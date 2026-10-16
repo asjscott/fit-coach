@@ -4,8 +4,11 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
-  },
+  "lint": "eslint .",
+  "format": "prettier --write .",
+  "typecheck": "pnpm -r typecheck",
+  "test": "pnpm -r test"
+},
   "keywords": [],
   "author": "",
   "license": "ISC",
@@ -17,5 +20,12 @@
     }
   },
   "packageManager": "pnpm@12.14.0+sha512.c18ba6d87993d3d164cb5e8948f32b2c06ee854487e06cd8d86781342fb3e5bb4634367034711e86802baa9c37bea906ce1929ad08d70884c97d801df13389a6",
-  "type": "module"
+  "type": "module",
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "eslint": "^10.12.0",
+    "prettier": "^3.9.10",
+    "typescript": "^5.0.2",
+    "typescript-eslint": "^8.71.2"
+  }
 }
