@@ -7,7 +7,8 @@ export async function pingDb(): Promise<"up" | "down"> {
   try {
     await db.command({ ping: 1 });
     return "up";
-  } catch {
+  } catch (err) {
+    console.error("MongoDB ping failed:", err);
     return "down";
   }
 }
