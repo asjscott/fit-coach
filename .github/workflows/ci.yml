@@ -13,5 +13,6 @@ jobs:
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - run: pnpm lint
+      - run: pnpm --filter @fit/mobile exec expo customize tsconfig.json
       - run: pnpm typecheck
       - run: pnpm test
