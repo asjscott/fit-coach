@@ -9,6 +9,11 @@ import { ThemedView } from '@/components/themed-view';
 import { WebBadge } from '@/components/web-badge';
 import { BottomTabInset, MaxContentWidth, Spacing } from '@/constants/theme';
 
+import { HealthResponse } from "@fit/shared";
+import { useEffect, useState } from 'react';
+
+const API_URL = process.env.EXPO_PUBLIC_API_URL
+
 function getDevMenuHint() {
   if (Platform.OS === 'web') {
     return <ThemedText type="small">use browser devtools</ThemedText>;
@@ -29,6 +34,18 @@ function getDevMenuHint() {
 }
 
 export default function HomeScreen() {
+  const [status, setStatus] = useState("Checking API...");
+
+  useEffect(() => {
+    fetch(`${API_URL}/health`)
+    .then((res) => res.json())
+    .then((json) => {
+      const health = HealthResponse.parse(json);
+      setStatus(`API ${health.status} DB ${health.db}`)
+    })
+    .catch((err: Error) => setStatus(`Error: ${err.message}`))
+  }, []);
+
   return (
     <ThemedView style={styles.container}>
       <SafeAreaView style={styles.safeArea}>
@@ -37,6 +54,7 @@ export default function HomeScreen() {
           <ThemedText type="title" style={styles.title}>
             Hello, Alec
           </ThemedText>
+          <ThemedText>{status}</ThemedText>
         </ThemedView>
 
         <ThemedText type="code" style={styles.code}>
