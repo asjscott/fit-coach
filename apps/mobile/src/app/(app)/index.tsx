@@ -1,10 +1,13 @@
 import { useEffect, useState } from "react";
 import { Text, View } from "react-native";
 import { HealthResponse } from "@fit/shared";
+import { Button } from "react-native";
+import { useAuth } from "@clerk/expo";
 
 const API_URL = process.env.EXPO_PUBLIC_API_URL;
 
 export default function Home() {
+  const { signOut } = useAuth();
   const [status, setStatus] = useState("Checking API…");
 
   useEffect(() => {
@@ -21,6 +24,7 @@ export default function Home() {
     <View style={{ flex: 1, alignItems: "center", justifyContent: "center", gap: 8 }}>
       <Text>Hello, Alec</Text>
       <Text>{status}</Text>
+       <Button title="Sign Out" onPress={() => signOut()} />
     </View>
   );
 }
