@@ -1,30 +1,33 @@
 import { useEffect, useState } from "react";
-import { Text, View } from "react-native";
-import { HealthResponse } from "@fit/shared";
-import { Button } from "react-native";
+import { Button, Text, View } from "react-native";
+import { HealthResponse, MeResponse } from "@fit/shared";
 import { useAuth } from "@clerk/expo";
-
-const API_URL = process.env.EXPO_PUBLIC_API_URL;
+import { useApi } from "../../../api/api";
 
 export default function Home() {
   const { signOut } = useAuth();
+  const api = useApi();
   const [status, setStatus] = useState("Checking API…");
+  const [me, setMe] = useState("Loading user…");
 
   useEffect(() => {
-    fetch(`${API_URL}/health`)
-      .then((res) => res.json())
+    api("/health")
       .then((json) => {
         const health = HealthResponse.parse(json);
         setStatus(`API ${health.status} · DB ${health.db}`);
       })
       .catch((err: Error) => setStatus(`Error: ${err.message}`));
-  }, []);
+
+    api("/me")
+      .then((json) => setMe(`Signed in as ${MeResponse.parse(json).clerkUserId}`))
+      .catch((err: Error) => setMe(`Error: ${err.message}`));
+  }, [api]);
 
   return (
     <View style={{ flex: 1, alignItems: "center", justifyContent: "center", gap: 8 }}>
-      <Text>Hello, Alec</Text>
+      <Text>{me}</Text>
       <Text>{status}</Text>
-       <Button title="Sign Out" onPress={() => signOut()} />
+      <Button title="Sign Out" onPress={() => signOut()} />
     </View>
   );
 }

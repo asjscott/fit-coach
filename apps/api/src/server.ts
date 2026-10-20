@@ -1,6 +1,6 @@
 import Fastify from "fastify";
 import { clerkPlugin, getAuth } from "@clerk/fastify";
-import { HealthResponse } from "@fit/shared";
+import { HealthResponse, MeResponse } from "@fit/shared";
 import { pingDb } from "./db";
 import { requireAuth } from "./auth";
 
@@ -15,9 +15,9 @@ app.get("/health", async () => {
   } satisfies HealthResponse);
 });
 
-app.get("/me", { preHandler: requireAuth }, async (req) => ({
-  clerkUserId: getAuth(req).userId,
-}));
+app.get("/me", { preHandler: requireAuth }, async (req) =>
+  MeResponse.parse({ clerkUserId: getAuth(req).userId }),
+);
 
 const port = Number(process.env.PORT ?? 3000);
 await app.listen({ port, host: "0.0.0.0" });
