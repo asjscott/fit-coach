@@ -3,6 +3,7 @@
   "main": "expo-router/entry",
   "version": "1.0.0",
   "dependencies": {
+    "@clerk/expo": "^4.13.0",
     "@expo/ui": "~57.0.25",
     "@fit/shared": "workspace:*",
     "expo": "~57.0.30",
@@ -13,6 +14,7 @@
     "expo-image": "~57.0.5",
     "expo-linking": "~57.0.13",
     "expo-router": "~57.0.28",
+    "expo-secure-store": "~57.0.4",
     "expo-splash-screen": "~57.0.10",
     "expo-status-bar": "~57.0.1",
     "expo-symbols": "~57.0.3",
@@ -38,7 +40,8 @@
     "ios": "expo start --ios",
     "web": "expo start --web",
     "lint": "expo lint",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "start:prod-api": "EXPO_PUBLIC_API_URL=https://fit-coach-evn9.onrender.com expo start --clear"
   },
   "private": true
 }
