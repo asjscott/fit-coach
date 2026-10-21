@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Button, Text, View } from "react-native";
-import { HealthResponse, MeResponse } from "@fit/shared";
+import { HealthResponse, Me } from "@fit/shared";
 import { useAuth } from "@clerk/expo";
 import { useApi } from "../../../api/api";
 
@@ -19,7 +19,11 @@ export default function Home() {
       .catch((err: Error) => setStatus(`Error: ${err.message}`));
 
     api("/me")
-      .then((json) => setMe(`Signed in as ${MeResponse.parse(json).clerkUserId}`))
+      .then((json) => {
+        const user = Me.parse(json);
+        const display = !user.onboardedAt ? "Onboarding not complete" : user.id;
+        setMe(display);
+      })
       .catch((err: Error) => setMe(`Error: ${err.message}`));
   }, [api]);
 
