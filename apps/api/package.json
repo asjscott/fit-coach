@@ -17,6 +17,7 @@
     "@clerk/fastify": "^3.1.90",
     "@fit/shared": "workspace:*",
     "fastify": "^5.12.7",
+    "fastify-type-provider-zod": "^7.0.0",
     "mongodb": "^7.7.0"
   },
   "devDependencies": {
