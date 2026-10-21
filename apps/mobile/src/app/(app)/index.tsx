@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
-import { Button, Text, View } from "react-native";
+import { router } from "expo-router";
 import { HealthResponse, Me } from "@fit/shared";
 import { useAuth } from "@clerk/expo";
+import { Box, Button, Card, Screen, Stack, Text } from "@/components/ui";
 import { useApi } from "../../../api/api";
 
 export default function Home() {
@@ -28,10 +29,28 @@ export default function Home() {
   }, [api]);
 
   return (
-    <View style={{ flex: 1, alignItems: "center", justifyContent: "center", gap: 8 }}>
-      <Text>{me}</Text>
-      <Text>{status}</Text>
-      <Button title="Sign Out" onPress={() => signOut()} />
-    </View>
+    <Screen>
+      <Stack gap="xl" flex={1}>
+        <Text variant="display">Fit Coach</Text>
+        <Card>
+          <Text variant="caption" color="textSubtle">
+            ACCOUNT
+          </Text>
+          <Text variant="bodyStrong">{me}</Text>
+        </Card>
+        <Card>
+          <Text variant="caption" color="textSubtle">
+            STATUS
+          </Text>
+          <Text variant="bodyStrong">{status}</Text>
+        </Card>
+      </Stack>
+      <Box gap="sm">
+        {__DEV__ && (
+          <Button title="Style guide" variant="secondary" onPress={() => router.push("/styleguide")} />
+        )}
+        <Button title="Sign out" variant="ghost" onPress={() => signOut()} />
+      </Box>
+    </Screen>
   );
 }

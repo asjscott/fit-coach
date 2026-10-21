@@ -1,6 +1,6 @@
 import { useHostedAuth } from "@clerk/expo/hosted-auth";
 import { useState } from "react";
-import { Button, StyleSheet, Text, View } from "react-native";
+import { Box, Button, Screen, Stack, Text } from "@/components/ui";
 
 export default function SignInScreen() {
   const { startHostedAuth } = useHostedAuth();
@@ -16,17 +16,20 @@ export default function SignInScreen() {
   };
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>Fit Coach</Text>
-      <Button title="Sign in" onPress={() => start("sign-in")} />
-      <Button title="Create account" onPress={() => start("sign-up")} />
-      {error && <Text style={styles.error}>{error}</Text>}
-    </View>
+    <Screen>
+      <Box flex={1} justify="center" gap="sm">
+        <Text variant="display">Fit Coach</Text>
+        <Text color="textMuted">Training that adapts to you.</Text>
+      </Box>
+      <Stack>
+        <Button title="Create account" onPress={() => start("sign-up")} />
+        <Button title="Sign in" variant="secondary" onPress={() => start("sign-in")} />
+        {error && (
+          <Text variant="caption" color="danger" align="center">
+            {error}
+          </Text>
+        )}
+      </Stack>
+    </Screen>
   );
 }
-
-const styles = StyleSheet.create({
-  container: { flex: 1, gap: 12, alignItems: "center", justifyContent: "center" },
-  title: { fontSize: 28, fontWeight: "600", marginBottom: 24 },
-  error: { color: "crimson" },
-});
