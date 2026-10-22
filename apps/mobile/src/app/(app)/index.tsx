@@ -1,8 +1,13 @@
 import { useEffect, useState } from "react";
-import { router } from "expo-router";
 import { HealthResponse, Me } from "@fit/shared";
 import { useAuth } from "@clerk/expo";
-import { Box, Button, Card, Screen, Stack, Text } from "@/components/ui";
+import { ButtonGroup } from "@/components/button";
+import { Card } from "@/components/card";
+import { Heading } from "@/components/heading";
+import { LoadingButton } from "@/components/loading-button";
+import { Screen } from "@/components/screen";
+import { Stack } from "@/components/stack";
+import { Text } from "@/components/text";
 import { useApi } from "../../../api/api";
 
 export default function Home() {
@@ -30,27 +35,27 @@ export default function Home() {
 
   return (
     <Screen>
-      <Stack gap="xl" flex={1}>
-        <Text variant="display">Fit Coach</Text>
+      <Stack spacing={6} flex>
+        <Heading size="3xl">Fit Coach</Heading>
         <Card>
-          <Text variant="caption" color="textSubtle">
+          <Text size="xs" weight="medium" color="textSubtle">
             ACCOUNT
           </Text>
-          <Text variant="bodyStrong">{me}</Text>
+          <Text weight="semiBold">{me}</Text>
         </Card>
         <Card>
-          <Text variant="caption" color="textSubtle">
+          <Text size="xs" weight="medium" color="textSubtle">
             STATUS
           </Text>
-          <Text variant="bodyStrong">{status}</Text>
+          <Text weight="semiBold">{status}</Text>
         </Card>
       </Stack>
-      <Box gap="sm">
+      <ButtonGroup space={2}>
         {__DEV__ && (
-          <Button title="Style guide" variant="secondary" onPress={() => router.push("/styleguide")} />
+          <LoadingButton label="Components" action="secondary" icon="settings" href="/styleguide" />
         )}
-        <Button title="Sign out" variant="ghost" onPress={() => signOut()} />
-      </Box>
+        <LoadingButton label="Sign out" action="default" icon="signOut" onPress={() => signOut()} />
+      </ButtonGroup>
     </Screen>
   );
 }

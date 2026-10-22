@@ -1,0 +1,25 @@
+import { Platform, Switch as RNSwitch, type SwitchProps as RNSwitchProps } from "react-native";
+import { useTheme } from "@/theme";
+import { useFormControlContext } from "../form-control";
+
+const scale = { sm: 0.75, md: 1, lg: 1.25 } as const;
+
+export type SwitchProps = RNSwitchProps & { size?: keyof typeof scale };
+
+export function Switch({ size = "md", disabled, style, ...props }: SwitchProps) {
+  const { colors } = useTheme();
+  const formControl = useFormControlContext();
+  const isDisabled = disabled ?? (formControl.isDisabled || formControl.isReadOnly);
+
+  return (
+    <RNSwitch
+      disabled={isDisabled}
+      trackColor={{ false: colors.border, true: colors.orange }}
+      // Android tints the thumb; iOS keeps its native white thumb
+      thumbColor={Platform.OS === "android" ? colors.onAccent : undefined}
+      ios_backgroundColor={colors.border}
+      style={[{ transform: [{ scale: scale[size] }] }, isDisabled && { opacity: 0.4 }, style]}
+      {...props}
+    />
+  );
+}

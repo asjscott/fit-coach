@@ -13,10 +13,13 @@ export const InjuryTag = z.enum([
 ]);
 
 export const UserProfile = z.object({
-  sex: z.enum(["male", "female"]),
-  birthYear: z.number().int().min(1930).max(new Date().getFullYear() - 16),
-  heightCm: z.number().min(120).max(230),
-  weightKg: z.number().min(35).max(250),
+  sex: z.enum(["male", "female"], {error: "Choose one"}),
+  birthYear: z.number({error: "Enter your birth year"})
+  .int("Use a whole number")
+  .min(1930, "Check your birth year")
+  .max(new Date().getFullYear() - 16, "You must be at least 16"),
+  heightCm: z.number({error: "Enter your height"}).min(120).max(230),
+  weightKg: z.number({error: "Enter your weight"}).min(35).max(250),
   goal: Goal,
   daysPerWeek: z.number().int().min(2).max(6),
   injuries: z.array(InjuryTag),

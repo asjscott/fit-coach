@@ -1,6 +1,11 @@
 import { useHostedAuth } from "@clerk/expo/hosted-auth";
 import { useState } from "react";
-import { Box, Button, Screen, Stack, Text } from "@/components/ui";
+import { ButtonGroup } from "@/components/button";
+import { Heading } from "@/components/heading";
+import { LoadingButton } from "@/components/loading-button";
+import { Screen } from "@/components/screen";
+import { Stack } from "@/components/stack";
+import { Text } from "@/components/text";
 
 export default function SignInScreen() {
   const { startHostedAuth } = useHostedAuth();
@@ -17,19 +22,19 @@ export default function SignInScreen() {
 
   return (
     <Screen>
-      <Box flex={1} justify="center" gap="sm">
-        <Text variant="display">Fit Coach</Text>
+      <Stack flex justify="center" spacing={2}>
+        <Heading size="3xl">Fit Coach</Heading>
         <Text color="textMuted">Training that adapts to you.</Text>
-      </Box>
-      <Stack>
-        <Button title="Create account" onPress={() => start("sign-up")} />
-        <Button title="Sign in" variant="secondary" onPress={() => start("sign-in")} />
+      </Stack>
+      <ButtonGroup space={3}>
+        <LoadingButton label="Create account" onPress={() => start("sign-up")} />
+        <LoadingButton label="Sign in" action="secondary" onPress={() => start("sign-in")} />
         {error && (
-          <Text variant="caption" color="danger" align="center">
+          <Text size="xs" color="danger" centered>
             {error}
           </Text>
         )}
-      </Stack>
+      </ButtonGroup>
     </Screen>
   );
 }

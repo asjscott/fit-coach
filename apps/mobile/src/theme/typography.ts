@@ -1,5 +1,3 @@
-import type { TextStyle } from "react-native";
-
 // Keys must match the font names registered with useFonts in the root layout
 export const fonts = {
   regular: "Inter_400Regular",
@@ -9,16 +7,24 @@ export const fonts = {
   extraBold: "Inter_800ExtraBold",
 } as const;
 
-export const textVariants = {
-  display: { fontFamily: fonts.extraBold, fontSize: 34, lineHeight: 40, letterSpacing: -0.8 },
-  title: { fontFamily: fonts.bold, fontSize: 28, lineHeight: 34, letterSpacing: -0.5 },
-  heading: { fontFamily: fonts.bold, fontSize: 20, lineHeight: 26, letterSpacing: -0.2 },
-  body: { fontFamily: fonts.regular, fontSize: 16, lineHeight: 24 },
-  bodyStrong: { fontFamily: fonts.semiBold, fontSize: 16, lineHeight: 24 },
-  label: { fontFamily: fonts.semiBold, fontSize: 14, lineHeight: 20 },
-  caption: { fontFamily: fonts.medium, fontSize: 12, lineHeight: 16 },
-  // Fixed-width digits so weights/reps don't jitter when they change
-  numeric: { fontFamily: fonts.bold, fontSize: 28, lineHeight: 34, fontVariant: ["tabular-nums"] },
-} satisfies Record<string, TextStyle>;
+export type FontWeight = keyof typeof fonts;
 
-export type TextVariant = keyof typeof textVariants;
+export const fontSizes = {
+  "2xs": 10,
+  xs: 12,
+  sm: 14,
+  md: 16,
+  lg: 18,
+  xl: 20,
+  "2xl": 24,
+  "3xl": 30,
+  "4xl": 36,
+  "5xl": 48,
+  "6xl": 60,
+} as const;
+
+export type FontSize = keyof typeof fontSizes;
+
+// Body copy breathes more than headings
+export const lineHeight = (fontSize: number, tight = false) =>
+  Math.round(fontSize * (tight ? 1.2 : 1.45));

@@ -16,7 +16,7 @@ export default function AppLayout() {
       }}
     >
       <Stack.Screen name="index" options={{ headerShown: false }} />
-      <Stack.Screen name="styleguide" options={{ title: "Style guide" }} />
+      <Stack.Screen name="styleguide" options={{ title: "Components" }} />
     </Stack>
   );
 }

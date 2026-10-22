@@ -15,8 +15,8 @@ import {
   Slot,
 } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
-import { StatusBar } from "expo-status-bar";
 import { useEffect, useMemo } from "react";
+import { StatusBar } from "@/components/status-bar";
 import { ThemeProvider, useTheme } from "@/theme";
 
 SplashScreen.preventAutoHideAsync();
@@ -70,7 +70,7 @@ function ThemedNavigation() {
 
   return (
     <NavigationThemeProvider value={navigationTheme}>
-      <StatusBar style={scheme === "dark" ? "light" : "dark"} />
+      <StatusBar />
       <Slot />
     </NavigationThemeProvider>
   );
