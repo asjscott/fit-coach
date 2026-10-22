@@ -35,6 +35,7 @@ export function Chip({ label, selected = false, onPress, disabled }: ChipProps) 
 const createStyles = (colors: Colors) =>
   StyleSheet.create({
     chip: {
+      alignItems: "center",
       paddingHorizontal: spacing[4],
       paddingVertical: spacing[2],
       borderRadius: radii.pill,

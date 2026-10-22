@@ -3,6 +3,15 @@ import { useCallback, useEffect, useRef } from "react";
 
 const API_URL = process.env.EXPO_PUBLIC_API_URL;
 
+export class ApiError extends Error {
+  constructor(
+    readonly status: number,
+    message: string,
+  ) {
+    super(message);
+  }
+}
+
 export function useApi() {
   const { getToken } = useAuth();
 
@@ -23,7 +32,7 @@ export function useApi() {
       }
 
       const res = await fetch(`${API_URL}${path}`, { ...init, headers });
-      if (!res.ok) throw new Error((await res.text()) || String(res.status));
+      if (!res.ok) throw new ApiError(res.status, (await res.text()) || String(res.status));
       return res.json();
     },
     [],

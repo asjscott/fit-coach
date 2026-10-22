@@ -17,6 +17,7 @@ import {
 import * as SplashScreen from "expo-splash-screen";
 import { useEffect, useMemo } from "react";
 import { StatusBar } from "@/components/status-bar";
+import { CurrentUserProvider } from "@/features/user/CurrentUserProvider";
 import { ThemeProvider, useTheme } from "@/theme";
 
 SplashScreen.preventAutoHideAsync();
@@ -41,9 +42,11 @@ export default function RootLayout() {
 
   return (
     <ClerkProvider publishableKey={publishableKey} tokenCache={tokenCache}>
-      <ThemeProvider>
-        <ThemedNavigation />
-      </ThemeProvider>
+      <CurrentUserProvider>
+        <ThemeProvider>
+          <ThemedNavigation />
+        </ThemeProvider>
+      </CurrentUserProvider>
     </ClerkProvider>
   );
 }

@@ -7,10 +7,12 @@ export const HealthResponse = z.object({
 export type HealthResponse = z.infer<typeof HealthResponse>;
 
 export const Goal = z.enum(["lose_fat", "build_muscle", "recomp", "athletic"]);
+export type Goal = z.infer<typeof Goal>;
 
 export const InjuryTag = z.enum([
   "neck", "shoulder", "elbow", "wrist", "lower_back", "hip", "knee", "ankle",
 ]);
+export type InjuryTag = z.infer<typeof InjuryTag>;
 
 export const UserProfile = z.object({
   sex: z.enum(["male", "female"], {error: "Choose one"}),
@@ -27,10 +29,25 @@ export const UserProfile = z.object({
 
 export type UserProfile = z.infer<typeof UserProfile>;
 
-export const Me = z.object({
+// Fields that must be filled before a user counts as onboarded; injuries are optional
+export const OnboardingProfile = UserProfile.omit({ injuries: true });
+export type OnboardingProfile = z.infer<typeof OnboardingProfile>;
+
+export const User = z.object({
   id: z.string(),
   profile: UserProfile.partial(),
+  // Set by the server once OnboardingProfile is complete; read-only for clients
   onboardedAt: z.iso.datetime().nullable(),
 });
+export type User = z.infer<typeof User>;
 
-export type Me = z.infer<typeof Me>;
+// Body for PATCH /user; profile fields are merged into the stored profile
+export const UserUpdate = z.strictObject({
+  profile: UserProfile.partial(),
+});
+export type UserUpdate = z.infer<typeof UserUpdate>;
+
+export const ErrorResponse = z.object({
+  error: z.string(),
+});
+export type ErrorResponse = z.infer<typeof ErrorResponse>;

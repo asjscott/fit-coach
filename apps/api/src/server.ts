@@ -1,6 +1,6 @@
 import Fastify from "fastify";
 import { serializerCompiler, validatorCompiler } from "fastify-type-provider-zod";
-import { meRoutes } from "./routes/me";
+import { userRoutes } from "./routes/users";
 import { clerkPlugin } from "@clerk/fastify";
 import { HealthResponse } from "@fit/shared";
 import { pingDb } from "./db";
@@ -17,7 +17,7 @@ await ensureUserIndexes().catch((err) =>
   app.log.error(err, "Failed to create user indexes"),
 );
 
-await app.register(meRoutes);
+await app.register(userRoutes);
 
 app.get("/health", async () => {
   return HealthResponse.parse({
