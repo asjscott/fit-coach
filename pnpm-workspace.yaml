@@ -2,7 +2,21 @@ packages:
   - "apps/*"
   - "packages/*"
 allowBuilds:
+  builds: true
   esbuild: true
 overrides:
   "@react-native/metro-config": "0.86.3"
 nodeLinker: hoisted
+permissions:
+  '@clerk/shared':
+    build: false
+  browser-tabs-lock:
+    build: false
+  bufferutil:
+    build: false
+  builds:
+    skills: true
+  core-js:
+    build: false
+  utf-8-validate:
+    build: false
