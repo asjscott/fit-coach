@@ -15,7 +15,7 @@ export const InjuryTag = z.enum([
 export type InjuryTag = z.infer<typeof InjuryTag>;
 
 export const UserProfile = z.object({
-  sex: z.enum(["male", "female"], {error: "Choose one"}),
+  gender: z.enum(["male", "female"], {error: "Choose one"}),
   birthYear: z.number({error: "Enter your birth year"})
   .int("Use a whole number")
   .min(1930, "Check your birth year")
@@ -24,7 +24,7 @@ export const UserProfile = z.object({
   weightKg: z.number({error: "Enter your weight"}).min(35).max(250),
   goal: Goal,
   daysPerWeek: z.number().int().min(2).max(6),
-  injuries: z.array(InjuryTag),
+  injuries: z.array(InjuryTag, {error: "Choose any that apply, or None"}),
 });
 
 export type UserProfile = z.infer<typeof UserProfile>;

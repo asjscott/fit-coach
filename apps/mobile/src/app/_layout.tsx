@@ -17,6 +17,7 @@ import {
 import * as SplashScreen from "expo-splash-screen";
 import { useEffect, useMemo } from "react";
 import { StatusBar } from "@/components/status-bar";
+import { ToastProvider } from "@/contexts/ToastContext";
 import { CurrentUserProvider } from "@/features/user/CurrentUserProvider";
 import { ThemeProvider, useTheme } from "@/theme";
 
@@ -44,7 +45,9 @@ export default function RootLayout() {
     <ClerkProvider publishableKey={publishableKey} tokenCache={tokenCache}>
       <CurrentUserProvider>
         <ThemeProvider>
-          <ThemedNavigation />
+          <ToastProvider>
+            <ThemedNavigation />
+          </ToastProvider>
         </ThemeProvider>
       </CurrentUserProvider>
     </ClerkProvider>

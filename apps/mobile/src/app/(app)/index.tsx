@@ -9,7 +9,9 @@ import { Screen } from "@/components/screen";
 import { HStack, Stack } from "@/components/stack";
 import { Text } from "@/components/text";
 import { useCurrentUser } from "@/features/user/CurrentUserProvider";
-import { goalLabel, injuryLabel, sexOptions } from "@/features/onboarding/options";
+import { goalLabel } from "@/features/user/components/form/fields/user-goal-field";
+import { injuryLabel } from "@/features/user/components/form/fields/user-injuries-field";
+import { genderLabel } from "@/features/user/components/form/fields/user-gender-field";
 import { spacing } from "@/theme";
 import { useApi } from "../../../api/api";
 
@@ -49,7 +51,7 @@ export default function Home() {
           <Text size="xs" weight="medium" color="textSubtle">
             PROFILE
           </Text>
-          <Row label="Sex" value={sexOptions.find((o) => o.value === profile.sex)?.label} />
+          <Row label="Gender" value={profile.gender && genderLabel(profile.gender)} />
           <Row label="Age" value={profile.birthYear && `${new Date().getFullYear() - profile.birthYear}`} />
           <Row label="Height" value={profile.heightCm && `${profile.heightCm} cm`} />
           <Row label="Weight" value={profile.weightKg && `${profile.weightKg} kg`} />

@@ -4,7 +4,7 @@ import { userRoutes } from "./routes/users";
 import { clerkPlugin } from "@clerk/fastify";
 import { HealthResponse } from "@fit/shared";
 import { pingDb } from "./db";
-import { ensureUserIndexes } from "./users";
+import { ensureUserIndexes, migrateUsers } from "./users";
 
 const app = Fastify({ logger: true });
 
@@ -16,6 +16,8 @@ await app.register(clerkPlugin);
 await ensureUserIndexes().catch((err) =>
   app.log.error(err, "Failed to create user indexes"),
 );
+
+await migrateUsers().catch((err) => app.log.error(err, "Failed to migrate users"));
 
 await app.register(userRoutes);
 

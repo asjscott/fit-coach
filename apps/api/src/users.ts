@@ -16,6 +16,12 @@ export async function ensureUserIndexes() {
   await users.createIndex({ clerkUserId: 1 }, { unique: true });
 }
 
+// profile.sex was renamed to profile.gender; safe to run repeatedly
+export async function migrateUsers() {
+  const legacy = db.collection("users");
+  await legacy.updateMany({ "profile.sex": { $exists: true } }, { $rename: { "profile.sex": "profile.gender" } });
+}
+
 export function findUser(clerkUserId: string) {
   return users.findOne({ clerkUserId });
 }
