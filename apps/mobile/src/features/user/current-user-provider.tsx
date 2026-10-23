@@ -1,7 +1,7 @@
 import { useAuth } from "@clerk/expo";
 import { User, type UserProfile, type UserUpdate } from "@fit/shared";
 import { createContext, use, useCallback, useEffect, useState, type ReactNode } from "react";
-import { ApiError, useApi } from "../../../api/api";
+import { ApiError, useApi } from "@/api";
 
 type CurrentUserContextValue = {
   // null until loaded, and while signed out

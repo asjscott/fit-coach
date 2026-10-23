@@ -8,12 +8,12 @@ import { LoadingButton } from "@/components/loading-button";
 import { Screen } from "@/components/screen";
 import { HStack, Stack } from "@/components/stack";
 import { Text } from "@/components/text";
-import { useCurrentUser } from "@/features/user/CurrentUserProvider";
+import { useCurrentUser } from "@/features/user/current-user-provider";
 import { goalLabel } from "@/features/user/components/form/fields/user-goal-field";
 import { injuryLabel } from "@/features/user/components/form/fields/user-injuries-field";
 import { genderLabel } from "@/features/user/components/form/fields/user-gender-field";
 import { spacing } from "@/theme";
-import { useApi } from "../../../api/api";
+import { useApi } from "@/api";
 
 export default function Home() {
   const { signOut } = useAuth();

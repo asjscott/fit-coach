@@ -1,3 +1,4 @@
+import type { UserProfile } from "@fit/shared";
 import { Box } from "@/components/box";
 import { FormProvider } from "@/components/hook-form";
 import { LoadingDialog } from "@/components/loading";
@@ -10,8 +11,8 @@ import { UserHeightField } from "@/features/user/components/form/fields/user-hei
 import { UserInjuriesField } from "@/features/user/components/form/fields/user-injuries-field";
 import { UserGenderField } from "@/features/user/components/form/fields/user-gender-field";
 import { UserWeightField } from "@/features/user/components/form/fields/user-weight-field";
-import { useUserOnboarding } from "../hooks/useUserOnboarding";
-import { CompleteStage, FormStage, StagedForm } from "./StagedForm";
+import { useUserOnboarding } from "../hooks/use-user-onboarding";
+import { CompleteStage, FormStage, StagedForm } from "./staged-form";
 
 export function UserOnboardingForm() {
   const { onboardingForm, stage, onStageChange, onSubmit, isSaving, isEditing } = useUserOnboarding();
@@ -37,9 +38,8 @@ export function UserOnboardingForm() {
             )
           }
         >
-          <FormStage
-            currentStage={stage}
-            stage={1}
+          <FormStage<UserProfile>
+            fields={["gender", "birthYear", "heightCm", "weightKg"]}
             title="About you"
             message="We use these to set your starting weights and volume."
           >
@@ -54,18 +54,16 @@ export function UserOnboardingForm() {
               </Box>
             </HStack>
           </FormStage>
-          <FormStage
-            currentStage={stage}
-            stage={2}
+          <FormStage<UserProfile>
+            fields={["goal", "daysPerWeek"]}
             title="Your goal"
             message="Pick what matters most right now. You can change it later."
           >
             <UserGoalField />
             <UserDaysPerWeekField />
           </FormStage>
-          <FormStage
-            currentStage={stage}
-            stage={3}
+          <FormStage<UserProfile>
+            fields={["injuries"]}
             title="Any injuries?"
             message="Select anything that hurts or limits you, and we'll program around it."
           >

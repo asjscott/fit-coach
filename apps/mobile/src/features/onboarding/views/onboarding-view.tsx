@@ -3,9 +3,9 @@ import { Redirect, router } from "expo-router";
 import { Button, ButtonText } from "@/components/button";
 import { Screen } from "@/components/screen";
 import { HStack } from "@/components/stack";
-import { useCurrentUser } from "@/features/user/CurrentUserProvider";
-import { UserLoadingScreen } from "@/features/user/components/UserLoadingScreen";
-import { UserOnboardingForm } from "../form/UserOnboardingForm";
+import { useCurrentUser } from "@/features/user/current-user-provider";
+import { UserLoadingScreen } from "@/features/user/components/user-loading-screen";
+import { UserOnboardingForm } from "../form/user-onboarding-form";
 
 // Doesn't redirect onboarded users away: "Edit profile" reuses this flow
 export function OnboardingView() {

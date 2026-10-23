@@ -1,7 +1,7 @@
 import { useAuth } from "@clerk/expo";
 import { Redirect, Stack } from "expo-router";
-import { useCurrentUser } from "@/features/user/CurrentUserProvider";
-import { UserLoadingScreen } from "@/features/user/components/UserLoadingScreen";
+import { useCurrentUser } from "@/features/user/current-user-provider";
+import { UserLoadingScreen } from "@/features/user/components/user-loading-screen";
 import { fonts, useTheme } from "@/theme";
 
 export default function AppLayout() {

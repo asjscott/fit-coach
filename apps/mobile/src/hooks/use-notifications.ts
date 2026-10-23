@@ -1,6 +1,6 @@
 import { useCallback, useMemo } from "react";
 import { ErrorResponse } from "@fit/shared";
-import { useToast } from "@/contexts/ToastContext";
+import { useToast } from "@/contexts/toast-context";
 
 type NotificationType = "error" | "success" | "warning" | "info";
 

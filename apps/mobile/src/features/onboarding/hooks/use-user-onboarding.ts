@@ -2,18 +2,9 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { UserProfile } from "@fit/shared";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
-import { useCurrentUser } from "@/features/user/CurrentUserProvider";
-import { useNotifications } from "@/hooks/useNotifications";
-import type { Stage, StageAction } from "../form/StagedForm";
-
-// ----------------------------------------------------------------------
-
-// Field names for each stage, used to trigger partial validation for each stage
-const stages: Record<number, (keyof UserProfile)[]> = {
-  1: ["gender", "birthYear", "heightCm", "weightKg"],
-  2: ["goal", "daysPerWeek"],
-  3: ["injuries"],
-};
+import { useCurrentUser } from "@/features/user/current-user-provider";
+import { useNotifications } from "@/hooks/use-notifications";
+import type { Stage, StageAction } from "../form/staged-form";
 
 // ----------------------------------------------------------------------
 
@@ -36,17 +27,17 @@ export function useUserOnboarding() {
 
   const { trigger, handleSubmit, formState } = onboardingForm;
 
-  const onStageChange = async ({ action }: StageAction) => {
+  const onStageChange = async (change: StageAction<UserProfile>) => {
     if (typeof stage !== "number") return;
 
     // Always allow going back
-    if (action === "previous") {
+    if (change.action === "previous") {
       setStage(Math.max(stage - 1, 1));
       return;
     }
 
-    // If going forwards, validate the current stage
-    const valid = await trigger(stages[stage]);
+    // If going forwards, validate the current stage's fields; trigger() with none would validate the whole form
+    const valid = change.fields.length === 0 || (await trigger(change.fields));
     if (!valid) {
       handleError("Please check the form for errors before continuing.");
       return;
