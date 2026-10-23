@@ -1,5 +1,5 @@
 import type { WithId } from "mongodb";
-import { OnboardingProfile, User, type UserProfile } from "@fit/shared";
+import { EquipmentProfile, OnboardingProfile, User, type UserProfile } from "@fit/shared";
 import { db } from "./db";
 
 // The shape of a user document in MongoDB
@@ -8,6 +8,7 @@ type UserDoc = {
   createdAt: Date;
   profile: Partial<UserProfile>;
   onboardedAt: Date | null;
+  equipmentProfiles: EquipmentProfile[]
 };
 
 export const users = db.collection<UserDoc>("users");
@@ -30,7 +31,7 @@ export function findUser(clerkUserId: string) {
 export async function createUser(clerkUserId: string) {
   const result = await users.findOneAndUpdate(
     { clerkUserId },
-    { $setOnInsert: { clerkUserId, createdAt: new Date(), profile: {}, onboardedAt: null } },
+    { $setOnInsert: { clerkUserId, createdAt: new Date(), profile: {}, onboardedAt: null, equipmentProfiles: [] } },
     { upsert: true, returnDocument: "after", includeResultMetadata: true }
   );
   if (!result.value) throw new Error("Failed to create user");
@@ -66,5 +67,6 @@ export function toUser(user: WithId<UserDoc>): User {
     id: user._id.toHexString(),
     profile: user.profile,
     onboardedAt: user.onboardedAt?.toISOString() ?? null,
+    equipmentProfiles: user.equipmentProfiles ?? []
   });
 }
