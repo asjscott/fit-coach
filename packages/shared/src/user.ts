@@ -37,8 +37,17 @@ export const User = z.object({
 });
 export type User = z.infer<typeof User>;
 
-// Body for PATCH /user; profile fields are merged into the stored profile
+// A user's full set of equipment profiles: unique ids and exactly one primary
+export const EquipmentProfiles = z
+  .array(EquipmentProfile)
+  .min(1, "Add at least one equipment profile")
+  .refine((profiles) => new Set(profiles.map((p) => p.id)).size === profiles.length, "Equipment profile ids must be unique")
+  .refine((profiles) => profiles.filter((p) => p.isPrimary).length === 1, "Choose one primary equipment profile");
+
+// Body for PATCH /user; profile fields are merged into the stored profile,
+// equipmentProfiles replaces the stored list
 export const UserUpdate = z.strictObject({
-  profile: UserProfile.partial(),
+  profile: UserProfile.partial().optional(),
+  equipmentProfiles: EquipmentProfiles.optional(),
 });
 export type UserUpdate = z.infer<typeof UserUpdate>;

@@ -1,5 +1,5 @@
 import type { WithId } from "mongodb";
-import { EquipmentProfile, OnboardingProfile, User, type UserProfile } from "@fit/shared";
+import { EquipmentProfile, OnboardingProfile, User, type UserProfile, type UserUpdate } from "@fit/shared";
 import { db } from "./db";
 
 // The shape of a user document in MongoDB
@@ -38,20 +38,25 @@ export async function createUser(clerkUserId: string) {
   return { user: result.value, created: !result.lastErrorObject?.updatedExisting };
 }
 
-// Merges profile fields into the stored profile; null if the user doesn't exist
-export async function updateUserProfile(clerkUserId: string, profile: Partial<UserProfile>) {
+// Merges profile fields into the stored profile and replaces equipmentProfiles if given;
+// null if the user doesn't exist
+export async function updateUser(clerkUserId: string, { profile, equipmentProfiles }: UserUpdate) {
   // $literal stops string values beginning with "$" being read as field paths
-  const user = await users.findOneAndUpdate(
-    { clerkUserId },
-    [{ $set: { profile: { $mergeObjects: ["$profile", { $literal: profile }] } } }],
-    { returnDocument: "after" }
-  );
+  const set: Record<string, unknown> = {};
+  if (profile) set.profile = { $mergeObjects: ["$profile", { $literal: profile }] };
+  if (equipmentProfiles) set.equipmentProfiles = { $literal: equipmentProfiles };
+
+  const user = Object.keys(set).length
+    ? await users.findOneAndUpdate({ clerkUserId }, [{ $set: set }], { returnDocument: "after" })
+    : await findUser(clerkUserId);
   return user && markOnboardedIfComplete(user);
 }
 
 // Stamp onboardedAt the first time the required profile fields are all valid
+// and the user has at least one equipment profile
 async function markOnboardedIfComplete(user: WithId<UserDoc>) {
-  if (user.onboardedAt || !OnboardingProfile.safeParse(user.profile).success) return user;
+  if (user.onboardedAt) return user;
+  if (!OnboardingProfile.safeParse(user.profile).success || !user.equipmentProfiles?.length) return user;
   const updated = await users.findOneAndUpdate(
     { _id: user._id, onboardedAt: null },
     { $set: { onboardedAt: new Date() } },

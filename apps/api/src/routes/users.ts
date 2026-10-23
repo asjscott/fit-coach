@@ -2,7 +2,7 @@ import { getAuth } from "@clerk/fastify";
 import type { FastifyPluginAsyncZod } from "fastify-type-provider-zod";
 import { ErrorResponse, User, UserUpdate } from "@fit/shared";
 import { requireAuth } from "../auth";
-import { createUser, findUser, toUser, updateUserProfile } from "../users";
+import { createUser, findUser, toUser, updateUser } from "../users";
 
 // /user is the signed-in user's own record; /users is the collection it is created in
 export const userRoutes: FastifyPluginAsyncZod = async (app) => {
@@ -26,11 +26,12 @@ export const userRoutes: FastifyPluginAsyncZod = async (app) => {
   });
 
   // Sets onboardedAt as a side effect once the required profile fields are complete
+  // and the user has an equipment profile
   app.patch(
     "/user",
     { schema: { body: UserUpdate, response: { 200: User, 404: ErrorResponse } } },
     async (req, reply) => {
-      const user = await updateUserProfile(getAuth(req).userId!, req.body.profile);
+      const user = await updateUser(getAuth(req).userId!, req.body);
       if (!user) return reply.code(404).send({ error: "user not found" });
       return toUser(user);
     },
