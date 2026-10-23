@@ -15,6 +15,7 @@
   "type": "module",
   "dependencies": {
     "@clerk/fastify": "^3.1.90",
+    "@fastify/cors": "^11.3.1",
     "@fit/shared": "workspace:*",
     "fastify": "^5.12.7",
     "fastify-type-provider-zod": "^7.0.0",

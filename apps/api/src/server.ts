@@ -1,3 +1,4 @@
+import cors from "@fastify/cors";
 import Fastify from "fastify";
 import { serializerCompiler, validatorCompiler } from "fastify-type-provider-zod";
 import { userRoutes } from "./routes/users";
@@ -10,6 +11,15 @@ const app = Fastify({ logger: true });
 
 app.setValidatorCompiler(validatorCompiler);   // checks incoming requests
 app.setSerializerCompiler(serializerCompiler); // checks outgoing responses on routes that declare schema.response
+
+// Browsers (the Expo web build) need CORS; native apps send no Origin and are unaffected.
+// Registered before auth so preflight requests are answered without a token
+await app.register(cors, {
+  origin: process.env.CORS_ORIGINS?.split(",") ?? ["http://localhost:8081"],
+  methods: ["GET", "POST", "PATCH"],
+  allowedHeaders: ["Authorization", "Content-Type"],
+  exposedHeaders: ["Location"],
+});
 
 await app.register(clerkPlugin);
 
