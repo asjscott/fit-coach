@@ -2,32 +2,53 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { UserProfile } from "@fit/shared";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
+import { z } from "zod";
+import {
+  EquipmentByGroup,
+  groupTags,
+  toEquipmentInput,
+  toTrainingSetup,
+  TrainingSetup,
+} from "@/features/equipment/training-setup";
 import { useCurrentUser } from "@/features/user/current-user-provider";
 import { useNotifications } from "@/hooks/use-notifications";
 import type { Stage, StageAction } from "../form/staged-form";
 
 // ----------------------------------------------------------------------
 
+// The profile plus the answers that become the primary equipment profile
+export const OnboardingValues = UserProfile.extend({
+  trainingSetup: TrainingSetup,
+  equipment: EquipmentByGroup,
+});
+export type OnboardingValues = z.infer<typeof OnboardingValues>;
+
 // One form across every stage, saved once at the end
 export function useUserOnboarding() {
   // The view only renders the form once the user has loaded
-  const { user, updateProfile } = useCurrentUser();
+  const { user, updateUser, saveEquipmentProfile } = useCurrentUser();
   const { handleError } = useNotifications();
   const profile = user?.profile ?? {};
+  const primaryEquipment = user?.equipmentProfiles.find((p) => p.isPrimary);
 
   // Captured once so the completion message doesn't flip when the save stamps onboardedAt
   const [isEditing] = useState(!!user?.onboardedAt);
   const [stage, setStage] = useState<Stage>(1);
 
-  const onboardingForm = useForm<UserProfile>({
-    resolver: zodResolver(UserProfile),
+  const onboardingForm = useForm<OnboardingValues>({
+    resolver: zodResolver(OnboardingValues),
     mode: "onBlur",
-    defaultValues: { ...profile, daysPerWeek: profile.daysPerWeek ?? 3 },
+    defaultValues: {
+      ...profile,
+      daysPerWeek: profile.daysPerWeek ?? 3,
+      trainingSetup: primaryEquipment && toTrainingSetup(primaryEquipment),
+      equipment: groupTags(primaryEquipment?.tags ?? []),
+    },
   });
 
   const { trigger, handleSubmit, formState } = onboardingForm;
 
-  const onStageChange = async (change: StageAction<UserProfile>) => {
+  const onStageChange = async (change: StageAction<OnboardingValues>) => {
     if (typeof stage !== "number") return;
 
     // Always allow going back
@@ -45,10 +66,13 @@ export function useUserOnboarding() {
     setStage(stage + 1);
   };
 
-  const save = async (values: UserProfile) => {
+  const save = async ({ trainingSetup, equipment, ...values }: OnboardingValues) => {
     try {
-      // The server stamps onboardedAt once the required fields are saved
-      const updated = await updateProfile(values);
+      // Updates the primary profile by id if there is one, so retrying or editing never adds a second
+      await saveEquipmentProfile(toEquipmentInput(trainingSetup, equipment, primaryEquipment), primaryEquipment?.id);
+
+      // The server stamps onboardedAt once the required fields and an equipment profile are saved
+      const updated = await updateUser({ profile: values });
       if (!updated.onboardedAt) throw new Error("Some answers are missing, go back and check them");
       setStage("complete");
     } catch (err) {

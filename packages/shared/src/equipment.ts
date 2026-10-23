@@ -51,6 +51,15 @@ export const EQUIPMENT_LABELS: Record<EquipmentTag, string> = {
   foam_roller: "Foam roller",
 };
 
+export const EQUIPMENT_GROUPS = [
+  { key: "free_weights", name: "Free weights", tags: ["dumbbells", "kettlebells", "barbell", "plates", "ez_bar", "weight_vest", "medicine_ball", "slam_ball"] },
+  { key: "benches_racks", name: "Benches and racks", tags: ["flat_bench", "adjustable_bench", "squat_rack", "power_rack", "landmine"] },
+  { key: "bodyweight", name: "Bodyweight stations", tags: ["pull_up_bar", "rings", "dip_station", "parallettes", "suspension_trainer", "plyo_box", "ab_wheel", "sliders"] },
+  { key: "bands_cables", name: "Bands and cables", tags: ["loop_bands", "mini_bands", "tube_bands", "cable_machine"] },
+  { key: "cardio_recovery", name: "Cardio and recovery", tags: ["jump_rope", "stationary_bike", "rower", "treadmill", "air_bike", "foam_roller"] },
+] as const satisfies readonly { key: string; name: string; tags: readonly EquipmentTag[] }[];
+export type EquipmentGroupKey = (typeof EQUIPMENT_GROUPS)[number]["key"];
+
 export const EquipmentTag = z.enum([
   // Free weights
   "dumbbells", "kettlebells", "barbell", "plates", "ez_bar", "weight_vest", "medicine_ball", "slam_ball",
@@ -89,3 +98,7 @@ export const EquipmentProfile = z.object({
     .default({}),
 });
 export type EquipmentProfile = z.infer<typeof EquipmentProfile>;
+
+// Body for creating or updating an equipment profile; the server owns the id
+export const EquipmentProfileInput = EquipmentProfile.omit({ id: true });
+export type EquipmentProfileInput = z.infer<typeof EquipmentProfileInput>;

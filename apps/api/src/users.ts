@@ -1,5 +1,5 @@
-import type { WithId } from "mongodb";
-import { EquipmentProfile, OnboardingProfile, User, type UserProfile, type UserUpdate } from "@fit/shared";
+import { ObjectId, type WithId } from "mongodb";
+import { EquipmentProfile, type EquipmentProfileInput, OnboardingProfile, User, type UserProfile, type UserUpdate } from "@fit/shared";
 import { db } from "./db";
 
 // The shape of a user document in MongoDB
@@ -38,17 +38,78 @@ export async function createUser(clerkUserId: string) {
   return { user: result.value, created: !result.lastErrorObject?.updatedExisting };
 }
 
-// Merges profile fields into the stored profile and replaces equipmentProfiles if given;
-// null if the user doesn't exist
-export async function updateUser(clerkUserId: string, { profile, equipmentProfiles }: UserUpdate) {
+// Merges profile fields into the stored profile; null if the user doesn't exist
+export async function updateUser(clerkUserId: string, { profile }: UserUpdate) {
   // $literal stops string values beginning with "$" being read as field paths
-  const set: Record<string, unknown> = {};
-  if (profile) set.profile = { $mergeObjects: ["$profile", { $literal: profile }] };
-  if (equipmentProfiles) set.equipmentProfiles = { $literal: equipmentProfiles };
+  const user = await users.findOneAndUpdate(
+    { clerkUserId },
+    [{ $set: { profile: { $mergeObjects: ["$profile", { $literal: profile }] } } }],
+    { returnDocument: "after" }
+  );
+  return user && markOnboardedIfComplete(user);
+}
 
-  const user = Object.keys(set).length
-    ? await users.findOneAndUpdate({ clerkUserId }, [{ $set: set }], { returnDocument: "after" })
-    : await findUser(clerkUserId);
+// Users created before equipment profiles existed have no array
+const storedProfiles = { $ifNull: ["$equipmentProfiles", []] };
+
+// Adds a profile with a server-generated id; null if the user doesn't exist.
+// The first profile is always primary, and a new primary demotes the others
+export async function createEquipmentProfile(clerkUserId: string, input: EquipmentProfileInput) {
+  const isPrimary = { $or: [input.isPrimary, { $eq: [{ $size: storedProfiles }, 0] }] };
+  const profile = { ...input, id: new ObjectId().toHexString() };
+
+  const user = await users.findOneAndUpdate(
+    { clerkUserId },
+    [
+      {
+        $set: {
+          equipmentProfiles: {
+            $concatArrays: [
+              {
+                $map: {
+                  input: storedProfiles,
+                  as: "p",
+                  in: { $mergeObjects: ["$$p", { isPrimary: input.isPrimary ? false : "$$p.isPrimary" }] },
+                },
+              },
+              [{ $mergeObjects: [{ $literal: profile }, { isPrimary }] }],
+            ],
+          },
+        },
+      },
+    ],
+    { returnDocument: "after" }
+  );
+  return user && markOnboardedIfComplete(user);
+}
+
+// Replaces the profile with this id; null if the user or profile doesn't exist.
+// Making it primary demotes the others; the primary can't be unset directly,
+// only by making another profile primary
+export async function updateEquipmentProfile(clerkUserId: string, id: string, input: EquipmentProfileInput) {
+  const user = await users.findOneAndUpdate(
+    { clerkUserId, "equipmentProfiles.id": id },
+    [
+      {
+        $set: {
+          equipmentProfiles: {
+            $map: {
+              input: "$equipmentProfiles",
+              as: "p",
+              in: {
+                $cond: [
+                  { $eq: ["$$p.id", { $literal: id }] },
+                  { $mergeObjects: [{ $literal: { ...input, id } }, { isPrimary: { $or: [input.isPrimary, "$$p.isPrimary"] } }] },
+                  { $mergeObjects: ["$$p", { isPrimary: input.isPrimary ? false : "$$p.isPrimary" }] },
+                ],
+              },
+            },
+          },
+        },
+      },
+    ],
+    { returnDocument: "after" }
+  );
   return user && markOnboardedIfComplete(user);
 }
 

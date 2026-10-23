@@ -16,7 +16,7 @@ app.setSerializerCompiler(serializerCompiler); // checks outgoing responses on r
 // Registered before auth so preflight requests are answered without a token
 await app.register(cors, {
   origin: process.env.CORS_ORIGINS?.split(",") ?? ["http://localhost:8081"],
-  methods: ["GET", "POST", "PATCH"],
+  methods: ["GET", "POST", "PATCH", "PUT"],
   allowedHeaders: ["Authorization", "Content-Type"],
   exposedHeaders: ["Location"],
 });
