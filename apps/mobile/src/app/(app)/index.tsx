@@ -107,7 +107,7 @@ export default function Home() {
             YOUR PLAN
           </Text>
           <Text size="xl" weight="bold">
-            {profile.goal && goalLabel(profile.goal)}
+            {!!profile.goal && goalLabel(profile.goal)}
           </Text>
           <Text color="textMuted">{profile.daysPerWeek} training days per week</Text>
         </Card>

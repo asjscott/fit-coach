@@ -56,7 +56,7 @@ export function LoadingButton({
         <ButtonSpinner />
       ) : (
         <>
-          {icon && <ButtonIcon name={icon} />}
+          {!!icon && <ButtonIcon name={icon} />}
           <ButtonText>{label}</ButtonText>
         </>
       )}
