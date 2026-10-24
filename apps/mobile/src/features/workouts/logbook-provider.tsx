@@ -1,5 +1,5 @@
 import { createLogbook, type Logbook } from "@fit/engines";
-import type { Exercise, InProgressWorkout, SetValues, Workout } from "@fit/shared";
+import type { Exercise, InProgressWorkout, InProgressWorkoutExercise, SetValues, Workout } from "@fit/shared";
 import * as Crypto from "expo-crypto";
 import * as Network from "expo-network";
 import Storage from "expo-sqlite/kv-store";
@@ -14,7 +14,14 @@ type LogbookContextValue = {
   isLoaded: boolean;
   start: () => Promise<void>;
   addWorkoutExercise: (exercise: Pick<Exercise, "slug" | "loadType">) => Promise<void>;
+  removeWorkoutExercise: (workoutExerciseId: string) => Promise<void>;
+  moveWorkoutExercise: (workoutExerciseId: string, toIndex: number) => Promise<void>;
   logSet: (workoutExerciseId: string, values: SetValues) => Promise<void>;
+  editSet: (workoutExerciseId: string, setIndex: number, values: SetValues) => Promise<void>;
+  deleteSet: (workoutExerciseId: string, setIndex: number) => Promise<void>;
+  // The values a new Set starts with: the last Set's, or null for the first
+  nextSetDraft: (workoutExercise: InProgressWorkoutExercise) => SetValues | null;
+  discard: () => Promise<void>;
   // Ends the Workout now and tries to upload it. Resolves to whether the server has it;
   // if not, it stays on the phone as a Pending Workout
   finish: () => Promise<{ uploaded: boolean }>;
@@ -104,6 +111,29 @@ export function LogbookProvider({ children }: { children: ReactNode }) {
     [logbook, run],
   );
 
+  const removeWorkoutExercise = useCallback(
+    (workoutExerciseId: string) => run(() => logbook.removeWorkoutExercise(workoutExerciseId)),
+    [logbook, run],
+  );
+
+  const moveWorkoutExercise = useCallback(
+    (workoutExerciseId: string, toIndex: number) => run(() => logbook.moveWorkoutExercise(workoutExerciseId, toIndex)),
+    [logbook, run],
+  );
+
+  const editSet = useCallback(
+    (workoutExerciseId: string, setIndex: number, values: SetValues) =>
+      run(() => logbook.editSet(workoutExerciseId, setIndex, values)),
+    [logbook, run],
+  );
+
+  const deleteSet = useCallback(
+    (workoutExerciseId: string, setIndex: number) => run(() => logbook.deleteSet(workoutExerciseId, setIndex)),
+    [logbook, run],
+  );
+
+  const discard = useCallback(() => run(() => logbook.discard()), [logbook, run]);
+
   const finish = useCallback(async () => {
     let finished: Workout | undefined;
     await run(async () => {
@@ -118,7 +148,25 @@ export function LogbookProvider({ children }: { children: ReactNode }) {
   const deletePending = useCallback((workoutId: string) => run(() => logbook.deletePending(workoutId)), [logbook, run]);
 
   return (
-    <LogbookContext value={{ workout, isLoaded, start, addWorkoutExercise, logSet, finish, pending, deletePending }}>
+    <LogbookContext
+      value={{
+        workout,
+        isLoaded,
+        start,
+        addWorkoutExercise,
+        removeWorkoutExercise,
+        moveWorkoutExercise,
+        logSet,
+        editSet,
+        deleteSet,
+        nextSetDraft: logbook.nextSetDraft,
+        discard,
+        finish,
+        pending,
+        deletePending,
+      }}
+    >
+
       {children}
     </LogbookContext>
   );
