@@ -39,12 +39,21 @@ export async function createWorkout(clerkUserId: string, workout: Workout) {
   return { workout: result.value, created: !result.lastErrorObject?.updatedExisting };
 }
 
-// The user's Workouts newest first, started before the cursor when given
-export function findWorkouts(clerkUserId: string, { limit, before }: WorkoutsQuery) {
+// Where a page starts: after the Workout at (before, beforeId) in newest-first order. With
+// no beforeId, every Workout that started at before is treated as already received
+function afterCursor({ before, beforeId }: WorkoutsQuery) {
+  if (!before) return {};
+  const startedAt = new Date(before);
+  if (!beforeId) return { startedAt: { $lt: startedAt } };
+  return { $or: [{ startedAt: { $lt: startedAt } }, { startedAt, id: { $lt: beforeId } }] };
+}
+
+// The user's Workouts newest first (ties broken by id), after the cursor when given
+export function findWorkouts(clerkUserId: string, query: WorkoutsQuery) {
   return workouts
-    .find({ clerkUserId, ...(before && { startedAt: { $lt: new Date(before) } }) })
+    .find({ clerkUserId, ...afterCursor(query) })
     .sort({ startedAt: -1, id: -1 })
-    .limit(limit)
+    .limit(query.limit)
     .toArray();
 }
 

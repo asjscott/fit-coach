@@ -57,10 +57,17 @@ export const InProgressWorkout = z.object({
 export type InProgressWorkout = z.infer<typeof InProgressWorkout>;
 export type InProgressWorkoutExercise = InProgressWorkout["workoutExercises"][number];
 
-// A page of History from GET /workouts, newest first. To load older Workouts, pass the
-// startedAt of the last Workout received as before
-export const WorkoutsQuery = z.object({
-  limit: z.coerce.number().int().min(1).max(100).default(20),
-  before: z.iso.datetime().optional(),
-});
+// A page of History from GET /workouts, newest first (ties on start broken by id, highest
+// first). To load older Workouts, pass the startedAt and id of the last Workout received
+// as before and beforeId, so Workouts that started at the same moment are never skipped
+export const WorkoutsQuery = z
+  .object({
+    limit: z.coerce.number().int().min(1).max(100).default(20),
+    before: z.iso.datetime().optional(),
+    beforeId: z.uuid().optional(),
+  })
+  .refine((query) => query.beforeId === undefined || query.before !== undefined, {
+    error: "beforeId needs before",
+    path: ["beforeId"],
+  });
 export type WorkoutsQuery = z.infer<typeof WorkoutsQuery>;

@@ -3,28 +3,31 @@ import { router } from "expo-router";
 import { useState } from "react";
 import { Button, ButtonIcon } from "@/components/button";
 import { Card } from "@/components/card";
-import { Heading } from "@/components/heading";
+import { ConfirmModal } from "@/components/choice-modal";
 import type { IconName } from "@/components/icons";
 import { Input, InputField } from "@/components/input";
 import { LoadingButton } from "@/components/loading-button";
-import { Modal, ModalBackdrop, ModalBody, ModalCloseButton, ModalContent, ModalFooter, ModalHeader } from "@/components/modal";
 import { Pressable } from "@/components/pressable";
 import { Screen } from "@/components/screen";
 import { HStack, Stack } from "@/components/stack";
 import { Text } from "@/components/text";
 import { useToast } from "@/contexts/toast-context";
 import { spacing } from "@/theme";
-import { describeSet } from "../format";
-import { libraryExercise } from "../library";
+import { errorMessage } from "@/utils/error-message";
+import { SetRow } from "../components/set-row";
+import { describeSet, timeLabel } from "../format";
+import { useHasEnded } from "../hooks/use-has-ended";
+import { exerciseName, libraryExercise } from "../library";
 import { useLogbook } from "../logbook-provider";
-
-const errorMessage = (err: unknown) => (err instanceof Error ? err.message : "Something went wrong");
 
 export default function WorkoutView() {
   const { workout, discard } = useLogbook();
   const { showToast } = useToast();
   const [confirmingDiscard, setConfirmingDiscard] = useState(false);
+  const hasEnded = useHasEnded(workout);
 
+  // Finished or discarded: blank until the navigation away lands
+  if (hasEnded) return <Screen edges={["bottom"]}>{null}</Screen>;
   if (!workout) {
     return (
       <Screen edges={["bottom"]}>
@@ -36,10 +39,7 @@ export default function WorkoutView() {
   return (
     <Screen scroll edges={["bottom"]}>
       <Stack spacing={4} flex>
-        <Text color="textMuted">
-          Started{" "}
-          {new Date(workout.startedAt).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}
-        </Text>
+        <Text color="textMuted">Started {timeLabel(workout.startedAt)}</Text>
         {workout.workoutExercises.map((workoutExercise, i) => (
           <WorkoutExerciseCard
             key={workoutExercise.id}
@@ -65,7 +65,7 @@ export default function WorkoutView() {
       </Stack>
       <ConfirmModal
         isOpen={confirmingDiscard}
-        title="Discard workout?"
+        title="Discard Workout?"
         message="Everything you've logged in this Workout will be deleted. This can't be undone."
         confirmLabel="Discard"
         onCancel={() => setConfirmingDiscard(false)}
@@ -80,52 +80,6 @@ export default function WorkoutView() {
         }}
       />
     </Screen>
-  );
-}
-
-// Asks before a change that throws logged Sets away
-function ConfirmModal({
-  isOpen,
-  title,
-  message,
-  confirmLabel,
-  onCancel,
-  onConfirm,
-}: {
-  isOpen: boolean;
-  title: string;
-  message: string;
-  confirmLabel: string;
-  onCancel: () => void;
-  onConfirm: () => Promise<void>;
-}) {
-  const [confirming, setConfirming] = useState(false);
-  const handleConfirm = async () => {
-    setConfirming(true);
-    try {
-      await onConfirm();
-    } finally {
-      setConfirming(false);
-    }
-  };
-
-  return (
-    <Modal isOpen={isOpen} onClose={onCancel}>
-      <ModalBackdrop />
-      <ModalContent>
-        <ModalHeader>
-          <Heading size="md">{title}</Heading>
-          <ModalCloseButton />
-        </ModalHeader>
-        <ModalBody>
-          <Text color="textMuted">{message}</Text>
-        </ModalBody>
-        <ModalFooter>
-          <LoadingButton label="Cancel" size="sm" action="default" onPress={onCancel} />
-          <LoadingButton label={confirmLabel} size="sm" action="negative" loading={confirming} onPress={handleConfirm} />
-        </ModalFooter>
-      </ModalContent>
-    </Modal>
   );
 }
 
@@ -171,7 +125,7 @@ function WorkoutExerciseCard({
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
   const [confirmingRemove, setConfirmingRemove] = useState(false);
   const exercise = libraryExercise(workoutExercise.slug);
-  const name = exercise?.name ?? workoutExercise.slug;
+  const name = exerciseName(workoutExercise.slug);
   const perSide = exercise?.unilateral ? " per side" : "";
   const { id, loadType, sets } = workoutExercise;
   const editingSet = editingIndex === null ? undefined : sets[editingIndex];
@@ -223,15 +177,7 @@ function WorkoutExerciseCard({
             accessibilityRole="button"
             accessibilityLabel={`Set ${i + 1}, ${describeSet(set)}${perSide}. Edit`}
           >
-            <HStack spacing={3}>
-              <Text weight="semiBold" color={editingIndex === i ? "orange" : "textSubtle"}>
-                {i + 1}
-              </Text>
-              <Text>
-                {describeSet(set)}
-                {perSide}
-              </Text>
-            </HStack>
+            <SetRow set={set} index={i} unilateral={exercise?.unilateral} highlighted={editingIndex === i} />
           </Pressable>
         ))}
         {editingSet && editingIndex !== null ? (

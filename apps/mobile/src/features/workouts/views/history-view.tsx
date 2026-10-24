@@ -16,20 +16,15 @@ import { useToast } from "@/contexts/toast-context";
 import { spacing } from "@/theme";
 import { dateLabel, durationLabel } from "../format";
 import { useHistory } from "../history-provider";
-import { libraryExercise } from "../library";
+import { exerciseName } from "../library";
 import { useLogbook } from "../logbook-provider";
 
-// An Exercise this app version doesn't know shows as its slug
-const exerciseNames = (workout: Workout) =>
-  workout.workoutExercises
-    .map(({ slug }) => libraryExercise(slug)?.name ?? slug)
-    .join(", ");
+const exerciseNames = (workout: Workout) => workout.workoutExercises.map(({ slug }) => exerciseName(slug)).join(", ");
 
 type Row = { workout: Workout; isPending: boolean };
 
 export default function HistoryView() {
-  const { workouts, error, isLoading, isLoadingMore, refresh, loadMore } =
-    useHistory();
+  const { workouts, error, isLoading, isLoadingMore, refresh, loadMore } = useHistory();
   const { pending } = useLogbook();
 
   // Reload on every visit, so a Workout just finished shows at the top
@@ -46,17 +41,14 @@ export default function HistoryView() {
     pendingCount.current = pending.length;
   }, [pending.length, refresh]);
 
-  if (isLoading && !pending.length)
-    return <Loading message="Loading history..." />;
+  if (isLoading && !pending.length) return <Loading message="Loading History..." />;
 
   // Pending Workouts on top, newest first; a Workout the server already has shows once
   const pendingIds = new Set(pending.map((w) => w.id));
   const isOffline = !workouts && !!error;
   const rows: Row[] = [
     ...[...pending].reverse().map((workout) => ({ workout, isPending: true })),
-    ...(workouts ?? [])
-      .filter((w) => !pendingIds.has(w.id))
-      .map((workout) => ({ workout, isPending: false })),
+    ...(workouts ?? []).filter((w) => !pendingIds.has(w.id)).map((workout) => ({ workout, isPending: false })),
   ];
 
   return (
@@ -70,10 +62,7 @@ export default function HistoryView() {
         ListHeaderComponent={
           isOffline ? (
             <Alert action="muted">
-              <AlertText>
-                Showing only workouts on this phone. The rest of your history
-                needs a connection.
-              </AlertText>
+              <AlertText>Showing only Workouts on this phone. The rest of your History needs a connection.</AlertText>
             </Alert>
           ) : error ? (
             <Text color="danger">{error}</Text>
@@ -84,7 +73,7 @@ export default function HistoryView() {
         ListEmptyComponent={
           error || isLoading ? null : (
             <Text color="textMuted" centered style={{ marginTop: spacing[6] }}>
-              No workouts yet. Finished workouts show up here.
+              No Workouts yet. Finished Workouts show up here.
             </Text>
           )
         }
@@ -97,9 +86,7 @@ function WorkoutCard({ workout, isPending }: Row) {
   return (
     <Pressable
       accessibilityRole="button"
-      onPress={() =>
-        router.push({ pathname: "/history/[id]", params: { id: workout.id } })
-      }
+      onPress={() => router.push({ pathname: "/history/[id]", params: { id: workout.id } })}
     >
       <Card size="sm">
         <HStack justify="between" spacing={4}>
@@ -127,7 +114,7 @@ function PendingActions({ workoutId }: { workoutId: string }) {
     try {
       await deletePending(workoutId);
     } catch (err) {
-      showToast("Couldn't delete the workout", { error: err });
+      showToast("Couldn't delete the Workout", { error: err });
     }
   };
 
@@ -138,12 +125,7 @@ function PendingActions({ workoutId }: { workoutId: string }) {
       </Badge>
       {confirming ? (
         <HStack spacing={2}>
-          <Button
-            size="xs"
-            action="default"
-            variant="outline"
-            onPress={() => setConfirming(false)}
-          >
+          <Button size="xs" action="default" variant="outline" onPress={() => setConfirming(false)}>
             <ButtonText>Keep</ButtonText>
           </Button>
           <Button size="xs" action="negative" onPress={handleDelete}>
@@ -151,12 +133,7 @@ function PendingActions({ workoutId }: { workoutId: string }) {
           </Button>
         </HStack>
       ) : (
-        <Button
-          size="xs"
-          action="negative"
-          variant="link"
-          onPress={() => setConfirming(true)}
-        >
+        <Button size="xs" action="negative" variant="link" onPress={() => setConfirming(true)}>
           <ButtonText>Delete</ButtonText>
         </Button>
       )}

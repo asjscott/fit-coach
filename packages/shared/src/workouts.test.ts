@@ -71,4 +71,17 @@ describe("WorkoutsQuery", () => {
   it("rejects a before cursor that isn't a datetime", () => {
     expect(WorkoutsQuery.safeParse({ before: "yesterday" }).success).toBe(false);
   });
+
+  it("reads the id of the last Workout received alongside before, to break start-time ties", () => {
+    const query = { before: "2026-10-24T09:00:00.000Z", beforeId: "3b241101-e2bb-4255-8caf-4136c566a962" };
+    expect(WorkoutsQuery.parse(query)).toEqual({ limit: 20, ...query });
+  });
+
+  it("rejects a beforeId without before", () => {
+    expect(WorkoutsQuery.safeParse({ beforeId: "3b241101-e2bb-4255-8caf-4136c566a962" }).success).toBe(false);
+  });
+
+  it("rejects a beforeId that isn't a Workout id", () => {
+    expect(WorkoutsQuery.safeParse({ before: "2026-10-24T09:00:00.000Z", beforeId: "nope" }).success).toBe(false);
+  });
 });

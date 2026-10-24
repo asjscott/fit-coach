@@ -90,7 +90,7 @@ export default function ExercisePickerView() {
         )}
         ListEmptyComponent={
           <Text color="textMuted" centered style={{ marginTop: spacing[6] }}>
-            No exercises match “{query.trim()}”.
+            No Exercises match “{query.trim()}”.
           </Text>
         }
       />

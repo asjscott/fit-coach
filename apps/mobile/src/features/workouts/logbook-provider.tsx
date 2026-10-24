@@ -1,11 +1,10 @@
-import { createLogbook, type FinishResult, type Logbook } from "@fit/engines";
+import { createLogbook, type FinishResult, type Logbook, type WorkoutTimes } from "@fit/engines";
 import type { Exercise, InProgressWorkout, InProgressWorkoutExercise, SetValues, Workout } from "@fit/shared";
 import * as Crypto from "expo-crypto";
-import * as Network from "expo-network";
 import Storage from "expo-sqlite/kv-store";
 import { createContext, use, useCallback, useEffect, useState, type ReactNode } from "react";
-import { AppState } from "react-native";
 import { useApi } from "@/api";
+import { useSyncTriggers } from "./hooks/use-sync-triggers";
 
 type LogbookContextValue = {
   // null when no Workout is in progress
@@ -21,11 +20,10 @@ type LogbookContextValue = {
   deleteSet: (workoutExerciseId: string, setIndex: number) => Promise<void>;
   // The values a new Set starts with: the last Set's, or null for the first
   nextSetDraft: (workoutExercise: InProgressWorkoutExercise) => SetValues | null;
-  // Ends the Workout with these times and tries to upload it. Resolves to whether the
-  // server has it (if not, it stays on the phone as a Pending Workout), or to
-  // "nothing-to-save" with no Sets, leaving the Workout in progress to be discarded.
-  // Rejects with a LogbookError for invalid times
-  finish: (times: { startedAt: Date; endedAt: Date }) => Promise<FinishOutcome>;
+  // Ends the Workout with these times, resolving as soon as it is a Pending Workout, then
+  // tries to upload it (see FinishOutcome). Resolves to "nothing-to-save" with no Sets,
+  // leaving the Workout in progress to be discarded. Rejects with a LogbookError for invalid times
+  finish: (times: WorkoutTimes) => Promise<FinishOutcome>;
   // For a forgotten Workout: finishes with the last Set's time as the end
   finishAtLastSet: () => Promise<FinishOutcome>;
   discard: () => Promise<void>;
@@ -33,13 +31,17 @@ type LogbookContextValue = {
   isStale: () => Promise<boolean>;
   // Finished Workouts still on the phone, waiting to upload; oldest first
   pending: Workout[];
+  // How many Pending Workouts signing out now would lose, read from the phone
+  pendingCount: () => Promise<number>;
   // Removes a Pending Workout so it never uploads; works offline
   deletePending: (workoutId: string) => Promise<void>;
   // For signing out: removes the in-progress and Pending Workouts from the phone
   clear: () => Promise<void>;
 };
 
-export type FinishOutcome = { status: "pending"; uploaded: boolean } | { status: "nothing-to-save" };
+// uploaded settles once the upload attempt does: true when the server has this Workout,
+// false when it stays on the phone as a Pending Workout for the next try
+export type FinishOutcome = { status: "pending"; uploaded: Promise<boolean> } | { status: "nothing-to-save" };
 
 const LogbookContext = createContext<LogbookContextValue | null>(null);
 
@@ -93,21 +95,7 @@ export function LogbookProvider({ children }: { children: ReactNode }) {
     sync();
   }, [logbook, refreshPending, sync]);
 
-  // Syncs when the app returns to the foreground and when the network comes back
-  useEffect(() => {
-    const appState = AppState.addEventListener("change", (state) => {
-      if (state === "active") sync();
-    });
-    let wasConnected: boolean | undefined;
-    const network = Network.addNetworkStateListener(({ isConnected }) => {
-      if (isConnected && wasConnected === false) sync();
-      wasConnected = isConnected;
-    });
-    return () => {
-      appState.remove();
-      network.remove();
-    };
-  }, [sync]);
+  useSyncTriggers(sync);
 
   const start = useCallback(() => run(() => logbook.start(new Date())), [logbook, run]);
 
@@ -142,8 +130,9 @@ export function LogbookProvider({ children }: { children: ReactNode }) {
     [logbook, run],
   );
 
-  // Uploads straight after finishing, so a Workout finished with signal reaches the server now.
-  // Uploaded means this Workout left the phone, whatever happened to other Pending Workouts
+  // Starts uploading straight after finishing, so a Workout finished with signal reaches the
+  // server now, without making the user wait for it. Uploaded means this Workout left the
+  // phone, whatever happened to other Pending Workouts
   const uploadFinished = useCallback(
     async (finishing: () => Promise<FinishResult>): Promise<FinishOutcome> => {
       let result: FinishResult | undefined;
@@ -152,15 +141,14 @@ export function LogbookProvider({ children }: { children: ReactNode }) {
       });
       if (!result || result.status === "nothing-to-save") return { status: "nothing-to-save" };
       const { id } = result.workout;
-      await sync();
-      const stillPending = (await logbook.pending()).some((p) => p.id === id);
-      return { status: "pending", uploaded: !stillPending };
+      const uploaded = sync().then(async () => !(await logbook.pending()).some((p) => p.id === id));
+      return { status: "pending", uploaded };
     },
     [logbook, run, sync],
   );
 
   const finish = useCallback(
-    ({ startedAt, endedAt }: { startedAt: Date; endedAt: Date }) =>
+    ({ startedAt, endedAt }: WorkoutTimes) =>
       uploadFinished(() => logbook.finish({ startedAt, endedAt, now: new Date() })),
     [logbook, uploadFinished],
   );
@@ -172,6 +160,8 @@ export function LogbookProvider({ children }: { children: ReactNode }) {
   const isStale = useCallback(() => logbook.isStale(new Date()), [logbook]);
 
   const deletePending = useCallback((workoutId: string) => run(() => logbook.deletePending(workoutId)), [logbook, run]);
+
+  const pendingCount = useCallback(() => logbook.pendingCount(), [logbook]);
 
   const clear = useCallback(() => run(() => logbook.clear()), [logbook, run]);
 
@@ -193,11 +183,11 @@ export function LogbookProvider({ children }: { children: ReactNode }) {
         discard,
         isStale,
         pending,
+        pendingCount,
         deletePending,
         clear,
       }}
     >
-
       {children}
     </LogbookContext>
   );

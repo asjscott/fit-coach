@@ -8,6 +8,7 @@ import { LoadingButton } from "@/components/loading-button";
 import { Screen } from "@/components/screen";
 import { Stack } from "@/components/stack";
 import { Text } from "@/components/text";
+import { errorMessage } from "@/utils/error-message";
 
 export default function SignInScreen() {
   const clerk = useClerk();
@@ -25,7 +26,7 @@ export default function SignInScreen() {
       }
       await startHostedAuth({ mode });
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Something went wrong");
+      setError(errorMessage(err));
     }
   };
 

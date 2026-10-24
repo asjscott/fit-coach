@@ -19,6 +19,9 @@ export type WorkoutUploader = {
   upload(workout: Workout): Promise<void>;
 };
 
+// When a Workout started and ended, as the user confirms them on finishing
+export type WorkoutTimes = { startedAt: Date; endedAt: Date };
+
 export type FinishResult = { status: "pending"; workout: Workout } | { status: "nothing-to-save" };
 
 // A change the Logbook refused; the message is fit to show the user
@@ -100,7 +103,7 @@ export function createLogbook({
 
   async function finishAs(
     { id, workoutExercises }: InProgressWorkout,
-    { startedAt, endedAt, now }: { startedAt: Date; endedAt: Date; now: Date },
+    { startedAt, endedAt, now }: WorkoutTimes & { now: Date },
   ): Promise<FinishResult> {
     const withSets = workoutExercises.filter(({ sets }) => sets.length > 0);
     if (withSets.length === 0) return { status: "nothing-to-save" };
@@ -215,7 +218,7 @@ export function createLogbook({
     // Turns the in-progress Workout into a Pending Workout; sync() uploads it. Workout
     // Exercises with no Sets are dropped; with no Sets at all there is nothing to save,
     // and the Workout stays in progress for the user to confirm a discard
-    finish: ({ startedAt, endedAt, now }: { startedAt: Date; endedAt: Date; now: Date }) =>
+    finish: ({ startedAt, endedAt, now }: WorkoutTimes & { now: Date }) =>
       serially(async () => finishAs(await readOrThrow(), { startedAt, endedAt, now })),
 
     // For a forgotten Workout: finishes with the last Set's time as the end
@@ -229,6 +232,9 @@ export function createLogbook({
 
     // The finished Workouts still waiting to upload, oldest first
     pending: () => serially(readPending),
+
+    // How many finished Workouts haven't uploaded yet: what signing out now would lose
+    pendingCount: () => serially(async () => (await readPending()).length),
 
     // Removes a Pending Workout from the phone so it never uploads. A Workout already
     // uploading when this is called may still reach the server
