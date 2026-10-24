@@ -1,8 +1,7 @@
 import { Exercise } from "@fit/shared";
 import { useEffect, useState } from "react";
 import { ApiError, useApi } from "@/api";
-
-const errorMessage = (err: unknown) => (err instanceof Error ? err.message : "Something went wrong");
+import { errorMessage } from "@/utils/error-message";
 
 // The whole exercise library, loaded once per mount
 export function useExercises() {

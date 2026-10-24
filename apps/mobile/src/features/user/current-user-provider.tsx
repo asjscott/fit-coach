@@ -2,6 +2,7 @@ import { useAuth } from "@clerk/expo";
 import { User, type EquipmentProfileInput, type UserUpdate } from "@fit/shared";
 import { createContext, use, useCallback, useEffect, useState, type ReactNode } from "react";
 import { ApiError, useApi } from "@/api";
+import { errorMessage } from "@/utils/error-message";
 
 type CurrentUserContextValue = {
   // null until loaded, and while signed out
@@ -14,8 +15,6 @@ type CurrentUserContextValue = {
 };
 
 const CurrentUserContext = createContext<CurrentUserContextValue | null>(null);
-
-const errorMessage = (err: unknown) => (err instanceof Error ? err.message : "Something went wrong");
 
 // Loads the signed-in user's record once and shares it with every screen
 export function CurrentUserProvider({ children }: { children: ReactNode }) {

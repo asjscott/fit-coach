@@ -10,7 +10,9 @@ import { Text } from "@/components/text";
 import { useToast } from "@/contexts/toast-context";
 import { spacing } from "@/theme";
 import { NothingToSaveModal } from "../components/nothing-to-save-modal";
+import { useHasEnded } from "../hooks/use-has-ended";
 import { useLogbook, type FinishOutcome } from "../logbook-provider";
+import { toastWhenUploaded } from "../upload-toast";
 
 const pad = (n: number) => String(n).padStart(2, "0");
 
@@ -54,7 +56,10 @@ export default function FinishView() {
   const [errors, setErrors] = useState<{ start?: string; end?: string }>({});
   const [finishing, setFinishing] = useState(false);
   const [confirmingDiscard, setConfirmingDiscard] = useState(false);
+  const hasEnded = useHasEnded(workout);
 
+  // Finished: blank until the navigation back home lands
+  if (hasEnded) return <Screen edges={["bottom"]}>{null}</Screen>;
   if (!workout) {
     return (
       <Screen edges={["bottom"]}>
@@ -73,9 +78,7 @@ export default function FinishView() {
       setConfirmingDiscard(true);
       return;
     }
-    showToast(outcome.uploaded ? "Workout saved" : "Saved on your phone; it will upload when you have signal", {
-      type: outcome.uploaded ? "success" : "info",
-    });
+    toastWhenUploaded(showToast, outcome.uploaded);
     router.dismissTo("/");
   };
 

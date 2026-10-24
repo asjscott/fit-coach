@@ -1,11 +1,9 @@
 import { Workout } from "@fit/shared";
 import { useCallback, useRef, useState } from "react";
 import { useApi } from "@/api";
+import { errorMessage } from "@/utils/error-message";
 
 const PAGE_SIZE = 20;
-
-const errorMessage = (err: unknown) =>
-  err instanceof Error ? err.message : "Something went wrong";
 
 // The user's uploaded Workouts from the server, newest first, a page at a time.
 // Nothing is stored on the phone (ADR 0001). Use it through HistoryProvider, so the
@@ -20,10 +18,14 @@ export function useHistoryState() {
   const generation = useRef(0);
   const loadingMore = useRef(false);
 
+  // The page after the given Workout, or the newest page
   const fetchPage = useCallback(
-    async (before?: string) => {
+    async (after?: Workout) => {
       const query = new URLSearchParams({ limit: String(PAGE_SIZE) });
-      if (before) query.set("before", before);
+      if (after) {
+        query.set("before", after.startedAt);
+        query.set("beforeId", after.id);
+      }
       const page = Workout.array().parse(await api(`/workouts?${query}`));
       return { page, hasMore: page.length === PAGE_SIZE };
     },
@@ -53,7 +55,7 @@ export function useHistoryState() {
     loadingMore.current = true;
     setIsLoadingMore(true);
     try {
-      const result = await fetchPage(workouts[workouts.length - 1].startedAt);
+      const result = await fetchPage(workouts[workouts.length - 1]);
       if (current !== generation.current) return;
       setWorkouts([...workouts, ...result.page]);
       setHasMore(result.hasMore);
@@ -70,21 +72,11 @@ export function useHistoryState() {
   const deleteWorkout = useCallback(
     async (id: string) => {
       await api(`/workouts/${encodeURIComponent(id)}`, { method: "DELETE" });
-      setWorkouts(
-        (current) => current?.filter((workout) => workout.id !== id) ?? null,
-      );
+      setWorkouts((current) => current?.filter((workout) => workout.id !== id) ?? null);
     },
     [api],
   );
 
   // workouts is null while loading, and after the newest page failed to load (offline)
-  return {
-    workouts,
-    error,
-    isLoading: !workouts && !error,
-    isLoadingMore,
-    refresh,
-    loadMore,
-    deleteWorkout,
-  };
+  return { workouts, error, isLoading: !workouts && !error, isLoadingMore, refresh, loadMore, deleteWorkout };
 }

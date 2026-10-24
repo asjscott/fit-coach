@@ -29,7 +29,8 @@ export default function Home() {
   const [status, setStatus] = useState("Checking API…");
   const [starting, setStarting] = useState(false);
   const [forgotten, setForgotten] = useState(false);
-  const [confirmingSignOut, setConfirmingSignOut] = useState(false);
+  // What signing out would lose, while the user confirms; null when not asking
+  const [signOutWarningText, setSignOutWarningText] = useState<string | null>(null);
   const { isLoaded, isStale } = logbook;
 
   // A forgotten Workout must be finished or discarded before the user carries on
@@ -49,7 +50,7 @@ export default function Home() {
       try {
         await logbook.start();
       } catch (err) {
-        showToast("Couldn't start a workout", { error: err });
+        showToast("Couldn't start a Workout", { error: err });
         return;
       } finally {
         setStarting(false);
@@ -67,15 +68,21 @@ export default function Home() {
       showToast("Couldn't sign out", { error: err });
       return;
     }
-    setConfirmingSignOut(false);
+    setSignOutWarningText(null);
     await signOut();
   };
 
-  const signOutWarningText = signOutWarning(logbook.pending.length, logbook.workout !== null);
-
-  const handleSignOut = () => {
-    if (signOutWarningText) setConfirmingSignOut(true);
-    else signOutAndClear();
+  // Counts the Pending Workouts on the phone now, so the warning is never out of date
+  const handleSignOut = async () => {
+    let warning: string | null;
+    try {
+      warning = signOutWarning(await logbook.pendingCount(), logbook.workout !== null);
+    } catch (err) {
+      showToast("Couldn't sign out", { error: err });
+      return;
+    }
+    if (warning) setSignOutWarningText(warning);
+    else await signOutAndClear();
   };
 
   useEffect(() => {
@@ -144,9 +151,9 @@ export default function Home() {
       </ButtonGroup>
       <ForgottenWorkoutModal isOpen={forgotten} onDone={() => setForgotten(false)} />
       <SignOutModal
-        isOpen={confirmingSignOut && signOutWarningText !== null}
+        isOpen={signOutWarningText !== null}
         warning={signOutWarningText ?? ""}
-        onClose={() => setConfirmingSignOut(false)}
+        onClose={() => setSignOutWarningText(null)}
         onConfirm={signOutAndClear}
       />
     </Screen>
