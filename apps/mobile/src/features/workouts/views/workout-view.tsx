@@ -20,9 +20,8 @@ import { useLogbook } from "../logbook-provider";
 const errorMessage = (err: unknown) => (err instanceof Error ? err.message : "Something went wrong");
 
 export default function WorkoutView() {
-  const { workout, finish, discard } = useLogbook();
+  const { workout, discard } = useLogbook();
   const { showToast } = useToast();
-  const [finishing, setFinishing] = useState(false);
   const [confirmingDiscard, setConfirmingDiscard] = useState(false);
 
   if (!workout) {
@@ -32,23 +31,6 @@ export default function WorkoutView() {
       </Screen>
     );
   }
-
-  const hasSets = workout.workoutExercises.some((we) => we.sets.length > 0);
-
-  const handleFinish = async () => {
-    setFinishing(true);
-    try {
-      const { uploaded } = await finish();
-      showToast(uploaded ? "Workout saved" : "Saved on your phone; it will upload when you have signal", {
-        type: uploaded ? "success" : "info",
-      });
-      router.back();
-    } catch (err) {
-      showToast(`Couldn't finish: ${errorMessage(err)}`, { error: err });
-    } finally {
-      setFinishing(false);
-    }
-  };
 
   return (
     <Screen scroll edges={["bottom"]}>
@@ -71,7 +53,7 @@ export default function WorkoutView() {
       </Stack>
       <Stack spacing={2} style={{ marginTop: spacing[6] }}>
         <LoadingButton label="Add exercise" action="secondary" icon="plus" href="/workout/add-exercise" />
-        <LoadingButton label="Finish" icon="check" loading={finishing} disabled={!hasSets} onPress={handleFinish} />
+        <LoadingButton label="Finish" icon="check" href="/workout/finish" />
         <LoadingButton
           label="Discard workout"
           action="negative"

@@ -28,6 +28,7 @@ export default function AppLayout() {
         <Stack.Screen name="exercises/[slug]" options={{ title: "" }} />
         <Stack.Screen name="workout/index" options={{ title: "Workout" }} />
         <Stack.Screen name="workout/add-exercise" options={{ title: "Add exercise", presentation: "modal" }} />
+        <Stack.Screen name="workout/finish" options={{ title: "Finish workout" }} />
         <Stack.Screen name="history/index" options={{ title: "History" }} />
         <Stack.Screen name="styleguide" options={{ title: "Components" }} />
       </Stack>

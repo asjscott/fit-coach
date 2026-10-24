@@ -19,6 +19,8 @@ export type WorkoutUploader = {
   upload(workout: Workout): Promise<void>;
 };
 
+export type FinishResult = { status: "pending"; workout: Workout } | { status: "nothing-to-save" };
+
 // A change the Logbook refused; the message is fit to show the user
 export class LogbookError extends Error {}
 
@@ -26,6 +28,15 @@ function parseOrThrow<T>(schema: z.ZodType<T>, value: unknown): T {
   const parsed = schema.safeParse(value);
   if (!parsed.success) throw new LogbookError(parsed.error.issues[0].message);
   return parsed.data;
+}
+
+// A Workout left this long after its last Set was probably forgotten, not still going
+const STALE_AFTER_MS = 3 * 60 * 60 * 1000;
+
+// When the most recently logged Set was logged, or null with no Sets
+function lastSetAt(workout: InProgressWorkout): Date | null {
+  const times = workout.workoutExercises.flatMap((we) => we.sets.map((set) => Date.parse(set.loggedAt)));
+  return times.length === 0 ? null : new Date(Math.max(...times));
 }
 
 const IN_PROGRESS_KEY = "logbook:in-progress";
@@ -87,6 +98,24 @@ export function createLogbook({
     return set;
   }
 
+  async function finishAs(
+    { id, workoutExercises }: InProgressWorkout,
+    { startedAt, endedAt, now }: { startedAt: Date; endedAt: Date; now: Date },
+  ): Promise<FinishResult> {
+    const withSets = workoutExercises.filter(({ sets }) => sets.length > 0);
+    if (withSets.length === 0) return { status: "nothing-to-save" };
+    if (endedAt > now) throw new LogbookError("The end can't be in the future");
+    const workout = parseOrThrow(Workout, {
+      id,
+      startedAt: startedAt.toISOString(),
+      endedAt: endedAt.toISOString(),
+      workoutExercises: withSets.map(({ slug, loadType, sets }) => ({ slug, loadType, sets })),
+    });
+    await writePending([...(await readPending()), workout]);
+    await storage.removeItem(IN_PROGRESS_KEY);
+    return { status: "pending", workout };
+  }
+
   return {
     inProgress: () => serially(read),
 
@@ -98,8 +127,18 @@ export function createLogbook({
         return workout;
       }),
 
-    // Throws the in-progress Workout away; it never becomes a Pending Workout
+    // Throws the in-progress Workout away; nothing reaches History
     discard: () => serially(() => storage.removeItem(IN_PROGRESS_KEY)),
+
+    // True when the in-progress Workout was probably forgotten: more than 3 hours since
+    // its last Set, or since the start if it has none
+    isStale: (now: Date) =>
+      serially(async () => {
+        const workout = await read();
+        if (!workout) return false;
+        const since = lastSetAt(workout) ?? new Date(workout.startedAt);
+        return now.getTime() - since.getTime() > STALE_AFTER_MS;
+      }),
 
     // Snapshots the Exercise's Load Type so Sets can be checked without the library
     addWorkoutExercise: (exercise: Pick<Exercise, "slug" | "loadType">) =>
@@ -173,19 +212,19 @@ export function createLogbook({
       return Object.fromEntries(Object.entries(last).filter(([key]) => key !== "loggedAt")) as SetValues;
     },
 
-    // Turns the in-progress Workout into a Pending Workout; sync() uploads it
-    finish: ({ startedAt, endedAt }: { startedAt: Date; endedAt: Date }) =>
-      serially(async () => {
-        const { id, workoutExercises } = await readOrThrow();
-        const workout = parseOrThrow(Workout, {
-          id,
-          startedAt: startedAt.toISOString(),
-          endedAt: endedAt.toISOString(),
-          workoutExercises: workoutExercises.map(({ slug, loadType, sets }) => ({ slug, loadType, sets })),
-        });
-        await writePending([...(await readPending()), workout]);
-        await storage.removeItem(IN_PROGRESS_KEY);
-        return workout;
+    // Turns the in-progress Workout into a Pending Workout; sync() uploads it. Workout
+    // Exercises with no Sets are dropped; with no Sets at all there is nothing to save,
+    // and the Workout stays in progress for the user to confirm a discard
+    finish: ({ startedAt, endedAt, now }: { startedAt: Date; endedAt: Date; now: Date }) =>
+      serially(async () => finishAs(await readOrThrow(), { startedAt, endedAt, now })),
+
+    // For a forgotten Workout: finishes with the last Set's time as the end
+    finishAtLastSet: () =>
+      serially(async (): Promise<FinishResult> => {
+        const workout = await readOrThrow();
+        const endedAt = lastSetAt(workout);
+        if (!endedAt) return { status: "nothing-to-save" };
+        return finishAs(workout, { startedAt: new Date(workout.startedAt), endedAt, now: endedAt });
       }),
 
     // Uploads each Pending Workout, removing it from the phone only once the server has it.

@@ -42,7 +42,7 @@ describe("Logbook", () => {
     await logbook.logSet(squat.id, { kind: "external", kg: 22.5, reps: 8 }, at("09:08"));
     await logbook.logSet(plank.id, { kind: "timed", seconds: 45 }, at("09:12"));
 
-    await logbook.finish({ startedAt: at("09:00"), endedAt: at("09:30") });
+    await logbook.finish({ startedAt: at("09:00"), endedAt: at("09:30"), now: at("09:30") });
     await logbook.sync();
     await logbook.sync();
 
@@ -109,7 +109,7 @@ describe("Logbook", () => {
       throw new Error("No signal");
     };
 
-    await logbook.finish({ startedAt: at("09:00"), endedAt: at("09:10") });
+    await logbook.finish({ startedAt: at("09:00"), endedAt: at("09:10"), now: at("09:10") });
     await expect(logbook.sync()).rejects.toThrow("No signal");
 
     expect(await logbook.inProgress()).toBeNull();
@@ -119,17 +119,6 @@ describe("Logbook", () => {
     await rebuilt.logbook.sync();
     expect(rebuilt.uploader.uploaded).toHaveLength(1);
     expect(rebuilt.uploader.uploaded[0].workoutExercises[0].slug).toBe("plank");
-  });
-
-  it("refuses to finish a Workout with no Sets", async () => {
-    const { logbook, uploader } = setup();
-    await logbook.start(at("09:00"));
-    await logbook.addWorkoutExercise(exercise("plank"));
-
-    await expect(logbook.finish({ startedAt: at("09:00"), endedAt: at("09:10") })).rejects.toThrow();
-
-    expect(uploader.uploaded).toEqual([]);
-    expect(await logbook.inProgress()).not.toBeNull();
   });
 
   it("refuses a Set that doesn't match the Workout Exercise's Load Type", async () => {
@@ -150,6 +139,129 @@ describe("Logbook", () => {
     await expect(logbook.logSet(squat.id, { kind: "external", kg: 20.1, reps: 10 }, at("09:05"))).rejects.toThrow(
       new LogbookError("Use 0.25 kg steps"),
     );
+  });
+
+  describe("finishing", () => {
+    it("drops Workout Exercises with no Sets", async () => {
+      const { logbook, uploader } = setup();
+      await logbook.start(at("09:00"));
+      await logbook.addWorkoutExercise(exercise("push-up"));
+      const plank = await logbook.addWorkoutExercise(exercise("plank"));
+      await logbook.logSet(plank.id, { kind: "timed", seconds: 60 }, at("09:05"));
+
+      await logbook.finish({ startedAt: at("09:00"), endedAt: at("09:10"), now: at("09:10") });
+      await logbook.sync();
+
+      expect(uploader.uploaded[0].workoutExercises.map((we) => we.slug)).toEqual(["plank"]);
+    });
+
+    it("reports nothing to save when there are no Sets, and saves nothing", async () => {
+      const { logbook, uploader } = setup();
+      await logbook.start(at("09:00"));
+      await logbook.addWorkoutExercise(exercise("plank"));
+
+      const result = await logbook.finish({ startedAt: at("09:00"), endedAt: at("09:10"), now: at("09:10") });
+      await logbook.sync();
+
+      expect(result).toEqual({ status: "nothing-to-save" });
+      expect(uploader.uploaded).toEqual([]);
+      expect(await logbook.inProgress()).not.toBeNull();
+    });
+
+    it("keeps start and end times edited for a backfilled Workout", async () => {
+      const { logbook, uploader } = setup();
+      await logbook.start(at("09:00"));
+      const plank = await logbook.addWorkoutExercise(exercise("plank"));
+      await logbook.logSet(plank.id, { kind: "timed", seconds: 60 }, at("09:05"));
+
+      await logbook.finish({
+        startedAt: new Date("2026-10-23T18:00:00.000Z"),
+        endedAt: new Date("2026-10-23T18:45:00.000Z"),
+        now: at("09:10"),
+      });
+      await logbook.sync();
+
+      expect(uploader.uploaded[0]).toMatchObject({
+        startedAt: "2026-10-23T18:00:00.000Z",
+        endedAt: "2026-10-23T18:45:00.000Z",
+      });
+    });
+
+    it.each([
+      ["an end before the start", at("09:30"), at("09:00"), "The end must be after the start"],
+      ["an end in the future", at("09:00"), at("10:01"), "The end can't be in the future"],
+    ])("rejects %s and keeps the Workout in progress", async (_, startedAt, endedAt, message) => {
+      const { logbook, uploader } = setup();
+      await logbook.start(at("09:00"));
+      const plank = await logbook.addWorkoutExercise(exercise("plank"));
+      await logbook.logSet(plank.id, { kind: "timed", seconds: 60 }, at("09:05"));
+
+      await expect(logbook.finish({ startedAt, endedAt, now: at("10:00") })).rejects.toThrow(new LogbookError(message));
+      await logbook.sync();
+
+      expect(uploader.uploaded).toEqual([]);
+      expect(await logbook.inProgress()).not.toBeNull();
+    });
+  });
+
+  describe("forgotten Workouts", () => {
+    const after = (time: string, ms: number) => new Date(at(time).getTime() + ms);
+
+    it("is stale only once more than 3 hours have passed since the last Set", async () => {
+      const { logbook } = setup();
+      await logbook.start(at("09:00"));
+      const squat = await logbook.addWorkoutExercise(exercise("goblet-squat"));
+      const plank = await logbook.addWorkoutExercise(exercise("plank"));
+      await logbook.logSet(plank.id, { kind: "timed", seconds: 60 }, at("09:20"));
+      await logbook.logSet(squat.id, { kind: "external", kg: 20, reps: 10 }, at("09:10"));
+
+      expect(await logbook.isStale(at("12:20"))).toBe(false);
+      expect(await logbook.isStale(after("12:20", 1))).toBe(true);
+    });
+
+    it("measures from the start when there are no Sets", async () => {
+      const { logbook } = setup();
+      await logbook.start(at("09:00"));
+      await logbook.addWorkoutExercise(exercise("plank"));
+
+      expect(await logbook.isStale(at("12:00"))).toBe(false);
+      expect(await logbook.isStale(after("12:00", 1))).toBe(true);
+    });
+
+    it("finishes at the last Set, using its time as the end", async () => {
+      const { logbook, uploader } = setup();
+      await logbook.start(at("09:00"));
+      await logbook.addWorkoutExercise(exercise("push-up"));
+      const plank = await logbook.addWorkoutExercise(exercise("plank"));
+      await logbook.logSet(plank.id, { kind: "timed", seconds: 60 }, at("09:05"));
+      await logbook.logSet(plank.id, { kind: "timed", seconds: 45 }, at("09:40"));
+
+      const result = await logbook.finishAtLastSet();
+      await logbook.sync();
+
+      expect(result.status).toBe("pending");
+      expect(uploader.uploaded[0]).toMatchObject({
+        startedAt: "2026-10-24T09:00:00.000Z",
+        endedAt: "2026-10-24T09:40:00.000Z",
+        workoutExercises: [{ slug: "plank" }],
+      });
+      expect(await logbook.inProgress()).toBeNull();
+    });
+
+    it("has nothing to save when finishing at the last Set of a Workout with no Sets", async () => {
+      const { logbook, uploader } = setup();
+      await logbook.start(at("09:00"));
+
+      expect(await logbook.finishAtLastSet()).toEqual({ status: "nothing-to-save" });
+      await logbook.sync();
+      expect(uploader.uploaded).toEqual([]);
+    });
+
+    it("is never stale with no Workout in progress", async () => {
+      const { logbook } = setup();
+
+      expect(await logbook.isStale(at("23:00"))).toBe(false);
+    });
   });
 });
 
@@ -244,7 +356,7 @@ describe("Logbook: correcting the in-progress Workout", () => {
     ]);
 
     await rebuilt.logbook.moveWorkoutExercise(squat.id, 2);
-    await rebuilt.logbook.finish({ startedAt: at("09:00"), endedAt: at("09:30") });
+    await rebuilt.logbook.finish({ startedAt: at("09:00"), endedAt: at("09:30"), now: at("09:30") });
     await rebuilt.logbook.sync();
     expect(rebuilt.uploader.uploaded[0].workoutExercises.map((we) => we.slug)).toEqual([
       "plank",
