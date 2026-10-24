@@ -1,5 +1,5 @@
-import { createLogbook, type Logbook } from "@fit/engines";
-import type { Exercise, InProgressWorkout, SetValues } from "@fit/shared";
+import { createLogbook, type FinishResult, type Logbook } from "@fit/engines";
+import type { Exercise, InProgressWorkout, InProgressWorkoutExercise, SetValues } from "@fit/shared";
 import * as Crypto from "expo-crypto";
 import Storage from "expo-sqlite/kv-store";
 import { createContext, use, useCallback, useEffect, useState, type ReactNode } from "react";
@@ -12,11 +12,26 @@ type LogbookContextValue = {
   isLoaded: boolean;
   start: () => Promise<void>;
   addWorkoutExercise: (exercise: Pick<Exercise, "slug" | "loadType">) => Promise<void>;
+  removeWorkoutExercise: (workoutExerciseId: string) => Promise<void>;
+  moveWorkoutExercise: (workoutExerciseId: string, toIndex: number) => Promise<void>;
   logSet: (workoutExerciseId: string, values: SetValues) => Promise<void>;
-  // Ends the Workout now and tries to upload it. Resolves to whether the server has it;
-  // if not, it stays on the phone as a Pending Workout
-  finish: () => Promise<{ uploaded: boolean }>;
+  editSet: (workoutExerciseId: string, setIndex: number, values: SetValues) => Promise<void>;
+  deleteSet: (workoutExerciseId: string, setIndex: number) => Promise<void>;
+  // The values a new Set starts with: the last Set's, or null for the first
+  nextSetDraft: (workoutExercise: InProgressWorkoutExercise) => SetValues | null;
+  // Ends the Workout with these times and tries to upload it. Resolves to whether the
+  // server has it (if not, it stays on the phone as a Pending Workout), or to
+  // "nothing-to-save" with no Sets, leaving the Workout in progress to be discarded.
+  // Rejects with a LogbookError for invalid times
+  finish: (times: { startedAt: Date; endedAt: Date }) => Promise<FinishOutcome>;
+  // For a forgotten Workout: finishes with the last Set's time as the end
+  finishAtLastSet: () => Promise<FinishOutcome>;
+  discard: () => Promise<void>;
+  // Whether the in-progress Workout looks forgotten, so the user must finish or discard it
+  isStale: () => Promise<boolean>;
 };
+
+export type FinishOutcome = { status: "pending"; uploaded: boolean } | { status: "nothing-to-save" };
 
 const LogbookContext = createContext<LogbookContextValue | null>(null);
 
@@ -71,19 +86,78 @@ export function LogbookProvider({ children }: { children: ReactNode }) {
     [logbook, run],
   );
 
-  const finish = useCallback(async () => {
-    await run(async () => {
-      const current = await logbook.inProgress();
-      if (current) await logbook.finish({ startedAt: new Date(current.startedAt), endedAt: new Date() });
-    });
-    return logbook.sync().then(
-      () => ({ uploaded: true }),
-      () => ({ uploaded: false }),
-    );
-  }, [logbook, run]);
+  const removeWorkoutExercise = useCallback(
+    (workoutExerciseId: string) => run(() => logbook.removeWorkoutExercise(workoutExerciseId)),
+    [logbook, run],
+  );
+
+  const moveWorkoutExercise = useCallback(
+    (workoutExerciseId: string, toIndex: number) => run(() => logbook.moveWorkoutExercise(workoutExerciseId, toIndex)),
+    [logbook, run],
+  );
+
+  const editSet = useCallback(
+    (workoutExerciseId: string, setIndex: number, values: SetValues) =>
+      run(() => logbook.editSet(workoutExerciseId, setIndex, values)),
+    [logbook, run],
+  );
+
+  const deleteSet = useCallback(
+    (workoutExerciseId: string, setIndex: number) => run(() => logbook.deleteSet(workoutExerciseId, setIndex)),
+    [logbook, run],
+  );
+
+  // Uploads straight after finishing, so a Workout finished with signal reaches the server now
+  const uploadFinished = useCallback(
+    async (finishing: () => Promise<FinishResult>): Promise<FinishOutcome> => {
+      let result: FinishResult;
+      try {
+        result = await finishing();
+      } finally {
+        setWorkout(await logbook.inProgress());
+      }
+      if (result.status === "nothing-to-save") return result;
+      return logbook.sync().then(
+        () => ({ status: "pending", uploaded: true }),
+        () => ({ status: "pending", uploaded: false }),
+      );
+    },
+    [logbook],
+  );
+
+  const finish = useCallback(
+    ({ startedAt, endedAt }: { startedAt: Date; endedAt: Date }) =>
+      uploadFinished(() => logbook.finish({ startedAt, endedAt, now: new Date() })),
+    [logbook, uploadFinished],
+  );
+
+  const finishAtLastSet = useCallback(() => uploadFinished(() => logbook.finishAtLastSet()), [logbook, uploadFinished]);
+
+  const discard = useCallback(() => run(() => logbook.discard()), [logbook, run]);
+
+  const isStale = useCallback(() => logbook.isStale(new Date()), [logbook]);
 
   return (
-    <LogbookContext value={{ workout, isLoaded, start, addWorkoutExercise, logSet, finish }}>{children}</LogbookContext>
+    <LogbookContext
+      value={{
+        workout,
+        isLoaded,
+        start,
+        addWorkoutExercise,
+        removeWorkoutExercise,
+        moveWorkoutExercise,
+        logSet,
+        editSet,
+        deleteSet,
+        nextSetDraft: logbook.nextSetDraft,
+        finish,
+        finishAtLastSet,
+        discard,
+        isStale,
+      }}
+    >
+      {children}
+    </LogbookContext>
   );
 }
 
