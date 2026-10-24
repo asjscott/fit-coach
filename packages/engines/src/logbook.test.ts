@@ -497,6 +497,26 @@ describe("Logbook: correcting the in-progress Workout", () => {
 });
 
 describe("Logbook: signing out", () => {
+  it("reports how many Pending Workouts would be lost, counting down as they upload", async () => {
+    const { logbook, uploader } = setup();
+    const upload = uploader.upload;
+    uploader.upload = async () => {
+      throw new Error("No signal");
+    };
+    expect(await logbook.pendingCount()).toBe(0);
+    await finishPlank(logbook, "08:00");
+    await finishPlank(logbook, "09:00");
+    await logbook.start(at("10:00"));
+    expect(await logbook.pendingCount()).toBe(2);
+
+    await logbook.sync().catch(() => {});
+    expect(await logbook.pendingCount()).toBe(2);
+
+    uploader.upload = upload;
+    await logbook.sync();
+    expect(await logbook.pendingCount()).toBe(0);
+  });
+
   it("clears the in-progress and Pending Workouts from the phone, so none upload", async () => {
     const { logbook, uploader, storage } = setup();
     uploader.upload = async () => {

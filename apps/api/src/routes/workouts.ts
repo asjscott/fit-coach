@@ -11,8 +11,8 @@ export const workoutRoutes: FastifyPluginAsyncZod = async (app) => {
   // Every route in this file needs a signed-in user
   app.addHook("preHandler", requireAuth);
 
-  // History, newest first by start time. Pass the last startedAt received as before for
-  // the next page
+  // History, newest first by start time. Pass the last Workout's startedAt and id as
+  // before and beforeId for the next page
   app.get(
     "/workouts",
     { schema: { querystring: WorkoutsQuery, response: { 200: z.array(Workout) } } },
