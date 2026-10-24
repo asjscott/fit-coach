@@ -18,5 +18,8 @@ permissions:
     skills: true
   core-js:
     build: false
+  # Its postinstall only pre-downloads mongod, which it also fetches on first run (pnpm dev:local)
+  mongodb-memory-server:
+    build: false
   utf-8-validate:
     build: false
