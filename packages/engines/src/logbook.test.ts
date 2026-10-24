@@ -1,7 +1,7 @@
 import type { Workout } from "@fit/shared";
 import { describe, expect, it } from "vitest";
 import { EXERCISES } from "./data/exercises";
-import { createLogbook, LogbookError, type PhoneStorage } from "./logbook";
+import { createLogbook, LogbookError, type DeviceStorage } from "./logbook";
 
 const exercise = (slug: string) => {
   const found = EXERCISES.find((e) => e.slug === slug);
@@ -9,7 +9,7 @@ const exercise = (slug: string) => {
   return found;
 };
 
-function memoryStorage(): PhoneStorage {
+function memoryStorage(): DeviceStorage {
   const items = new Map<string, string>();
   return {
     getItem: async (key) => items.get(key) ?? null,

@@ -1,9 +1,9 @@
 import { createLogbook, type FinishResult, type Logbook, type WorkoutTimes } from "@fit/engines";
 import type { Exercise, InProgressWorkout, InProgressWorkoutExercise, SetValues, Workout } from "@fit/shared";
 import * as Crypto from "expo-crypto";
-import Storage from "expo-sqlite/kv-store";
 import { createContext, use, useCallback, useEffect, useState, type ReactNode } from "react";
 import { useApi } from "@/api";
+import { deviceStorage } from "./device-storage";
 import { useSyncTriggers } from "./hooks/use-sync-triggers";
 
 type LogbookContextValue = {
@@ -51,7 +51,7 @@ export function LogbookProvider({ children }: { children: ReactNode }) {
   const api = useApi();
   const [logbook] = useState<Logbook>(() =>
     createLogbook({
-      storage: Storage,
+      storage: deviceStorage,
       uploader: {
         upload: async (workout) => {
           await api("/workouts", { method: "POST", body: JSON.stringify(workout) });
