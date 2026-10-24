@@ -51,7 +51,6 @@
     "android": "expo start --android",
     "ios": "expo start --ios",
     "web": "expo start --web",
-    "lint": "expo lint",
     "typecheck": "tsc --noEmit",
     "start:prod-api": "EXPO_PUBLIC_API_URL=https://fit-coach-evn9.onrender.com expo start --clear"
   },
