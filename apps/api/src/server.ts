@@ -3,10 +3,12 @@ import Fastify from "fastify";
 import { serializerCompiler, validatorCompiler } from "fastify-type-provider-zod";
 import { exerciseRoutes } from "./routes/exercises";
 import { userRoutes } from "./routes/users";
+import { workoutRoutes } from "./routes/workouts";
 import { clerkPlugin } from "@clerk/fastify";
 import { HealthResponse } from "@fit/shared";
 import { pingDb } from "./db";
 import { ensureUserIndexes, migrateUsers } from "./users";
+import { ensureWorkoutIndexes } from "./workouts";
 
 const app = Fastify({ logger: true });
 
@@ -28,10 +30,15 @@ await ensureUserIndexes().catch((err) =>
   app.log.error(err, "Failed to create user indexes"),
 );
 
+await ensureWorkoutIndexes().catch((err) =>
+  app.log.error(err, "Failed to create workout indexes"),
+);
+
 await migrateUsers().catch((err) => app.log.error(err, "Failed to migrate users"));
 
 await app.register(userRoutes);
 await app.register(exerciseRoutes);
+await app.register(workoutRoutes);
 
 app.get("/health", async () => {
   return HealthResponse.parse({

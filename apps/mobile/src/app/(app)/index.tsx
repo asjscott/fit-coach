@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { HealthResponse } from "@fit/shared";
 import { useAuth } from "@clerk/expo";
+import { router } from "expo-router";
 import { ButtonGroup } from "@/components/button";
 import { Card } from "@/components/card";
 import { Heading } from "@/components/heading";
@@ -8,7 +9,9 @@ import { LoadingButton } from "@/components/loading-button";
 import { Screen } from "@/components/screen";
 import { HStack, Stack } from "@/components/stack";
 import { Text } from "@/components/text";
+import { useToast } from "@/contexts/toast-context";
 import { useCurrentUser } from "@/features/user/current-user-provider";
+import { useLogbook } from "@/features/workouts/logbook-provider";
 import { goalLabel } from "@/features/user/components/form/fields/user-goal-field";
 import { injuryLabel } from "@/features/user/components/form/fields/user-injuries-field";
 import { genderLabel } from "@/features/user/components/form/fields/user-gender-field";
@@ -19,7 +22,26 @@ export default function Home() {
   const { signOut } = useAuth();
   const { user } = useCurrentUser();
   const api = useApi();
+  const logbook = useLogbook();
+  const { showToast } = useToast();
   const [status, setStatus] = useState("Checking API…");
+  const [starting, setStarting] = useState(false);
+
+  // Resuming just opens the Workout; starting saves a new one on the phone first
+  const handleWorkout = async () => {
+    if (!logbook.workout) {
+      setStarting(true);
+      try {
+        await logbook.start();
+      } catch (err) {
+        showToast("Couldn't start a workout", { error: err });
+        return;
+      } finally {
+        setStarting(false);
+      }
+    }
+    router.push("/workout");
+  };
 
   useEffect(() => {
     api("/health")
@@ -71,7 +93,13 @@ export default function Home() {
         </Card>
       </Stack>
       <ButtonGroup space={2} style={{ marginTop: spacing[6] }}>
-        <LoadingButton label="Exercises" action="secondary" icon="dumbbell" href="/exercises" />
+        <LoadingButton
+          label={logbook.workout ? "Resume workout" : "Start workout"}
+          icon="dumbbell"
+          loading={!logbook.isLoaded || starting}
+          onPress={handleWorkout}
+        />
+        <LoadingButton label="Exercises" action="secondary" icon="search" href="/exercises" />
         <LoadingButton label="Edit profile" action="secondary" icon="user" href="/onboarding" />
         {__DEV__ && (
           <LoadingButton label="Components" action="secondary" icon="settings" href="/styleguide" />
