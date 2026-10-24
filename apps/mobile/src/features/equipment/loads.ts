@@ -9,7 +9,10 @@ export const bandTags = ["loop_bands", "mini_bands", "tube_bands"] as const sati
 export const hasLoadTags = (tags: EquipmentTag[]) => loadTags.some((tag) => tags.includes(tag));
 
 // Common sizes offered in the dropdowns
-export const dumbbellWeightsKg = [1, 2, 2.5, 3, 4, 5, 6, 7, 7.5, 8, 9, 10, 12, 12.5, 14, 15, 16, 17.5, 18, 20, 22, 22.5, 24, 25, 26, 27.5, 28, 30, 32, 32.5, 34, 35, 36, 37.5, 40, 45, 50];
+export const dumbbellWeightsKg = [
+  1, 2, 2.5, 3, 4, 5, 6, 7, 7.5, 8, 9, 10, 12, 12.5, 14, 15, 16, 17.5, 18, 20, 22, 22.5, 24, 25, 26, 27.5, 28, 30, 32,
+  32.5, 34, 35, 36, 37.5, 40, 45, 50,
+];
 export const kettlebellWeightsKg = [4, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24, 26, 28, 32, 36, 40, 44, 48];
 export const barWeightsKg = [7, 10, 15, 20];
 export const plateWeightsKg = [0.5, 1.25, 2.5, 5, 10, 15, 20, 25];
@@ -69,7 +72,8 @@ export function toLoads(form: LoadsForm, tags: EquipmentTag[]): EquipmentProfile
   const { dumbbells, kettlebells, barbell } = form;
   if (has("dumbbells") && dumbbells?.kind === "adjustable") {
     const { minKg, maxKg, stepKg } = dumbbells;
-    if (minKg != null && maxKg != null && stepKg != null) loads.dumbbells = { kind: "adjustable", minKg, maxKg, stepKg };
+    if (minKg != null && maxKg != null && stepKg != null)
+      loads.dumbbells = { kind: "adjustable", minKg, maxKg, stepKg };
   }
   if (has("dumbbells") && dumbbells?.kind === "fixed" && dumbbells.weightsKg?.length) {
     loads.dumbbells = { kind: "fixed", weightsKg: toNumbers(dumbbells.weightsKg) };

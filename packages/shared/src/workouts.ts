@@ -3,10 +3,16 @@ import { LoadType } from "./exercises";
 
 // Each Set records when it was logged; values are per side for a one-sided Exercise
 const loggedAt = z.iso.datetime();
-const count = (name: string) => z.number().int(`${name} must be a whole number`).positive(`${name} must be more than 0`);
+const count = (name: string) =>
+  z.number().int(`${name} must be a whole number`).positive(`${name} must be more than 0`);
 
 export const Set = z.discriminatedUnion("kind", [
-  z.object({ kind: z.literal("external"), kg: z.number().positive("Weight must be more than 0").multipleOf(0.25, "Use 0.25 kg steps"), reps: count("Reps"), loggedAt }),
+  z.object({
+    kind: z.literal("external"),
+    kg: z.number().positive("Weight must be more than 0").multipleOf(0.25, "Use 0.25 kg steps"),
+    reps: count("Reps"),
+    loggedAt,
+  }),
   z.object({ kind: z.literal("bodyweight"), reps: count("Reps"), loggedAt }),
   z.object({ kind: z.literal("timed"), seconds: count("Seconds"), loggedAt }),
 ]);
@@ -51,7 +57,9 @@ export const InProgressWorkout = z.object({
   id: z.uuid(),
   startedAt: z.iso.datetime(),
   workoutExercises: z.array(
-    z.object({ id: z.string(), ...workoutExerciseFields, sets: z.array(Set) }).refine(setsMatchLoadType, setsMatchLoadTypeError),
+    z
+      .object({ id: z.string(), ...workoutExerciseFields, sets: z.array(Set) })
+      .refine(setsMatchLoadType, setsMatchLoadTypeError),
   ),
 });
 export type InProgressWorkout = z.infer<typeof InProgressWorkout>;

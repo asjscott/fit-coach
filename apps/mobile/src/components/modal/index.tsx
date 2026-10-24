@@ -1,5 +1,14 @@
 import { createContext, use, type ReactNode } from "react";
-import { Modal as RNModal, Pressable, ScrollView, View, type ScrollViewProps, type StyleProp, type ViewProps, type ViewStyle } from "react-native";
+import {
+  Modal as RNModal,
+  Pressable,
+  ScrollView,
+  View,
+  type ScrollViewProps,
+  type StyleProp,
+  type ViewProps,
+  type ViewStyle,
+} from "react-native";
 import { spacing, useThemedStyles } from "@/theme";
 import { Icon } from "../icons";
 import { createModalStyles, modalWidths, type ModalSize } from "./styles";

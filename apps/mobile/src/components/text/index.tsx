@@ -1,13 +1,5 @@
 import { Text as RNText, type TextProps as RNTextProps } from "react-native";
-import {
-  fonts,
-  fontSizes,
-  lineHeight,
-  useTheme,
-  type ColorToken,
-  type FontSize,
-  type FontWeight,
-} from "@/theme";
+import { fonts, fontSizes, lineHeight, useTheme, type ColorToken, type FontSize, type FontWeight } from "@/theme";
 import { decorationStyles } from "./styles";
 
 export type TextProps = RNTextProps & {

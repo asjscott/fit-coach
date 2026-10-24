@@ -7,12 +7,7 @@ export type ContainerProps = ViewProps & {
 };
 
 // Full-width page section with the standard horizontal gutter
-export function Container({
-  disableGutters = false,
-  fullHeight = true,
-  style,
-  ...props
-}: ContainerProps) {
+export function Container({ disableGutters = false, fullHeight = true, style, ...props }: ContainerProps) {
   const { colors } = useTheme();
   return (
     <View

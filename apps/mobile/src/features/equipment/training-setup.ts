@@ -67,6 +67,9 @@ export function toTrainingSetup(profile: EquipmentProfile): TrainingSetup {
 
 export function groupTags(tags: EquipmentTag[]): EquipmentByGroup {
   return Object.fromEntries(
-    EQUIPMENT_GROUPS.map((group) => [group.key, tags.filter((tag) => (group.tags as readonly EquipmentTag[]).includes(tag))]),
+    EQUIPMENT_GROUPS.map((group) => [
+      group.key,
+      tags.filter((tag) => (group.tags as readonly EquipmentTag[]).includes(tag)),
+    ]),
   );
 }

@@ -37,7 +37,11 @@ export const BATCH_4: Exercise[] = [
     regression: "dead-bug",
     progression: null,
     avoidWith: ["lower_back"],
-    cues: ["Lower back glued to the floor", "Shoulders and legs just off the ground", "Bend your knees to make it easier"],
+    cues: [
+      "Lower back glued to the floor",
+      "Shoulders and legs just off the ground",
+      "Bend your knees to make it easier",
+    ],
     videoUrl: null,
   },
   {
@@ -52,7 +56,11 @@ export const BATCH_4: Exercise[] = [
     regression: null,
     progression: null,
     avoidWith: [],
-    cues: ["On hands and knees, back flat", "Reach opposite arm and leg out long", "Pause, return slowly, switch sides"],
+    cues: [
+      "On hands and knees, back flat",
+      "Reach opposite arm and leg out long",
+      "Pause, return slowly, switch sides",
+    ],
     videoUrl: null,
   },
   {
@@ -97,7 +105,11 @@ export const BATCH_4: Exercise[] = [
     regression: "plank",
     progression: null,
     avoidWith: ["lower_back", "shoulder"],
-    cues: ["Start on your knees", "Roll out only as far as you can keep a flat back", "Pull back with your stomach, not your hips"],
+    cues: [
+      "Start on your knees",
+      "Roll out only as far as you can keep a flat back",
+      "Pull back with your stomach, not your hips",
+    ],
     videoUrl: null,
   },
   {
@@ -112,7 +124,11 @@ export const BATCH_4: Exercise[] = [
     regression: null,
     progression: null,
     avoidWith: [],
-    cues: ["Stand side-on to the anchor", "Press your hands straight out from your chest", "Don't let the band twist you"],
+    cues: [
+      "Stand side-on to the anchor",
+      "Press your hands straight out from your chest",
+      "Don't let the band twist you",
+    ],
     videoUrl: null,
   },
   {
@@ -127,7 +143,11 @@ export const BATCH_4: Exercise[] = [
     regression: null,
     progression: null,
     avoidWith: ["shoulder"],
-    cues: ["Lie face down, thumbs pointing up", "Lift your arms into a Y, then T, then W", "Squeeze your shoulder blades each time"],
+    cues: [
+      "Lie face down, thumbs pointing up",
+      "Lift your arms into a Y, then T, then W",
+      "Squeeze your shoulder blades each time",
+    ],
     videoUrl: null,
   },
 
@@ -177,7 +197,11 @@ export const BATCH_4: Exercise[] = [
     regression: null,
     progression: null,
     avoidWith: ["shoulder"],
-    cues: ["Lock the weights out overhead", "Biceps by your ears", "Use lighter weights than you'd carry at your sides"],
+    cues: [
+      "Lock the weights out overhead",
+      "Biceps by your ears",
+      "Use lighter weights than you'd carry at your sides",
+    ],
     videoUrl: null,
   },
 
@@ -209,14 +233,21 @@ export const BATCH_4: Exercise[] = [
     regression: null,
     progression: null,
     avoidWith: [],
-    cues: ["Sit tall, slight bend in your knees", "Pull the handle to your stomach", "Don't rock your body to move the weight"],
+    cues: [
+      "Sit tall, slight bend in your knees",
+      "Pull the handle to your stomach",
+      "Don't rock your body to move the weight",
+    ],
     videoUrl: null,
   },
   {
     slug: "deadlift",
     name: "Deadlift",
     patterns: [{ pattern: "hinge", credit: 1 }],
-    muscles: { primary: ["glutes", "hamstrings", "lower_back"], secondary: ["quads", "upper_back", "forearms", "traps"] },
+    muscles: {
+      primary: ["glutes", "hamstrings", "lower_back"],
+      secondary: ["quads", "upper_back", "forearms", "traps"],
+    },
     equipmentOptions: [["barbell", "plates"]],
     loadType: "external",
     unilateral: false,
@@ -224,7 +255,11 @@ export const BATCH_4: Exercise[] = [
     regression: "barbell-romanian-deadlift",
     progression: null,
     avoidWith: ["lower_back"],
-    cues: ["Bar over your midfoot, shins close", "Brace hard and push the floor away", "Hips and shoulders rise together"],
+    cues: [
+      "Bar over your midfoot, shins close",
+      "Brace hard and push the floor away",
+      "Hips and shoulders rise together",
+    ],
     videoUrl: null,
   },
   {
@@ -239,7 +274,11 @@ export const BATCH_4: Exercise[] = [
     regression: "dumbbell-overhead-press",
     progression: null,
     avoidWith: ["shoulder", "lower_back"],
-    cues: ["Bar on your front shoulders, grip just outside them", "Move your head back as the bar passes your face", "Finish with the bar over your midfoot"],
+    cues: [
+      "Bar on your front shoulders, grip just outside them",
+      "Move your head back as the bar passes your face",
+      "Finish with the bar over your midfoot",
+    ],
     videoUrl: null,
   },
   {
@@ -254,7 +293,11 @@ export const BATCH_4: Exercise[] = [
     regression: null,
     progression: null,
     avoidWith: [],
-    cues: ["Hold the end of the bar at your shoulder", "Press up and slightly forward", "Kinder on shoulders than straight overhead"],
+    cues: [
+      "Hold the end of the bar at your shoulder",
+      "Press up and slightly forward",
+      "Kinder on shoulders than straight overhead",
+    ],
     videoUrl: null,
   },
 ];

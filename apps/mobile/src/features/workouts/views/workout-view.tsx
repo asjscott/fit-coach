@@ -48,9 +48,7 @@ export default function WorkoutView() {
             count={workout.workoutExercises.length}
           />
         ))}
-        {workout.workoutExercises.length === 0 && (
-          <Text color="textMuted">Add an Exercise to start logging Sets.</Text>
-        )}
+        {workout.workoutExercises.length === 0 && <Text color="textMuted">Add an Exercise to start logging Sets.</Text>}
       </Stack>
       <Stack spacing={2} style={{ marginTop: spacing[6] }}>
         <LoadingButton label="Add exercise" action="secondary" icon="plus" href="/workout/add-exercise" />

@@ -144,9 +144,7 @@ export default function Home() {
         <LoadingButton label="History" action="secondary" icon="calendar" href="/history" />
         <LoadingButton label="Exercises" action="secondary" icon="search" href="/exercises" />
         <LoadingButton label="Edit profile" action="secondary" icon="user" href="/onboarding" />
-        {__DEV__ && (
-          <LoadingButton label="Components" action="secondary" icon="settings" href="/styleguide" />
-        )}
+        {__DEV__ && <LoadingButton label="Components" action="secondary" icon="settings" href="/styleguide" />}
         <LoadingButton label="Sign out" action="default" icon="signOut" onPress={handleSignOut} />
       </ButtonGroup>
       <ForgottenWorkoutModal isOpen={forgotten} onDone={() => setForgotten(false)} />

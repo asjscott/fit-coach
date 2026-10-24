@@ -37,7 +37,11 @@ const Base: Exercise[] = [
     regression: "bodyweight-squat",
     progression: "back-squat",
     avoidWith: ["knee"],
-    cues: ["Hold the weight at your chest", "Elbows inside your knees at the bottom", "Drive up through your whole foot"],
+    cues: [
+      "Hold the weight at your chest",
+      "Elbows inside your knees at the bottom",
+      "Drive up through your whole foot",
+    ],
     videoUrl: null,
   },
   {
@@ -99,7 +103,11 @@ const Base: Exercise[] = [
     regression: "single-leg-glute-bridge",
     progression: "single-arm-kettlebell-swing",
     avoidWith: ["lower_back"],
-    cues: ["Hinge at the hips, not a squat", "Snap your hips forward to float the bell", "Arms guide, hips do the work"],
+    cues: [
+      "Hinge at the hips, not a squat",
+      "Snap your hips forward to float the bell",
+      "Arms guide, hips do the work",
+    ],
     videoUrl: null,
   },
   {
@@ -114,7 +122,11 @@ const Base: Exercise[] = [
     regression: "single-leg-glute-bridge",
     progression: "barbell-romanian-deadlift",
     avoidWith: ["lower_back"],
-    cues: ["Soft knees, push your hips back", "Weights slide down close to your legs", "Stop when your back starts to round"],
+    cues: [
+      "Soft knees, push your hips back",
+      "Weights slide down close to your legs",
+      "Stop when your back starts to round",
+    ],
     videoUrl: null,
   },
   {
@@ -161,7 +173,11 @@ const Base: Exercise[] = [
     regression: "incline-push-up",
     progression: "decline-push-up",
     avoidWith: ["wrist"],
-    cues: ["Hands just wider than shoulders", "Elbows about 45 degrees from your body", "Chest touches first, hips stay level"],
+    cues: [
+      "Hands just wider than shoulders",
+      "Elbows about 45 degrees from your body",
+      "Chest touches first, hips stay level",
+    ],
     videoUrl: null,
   },
   {
@@ -176,7 +192,11 @@ const Base: Exercise[] = [
     regression: "push-up",
     progression: "barbell-bench-press",
     avoidWith: ["shoulder"],
-    cues: ["Shoulder blades pulled back into the bench", "Lower to the sides of your chest", "Press up and slightly together"],
+    cues: [
+      "Shoulder blades pulled back into the bench",
+      "Lower to the sides of your chest",
+      "Press up and slightly together",
+    ],
     videoUrl: null,
   },
   {
@@ -206,7 +226,11 @@ const Base: Exercise[] = [
     regression: null,
     progression: "barbell-overhead-press",
     avoidWith: ["shoulder"],
-    cues: ["Squeeze glutes and brace, ribs down", "Press straight up, finish with arms by ears", "Don't lean back to finish the rep"],
+    cues: [
+      "Squeeze glutes and brace, ribs down",
+      "Press straight up, finish with arms by ears",
+      "Don't lean back to finish the rep",
+    ],
     videoUrl: null,
   },
 
@@ -223,7 +247,11 @@ const Base: Exercise[] = [
     regression: null,
     progression: "pull-up-negative",
     avoidWith: [],
-    cues: ["Under a sturdy table, rings or a low bar", "Body straight, heels on the floor", "Pull your chest to your hands"],
+    cues: [
+      "Under a sturdy table, rings or a low bar",
+      "Body straight, heels on the floor",
+      "Pull your chest to your hands",
+    ],
     videoUrl: null,
   },
   {

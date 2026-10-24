@@ -8,12 +8,7 @@ import {
   Inter_800ExtraBold,
   useFonts,
 } from "@expo-google-fonts/inter";
-import {
-  DarkTheme,
-  DefaultTheme,
-  ThemeProvider as NavigationThemeProvider,
-  Slot,
-} from "expo-router";
+import { DarkTheme, DefaultTheme, ThemeProvider as NavigationThemeProvider, Slot } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import { useEffect, useMemo } from "react";
 import { StatusBar } from "@/components/status-bar";

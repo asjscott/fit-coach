@@ -22,21 +22,18 @@ export function useApi() {
     getTokenRef.current = getToken;
   }, [getToken]);
 
-  return useCallback(
-    async (path: string, init: RequestInit = {}): Promise<unknown> => {
-      const token = await getTokenRef.current();
-      const headers = new Headers(init.headers);
-      if (token) headers.set("Authorization", `Bearer ${token}`);
-      if (init.body && !headers.has("Content-Type")) {
-        headers.set("Content-Type", "application/json");
-      }
+  return useCallback(async (path: string, init: RequestInit = {}): Promise<unknown> => {
+    const token = await getTokenRef.current();
+    const headers = new Headers(init.headers);
+    if (token) headers.set("Authorization", `Bearer ${token}`);
+    if (init.body && !headers.has("Content-Type")) {
+      headers.set("Content-Type", "application/json");
+    }
 
-      const res = await fetch(`${API_URL}${path}`, { ...init, headers });
-      if (!res.ok) throw new ApiError(res.status, (await res.text()) || String(res.status));
-      // 204 No Content, e.g. after a DELETE
-      if (res.status === 204) return null;
-      return res.json();
-    },
-    [],
-  );
+    const res = await fetch(`${API_URL}${path}`, { ...init, headers });
+    if (!res.ok) throw new ApiError(res.status, (await res.text()) || String(res.status));
+    // 204 No Content, e.g. after a DELETE
+    if (res.status === 204) return null;
+    return res.json();
+  }, []);
 }

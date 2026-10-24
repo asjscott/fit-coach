@@ -18,7 +18,11 @@ export const BATCH_2: Exercise[] = [
     regression: null,
     progression: "pull-up-negative",
     avoidWith: [],
-    cues: ["Walk your feet forward to make it harder", "Body straight from head to heels", "Pull the handles to your ribs"],
+    cues: [
+      "Walk your feet forward to make it harder",
+      "Body straight from head to heels",
+      "Pull the handles to your ribs",
+    ],
     videoUrl: null,
   },
   {
@@ -33,7 +37,11 @@ export const BATCH_2: Exercise[] = [
     regression: "push-up",
     progression: null,
     avoidWith: ["shoulder"],
-    cues: ["Rings a few centimetres off the floor", "Keep the rings from drifting apart", "Turn your palms forward at the top"],
+    cues: [
+      "Rings a few centimetres off the floor",
+      "Keep the rings from drifting apart",
+      "Turn your palms forward at the top",
+    ],
     videoUrl: null,
   },
   {
@@ -48,7 +56,11 @@ export const BATCH_2: Exercise[] = [
     regression: null,
     progression: "ring-dip",
     avoidWith: ["shoulder", "elbow"],
-    cues: ["Start with arms locked out", "Lower until your shoulders are just below your elbows", "Lean slightly forward"],
+    cues: [
+      "Start with arms locked out",
+      "Lower until your shoulders are just below your elbows",
+      "Lean slightly forward",
+    ],
     videoUrl: null,
   },
   {
@@ -63,7 +75,11 @@ export const BATCH_2: Exercise[] = [
     regression: "bar-dip",
     progression: null,
     avoidWith: ["shoulder", "elbow"],
-    cues: ["Rings pressed against your sides", "Lower under control, rings close to your body", "Lock out with palms turned forward"],
+    cues: [
+      "Rings pressed against your sides",
+      "Lower under control, rings close to your body",
+      "Lock out with palms turned forward",
+    ],
     videoUrl: null,
   },
   {
@@ -78,7 +94,11 @@ export const BATCH_2: Exercise[] = [
     regression: "plank",
     progression: null,
     avoidWith: ["shoulder", "lower_back"],
-    cues: ["Start kneeling, arms straight", "Let the rings travel forward as you lean", "Stop before your lower back arches"],
+    cues: [
+      "Start kneeling, arms straight",
+      "Let the rings travel forward as you lean",
+      "Stop before your lower back arches",
+    ],
     videoUrl: null,
   },
   {
@@ -93,7 +113,11 @@ export const BATCH_2: Exercise[] = [
     regression: "glute-bridge",
     progression: null,
     avoidWith: ["knee"],
-    cues: ["Heels in the straps, lying on your back", "Lift your hips, then pull your heels in", "Keep your hips up the whole time"],
+    cues: [
+      "Heels in the straps, lying on your back",
+      "Lift your hips, then pull your heels in",
+      "Keep your hips up the whole time",
+    ],
     videoUrl: null,
   },
 
@@ -110,7 +134,11 @@ export const BATCH_2: Exercise[] = [
     regression: null,
     progression: null,
     avoidWith: [],
-    cues: ["Anchor the band in a door at chest height", "Pull your elbows back past your ribs", "Squeeze your shoulder blades, slow return"],
+    cues: [
+      "Anchor the band in a door at chest height",
+      "Pull your elbows back past your ribs",
+      "Squeeze your shoulder blades, slow return",
+    ],
     videoUrl: null,
   },
   {
@@ -140,7 +168,11 @@ export const BATCH_2: Exercise[] = [
     regression: null,
     progression: null,
     avoidWith: ["shoulder"],
-    cues: ["Anchor behind you at chest height", "Step forward until the band is tight", "Press straight out, slow return"],
+    cues: [
+      "Anchor behind you at chest height",
+      "Step forward until the band is tight",
+      "Press straight out, slow return",
+    ],
     videoUrl: null,
   },
   {
@@ -170,7 +202,11 @@ export const BATCH_2: Exercise[] = [
     regression: null,
     progression: "dumbbell-romanian-deadlift",
     avoidWith: ["lower_back"],
-    cues: ["Stand on the band, loop it behind your neck", "Push your hips back with a flat back", "Stand tall by squeezing your glutes"],
+    cues: [
+      "Stand on the band, loop it behind your neck",
+      "Push your hips back with a flat back",
+      "Stand tall by squeezing your glutes",
+    ],
     videoUrl: null,
   },
   {
@@ -185,7 +221,11 @@ export const BATCH_2: Exercise[] = [
     regression: null,
     progression: null,
     avoidWith: [],
-    cues: ["Anchor at face height", "Pull towards your forehead, elbows high", "Finish with your hands beside your ears"],
+    cues: [
+      "Anchor at face height",
+      "Pull towards your forehead, elbows high",
+      "Finish with your hands beside your ears",
+    ],
     videoUrl: null,
   },
   {
@@ -200,7 +240,11 @@ export const BATCH_2: Exercise[] = [
     regression: "glute-bridge",
     progression: null,
     avoidWith: [],
-    cues: ["Band just above your knees", "Push your knees out against the band", "Lift your hips and hold for a second"],
+    cues: [
+      "Band just above your knees",
+      "Push your knees out against the band",
+      "Lift your hips and hold for a second",
+    ],
     videoUrl: null,
   },
 ];

@@ -70,7 +70,11 @@ describe("Logbook", () => {
             { kind: "external", kg: 22.5, reps: 8, loggedAt: "2026-10-24T09:08:00.000Z" },
           ],
         },
-        { slug: "plank", loadType: "timed", sets: [{ kind: "timed", seconds: 45, loggedAt: "2026-10-24T09:12:00.000Z" }] },
+        {
+          slug: "plank",
+          loadType: "timed",
+          sets: [{ kind: "timed", seconds: 45, loggedAt: "2026-10-24T09:12:00.000Z" }],
+        },
       ],
     });
     expect(await logbook.inProgress()).toBeNull();

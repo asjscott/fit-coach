@@ -8,7 +8,7 @@ overrides:
   "@react-native/metro-config": "0.86.3"
 nodeLinker: hoisted
 permissions:
-  '@clerk/shared':
+  "@clerk/shared":
     build: false
   browser-tabs-lock:
     build: false

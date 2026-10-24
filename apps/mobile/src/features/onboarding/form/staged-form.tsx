@@ -15,8 +15,7 @@ export type Stage = number | "complete";
 
 // "next" carries the current stage's fields so the caller can validate just those
 export type StageAction<T extends FieldValues = FieldValues> =
-  | { action: "previous" }
-  | { action: "next"; fields: FieldPath<T>[] };
+  { action: "previous" } | { action: "next"; fields: FieldPath<T>[] };
 
 const StagedFormContext = createContext({ stage: 0, stageCount: 0 });
 

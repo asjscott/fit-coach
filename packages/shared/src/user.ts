@@ -4,22 +4,21 @@ import { EquipmentProfile } from "./equipment";
 export const Goal = z.enum(["lose_fat", "build_muscle", "recomp", "athletic"]);
 export type Goal = z.infer<typeof Goal>;
 
-export const InjuryTag = z.enum([
-  "neck", "shoulder", "elbow", "wrist", "lower_back", "hip", "knee", "ankle",
-]);
+export const InjuryTag = z.enum(["neck", "shoulder", "elbow", "wrist", "lower_back", "hip", "knee", "ankle"]);
 export type InjuryTag = z.infer<typeof InjuryTag>;
 
 export const UserProfile = z.object({
-  gender: z.enum(["male", "female"], {error: "Choose one"}),
-  birthYear: z.number({error: "Enter your birth year"})
-  .int("Use a whole number")
-  .min(1930, "Check your birth year")
-  .max(new Date().getFullYear() - 16, "You must be at least 16"),
-  heightCm: z.number({error: "Enter your height"}).min(120).max(230),
-  weightKg: z.number({error: "Enter your weight"}).min(35).max(250),
+  gender: z.enum(["male", "female"], { error: "Choose one" }),
+  birthYear: z
+    .number({ error: "Enter your birth year" })
+    .int("Use a whole number")
+    .min(1930, "Check your birth year")
+    .max(new Date().getFullYear() - 16, "You must be at least 16"),
+  heightCm: z.number({ error: "Enter your height" }).min(120).max(230),
+  weightKg: z.number({ error: "Enter your weight" }).min(35).max(250),
   goal: Goal,
   daysPerWeek: z.number().int().min(2).max(6),
-  injuries: z.array(InjuryTag, {error: "Choose any that apply, or None"}),
+  injuries: z.array(InjuryTag, { error: "Choose any that apply, or None" }),
 });
 
 export type UserProfile = z.infer<typeof UserProfile>;

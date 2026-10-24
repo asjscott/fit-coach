@@ -36,13 +36,7 @@ export function Textarea({ size = "md", isInvalid, isDisabled, isReadOnly, style
   return (
     <TextareaContext value={{ size, editable: !disabled && !readOnly, setFocused }}>
       <View
-        style={[
-          styles.root,
-          focused && styles.focused,
-          invalid && styles.invalid,
-          disabled && styles.disabled,
-          style,
-        ]}
+        style={[styles.root, focused && styles.focused, invalid && styles.invalid, disabled && styles.disabled, style]}
       >
         {children}
       </View>
@@ -75,11 +69,7 @@ export function TextareaInput({ style, onFocus, onBlur, ...props }: TextInputPro
           context.setFocused(false);
           onBlur?.(e);
         }}
-        style={[
-          styles.input,
-          { fontFamily: fonts.regular, fontSize: fontSizes[textSize[context.size]] },
-          style,
-        ]}
+        style={[styles.input, { fontFamily: fonts.regular, fontSize: fontSizes[textSize[context.size]] }, style]}
         {...props}
       />
       <KeyboardDoneBar nativeID={accessoryId} />

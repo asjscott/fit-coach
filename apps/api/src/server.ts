@@ -12,7 +12,7 @@ import { ensureWorkoutIndexes } from "./workouts";
 
 const app = Fastify({ logger: true });
 
-app.setValidatorCompiler(validatorCompiler);   // checks incoming requests
+app.setValidatorCompiler(validatorCompiler); // checks incoming requests
 app.setSerializerCompiler(serializerCompiler); // checks outgoing responses on routes that declare schema.response
 
 // Browsers (the Expo web build) need CORS; native apps send no Origin and are unaffected.
@@ -26,13 +26,9 @@ await app.register(cors, {
 
 await app.register(clerkPlugin);
 
-await ensureUserIndexes().catch((err) =>
-  app.log.error(err, "Failed to create user indexes"),
-);
+await ensureUserIndexes().catch((err) => app.log.error(err, "Failed to create user indexes"));
 
-await ensureWorkoutIndexes().catch((err) =>
-  app.log.error(err, "Failed to create workout indexes"),
-);
+await ensureWorkoutIndexes().catch((err) => app.log.error(err, "Failed to create workout indexes"));
 
 await migrateUsers().catch((err) => app.log.error(err, "Failed to migrate users"));
 

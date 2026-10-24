@@ -1,5 +1,12 @@
 import { ObjectId, type WithId } from "mongodb";
-import { EquipmentProfile, type EquipmentProfileInput, OnboardingProfile, User, type UserProfile, type UserUpdate } from "@fit/shared";
+import {
+  EquipmentProfile,
+  type EquipmentProfileInput,
+  OnboardingProfile,
+  User,
+  type UserProfile,
+  type UserUpdate,
+} from "@fit/shared";
 import { db } from "./db";
 
 // The shape of a user document in MongoDB
@@ -8,7 +15,7 @@ type UserDoc = {
   createdAt: Date;
   profile: Partial<UserProfile>;
   onboardedAt: Date | null;
-  equipmentProfiles: EquipmentProfile[]
+  equipmentProfiles: EquipmentProfile[];
 };
 
 export const users = db.collection<UserDoc>("users");
@@ -32,7 +39,7 @@ export async function createUser(clerkUserId: string) {
   const result = await users.findOneAndUpdate(
     { clerkUserId },
     { $setOnInsert: { clerkUserId, createdAt: new Date(), profile: {}, onboardedAt: null, equipmentProfiles: [] } },
-    { upsert: true, returnDocument: "after", includeResultMetadata: true }
+    { upsert: true, returnDocument: "after", includeResultMetadata: true },
   );
   if (!result.value) throw new Error("Failed to create user");
   return { user: result.value, created: !result.lastErrorObject?.updatedExisting };
@@ -44,7 +51,7 @@ export async function updateUser(clerkUserId: string, { profile }: UserUpdate) {
   const user = await users.findOneAndUpdate(
     { clerkUserId },
     [{ $set: { profile: { $mergeObjects: ["$profile", { $literal: profile }] } } }],
-    { returnDocument: "after" }
+    { returnDocument: "after" },
   );
   return user && markOnboardedIfComplete(user);
 }
@@ -78,7 +85,7 @@ export async function createEquipmentProfile(clerkUserId: string, input: Equipme
         },
       },
     ],
-    { returnDocument: "after" }
+    { returnDocument: "after" },
   );
   return user && markOnboardedIfComplete(user);
 }
@@ -99,7 +106,12 @@ export async function updateEquipmentProfile(clerkUserId: string, id: string, in
               in: {
                 $cond: [
                   { $eq: ["$$p.id", { $literal: id }] },
-                  { $mergeObjects: [{ $literal: { ...input, id } }, { isPrimary: { $or: [input.isPrimary, "$$p.isPrimary"] } }] },
+                  {
+                    $mergeObjects: [
+                      { $literal: { ...input, id } },
+                      { isPrimary: { $or: [input.isPrimary, "$$p.isPrimary"] } },
+                    ],
+                  },
                   { $mergeObjects: ["$$p", { isPrimary: input.isPrimary ? false : "$$p.isPrimary" }] },
                 ],
               },
@@ -108,7 +120,7 @@ export async function updateEquipmentProfile(clerkUserId: string, id: string, in
         },
       },
     ],
-    { returnDocument: "after" }
+    { returnDocument: "after" },
   );
   return user && markOnboardedIfComplete(user);
 }
@@ -121,7 +133,7 @@ async function markOnboardedIfComplete(user: WithId<UserDoc>) {
   const updated = await users.findOneAndUpdate(
     { _id: user._id, onboardedAt: null },
     { $set: { onboardedAt: new Date() } },
-    { returnDocument: "after" }
+    { returnDocument: "after" },
   );
   // null means another request stamped it first
   return updated ?? (await users.findOne({ _id: user._id })) ?? user;
@@ -133,6 +145,6 @@ export function toUser(user: WithId<UserDoc>): User {
     id: user._id.toHexString(),
     profile: user.profile,
     onboardedAt: user.onboardedAt?.toISOString() ?? null,
-    equipmentProfiles: user.equipmentProfiles ?? []
+    equipmentProfiles: user.equipmentProfiles ?? [],
   });
 }

@@ -3,7 +3,10 @@ import { Workout, WorkoutsQuery } from "./workouts";
 
 const loggedAt = "2026-10-24T09:10:00.000Z";
 
-const workout = (workoutExercises: unknown[], times = { startedAt: "2026-10-24T09:00:00.000Z", endedAt: "2026-10-24T10:00:00.000Z" }) => ({
+const workout = (
+  workoutExercises: unknown[],
+  times = { startedAt: "2026-10-24T09:00:00.000Z", endedAt: "2026-10-24T10:00:00.000Z" },
+) => ({
   id: "3b241101-e2bb-4255-8caf-4136c566a962",
   ...times,
   workoutExercises,
