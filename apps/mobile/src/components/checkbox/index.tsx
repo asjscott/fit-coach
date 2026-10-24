@@ -30,8 +30,7 @@ export type CheckboxGroupProps = {
 };
 
 export function CheckboxGroup({ value, onChange, isDisabled, space = 3, style, children }: CheckboxGroupProps) {
-  const toggle = (item: string) =>
-    onChange(value.includes(item) ? value.filter((v) => v !== item) : [...value, item]);
+  const toggle = (item: string) => onChange(value.includes(item) ? value.filter((v) => v !== item) : [...value, item]);
 
   return (
     <CheckboxGroupContext value={{ value, toggle, isDisabled }}>
@@ -97,12 +96,7 @@ export function CheckboxIndicator({ children }: { children?: ReactNode }) {
   const box = checkboxSizes[size].box;
   return (
     <View
-      style={[
-        styles.indicator,
-        { width: box, height: box },
-        isChecked && styles.checked,
-        isInvalid && styles.invalid,
-      ]}
+      style={[styles.indicator, { width: box, height: box }, isChecked && styles.checked, isInvalid && styles.invalid]}
     >
       {children}
     </View>

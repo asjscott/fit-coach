@@ -18,7 +18,11 @@ export function EquipmentPresetsField({ label = "Start from a preset" }: { label
   const apply = (tags: EquipmentTag[]) => {
     for (const group of EQUIPMENT_GROUPS) {
       const groupTags: readonly EquipmentTag[] = group.tags;
-      setValue(`equipment.${group.key}`, tags.filter((tag) => groupTags.includes(tag)), { shouldDirty: true });
+      setValue(
+        `equipment.${group.key}`,
+        tags.filter((tag) => groupTags.includes(tag)),
+        { shouldDirty: true },
+      );
     }
   };
 

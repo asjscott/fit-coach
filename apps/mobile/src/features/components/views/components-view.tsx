@@ -383,13 +383,7 @@ export default function ComponentsView() {
                   </Box>
                 </HStack>
                 <RHFSelect name="goal" label="Goal" options={goalOptions} required />
-                <RHFSlider
-                  name="daysPerWeek"
-                  label="Training days"
-                  min={2}
-                  max={6}
-                  formatValue={(v) => `${v} days`}
-                />
+                <RHFSlider name="daysPerWeek" label="Training days" min={2} max={6} formatValue={(v) => `${v} days`} />
                 <RHFChipSelect name="injuries" label="Injuries (chips)" options={injuryOptions} />
                 <RHFMultiSelect name="injuries" label="Injuries (multi-select)" options={injuryOptions} />
                 <RHFRadioGroup name="goal" label="Goal (radio)" options={goalOptions} />
@@ -456,12 +450,7 @@ export default function ComponentsView() {
         </ActionsheetContent>
       </Actionsheet>
 
-      <Toast
-        isVisible={!!toast}
-        message={toast?.message ?? ""}
-        type={toast?.type}
-        onHide={() => setToast(null)}
-      />
+      <Toast isVisible={!!toast} message={toast?.message ?? ""} type={toast?.type} onHide={() => setToast(null)} />
     </>
   );
 }

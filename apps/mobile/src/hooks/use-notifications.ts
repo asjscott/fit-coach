@@ -30,8 +30,17 @@ export function useNotifications() {
   const { showToast } = useToast();
 
   const showNotification = useCallback(
-    ({ type = "error", duration = 3000, message, error }: { type?: NotificationType; duration?: number; message?: string; error?: unknown }) =>
-      showToast(message || DEFAULT_NOTIFICATION_MESSAGES[type], { type, duration, error }),
+    ({
+      type = "error",
+      duration = 3000,
+      message,
+      error,
+    }: {
+      type?: NotificationType;
+      duration?: number;
+      message?: string;
+      error?: unknown;
+    }) => showToast(message || DEFAULT_NOTIFICATION_MESSAGES[type], { type, duration, error }),
     [showToast],
   );
 
@@ -52,5 +61,8 @@ export function useNotifications() {
     [showNotification],
   );
 
-  return useMemo(() => ({ handleError, handleSuccess, showNotification }), [handleError, handleSuccess, showNotification]);
+  return useMemo(
+    () => ({ handleError, handleSuccess, showNotification }),
+    [handleError, handleSuccess, showNotification],
+  );
 }

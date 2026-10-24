@@ -53,7 +53,11 @@ export const BATCH_1: Exercise[] = [
     regression: null,
     progression: null,
     avoidWith: ["wrist", "shoulder", "neck"],
-    cues: ["Hips high in an upside-down V", "Lower the top of your head towards the floor", "Press back up through your shoulders"],
+    cues: [
+      "Hips high in an upside-down V",
+      "Lower the top of your head towards the floor",
+      "Press back up through your shoulders",
+    ],
     videoUrl: null,
   },
 
@@ -70,7 +74,11 @@ export const BATCH_1: Exercise[] = [
     regression: "inverted-row",
     progression: "pull-up",
     avoidWith: ["shoulder", "elbow"],
-    cues: ["Jump or step up so your chin is over the bar", "Lower yourself as slowly as you can", "Aim for 3–5 seconds on the way down"],
+    cues: [
+      "Jump or step up so your chin is over the bar",
+      "Lower yourself as slowly as you can",
+      "Aim for 3–5 seconds on the way down",
+    ],
     videoUrl: null,
   },
   {
@@ -102,7 +110,11 @@ export const BATCH_1: Exercise[] = [
     regression: null,
     progression: "single-leg-glute-bridge",
     avoidWith: [],
-    cues: ["Feet flat, close to your hips", "Push through your heels to lift your hips", "Pause and squeeze at the top"],
+    cues: [
+      "Feet flat, close to your hips",
+      "Push through your heels to lift your hips",
+      "Pause and squeeze at the top",
+    ],
     videoUrl: null,
   },
   {
@@ -117,7 +129,11 @@ export const BATCH_1: Exercise[] = [
     regression: "single-leg-glute-bridge",
     progression: "dumbbell-single-leg-romanian-deadlift",
     avoidWith: ["ankle"],
-    cues: ["Soft knee on your standing leg", "Reach your free leg back as you tip forward", "Keep your hips square to the floor"],
+    cues: [
+      "Soft knee on your standing leg",
+      "Reach your free leg back as you tip forward",
+      "Keep your hips square to the floor",
+    ],
     videoUrl: null,
   },
 
@@ -164,7 +180,11 @@ export const BATCH_1: Exercise[] = [
     regression: "bulgarian-split-squat",
     progression: "pistol-squat",
     avoidWith: ["knee", "ankle"],
-    cues: ["Hold your back foot behind you", "Lower until your back knee touches the floor", "Hold a doorframe for balance at first"],
+    cues: [
+      "Hold your back foot behind you",
+      "Lower until your back knee touches the floor",
+      "Hold a doorframe for balance at first",
+    ],
     videoUrl: null,
   },
   {
@@ -179,7 +199,11 @@ export const BATCH_1: Exercise[] = [
     regression: "shrimp-squat",
     progression: null,
     avoidWith: ["knee", "ankle"],
-    cues: ["Free leg straight out in front", "Arms forward to counterbalance", "Sit to a box first if you can't reach the bottom"],
+    cues: [
+      "Free leg straight out in front",
+      "Arms forward to counterbalance",
+      "Sit to a box first if you can't reach the bottom",
+    ],
     videoUrl: null,
   },
   {

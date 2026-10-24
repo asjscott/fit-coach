@@ -26,5 +26,4 @@ export const fontSizes = {
 export type FontSize = keyof typeof fontSizes;
 
 // Body copy breathes more than headings
-export const lineHeight = (fontSize: number, tight = false) =>
-  Math.round(fontSize * (tight ? 1.2 : 1.45));
+export const lineHeight = (fontSize: number, tight = false) => Math.round(fontSize * (tight ? 1.2 : 1.45));

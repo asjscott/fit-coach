@@ -1,10 +1,4 @@
-import {
-  InProgressWorkout,
-  Workout,
-  type Exercise,
-  type InProgressWorkoutExercise,
-  type SetValues,
-} from "@fit/shared";
+import { InProgressWorkout, Workout, type Exercise, type InProgressWorkoutExercise, type SetValues } from "@fit/shared";
 import type { z } from "zod";
 
 // Strings by key: SQLite on the phone, localStorage on web, a Map in tests

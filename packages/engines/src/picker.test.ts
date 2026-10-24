@@ -61,10 +61,8 @@ describe("pickerRows", () => {
 
   it("orders names without regard to case", () => {
     const named = (slug: string, name: string): Exercise => ({ ...exercise("plank"), slug, name });
-    expect(slugs([named("b", "bravo"), named("a", "Alpha"), named("c", "charlie")], { tags: [], injuries: [] })).toEqual([
-      "a",
-      "b",
-      "c",
-    ]);
+    expect(
+      slugs([named("b", "bravo"), named("a", "Alpha"), named("c", "charlie")], { tags: [], injuries: [] }),
+    ).toEqual(["a", "b", "c"]);
   });
 });

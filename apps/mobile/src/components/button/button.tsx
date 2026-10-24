@@ -87,19 +87,13 @@ export function Button({
 export function ButtonText({ style, ...props }: TextProps) {
   const { size, foreground } = useButtonContext();
   return (
-    <Text
-      size={buttonSizes[size].text}
-      style={[{ color: foreground, fontFamily: fonts.semiBold }, style]}
-      {...props}
-    />
+    <Text size={buttonSizes[size].text} style={[{ color: foreground, fontFamily: fonts.semiBold }, style]} {...props} />
   );
 }
 
 export function ButtonIcon({ name, as, size }: { name?: IconName; as?: IconComponent; size?: number }) {
   const context = useButtonContext();
-  return (
-    <Icon name={name} as={as} size={size ?? buttonSizes[context.size].icon} rawColor={context.foreground} />
-  );
+  return <Icon name={name} as={as} size={size ?? buttonSizes[context.size].icon} rawColor={context.foreground} />;
 }
 
 export function ButtonSpinner() {
@@ -122,7 +116,5 @@ export function ButtonGroup({
   style,
   children,
 }: ButtonGroupProps) {
-  return (
-    <View style={[{ flexDirection, gap: isAttached ? 0 : spacing[space] }, style]}>{children}</View>
-  );
+  return <View style={[{ flexDirection, gap: isAttached ? 0 : spacing[space] }, style]}>{children}</View>;
 }

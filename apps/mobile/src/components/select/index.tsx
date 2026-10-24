@@ -119,9 +119,7 @@ export function SelectInput({ value, placeholder }: { value?: string; placeholde
 }
 
 export function SelectIcon({ name, as, size = 20 }: { name?: IconName; as?: IconComponent; size?: number }) {
-  return (
-    <Icon name={as ? undefined : (name ?? "chevronDown")} as={as} size={size} color="orange" />
-  );
+  return <Icon name={as ? undefined : (name ?? "chevronDown")} as={as} size={size} color="orange" />;
 }
 
 export function SelectPortal({ children }: { children?: ReactNode }) {
