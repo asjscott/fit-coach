@@ -1,5 +1,5 @@
 import type { WithId } from "mongodb";
-import { Workout } from "@fit/shared";
+import { Workout, type WorkoutsQuery } from "@fit/shared";
 import { db } from "./db";
 
 // The shape of a workout document in MongoDB: the Workout with its Workout Exercises
@@ -37,6 +37,15 @@ export async function createWorkout(clerkUserId: string, workout: Workout) {
   );
   if (!result.value) throw new Error("Failed to create workout");
   return { workout: result.value, created: !result.lastErrorObject?.updatedExisting };
+}
+
+// The user's Workouts newest first, started before the cursor when given
+export function findWorkouts(clerkUserId: string, { limit, before }: WorkoutsQuery) {
+  return workouts
+    .find({ clerkUserId, ...(before && { startedAt: { $lt: new Date(before) } }) })
+    .sort({ startedAt: -1, id: -1 })
+    .limit(limit)
+    .toArray();
 }
 
 // Convert a database document into the shape the app expects
