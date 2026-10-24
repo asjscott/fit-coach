@@ -495,3 +495,25 @@ describe("Logbook: correcting the in-progress Workout", () => {
     await expect(rebuilt.logbook.start(at("10:00"))).resolves.toMatchObject({ startedAt: "2026-10-24T10:00:00.000Z" });
   });
 });
+
+describe("Logbook: signing out", () => {
+  it("clears the in-progress and Pending Workouts from the phone, so none upload", async () => {
+    const { logbook, uploader, storage } = setup();
+    uploader.upload = async () => {
+      throw new Error("No signal");
+    };
+    await finishPlank(logbook, "08:00");
+    await finishPlank(logbook, "09:00");
+    await logbook.start(at("10:00"));
+    const plank = await logbook.addWorkoutExercise(exercise("plank"));
+    await logbook.logSet(plank.id, { kind: "timed", seconds: 45 }, at("10:05"));
+
+    await logbook.clear();
+
+    const rebuilt = setup(storage);
+    expect(await rebuilt.logbook.inProgress()).toBeNull();
+    expect(await rebuilt.logbook.pending()).toEqual([]);
+    await rebuilt.logbook.sync();
+    expect(rebuilt.uploader.uploaded).toEqual([]);
+  });
+});

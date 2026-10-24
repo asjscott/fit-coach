@@ -12,6 +12,7 @@ import { Text } from "@/components/text";
 import { useToast } from "@/contexts/toast-context";
 import { useCurrentUser } from "@/features/user/current-user-provider";
 import { ForgottenWorkoutModal } from "@/features/workouts/components/forgotten-workout-modal";
+import { SignOutModal, signOutWarning } from "@/features/workouts/components/sign-out-modal";
 import { useLogbook } from "@/features/workouts/logbook-provider";
 import { goalLabel } from "@/features/user/components/form/fields/user-goal-field";
 import { injuryLabel } from "@/features/user/components/form/fields/user-injuries-field";
@@ -28,6 +29,7 @@ export default function Home() {
   const [status, setStatus] = useState("Checking API…");
   const [starting, setStarting] = useState(false);
   const [forgotten, setForgotten] = useState(false);
+  const [confirmingSignOut, setConfirmingSignOut] = useState(false);
   const { isLoaded, isStale } = logbook;
 
   // A forgotten Workout must be finished or discarded before the user carries on
@@ -54,6 +56,26 @@ export default function Home() {
       }
     }
     router.push("/workout");
+  };
+
+  // Clears the phone first, so the next person on a shared phone can't see this user's
+  // Workouts; if that fails the user stays signed in
+  const signOutAndClear = async () => {
+    try {
+      await logbook.clear();
+    } catch (err) {
+      showToast("Couldn't sign out", { error: err });
+      return;
+    }
+    setConfirmingSignOut(false);
+    await signOut();
+  };
+
+  const signOutWarningText = signOutWarning(logbook.pending.length, logbook.workout !== null);
+
+  const handleSignOut = () => {
+    if (signOutWarningText) setConfirmingSignOut(true);
+    else signOutAndClear();
   };
 
   useEffect(() => {
@@ -118,9 +140,15 @@ export default function Home() {
         {__DEV__ && (
           <LoadingButton label="Components" action="secondary" icon="settings" href="/styleguide" />
         )}
-        <LoadingButton label="Sign out" action="default" icon="signOut" onPress={() => signOut()} />
+        <LoadingButton label="Sign out" action="default" icon="signOut" onPress={handleSignOut} />
       </ButtonGroup>
       <ForgottenWorkoutModal isOpen={forgotten} onDone={() => setForgotten(false)} />
+      <SignOutModal
+        isOpen={confirmingSignOut && signOutWarningText !== null}
+        warning={signOutWarningText ?? ""}
+        onClose={() => setConfirmingSignOut(false)}
+        onConfirm={signOutAndClear}
+      />
     </Screen>
   );
 }

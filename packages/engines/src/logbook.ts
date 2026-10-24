@@ -235,6 +235,14 @@ export function createLogbook({
     deletePending: (workoutId: string) =>
       serially(async () => writePending((await readPending()).filter((p) => p.id !== workoutId))),
 
+    // For signing out: removes the in-progress and Pending Workouts from the phone, so
+    // the next person can't see them. A Workout already uploading may still reach the server
+    clear: () =>
+      serially(async () => {
+        await storage.removeItem(IN_PROGRESS_KEY);
+        await storage.removeItem(PENDING_KEY);
+      }),
+
     // Uploads each Pending Workout, removing it from the phone only once the server has it.
     // A failed upload leaves that Workout pending and moves on to the next; once all have
     // been tried, rejects with the first failure if there was one.
