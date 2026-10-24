@@ -1,8 +1,10 @@
 import { createLogbook, type FinishResult, type Logbook } from "@fit/engines";
-import type { Exercise, InProgressWorkout, InProgressWorkoutExercise, SetValues } from "@fit/shared";
+import type { Exercise, InProgressWorkout, InProgressWorkoutExercise, SetValues, Workout } from "@fit/shared";
 import * as Crypto from "expo-crypto";
+import * as Network from "expo-network";
 import Storage from "expo-sqlite/kv-store";
 import { createContext, use, useCallback, useEffect, useState, type ReactNode } from "react";
+import { AppState } from "react-native";
 import { useApi } from "@/api";
 
 type LogbookContextValue = {
@@ -29,6 +31,10 @@ type LogbookContextValue = {
   discard: () => Promise<void>;
   // Whether the in-progress Workout looks forgotten, so the user must finish or discard it
   isStale: () => Promise<boolean>;
+  // Finished Workouts still on the phone, waiting to upload; oldest first
+  pending: Workout[];
+  // Removes a Pending Workout so it never uploads; works offline
+  deletePending: (workoutId: string) => Promise<void>;
 };
 
 export type FinishOutcome = { status: "pending"; uploaded: boolean } | { status: "nothing-to-save" };
@@ -51,7 +57,10 @@ export function LogbookProvider({ children }: { children: ReactNode }) {
     }),
   );
   const [workout, setWorkout] = useState<InProgressWorkout | null>(null);
+  const [pending, setPending] = useState<Workout[]>([]);
   const [isLoaded, setIsLoaded] = useState(false);
+
+  const refreshPending = useCallback(async () => setPending(await logbook.pending()), [logbook]);
 
   // Runs a Logbook call, then shows what it left on the phone
   const run = useCallback(
@@ -60,10 +69,17 @@ export function LogbookProvider({ children }: { children: ReactNode }) {
         await change();
       } finally {
         setWorkout(await logbook.inProgress());
+        await refreshPending();
       }
     },
-    [logbook],
+    [logbook, refreshPending],
   );
+
+  // Uploads what it can; anything that fails stays pending for the next try
+  const sync = useCallback(async () => {
+    await logbook.sync().catch(() => {});
+    await refreshPending();
+  }, [logbook, refreshPending]);
 
   // Also uploads anything left pending last time the app ran
   useEffect(() => {
@@ -71,8 +87,25 @@ export function LogbookProvider({ children }: { children: ReactNode }) {
       setWorkout(stored);
       setIsLoaded(true);
     });
-    logbook.sync().catch(() => {});
-  }, [logbook]);
+    refreshPending();
+    sync();
+  }, [logbook, refreshPending, sync]);
+
+  // Syncs when the app returns to the foreground and when the network comes back
+  useEffect(() => {
+    const appState = AppState.addEventListener("change", (state) => {
+      if (state === "active") sync();
+    });
+    let wasConnected: boolean | undefined;
+    const network = Network.addNetworkStateListener(({ isConnected }) => {
+      if (isConnected && wasConnected === false) sync();
+      wasConnected = isConnected;
+    });
+    return () => {
+      appState.remove();
+      network.remove();
+    };
+  }, [sync]);
 
   const start = useCallback(() => run(() => logbook.start(new Date())), [logbook, run]);
 
@@ -107,22 +140,21 @@ export function LogbookProvider({ children }: { children: ReactNode }) {
     [logbook, run],
   );
 
-  // Uploads straight after finishing, so a Workout finished with signal reaches the server now
+  // Uploads straight after finishing, so a Workout finished with signal reaches the server now.
+  // Uploaded means this Workout left the phone, whatever happened to other Pending Workouts
   const uploadFinished = useCallback(
     async (finishing: () => Promise<FinishResult>): Promise<FinishOutcome> => {
-      let result: FinishResult;
-      try {
+      let result: FinishResult | undefined;
+      await run(async () => {
         result = await finishing();
-      } finally {
-        setWorkout(await logbook.inProgress());
-      }
-      if (result.status === "nothing-to-save") return result;
-      return logbook.sync().then(
-        () => ({ status: "pending", uploaded: true }),
-        () => ({ status: "pending", uploaded: false }),
-      );
+      });
+      if (!result || result.status === "nothing-to-save") return { status: "nothing-to-save" };
+      const { id } = result.workout;
+      await sync();
+      const stillPending = (await logbook.pending()).some((p) => p.id === id);
+      return { status: "pending", uploaded: !stillPending };
     },
-    [logbook],
+    [logbook, run, sync],
   );
 
   const finish = useCallback(
@@ -136,6 +168,8 @@ export function LogbookProvider({ children }: { children: ReactNode }) {
   const discard = useCallback(() => run(() => logbook.discard()), [logbook, run]);
 
   const isStale = useCallback(() => logbook.isStale(new Date()), [logbook]);
+
+  const deletePending = useCallback((workoutId: string) => run(() => logbook.deletePending(workoutId)), [logbook, run]);
 
   return (
     <LogbookContext
@@ -154,8 +188,11 @@ export function LogbookProvider({ children }: { children: ReactNode }) {
         finishAtLastSet,
         discard,
         isStale,
+        pending,
+        deletePending,
       }}
     >
+
       {children}
     </LogbookContext>
   );

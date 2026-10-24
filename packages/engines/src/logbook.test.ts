@@ -32,6 +32,17 @@ function setup(storage = memoryStorage()) {
 
 const at = (time: string) => new Date(`2026-10-24T${time}:00.000Z`);
 
+// A finished Workout with one plank Set, started at the given time
+async function finishPlank(logbook: ReturnType<typeof setup>["logbook"], startedAt: string) {
+  await logbook.start(at(startedAt));
+  const plank = await logbook.addWorkoutExercise(exercise("plank"));
+  await logbook.logSet(plank.id, { kind: "timed", seconds: 60 }, at(startedAt));
+  const endedAt = new Date(at(startedAt).getTime() + 600_000);
+  const result = await logbook.finish({ startedAt: at(startedAt), endedAt, now: endedAt });
+  if (result.status !== "pending") throw new Error("Expected a Pending Workout");
+  return result.workout;
+}
+
 describe("Logbook", () => {
   it("uploads a finished Workout once, with its Workout Exercises and Sets in order", async () => {
     const { logbook, uploader } = setup();
@@ -262,6 +273,98 @@ describe("Logbook", () => {
 
       expect(await logbook.isStale(at("23:00"))).toBe(false);
     });
+  });
+
+  it("still uploads the other Pending Workouts when one upload fails", async () => {
+    const { logbook, uploader } = setup();
+    const first = await finishPlank(logbook, "07:00");
+    const second = await finishPlank(logbook, "08:00");
+    const third = await finishPlank(logbook, "09:00");
+    const upload = uploader.upload;
+    uploader.upload = async (workout) => {
+      if (workout.id === second.id) throw new Error("Server error");
+      return upload(workout);
+    };
+
+    await expect(logbook.sync()).rejects.toThrow("Server error");
+
+    expect(uploader.uploaded.map((w) => w.id)).toEqual([first.id, third.id]);
+    expect((await logbook.pending()).map((w) => w.id)).toEqual([second.id]);
+  });
+
+  it("uploads each Pending Workout once when two syncs overlap", async () => {
+    const { logbook, uploader } = setup();
+    await finishPlank(logbook, "08:00");
+    await finishPlank(logbook, "09:00");
+    const upload = uploader.upload;
+    // A slow connection, so the second sync starts while the first is still uploading
+    uploader.upload = async (workout) => {
+      await new Promise((resolve) => setTimeout(resolve, 5));
+      return upload(workout);
+    };
+
+    await Promise.all([logbook.sync(), logbook.sync()]);
+
+    expect(uploader.uploaded).toHaveLength(2);
+    expect(await logbook.pending()).toEqual([]);
+  });
+
+  it("keeps a Workout finished offline pending until the signal is back", async () => {
+    const { logbook, uploader } = setup();
+    const upload = uploader.upload;
+    uploader.upload = async () => {
+      throw new Error("No signal");
+    };
+    const workout = await finishPlank(logbook, "09:00");
+    await expect(logbook.sync()).rejects.toThrow("No signal");
+
+    expect(await logbook.pending()).toEqual([workout]);
+    expect(uploader.uploaded).toEqual([]);
+
+    uploader.upload = upload;
+    await logbook.sync();
+
+    expect(uploader.uploaded).toEqual([workout]);
+    expect(await logbook.pending()).toEqual([]);
+  });
+
+  it("still has the Pending Workouts when rebuilt over the same storage", async () => {
+    const { logbook, uploader, storage } = setup();
+    uploader.upload = async () => {
+      throw new Error("No signal");
+    };
+    const workout = await finishPlank(logbook, "09:00");
+
+    expect(await setup(storage).logbook.pending()).toEqual([workout]);
+  });
+
+  it("never uploads a deleted Pending Workout", async () => {
+    const { logbook, uploader } = setup();
+    const kept = await finishPlank(logbook, "08:00");
+    const deleted = await finishPlank(logbook, "09:00");
+
+    await logbook.deletePending(deleted.id);
+    await logbook.sync();
+
+    expect(uploader.uploaded).toEqual([kept]);
+    expect(await logbook.pending()).toEqual([]);
+  });
+
+  it("doesn't upload a Pending Workout deleted while a sync is under way", async () => {
+    const { logbook, uploader } = setup();
+    const first = await finishPlank(logbook, "08:00");
+    const second = await finishPlank(logbook, "09:00");
+    const upload = uploader.upload;
+    uploader.upload = async (workout) => {
+      // The user deletes the second one while the first is uploading
+      if (workout.id === first.id) await logbook.deletePending(second.id);
+      return upload(workout);
+    };
+
+    await logbook.sync();
+
+    expect(uploader.uploaded).toEqual([first]);
+    expect(await logbook.pending()).toEqual([]);
   });
 });
 

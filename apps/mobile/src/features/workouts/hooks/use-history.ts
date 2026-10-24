@@ -38,7 +38,10 @@ export function useHistory() {
       setHasMore(result.hasMore);
       setError(null);
     } catch (err) {
-      if (current === generation.current) setError(errorMessage(err));
+      // Offline: drop what was shown, so History holds only the Pending Workouts
+      if (current !== generation.current) return;
+      setWorkouts(null);
+      setError(errorMessage(err));
     }
   }, [fetchPage]);
 
@@ -60,5 +63,6 @@ export function useHistory() {
     }
   }, [fetchPage, hasMore, workouts]);
 
+  // workouts is null while loading, and after the newest page failed to load (offline)
   return { workouts, error, isLoading: !workouts && !error, isLoadingMore, refresh, loadMore };
 }
