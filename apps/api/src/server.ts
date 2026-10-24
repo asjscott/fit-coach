@@ -1,6 +1,7 @@
 import cors from "@fastify/cors";
 import Fastify from "fastify";
 import { serializerCompiler, validatorCompiler } from "fastify-type-provider-zod";
+import { exerciseRoutes } from "./routes/exercises";
 import { userRoutes } from "./routes/users";
 import { clerkPlugin } from "@clerk/fastify";
 import { HealthResponse } from "@fit/shared";
@@ -30,6 +31,7 @@ await ensureUserIndexes().catch((err) =>
 await migrateUsers().catch((err) => app.log.error(err, "Failed to migrate users"));
 
 await app.register(userRoutes);
+await app.register(exerciseRoutes);
 
 app.get("/health", async () => {
   return HealthResponse.parse({

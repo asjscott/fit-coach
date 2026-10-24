@@ -3,10 +3,12 @@ import { InjuryTag } from "./user";
 import { EquipmentTag } from "./equipment";
 
 export const Pattern = z.enum(["squat", "hinge", "push", "pull", "carry", "core"]);
+export type Pattern = z.infer<typeof Pattern>;
 export const Muscle = z.enum([
   "quads", "hamstrings", "glutes", "adductors", "calves", "chest", "front_delts", "side_delts",
   "rear_delts", "lats", "upper_back", "traps", "biceps", "triceps", "forearms", "abs", "obliques", "lower_back",
 ]);
+export type Muscle = z.infer<typeof Muscle>;
 
 export const Exercise = z.object({
   slug: z.string().regex(/^[a-z0-9-]+$/),            // stable ID, e.g. "goblet-squat"

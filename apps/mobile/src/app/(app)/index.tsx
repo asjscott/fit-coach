@@ -71,6 +71,7 @@ export default function Home() {
         </Card>
       </Stack>
       <ButtonGroup space={2} style={{ marginTop: spacing[6] }}>
+        <LoadingButton label="Exercises" action="secondary" icon="dumbbell" href="/exercises" />
         <LoadingButton label="Edit profile" action="secondary" icon="user" href="/onboarding" />
         {__DEV__ && (
           <LoadingButton label="Components" action="secondary" icon="settings" href="/styleguide" />
