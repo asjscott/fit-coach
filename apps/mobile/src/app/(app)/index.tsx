@@ -11,6 +11,7 @@ import { HStack, Stack } from "@/components/stack";
 import { Text } from "@/components/text";
 import { useToast } from "@/contexts/toast-context";
 import { useCurrentUser } from "@/features/user/current-user-provider";
+import { ForgottenWorkoutModal } from "@/features/workouts/components/forgotten-workout-modal";
 import { useLogbook } from "@/features/workouts/logbook-provider";
 import { goalLabel } from "@/features/user/components/form/fields/user-goal-field";
 import { injuryLabel } from "@/features/user/components/form/fields/user-injuries-field";
@@ -26,9 +27,21 @@ export default function Home() {
   const { showToast } = useToast();
   const [status, setStatus] = useState("Checking API…");
   const [starting, setStarting] = useState(false);
+  const [forgotten, setForgotten] = useState(false);
+  const { isLoaded, isStale } = logbook;
 
-  // Resuming just opens the Workout; starting saves a new one on the phone first
+  // A forgotten Workout must be finished or discarded before the user carries on
+  useEffect(() => {
+    if (isLoaded) isStale().then(setForgotten, () => {});
+  }, [isLoaded, isStale]);
+
+  // Resuming just opens the Workout, unless it was forgotten; starting saves a new one
+  // on the phone first
   const handleWorkout = async () => {
+    if (logbook.workout && (await isStale())) {
+      setForgotten(true);
+      return;
+    }
     if (!logbook.workout) {
       setStarting(true);
       try {
@@ -106,6 +119,7 @@ export default function Home() {
         )}
         <LoadingButton label="Sign out" action="default" icon="signOut" onPress={() => signOut()} />
       </ButtonGroup>
+      <ForgottenWorkoutModal isOpen={forgotten} onDone={() => setForgotten(false)} />
     </Screen>
   );
 }

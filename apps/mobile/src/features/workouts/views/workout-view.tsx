@@ -1,5 +1,4 @@
 import type { InProgressWorkoutExercise, LoadType, Set, SetValues } from "@fit/shared";
-import { router } from "expo-router";
 import { useState } from "react";
 import { Card } from "@/components/card";
 import { Input, InputField } from "@/components/input";
@@ -15,9 +14,7 @@ import { useLogbook } from "../logbook-provider";
 const errorMessage = (err: unknown) => (err instanceof Error ? err.message : "Something went wrong");
 
 export default function WorkoutView() {
-  const { workout, finish } = useLogbook();
-  const { showToast } = useToast();
-  const [finishing, setFinishing] = useState(false);
+  const { workout } = useLogbook();
 
   if (!workout) {
     return (
@@ -26,23 +23,6 @@ export default function WorkoutView() {
       </Screen>
     );
   }
-
-  const hasSets = workout.workoutExercises.some((we) => we.sets.length > 0);
-
-  const handleFinish = async () => {
-    setFinishing(true);
-    try {
-      const { uploaded } = await finish();
-      showToast(uploaded ? "Workout saved" : "Saved on your phone; it will upload when you have signal", {
-        type: uploaded ? "success" : "info",
-      });
-      router.back();
-    } catch (err) {
-      showToast(`Couldn't finish: ${errorMessage(err)}`, { error: err });
-    } finally {
-      setFinishing(false);
-    }
-  };
 
   return (
     <Screen scroll edges={["bottom"]}>
@@ -60,7 +40,7 @@ export default function WorkoutView() {
       </Stack>
       <Stack spacing={2} style={{ marginTop: spacing[6] }}>
         <LoadingButton label="Add exercise" action="secondary" icon="plus" href="/workout/add-exercise" />
-        <LoadingButton label="Finish" icon="check" loading={finishing} disabled={!hasSets} onPress={handleFinish} />
+        <LoadingButton label="Finish" icon="check" href="/workout/finish" />
       </Stack>
     </Screen>
   );
