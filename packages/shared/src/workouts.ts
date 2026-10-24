@@ -56,3 +56,11 @@ export const InProgressWorkout = z.object({
 });
 export type InProgressWorkout = z.infer<typeof InProgressWorkout>;
 export type InProgressWorkoutExercise = InProgressWorkout["workoutExercises"][number];
+
+// A page of History from GET /workouts, newest first. To load older Workouts, pass the
+// startedAt of the last Workout received as before
+export const WorkoutsQuery = z.object({
+  limit: z.coerce.number().int().min(1).max(100).default(20),
+  before: z.iso.datetime().optional(),
+});
+export type WorkoutsQuery = z.infer<typeof WorkoutsQuery>;
