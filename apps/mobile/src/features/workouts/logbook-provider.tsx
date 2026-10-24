@@ -35,6 +35,8 @@ type LogbookContextValue = {
   pending: Workout[];
   // Removes a Pending Workout so it never uploads; works offline
   deletePending: (workoutId: string) => Promise<void>;
+  // For signing out: removes the in-progress and Pending Workouts from the phone
+  clear: () => Promise<void>;
 };
 
 export type FinishOutcome = { status: "pending"; uploaded: boolean } | { status: "nothing-to-save" };
@@ -171,6 +173,8 @@ export function LogbookProvider({ children }: { children: ReactNode }) {
 
   const deletePending = useCallback((workoutId: string) => run(() => logbook.deletePending(workoutId)), [logbook, run]);
 
+  const clear = useCallback(() => run(() => logbook.clear()), [logbook, run]);
+
   return (
     <LogbookContext
       value={{
@@ -190,6 +194,7 @@ export function LogbookProvider({ children }: { children: ReactNode }) {
         isStale,
         pending,
         deletePending,
+        clear,
       }}
     >
 
