@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { Workout } from "./workouts";
+import { Workout, WorkoutsQuery } from "./workouts";
 
 const loggedAt = "2026-10-24T09:10:00.000Z";
 
@@ -49,5 +49,26 @@ describe("Workout", () => {
   it("rejects a weight that isn't in 0.25 kg steps", () => {
     const awkward = { ...gobletSquat, sets: [{ kind: "external", kg: 22.3, reps: 10, loggedAt }] };
     expect(Workout.safeParse(workout([awkward])).success).toBe(false);
+  });
+});
+
+describe("WorkoutsQuery", () => {
+  it("defaults to the newest page of 20", () => {
+    expect(WorkoutsQuery.parse({})).toEqual({ limit: 20 });
+  });
+
+  it("reads limit and before from query strings", () => {
+    expect(WorkoutsQuery.parse({ limit: "5", before: "2026-10-24T09:00:00.000Z" })).toEqual({
+      limit: 5,
+      before: "2026-10-24T09:00:00.000Z",
+    });
+  });
+
+  it.each([["0"], ["101"], ["2.5"], ["lots"]])("rejects a limit of %s", (limit) => {
+    expect(WorkoutsQuery.safeParse({ limit }).success).toBe(false);
+  });
+
+  it("rejects a before cursor that isn't a datetime", () => {
+    expect(WorkoutsQuery.safeParse({ before: "yesterday" }).success).toBe(false);
   });
 });
