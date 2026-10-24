@@ -7,8 +7,8 @@ import {
 } from "@fit/shared";
 import type { z } from "zod";
 
-// Strings by key; expo-sqlite/kv-store on the phone, a Map in tests
-export type PhoneStorage = {
+// Strings by key: SQLite on the phone, localStorage on web, a Map in tests
+export type DeviceStorage = {
   getItem(key: string): Promise<string | null>;
   setItem(key: string, value: string): Promise<void>;
   removeItem(key: string): Promise<void>;
@@ -46,14 +46,14 @@ const IN_PROGRESS_KEY = "logbook:in-progress";
 const PENDING_KEY = "logbook:pending";
 
 // Owns the Workout being logged and the Pending Workouts waiting to upload. Every change
-// is written to phone storage before the call returns, so a Logbook rebuilt over the
+// is written to device storage before the call returns, so a Logbook rebuilt over the
 // same storage carries on where it was
 export function createLogbook({
   storage,
   uploader,
   newId,
 }: {
-  storage: PhoneStorage;
+  storage: DeviceStorage;
   uploader: WorkoutUploader;
   newId: () => string;
 }) {
