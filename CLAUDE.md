@@ -17,7 +17,3 @@ Single-context: one `GLOSSARY.md` and `docs/adr/` at the repo root. See `docs/ag
 ### Workouts
 
 Logging, device storage, sync, History and the workouts API: see `docs/agents/workouts.md`.
-
-### Coding standards
-
-Judgement calls for review (domain language in copy, shared helpers, test seams): see `CODING_STANDARDS.md`.
