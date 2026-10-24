@@ -6,7 +6,14 @@ import { Card } from "@/components/card";
 import { Heading } from "@/components/heading";
 import { Loading } from "@/components/loading";
 import { LoadingButton } from "@/components/loading-button";
-import { Modal, ModalBackdrop, ModalBody, ModalContent, ModalFooter, ModalHeader } from "@/components/modal";
+import {
+  Modal,
+  ModalBackdrop,
+  ModalBody,
+  ModalContent,
+  ModalFooter,
+  ModalHeader,
+} from "@/components/modal";
 import { Screen } from "@/components/screen";
 import { HStack, Stack } from "@/components/stack";
 import { Text } from "@/components/text";
@@ -15,13 +22,18 @@ import { spacing } from "@/theme";
 import { dateLabel, describeSet, durationLabel, timeLabel } from "../format";
 import { useHistory } from "../history-provider";
 import { libraryExercise } from "../library";
+import { useLogbook } from "../logbook-provider";
 
-const errorMessage = (err: unknown) => (err instanceof Error ? err.message : "Something went wrong");
+const errorMessage = (err: unknown) =>
+  err instanceof Error ? err.message : "Something went wrong";
 
-// The detail of an uploaded Workout from History, found in the list History loaded
+// The detail of a Workout from History: a Pending Workout from the Logbook, deleted
+// there (works offline), or an uploaded one from the list History loaded, deleted on the server
 export default function WorkoutDetailView() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { workouts, error, isLoading, refresh, deleteWorkout } = useHistory();
+  const { pending, deletePending } = useLogbook();
+  const pendingWorkout = pending.find((w) => w.id === id);
   const workout = workouts?.find((w) => w.id === id);
 
   // Opened directly (e.g. a web reload) before History has loaded
@@ -29,16 +41,32 @@ export default function WorkoutDetailView() {
     if (!workouts) refresh();
   }, [workouts, refresh]);
 
+  if (pendingWorkout) {
+    return (
+      <WorkoutDetail
+        workout={pendingWorkout}
+        note="Not uploaded yet. It uploads when you're back online."
+        onDelete={() => deletePending(pendingWorkout.id)}
+      />
+    );
+  }
   if (isLoading) return <Loading message="Loading workout..." />;
   if (!workout) {
     return (
       <Screen edges={["bottom"]}>
-        <Text color={error ? "danger" : "textMuted"}>{error ?? "This Workout isn't in your History."}</Text>
+        <Text color={error ? "danger" : "textMuted"}>
+          {error ?? "This Workout isn't in your History."}
+        </Text>
       </Screen>
     );
   }
 
-  return <WorkoutDetail workout={workout} onDelete={() => deleteWorkout(workout.id)} />;
+  return (
+    <WorkoutDetail
+      workout={workout}
+      onDelete={() => deleteWorkout(workout.id)}
+    />
+  );
 }
 
 type WorkoutDetailProps = {
@@ -77,7 +105,8 @@ export function WorkoutDetail({ workout, note, onDelete }: WorkoutDetailProps) {
         <Stack spacing={1}>
           <Heading size="xl">{dateLabel(workout.startedAt)}</Heading>
           <Text color="textMuted" tabular>
-            {timeLabel(workout.startedAt)} – {timeLabel(workout.endedAt)} · {durationLabel(workout)}
+            {timeLabel(workout.startedAt)} – {timeLabel(workout.endedAt)} ·{" "}
+            {durationLabel(workout)}
           </Text>
           {note !== undefined && (
             <Text size="sm" color="textMuted">
@@ -86,7 +115,10 @@ export function WorkoutDetail({ workout, note, onDelete }: WorkoutDetailProps) {
           )}
         </Stack>
         {workout.workoutExercises.map((workoutExercise, i) => (
-          <WorkoutExerciseCard key={`${workoutExercise.slug}-${i}`} workoutExercise={workoutExercise} />
+          <WorkoutExerciseCard
+            key={`${workoutExercise.slug}-${i}`}
+            workoutExercise={workoutExercise}
+          />
         ))}
       </Stack>
       <LoadingButton
@@ -98,20 +130,36 @@ export function WorkoutDetail({ workout, note, onDelete }: WorkoutDetailProps) {
         onPress={() => setConfirming(true)}
       />
 
-      <Modal isOpen={confirming} onClose={() => !deleting && setConfirming(false)}>
+      <Modal
+        isOpen={confirming}
+        onClose={() => !deleting && setConfirming(false)}
+      >
         <ModalBackdrop />
         <ModalContent>
           <ModalHeader>
             <Heading size="md">Delete this workout?</Heading>
           </ModalHeader>
           <ModalBody>
-            <Text color="textMuted">It will be removed from your History. This can't be undone.</Text>
+            <Text color="textMuted">
+              It will be removed from your History. This can't be undone.
+            </Text>
           </ModalBody>
           <ModalFooter>
-            <Button action="default" size="sm" disabled={deleting} onPress={() => setConfirming(false)}>
+            <Button
+              action="default"
+              size="sm"
+              disabled={deleting}
+              onPress={() => setConfirming(false)}
+            >
               <ButtonText>Cancel</ButtonText>
             </Button>
-            <LoadingButton label="Delete" action="negative" size="sm" loading={deleting} onPress={handleDelete} />
+            <LoadingButton
+              label="Delete"
+              action="negative"
+              size="sm"
+              loading={deleting}
+              onPress={handleDelete}
+            />
           </ModalFooter>
         </ModalContent>
       </Modal>
@@ -119,7 +167,11 @@ export function WorkoutDetail({ workout, note, onDelete }: WorkoutDetailProps) {
   );
 }
 
-function WorkoutExerciseCard({ workoutExercise }: { workoutExercise: WorkoutExercise }) {
+function WorkoutExerciseCard({
+  workoutExercise,
+}: {
+  workoutExercise: WorkoutExercise;
+}) {
   // An Exercise this app version doesn't know shows as its slug
   const exercise = libraryExercise(workoutExercise.slug);
   const perSide = exercise?.unilateral ? " per side" : "";
