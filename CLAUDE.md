@@ -11,3 +11,13 @@ The five default labels: needs-triage, needs-info, ready-for-agent, ready-for-hu
 ### Domain docs
 
 Single-context: one `GLOSSARY.md` and `docs/adr/` at the repo root. See `docs/agents/domain.md`.
+
+## Code
+
+### Workouts
+
+Logging, device storage, sync, History and the workouts API: see `docs/agents/workouts.md`.
+
+### Coding standards
+
+Judgement calls for review (domain language in copy, shared helpers, test seams): see `CODING_STANDARDS.md`.
