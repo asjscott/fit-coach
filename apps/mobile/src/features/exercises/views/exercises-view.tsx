@@ -1,9 +1,11 @@
 import { Pattern, type Exercise } from "@fit/shared";
 import { isAvailable } from "@fit/engines";
+import { router } from "expo-router";
 import { useState } from "react";
 import { SectionList } from "react-native";
 import { Card } from "@/components/card";
 import { Loading } from "@/components/loading";
+import { Pressable } from "@/components/pressable";
 import { Screen } from "@/components/screen";
 import { HStack, Stack } from "@/components/stack";
 import { Switch } from "@/components/switch";
@@ -11,16 +13,8 @@ import { Text } from "@/components/text";
 import { useCurrentUser } from "@/features/user/current-user-provider";
 import { spacing, useTheme } from "@/theme";
 import { useExercises } from "../hooks/use-exercises";
+import { patternLabels } from "../labels";
 import { neededEquipment } from "../needed-equipment";
-
-const patternLabels: Record<Pattern, string> = {
-  squat: "Squat",
-  hinge: "Hinge",
-  push: "Push",
-  pull: "Pull",
-  carry: "Carry",
-  core: "Core",
-};
 
 type Row = { exercise: Exercise; available: boolean };
 
@@ -80,14 +74,16 @@ export default function ExercisesView() {
           </Text>
         )}
         renderItem={({ item: { exercise, available } }) => (
-          <Card size="sm" style={!available && { opacity: 0.5 }}>
-            <Text weight="semiBold">{exercise.name}</Text>
-            {!available && (
-              <Text size="sm" color="textMuted">
-                Needs: {neededEquipment(exercise, tags)}
-              </Text>
-            )}
-          </Card>
+          <Pressable accessibilityRole="link" onPress={() => router.push(`/exercises/${exercise.slug}`)}>
+            <Card size="sm" style={!available && { opacity: 0.5 }}>
+              <Text weight="semiBold">{exercise.name}</Text>
+              {!available && (
+                <Text size="sm" color="textMuted">
+                  Needs: {neededEquipment(exercise, tags)}
+                </Text>
+              )}
+            </Card>
+          </Pressable>
         )}
         ListEmptyComponent={
           error ? null : (

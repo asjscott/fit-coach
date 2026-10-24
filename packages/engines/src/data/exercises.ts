@@ -1,10 +1,14 @@
 import type { Exercise } from "@fit/shared";
+import { BATCH_1 } from "./batch_1";
+import { BATCH_2 } from "./batch_2";
+import { BATCH_3 } from "./batch_3";
+import { BATCH_4 } from "./batch_4";
 
 // The first 20 exercises. Every movement pattern (except carry) has at least
 // one option for every equipment preset, including "Bodyweight only".
 // Ladders: regression = easier variant, progression = harder variant (by slug).
 
-export const EXERCISES: Exercise[] = [
+const Base: Exercise[] = [
   // ───────────────────────── Squat ─────────────────────────
   {
     slug: "bodyweight-squat",
@@ -60,8 +64,8 @@ export const EXERCISES: Exercise[] = [
     loadType: "bodyweight",
     unilateral: true,
     secondsPerSet: 120,
-    regression: "bodyweight-squat",
-    progression: null,
+    regression: "split-squat",
+    progression: "shrimp-squat",
     avoidWith: ["knee"],
     cues: ["Back foot on a bench or chair", "Front shin stays roughly vertical", "Lower straight down, not forward"],
     videoUrl: null,
@@ -77,7 +81,7 @@ export const EXERCISES: Exercise[] = [
     loadType: "bodyweight",
     unilateral: true,
     secondsPerSet: 90,
-    regression: null,
+    regression: "glute-bridge",
     progression: "dumbbell-romanian-deadlift",
     avoidWith: [],
     cues: ["Drive through the heel of your planted foot", "Squeeze your glutes at the top", "Keep your hips level"],
@@ -93,7 +97,7 @@ export const EXERCISES: Exercise[] = [
     unilateral: false,
     secondsPerSet: 90,
     regression: "single-leg-glute-bridge",
-    progression: null,
+    progression: "single-arm-kettlebell-swing",
     avoidWith: ["lower_back"],
     cues: ["Hinge at the hips, not a squat", "Snap your hips forward to float the bell", "Arms guide, hips do the work"],
     videoUrl: null,
@@ -123,7 +127,7 @@ export const EXERCISES: Exercise[] = [
     unilateral: false,
     secondsPerSet: 150,
     regression: "dumbbell-romanian-deadlift",
-    progression: null,
+    progression: "deadlift",
     avoidWith: ["lower_back"],
     cues: ["Bar stays in contact with your thighs", "Hips back, back flat", "Stand tall by squeezing your glutes"],
     videoUrl: null,
@@ -155,7 +159,7 @@ export const EXERCISES: Exercise[] = [
     unilateral: false,
     secondsPerSet: 90,
     regression: "incline-push-up",
-    progression: null,
+    progression: "decline-push-up",
     avoidWith: ["wrist"],
     cues: ["Hands just wider than shoulders", "Elbows about 45 degrees from your body", "Chest touches first, hips stay level"],
     videoUrl: null,
@@ -200,7 +204,7 @@ export const EXERCISES: Exercise[] = [
     unilateral: false,
     secondsPerSet: 120,
     regression: null,
-    progression: null,
+    progression: "barbell-overhead-press",
     avoidWith: ["shoulder"],
     cues: ["Squeeze glutes and brace, ribs down", "Press straight up, finish with arms by ears", "Don't lean back to finish the rep"],
     videoUrl: null,
@@ -217,7 +221,7 @@ export const EXERCISES: Exercise[] = [
     unilateral: false,
     secondsPerSet: 90,
     regression: null,
-    progression: "pull-up",
+    progression: "pull-up-negative",
     avoidWith: [],
     cues: ["Under a sturdy table, rings or a low bar", "Body straight, heels on the floor", "Pull your chest to your hands"],
     videoUrl: null,
@@ -231,7 +235,7 @@ export const EXERCISES: Exercise[] = [
     loadType: "bodyweight",
     unilateral: false,
     secondsPerSet: 120,
-    regression: "inverted-row",
+    regression: "pull-up-negative",
     progression: null,
     avoidWith: ["shoulder", "elbow"],
     cues: ["Start from a full hang", "Pull your elbows down to your ribs", "Chin over the bar, control the way down"],
@@ -279,7 +283,7 @@ export const EXERCISES: Exercise[] = [
     unilateral: false,
     secondsPerSet: 75,
     regression: null,
-    progression: null,
+    progression: "ab-wheel-rollout",
     avoidWith: [],
     cues: ["Elbows under shoulders", "Squeeze glutes, tuck your pelvis slightly", "Breathe; stop when your hips sag"],
     videoUrl: null,
@@ -294,7 +298,7 @@ export const EXERCISES: Exercise[] = [
     unilateral: false,
     secondsPerSet: 75,
     regression: null,
-    progression: null,
+    progression: "hollow-hold",
     avoidWith: [],
     cues: ["Lower back pressed into the floor", "Reach opposite arm and leg away slowly", "Breathe out as you extend"],
     videoUrl: null,
@@ -317,3 +321,5 @@ export const EXERCISES: Exercise[] = [
     videoUrl: null,
   },
 ];
+
+export const EXERCISES: Exercise[] = [...Base, ...BATCH_1, ...BATCH_2, ...BATCH_3, ...BATCH_4];
