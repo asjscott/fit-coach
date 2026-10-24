@@ -41,6 +41,25 @@ This command will move the starter code to the **app-example** directory and cre
 - If you'd like to set up unit testing, follow our guide on ["Unit Testing with Jest"](https://docs.expo.dev/develop/unit-testing/)
 - Learn more about the TypeScript setup in this template in our guide on ["Using TypeScript"](https://docs.expo.dev/guides/typescript/)
 
+## Deploying the web version
+
+The in-progress and Pending Workouts are stored with `expo-sqlite`, which on web runs SQLite as wasm in a worker and needs `SharedArrayBuffer`. Browsers only allow that when the page is served with these headers:
+
+```
+Cross-Origin-Embedder-Policy: credentialless
+Cross-Origin-Opener-Policy: same-origin
+```
+
+`metro.config.js` adds them for the dev server only. **Any production web host must send them too**, or the app will load but saving a Workout will fail. On EAS Hosting, set them in `app.json`:
+
+```json
+["expo-router", { "headers": { "Cross-Origin-Embedder-Policy": "credentialless", "Cross-Origin-Opener-Policy": "same-origin" } }]
+```
+
+On any other host (Netlify, Vercel, a CDN…), add them to its headers config. These headers also stop the page loading cross-origin resources (images, scripts, iframes) that don't allow it, so check third-party embeds such as Clerk's sign-in still work. Docs: [expo-sqlite web setup](https://docs.expo.dev/versions/v57.0.0/sdk/sqlite/#web-setup).
+
+The web build is a single-page app (`"web": { "output": "single" }` in `app.json`), so the host must serve `index.html` for every path (an SPA fallback or rewrite). Static output (`"static"`) breaks expo-sqlite in development: the dev server either fails with "Worker chunk not found for: …/expo-sqlite/web/worker.ts" or, with lazy bundling off, the app fails at runtime with "Bundle splitting is required for Web Worker imports". Revisit if a later Expo release fixes this and you want pre-rendered pages.
+
 ## Learn more
 
 To learn more about developing your project with Expo, look at the following resources:

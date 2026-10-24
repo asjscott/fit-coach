@@ -30,6 +30,10 @@ _Avoid_: Round, attempt
 The user's finished Workouts, newest first.
 _Avoid_: Log, journal, activity
 
+**In-progress Workout**:
+The Workout the user has started but not yet finished; there is at most one at a time. Finishing it makes it a Pending Workout.
+_Avoid_: Active workout, current workout, draft workout
+
 **Pending Workout**:
 A finished Workout that hasn't reached the server yet.
 _Avoid_: Unsynced workout, queued workout, offline workout

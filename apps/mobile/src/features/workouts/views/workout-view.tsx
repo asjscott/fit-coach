@@ -75,7 +75,7 @@ function WorkoutExerciseCard({ workoutExercise }: { workoutExercise: InProgressW
       <Stack spacing={3}>
         <Stack spacing={1}>
           <Text weight="semiBold">{exercise?.name ?? workoutExercise.slug}</Text>
-          {perSide && (
+          {exercise?.unilateral && (
             <Text size="sm" color="textMuted">
               Log one side; the values count for each side
             </Text>
