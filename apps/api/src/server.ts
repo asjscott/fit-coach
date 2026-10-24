@@ -4,8 +4,8 @@ import { serializerCompiler, validatorCompiler } from "fastify-type-provider-zod
 import { exerciseRoutes } from "./routes/exercises";
 import { userRoutes } from "./routes/users";
 import { workoutRoutes } from "./routes/workouts";
-import { clerkPlugin } from "@clerk/fastify";
 import { HealthResponse } from "@fit/shared";
+import { registerAuth } from "./auth";
 import { pingDb } from "./db";
 import { ensureUserIndexes, migrateUsers } from "./users";
 import { ensureWorkoutIndexes } from "./workouts";
@@ -24,7 +24,7 @@ await app.register(cors, {
   exposedHeaders: ["Location"],
 });
 
-await app.register(clerkPlugin);
+await registerAuth(app);
 
 await ensureUserIndexes().catch((err) => app.log.error(err, "Failed to create user indexes"));
 
