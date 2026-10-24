@@ -48,6 +48,13 @@ export function findWorkouts(clerkUserId: string, { limit, before }: WorkoutsQue
     .toArray();
 }
 
+// Deletes the user's Workout; false when it isn't theirs or doesn't exist. No marker is
+// kept for a deleted Workout (ADR 0001)
+export async function deleteWorkout(clerkUserId: string, id: string) {
+  const { deletedCount } = await workouts.deleteOne({ clerkUserId, id });
+  return deletedCount === 1;
+}
+
 // Convert a database document into the shape the app expects
 export function toWorkout({ id, startedAt, endedAt, workoutExercises }: WithId<WorkoutDoc>): Workout {
   return Workout.parse({

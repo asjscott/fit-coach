@@ -4,11 +4,13 @@ import { useApi } from "@/api";
 
 const PAGE_SIZE = 20;
 
-const errorMessage = (err: unknown) => (err instanceof Error ? err.message : "Something went wrong");
+const errorMessage = (err: unknown) =>
+  err instanceof Error ? err.message : "Something went wrong";
 
 // The user's uploaded Workouts from the server, newest first, a page at a time.
-// Nothing is stored on the phone (ADR 0001)
-export function useHistory() {
+// Nothing is stored on the phone (ADR 0001). Use it through HistoryProvider, so the
+// History and Workout detail screens share one list
+export function useHistoryState() {
   const api = useApi();
   const [workouts, setWorkouts] = useState<Workout[] | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -63,6 +65,26 @@ export function useHistory() {
     }
   }, [fetchPage, hasMore, workouts]);
 
+  // Deletes an uploaded Workout on the server, then drops it from the list. Throws when
+  // the request fails (for example, offline), leaving the Workout in place
+  const deleteWorkout = useCallback(
+    async (id: string) => {
+      await api(`/workouts/${encodeURIComponent(id)}`, { method: "DELETE" });
+      setWorkouts(
+        (current) => current?.filter((workout) => workout.id !== id) ?? null,
+      );
+    },
+    [api],
+  );
+
   // workouts is null while loading, and after the newest page failed to load (offline)
-  return { workouts, error, isLoading: !workouts && !error, isLoadingMore, refresh, loadMore };
+  return {
+    workouts,
+    error,
+    isLoading: !workouts && !error,
+    isLoadingMore,
+    refresh,
+    loadMore,
+    deleteWorkout,
+  };
 }
