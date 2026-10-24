@@ -3,9 +3,12 @@ import { UserProfile } from "@fit/shared";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
+import { LoadsForm, pruneLoads, toLoadsForm } from "@/features/equipment/loads";
 import {
+  asksForLoads,
   EquipmentByGroup,
   groupTags,
+  selectedTags,
   toEquipmentInput,
   toTrainingSetup,
   TrainingSetup,
@@ -20,6 +23,7 @@ import type { Stage, StageAction } from "../form/staged-form";
 export const OnboardingValues = UserProfile.extend({
   trainingSetup: TrainingSetup,
   equipment: EquipmentByGroup,
+  loads: LoadsForm,
 });
 export type OnboardingValues = z.infer<typeof OnboardingValues>;
 
@@ -43,10 +47,11 @@ export function useUserOnboarding() {
       daysPerWeek: profile.daysPerWeek ?? 3,
       trainingSetup: primaryEquipment && toTrainingSetup(primaryEquipment),
       equipment: groupTags(primaryEquipment?.tags ?? []),
+      loads: toLoadsForm(primaryEquipment?.loads),
     },
   });
 
-  const { trigger, handleSubmit, formState } = onboardingForm;
+  const { trigger, handleSubmit, formState, getValues, setValue } = onboardingForm;
 
   const onStageChange = async (change: StageAction<OnboardingValues>) => {
     if (typeof stage !== "number") return;
@@ -63,13 +68,19 @@ export function useUserOnboarding() {
       handleError("Please check the form for errors before continuing.");
       return;
     }
+
+    // Drop weights for equipment no longer selected, so a stale half-filled answer can't block saving
+    const { trainingSetup, equipment, loads } = getValues();
+    const tags = asksForLoads(trainingSetup) ? selectedTags(trainingSetup, equipment) : [];
+    setValue("loads", pruneLoads(loads, tags));
+
     setStage(stage + 1);
   };
 
-  const save = async ({ trainingSetup, equipment, ...values }: OnboardingValues) => {
+  const save = async ({ trainingSetup, equipment, loads, ...values }: OnboardingValues) => {
     try {
       // Updates the primary profile by id if there is one, so retrying or editing never adds a second
-      await saveEquipmentProfile(toEquipmentInput(trainingSetup, equipment, primaryEquipment), primaryEquipment?.id);
+      await saveEquipmentProfile(toEquipmentInput(trainingSetup, equipment, loads), primaryEquipment?.id);
 
       // The server stamps onboardedAt once the required fields and an equipment profile are saved
       const updated = await updateUser({ profile: values });

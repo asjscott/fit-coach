@@ -4,9 +4,12 @@ import { FormProvider } from "@/components/hook-form";
 import { LoadingDialog } from "@/components/loading";
 import { HStack } from "@/components/stack";
 import { Text } from "@/components/text";
+import { EquipmentPresetsField } from "@/features/equipment/components/form/fields/equipment-presets-field";
 import { EquipmentTagsField } from "@/features/equipment/components/form/fields/equipment-tags-field";
 import { TrainingSetupField } from "@/features/equipment/components/form/fields/training-setup-field";
-import { selectableGroups } from "@/features/equipment/training-setup";
+import { EquipmentLoadsField } from "@/features/equipment/components/form/fields/equipment-loads-field";
+import { hasLoadTags } from "@/features/equipment/loads";
+import { asksForLoads, selectableGroups, selectedTags } from "@/features/equipment/training-setup";
 import { UserBirthYearField } from "@/features/user/components/form/fields/user-birth-year-field";
 import { UserDaysPerWeekField } from "@/features/user/components/form/fields/user-days-per-week-field";
 import { UserGoalField } from "@/features/user/components/form/fields/user-goal-field";
@@ -19,9 +22,14 @@ import { CompleteStage, FormStage, StagedForm } from "./staged-form";
 
 export function UserOnboardingForm() {
   const { onboardingForm, stage, onStageChange, onSubmit, isSaving, isEditing } = useUserOnboarding();
-  // Gym means all equipment, so it skips the equipment stage. useWatch rather than
+  // Which optional stages show depends on earlier answers. useWatch rather than
   // watch(), which the React Compiler memoizes and so never updates
   const trainingSetup = useWatch({ control: onboardingForm.control, name: "trainingSetup" });
+  const equipment = useWatch({ control: onboardingForm.control, name: "equipment" });
+  const tags = selectedTags(trainingSetup, equipment);
+  // Gym has everything and no equipment has nothing, so neither is asked to pick
+  const picksEquipment = trainingSetup === "home" || trainingSetup === "bodyweight";
+  const asksLoads = asksForLoads(trainingSetup) && hasLoadTags(tags);
 
   return (
     <>
@@ -75,7 +83,7 @@ export function UserOnboardingForm() {
           >
             <TrainingSetupField />
           </FormStage>
-          {trainingSetup && trainingSetup !== "gym" && (
+          {picksEquipment && (
             <FormStage<OnboardingValues>
               fields={["equipment"]}
               title={trainingSetup === "home" ? "What equipment do you have?" : "Any bodyweight stations?"}
@@ -85,7 +93,17 @@ export function UserOnboardingForm() {
                   : "Select anything you can use, or leave it empty for floor work only."
               }
             >
+              {trainingSetup === "home" && <EquipmentPresetsField />}
               <EquipmentTagsField groups={selectableGroups[trainingSetup]} />
+            </FormStage>
+          )}
+          {asksLoads && (
+            <FormStage<OnboardingValues>
+              fields={["loads"]}
+              title="What weights do you have?"
+              message="So we can pick the right loads. Skip anything you're not sure of."
+            >
+              <EquipmentLoadsField tags={tags} />
             </FormStage>
           )}
           <FormStage<OnboardingValues>

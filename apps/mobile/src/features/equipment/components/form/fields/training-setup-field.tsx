@@ -12,6 +12,7 @@ const setupDetails: Record<TrainingSetup, { label: string; description: string; 
   gym: { label: "Gym", description: "A commercial gym with a full range of equipment.", icon: "dumbbell" },
   home: { label: "Home", description: "Your own space, with whatever equipment you've got.", icon: "home" },
   bodyweight: { label: "Bodyweight only", description: "No weights, just you and maybe a bar or rings.", icon: "user" },
+  none: { label: "No equipment", description: "Nothing at all, just you and some floor space.", icon: "circleX" },
 };
 
 export const trainingSetupOptions = TrainingSetup.options.map((value) => ({ value, ...setupDetails[value] }));

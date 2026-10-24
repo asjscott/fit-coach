@@ -82,6 +82,7 @@ export const DumbbellLoads = z.discriminatedUnion("kind", [
 ]);
 
 export const BandLevel = z.enum(["light", "medium", "heavy", "extra_heavy"]);
+export type BandLevel = z.infer<typeof BandLevel>;
 
 export const EquipmentProfile = z.object({
   id: z.string(),
@@ -93,7 +94,11 @@ export const EquipmentProfile = z.object({
     .object({
       dumbbells: DumbbellLoads.optional(),
       kettlebells: z.object({ weightsKg: z.array(kg).min(1) }).optional(),
+      // Plates are loaded in pairs; empty when the user has no plates
+      barbell: z.object({ barKg: kg, platesKg: z.array(kg) }).optional(),
       loop_bands: z.object({ levels: z.array(BandLevel).min(1) }).optional(),
+      mini_bands: z.object({ levels: z.array(BandLevel).min(1) }).optional(),
+      tube_bands: z.object({ levels: z.array(BandLevel).min(1) }).optional(),
     })
     .default({}),
 });
