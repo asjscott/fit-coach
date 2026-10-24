@@ -3,4 +3,5 @@ dist
 .expo
 .env
 .env.*
+!.env.example
 .claude/worktrees
