@@ -131,19 +131,40 @@ export function createLogbook({
         return workout;
       }),
 
+    // The finished Workouts still waiting to upload, oldest first
+    pending: () => serially(readPending),
+
+    // Removes a Pending Workout from the phone so it never uploads. A Workout already
+    // uploading when this is called may still reach the server
+    deletePending: (workoutId: string) =>
+      serially(async () => writePending((await readPending()).filter((p) => p.id !== workoutId))),
+
     // Uploads each Pending Workout, removing it from the phone only once the server has it.
-    // Rejects on the first failure, leaving that Workout and any after it pending.
+    // A failed upload leaves that Workout pending and moves on to the next; once all have
+    // been tried, rejects with the first failure if there was one.
     // Uploads run outside the queue, so logging a Set never waits on the network
     sync: () =>
       (syncing ??= (async () => {
+        const failures: unknown[] = [];
         try {
-          for (const workout of await serially(readPending)) {
-            await uploader.upload(workout);
-            await serially(async () => writePending((await readPending()).filter((p) => p.id !== workout.id)));
+          const tried = new Set<string>();
+          // Reads the phone again before each upload, so a Workout deleted meanwhile is skipped
+          let workout: Workout | undefined;
+          while ((workout = (await serially(readPending)).find((p) => !tried.has(p.id)))) {
+            tried.add(workout.id);
+            try {
+              await uploader.upload(workout);
+            } catch (err) {
+              failures.push(err);
+              continue;
+            }
+            const { id } = workout;
+            await serially(async () => writePending((await readPending()).filter((p) => p.id !== id)));
           }
         } finally {
           syncing = null;
         }
+        if (failures.length) throw failures[0];
       })()),
   };
 }
