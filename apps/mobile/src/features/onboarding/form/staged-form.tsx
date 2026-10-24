@@ -1,6 +1,7 @@
 import { router } from "expo-router";
-import { Children, createContext, use, useEffect, useRef, type ReactNode } from "react";
+import { Children, createContext, isValidElement, use, useEffect, useRef, type ReactNode } from "react";
 import { View, type ScrollView as RNScrollView } from "react-native";
+import type { FieldPath, FieldValues } from "react-hook-form";
 import { Button, ButtonBanner, ButtonText, LeftButtons, RightButtons } from "@/components/button";
 import { Heading } from "@/components/heading";
 import { KeyboardAwareScrollView } from "@/components/keyboard-aware-scroll-view";
@@ -12,24 +13,26 @@ import { spacing } from "@/theme";
 
 export type Stage = number | "complete";
 
-export type StageAction = { action: "next" | "previous" };
+// "next" carries the current stage's fields so the caller can validate just those
+export type StageAction<T extends FieldValues = FieldValues> =
+  | { action: "previous" }
+  | { action: "next"; fields: FieldPath<T>[] };
 
-const StagedFormContext = createContext({ stageCount: 0 });
+const StagedFormContext = createContext({ stage: 0, stageCount: 0 });
 
 // ----------------------------------------------------------------------
 
-type FormStageProps = {
-  currentStage: Stage;
-  stage: number;
+type FormStageProps<T extends FieldValues = FieldValues> = {
   title: string;
   message: string;
+  // Fields validated before moving on from this stage
+  fields?: FieldPath<T>[];
   children?: ReactNode;
 };
 
-// Renders only while it is the current stage
-export function FormStage({ currentStage, stage, title, message, children }: FormStageProps) {
-  const { stageCount } = use(StagedFormContext);
-  if (currentStage !== stage) return null;
+// One step of a StagedForm; its number comes from its position among the StagedForm's children
+export function FormStage<T extends FieldValues = FieldValues>({ title, message, children }: FormStageProps<T>) {
+  const { stage, stageCount } = use(StagedFormContext);
 
   return (
     <Stack spacing={8}>
@@ -81,28 +84,31 @@ export function CompleteStage({
 
 // ----------------------------------------------------------------------
 
-type StagedFormProps = {
-  // 1-based index corresponding to child stages, or "complete"
+type StagedFormProps<T extends FieldValues> = {
+  // 1-based index into the child stages, or "complete"
   stage: Stage;
-  onStageChange: (change: StageAction) => void;
+  onStageChange: (change: StageAction<T>) => void;
   onSubmit: () => void;
   isSubmitting?: boolean;
-  // Form stage components; they control their own visibility, e.g. FormStage above
+  // FormStage elements, in order; only the current one is rendered
   children: ReactNode;
   renderComplete?: () => ReactNode;
 };
 
-export function StagedForm({
+export function StagedForm<T extends FieldValues>({
   stage,
   onStageChange,
   onSubmit,
   isSubmitting = false,
   children,
   renderComplete = () => <CompleteStage />,
-}: StagedFormProps) {
+}: StagedFormProps<T>) {
   const scrollRef = useRef<RNScrollView>(null);
-  const stageCount = Children.toArray(children).length;
+  const stages = Children.toArray(children);
+  const stageCount = stages.length;
   const showComplete = stage === "complete";
+  const current = showComplete ? null : stages[stage - 1];
+  const fields = (isValidElement<FormStageProps<T>>(current) && current.props.fields) || [];
   const showPrevious = !showComplete && stage > 1;
   const showNext = !showComplete && stage < stageCount;
   const showSubmit = stage === stageCount;
@@ -113,10 +119,10 @@ export function StagedForm({
   }, [stage]);
 
   return (
-    <StagedFormContext value={{ stageCount }}>
+    <StagedFormContext value={{ stage: showComplete ? stageCount : stage, stageCount }}>
       <View style={{ flex: 1 }}>
         <KeyboardAwareScrollView ref={scrollRef} contentContainerStyle={{ flexGrow: 1, paddingBottom: spacing[4] }}>
-          {children}
+          {current}
           {showComplete && renderComplete()}
         </KeyboardAwareScrollView>
 
@@ -131,7 +137,7 @@ export function StagedForm({
             )}
             <RightButtons>
               {showNext && (
-                <Button size="lg" onPress={() => onStageChange({ action: "next" })}>
+                <Button size="lg" onPress={() => onStageChange({ action: "next", fields })}>
                   <ButtonText>Next</ButtonText>
                 </Button>
               )}

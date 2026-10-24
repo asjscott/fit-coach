@@ -5,7 +5,7 @@ import { Screen } from "@/components/screen";
 import { Spinner } from "@/components/spinner";
 import { Stack } from "@/components/stack";
 import { Text } from "@/components/text";
-import { useCurrentUser } from "../CurrentUserProvider";
+import { useCurrentUser } from "../current-user-provider";
 
 // Shown while the user record loads, or with a retry if loading failed
 export function UserLoadingScreen() {

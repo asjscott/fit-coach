@@ -1,19 +1,20 @@
 import { useAuth } from "@clerk/expo";
-import { User, type UserProfile, type UserUpdate } from "@fit/shared";
+import { User, type EquipmentProfileInput, type UserUpdate } from "@fit/shared";
 import { createContext, use, useCallback, useEffect, useState, type ReactNode } from "react";
-import { ApiError, useApi } from "../../../api/api";
+import { ApiError, useApi } from "@/api";
+import { errorMessage } from "@/utils/error-message";
 
 type CurrentUserContextValue = {
   // null until loaded, and while signed out
   user: User | null;
   error: string | null;
   refresh: () => Promise<void>;
-  updateProfile: (profile: Partial<UserProfile>) => Promise<User>;
+  updateUser: (update: UserUpdate) => Promise<User>;
+  // Creates a profile without an id, or updates the one with this id
+  saveEquipmentProfile: (input: EquipmentProfileInput, id?: string) => Promise<User>;
 };
 
 const CurrentUserContext = createContext<CurrentUserContextValue | null>(null);
-
-const errorMessage = (err: unknown) => (err instanceof Error ? err.message : "Something went wrong");
 
 // Loads the signed-in user's record once and shares it with every screen
 export function CurrentUserProvider({ children }: { children: ReactNode }) {
@@ -50,17 +51,26 @@ export function CurrentUserProvider({ children }: { children: ReactNode }) {
     }
   }, [isSignedIn, refresh]);
 
-  const updateProfile = useCallback(
-    async (profile: Partial<UserProfile>) => {
-      const body: UserUpdate = { profile };
-      const updated = User.parse(await api("/user", { method: "PATCH", body: JSON.stringify(body) }));
+  const updateUser = useCallback(
+    async (update: UserUpdate) => {
+      const updated = User.parse(await api("/user", { method: "PATCH", body: JSON.stringify(update) }));
       setUser(updated);
       return updated;
     },
     [api],
   );
 
-  return <CurrentUserContext value={{ user, error, refresh, updateProfile }}>{children}</CurrentUserContext>;
+  const saveEquipmentProfile = useCallback(
+    async (input: EquipmentProfileInput, id?: string) => {
+      const path = id ? `/user/equipment-profiles/${encodeURIComponent(id)}` : "/user/equipment-profiles";
+      const updated = User.parse(await api(path, { method: id ? "PUT" : "POST", body: JSON.stringify(input) }));
+      setUser(updated);
+      return updated;
+    },
+    [api],
+  );
+
+  return <CurrentUserContext value={{ user, error, refresh, updateUser, saveEquipmentProfile }}>{children}</CurrentUserContext>;
 }
 
 export function useCurrentUser() {

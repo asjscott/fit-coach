@@ -1,8 +1,9 @@
 import { getAuth } from "@clerk/fastify";
 import type { FastifyPluginAsyncZod } from "fastify-type-provider-zod";
-import { ErrorResponse, User, UserUpdate } from "@fit/shared";
+import { EquipmentProfileInput, ErrorResponse, User, UserUpdate } from "@fit/shared";
+import { z } from "zod";
 import { requireAuth } from "../auth";
-import { createUser, findUser, toUser, updateUserProfile } from "../users";
+import { createEquipmentProfile, createUser, findUser, toUser, updateEquipmentProfile, updateUser } from "../users";
 
 // /user is the signed-in user's own record; /users is the collection it is created in
 export const userRoutes: FastifyPluginAsyncZod = async (app) => {
@@ -26,12 +27,41 @@ export const userRoutes: FastifyPluginAsyncZod = async (app) => {
   });
 
   // Sets onboardedAt as a side effect once the required profile fields are complete
+  // and the user has an equipment profile
   app.patch(
     "/user",
     { schema: { body: UserUpdate, response: { 200: User, 404: ErrorResponse } } },
     async (req, reply) => {
-      const user = await updateUserProfile(getAuth(req).userId!, req.body.profile);
+      const user = await updateUser(getAuth(req).userId!, req.body);
       if (!user) return reply.code(404).send({ error: "user not found" });
+      return toUser(user);
+    },
+  );
+
+  // The server assigns the new profile's id; responds with the whole user
+  app.post(
+    "/user/equipment-profiles",
+    { schema: { body: EquipmentProfileInput, response: { 201: User, 404: ErrorResponse } } },
+    async (req, reply) => {
+      const user = await createEquipmentProfile(getAuth(req).userId!, req.body);
+      if (!user) return reply.code(404).send({ error: "user not found" });
+      return reply.code(201).send(toUser(user));
+    },
+  );
+
+  // Replaces every field but the id; responds with the whole user
+  app.put(
+    "/user/equipment-profiles/:id",
+    {
+      schema: {
+        params: z.object({ id: z.string() }),
+        body: EquipmentProfileInput,
+        response: { 200: User, 404: ErrorResponse },
+      },
+    },
+    async (req, reply) => {
+      const user = await updateEquipmentProfile(getAuth(req).userId!, req.params.id, req.body);
+      if (!user) return reply.code(404).send({ error: "equipment profile not found" });
       return toUser(user);
     },
   );

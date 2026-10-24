@@ -41,6 +41,12 @@ This command will move the starter code to the **app-example** directory and cre
 - If you'd like to set up unit testing, follow our guide on ["Unit Testing with Jest"](https://docs.expo.dev/develop/unit-testing/)
 - Learn more about the TypeScript setup in this template in our guide on ["Using TypeScript"](https://docs.expo.dev/guides/typescript/)
 
+## Deploying the web version
+
+The web build is static (`"web": { "output": "static" }` in `app.json`): every route is pre-rendered to its own HTML file, so any static host works without special headers. Routes with a parameter (`/history/[id]`, `/exercises/[slug]`) export as one `[id].html` / `[slug].html` file: navigating to them inside the app works anywhere, but opening such a URL directly needs the host to serve that file for the path (EAS Hosting does this; elsewhere, add a rewrite such as `/history/*` → `/history/[id].html`).
+
+On web, the In-progress and Pending Workouts are kept in the browser's `localStorage` (`src/features/workouts/device-storage.web.ts`); on the phone they go through SQLite (`device-storage.ts`). `expo-sqlite`'s web build was dropped because it only works in one tab at a time and fails in Safari (see ADR 0001). The trade-off: a browser can clear `localStorage` (private windows, "clear site data"), so a Workout logged offline on web is less durable than on the phone.
+
 ## Learn more
 
 To learn more about developing your project with Expo, look at the following resources:

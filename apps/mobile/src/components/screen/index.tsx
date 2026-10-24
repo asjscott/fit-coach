@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { Keyboard, Pressable, StyleSheet, type StyleProp, type ViewStyle } from "react-native";
+import { Keyboard, Platform, Pressable, StyleSheet, View, type StyleProp, type ViewStyle } from "react-native";
 import { SafeAreaView, type Edge } from "react-native-safe-area-context";
 import { spacing, useTheme } from "@/theme";
 import { KeyboardAvoidingView } from "../keyboard-avoiding-view";
@@ -32,6 +32,9 @@ export function Screen({
     <KeyboardAwareScrollView contentContainerStyle={[styles.scrollContent, content]}>
       {children}
     </KeyboardAwareScrollView>
+  ) : Platform.OS === "web" ? (
+    // No on-screen keyboard to dismiss, and a click on an input would bubble up here and blur it
+    <View style={[styles.fill, content]}>{children}</View>
   ) : (
     // Tapping empty space dismisses the keyboard
     <Pressable style={[styles.fill, content]} onPress={Keyboard.dismiss} accessible={false}>

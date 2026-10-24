@@ -1,0 +1,32 @@
+import type { Set, Workout } from "@fit/shared";
+
+// How Workouts and Sets read on screen
+
+export const dateLabel = (iso: string) =>
+  new Date(iso).toLocaleDateString(undefined, {
+    weekday: "short",
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+  });
+
+export const timeLabel = (iso: string) => new Date(iso).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
+
+export const durationLabel = ({ startedAt, endedAt }: Pick<Workout, "startedAt" | "endedAt">) => {
+  const minutes = Math.round((Date.parse(endedAt) - Date.parse(startedAt)) / 60_000);
+  if (minutes < 60) return `${minutes} min`;
+  const rest = minutes % 60;
+  return rest ? `${Math.floor(minutes / 60)} h ${rest} min` : `${minutes / 60} h`;
+};
+
+// A Set as its Load Type records it; add " per side" for a one-sided Exercise
+export function describeSet(set: Set) {
+  switch (set.kind) {
+    case "external":
+      return `${set.kg} kg × ${set.reps}`;
+    case "bodyweight":
+      return `${set.reps} reps`;
+    case "timed":
+      return `${set.seconds} s`;
+  }
+}

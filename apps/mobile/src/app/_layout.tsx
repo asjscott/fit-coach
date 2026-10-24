@@ -17,8 +17,8 @@ import {
 import * as SplashScreen from "expo-splash-screen";
 import { useEffect, useMemo } from "react";
 import { StatusBar } from "@/components/status-bar";
-import { ToastProvider } from "@/contexts/ToastContext";
-import { CurrentUserProvider } from "@/features/user/CurrentUserProvider";
+import { ToastProvider } from "@/contexts/toast-context";
+import { CurrentUserProvider } from "@/features/user/current-user-provider";
 import { ThemeProvider, useTheme } from "@/theme";
 
 SplashScreen.preventAutoHideAsync();

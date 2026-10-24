@@ -5,5 +5,5 @@ export default defineConfig({
   format: ["esm"],
   target: "node22",
   clean: true,
-  noExternal: ["@fit/shared"],
+  noExternal: ["@fit/shared", "@fit/engines"],
 });
