@@ -33,6 +33,8 @@ export function useApi() {
 
       const res = await fetch(`${API_URL}${path}`, { ...init, headers });
       if (!res.ok) throw new ApiError(res.status, (await res.text()) || String(res.status));
+      // 204 No Content, e.g. after a DELETE
+      if (res.status === 204) return null;
       return res.json();
     },
     [],
