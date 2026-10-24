@@ -81,6 +81,12 @@ export function createLogbook({
     return workoutExercise;
   }
 
+  function findSet(sets: InProgressWorkoutExercise["sets"], setIndex: number) {
+    const set = sets[setIndex];
+    if (!set) throw new LogbookError("No such Set in this Workout Exercise");
+    return set;
+  }
+
   return {
     inProgress: () => serially(read),
 
@@ -91,6 +97,9 @@ export function createLogbook({
         await write(workout);
         return workout;
       }),
+
+    // Throws the in-progress Workout away; it never becomes a Pending Workout
+    discard: () => serially(() => storage.removeItem(IN_PROGRESS_KEY)),
 
     // Snapshots the Exercise's Load Type so Sets can be checked without the library
     addWorkoutExercise: (exercise: Pick<Exercise, "slug" | "loadType">) =>
@@ -107,6 +116,28 @@ export function createLogbook({
         return workoutExercise;
       }),
 
+    removeWorkoutExercise: (workoutExerciseId: string) =>
+      serially(async () => {
+        const workout = await readOrThrow();
+        const workoutExercise = findWorkoutExercise(workout, workoutExerciseId);
+        workout.workoutExercises = workout.workoutExercises.filter((we) => we !== workoutExercise);
+        await write(workout);
+      }),
+
+    // Moves a Workout Exercise to the given position, shifting the others along
+    moveWorkoutExercise: (workoutExerciseId: string, toIndex: number) =>
+      serially(async () => {
+        const workout = await readOrThrow();
+        const workoutExercise = findWorkoutExercise(workout, workoutExerciseId);
+        const { workoutExercises } = workout;
+        if (!Number.isInteger(toIndex) || toIndex < 0 || toIndex >= workoutExercises.length) {
+          throw new LogbookError("Can't move a Workout Exercise outside the Workout");
+        }
+        workoutExercises.splice(workoutExercises.indexOf(workoutExercise), 1);
+        workoutExercises.splice(toIndex, 0, workoutExercise);
+        await write(workout);
+      }),
+
     logSet: (workoutExerciseId: string, values: SetValues, now: Date) =>
       serially(async () => {
         const workout = await readOrThrow();
@@ -115,6 +146,32 @@ export function createLogbook({
         await write(parseOrThrow(InProgressWorkout, workout));
         return workoutExercise;
       }),
+
+    // Replaces a Set's values; it keeps the time it was logged
+    editSet: (workoutExerciseId: string, setIndex: number, values: SetValues) =>
+      serially(async () => {
+        const workout = await readOrThrow();
+        const { sets } = findWorkoutExercise(workout, workoutExerciseId);
+        const set = findSet(sets, setIndex);
+        sets[setIndex] = { ...values, loggedAt: set.loggedAt };
+        await write(parseOrThrow(InProgressWorkout, workout));
+      }),
+
+    deleteSet: (workoutExerciseId: string, setIndex: number) =>
+      serially(async () => {
+        const workout = await readOrThrow();
+        const { sets } = findWorkoutExercise(workout, workoutExerciseId);
+        findSet(sets, setIndex);
+        sets.splice(setIndex, 1);
+        await write(workout);
+      }),
+
+    // The values to pre-fill the next Set with: the last Set's, or null for the first Set
+    nextSetDraft: (workoutExercise: InProgressWorkoutExercise): SetValues | null => {
+      const last = workoutExercise.sets.at(-1);
+      if (!last) return null;
+      return Object.fromEntries(Object.entries(last).filter(([key]) => key !== "loggedAt")) as SetValues;
+    },
 
     // Turns the in-progress Workout into a Pending Workout; sync() uploads it
     finish: ({ startedAt, endedAt }: { startedAt: Date; endedAt: Date }) =>

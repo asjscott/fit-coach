@@ -152,3 +152,131 @@ describe("Logbook", () => {
     );
   });
 });
+
+describe("Logbook: correcting the in-progress Workout", () => {
+  it("drafts the next Set from the previous Set, and nothing for the first Set", async () => {
+    const { logbook } = setup();
+    await logbook.start(at("09:00"));
+    const squat = await logbook.addWorkoutExercise(exercise("goblet-squat"));
+
+    expect(logbook.nextSetDraft(squat)).toBeNull();
+
+    await logbook.logSet(squat.id, { kind: "external", kg: 20, reps: 10 }, at("09:05"));
+    const afterTwo = await logbook.logSet(squat.id, { kind: "external", kg: 22.5, reps: 8 }, at("09:08"));
+
+    expect(logbook.nextSetDraft(afterTwo)).toEqual({ kind: "external", kg: 22.5, reps: 8 });
+  });
+
+  it("saves an edited Set, keeping when it was logged", async () => {
+    const { logbook, storage } = setup();
+    await logbook.start(at("09:00"));
+    const squat = await logbook.addWorkoutExercise(exercise("goblet-squat"));
+    await logbook.logSet(squat.id, { kind: "external", kg: 20, reps: 10 }, at("09:05"));
+    await logbook.logSet(squat.id, { kind: "external", kg: 20, reps: 9 }, at("09:08"));
+
+    await logbook.editSet(squat.id, 0, { kind: "external", kg: 22.5, reps: 10 });
+
+    const rebuilt = setup(storage).logbook;
+    expect((await rebuilt.inProgress())?.workoutExercises[0].sets).toEqual([
+      { kind: "external", kg: 22.5, reps: 10, loggedAt: "2026-10-24T09:05:00.000Z" },
+      { kind: "external", kg: 20, reps: 9, loggedAt: "2026-10-24T09:08:00.000Z" },
+    ]);
+  });
+
+  it("refuses an edit that makes a Set invalid, keeping the Set as it was", async () => {
+    const { logbook } = setup();
+    await logbook.start(at("09:00"));
+    const squat = await logbook.addWorkoutExercise(exercise("goblet-squat"));
+    await logbook.logSet(squat.id, { kind: "external", kg: 20, reps: 10 }, at("09:05"));
+
+    await expect(logbook.editSet(squat.id, 0, { kind: "external", kg: 20, reps: 0 })).rejects.toThrow(LogbookError);
+
+    expect((await logbook.inProgress())?.workoutExercises[0].sets).toEqual([
+      { kind: "external", kg: 20, reps: 10, loggedAt: "2026-10-24T09:05:00.000Z" },
+    ]);
+  });
+
+  it("saves a deleted Set, and drafts the next Set from the Set now last", async () => {
+    const { logbook, storage } = setup();
+    await logbook.start(at("09:00"));
+    const pushUp = await logbook.addWorkoutExercise(exercise("push-up"));
+    await logbook.logSet(pushUp.id, { kind: "bodyweight", reps: 12 }, at("09:05"));
+    await logbook.logSet(pushUp.id, { kind: "bodyweight", reps: 120 }, at("09:08"));
+
+    await logbook.deleteSet(pushUp.id, 1);
+
+    const rebuilt = setup(storage).logbook;
+    const [workoutExercise] = (await rebuilt.inProgress())?.workoutExercises ?? [];
+    expect(workoutExercise.sets).toEqual([{ kind: "bodyweight", reps: 12, loggedAt: "2026-10-24T09:05:00.000Z" }]);
+    expect(rebuilt.nextSetDraft(workoutExercise)).toEqual({ kind: "bodyweight", reps: 12 });
+  });
+
+  it("saves a removed Workout Exercise, with its Sets", async () => {
+    const { logbook, storage } = setup();
+    await logbook.start(at("09:00"));
+    const squat = await logbook.addWorkoutExercise(exercise("goblet-squat"));
+    const plank = await logbook.addWorkoutExercise(exercise("plank"));
+    await logbook.logSet(squat.id, { kind: "external", kg: 20, reps: 10 }, at("09:05"));
+
+    await logbook.removeWorkoutExercise(squat.id);
+
+    const rebuilt = setup(storage).logbook;
+    expect((await rebuilt.inProgress())?.workoutExercises.map((we) => we.id)).toEqual([plank.id]);
+  });
+
+  it("saves a reordered Workout, and uploads it in that order", async () => {
+    const { logbook, storage } = setup();
+    await logbook.start(at("09:00"));
+    const squat = await logbook.addWorkoutExercise(exercise("goblet-squat"));
+    const pushUp = await logbook.addWorkoutExercise(exercise("push-up"));
+    const plank = await logbook.addWorkoutExercise(exercise("plank"));
+    await logbook.logSet(squat.id, { kind: "external", kg: 20, reps: 10 }, at("09:05"));
+    await logbook.logSet(pushUp.id, { kind: "bodyweight", reps: 12 }, at("09:10"));
+    await logbook.logSet(plank.id, { kind: "timed", seconds: 45 }, at("09:15"));
+
+    await logbook.moveWorkoutExercise(plank.id, 0);
+
+    const rebuilt = setup(storage);
+    expect((await rebuilt.logbook.inProgress())?.workoutExercises.map((we) => we.slug)).toEqual([
+      "plank",
+      "goblet-squat",
+      "push-up",
+    ]);
+
+    await rebuilt.logbook.moveWorkoutExercise(squat.id, 2);
+    await rebuilt.logbook.finish({ startedAt: at("09:00"), endedAt: at("09:30") });
+    await rebuilt.logbook.sync();
+    expect(rebuilt.uploader.uploaded[0].workoutExercises.map((we) => we.slug)).toEqual([
+      "plank",
+      "push-up",
+      "goblet-squat",
+    ]);
+  });
+
+  it("refuses to move a Workout Exercise outside the Workout", async () => {
+    const { logbook } = setup();
+    await logbook.start(at("09:00"));
+    const squat = await logbook.addWorkoutExercise(exercise("goblet-squat"));
+    await logbook.addWorkoutExercise(exercise("plank"));
+
+    await expect(logbook.moveWorkoutExercise(squat.id, 2)).rejects.toThrow(LogbookError);
+    await expect(logbook.moveWorkoutExercise(squat.id, -1)).rejects.toThrow(LogbookError);
+
+    expect((await logbook.inProgress())?.workoutExercises.map((we) => we.slug)).toEqual(["goblet-squat", "plank"]);
+  });
+
+  it("discards the in-progress Workout without uploading it, so a new one can start", async () => {
+    const { logbook, storage } = setup();
+    await logbook.start(at("09:00"));
+    const plank = await logbook.addWorkoutExercise(exercise("plank"));
+    await logbook.logSet(plank.id, { kind: "timed", seconds: 45 }, at("09:05"));
+
+    await logbook.discard();
+
+    const rebuilt = setup(storage);
+    expect(await rebuilt.logbook.inProgress()).toBeNull();
+    await rebuilt.logbook.sync();
+    expect(rebuilt.uploader.uploaded).toEqual([]);
+    await expect(rebuilt.logbook.start(at("10:00"))).resolves.toMatchObject({ startedAt: "2026-10-24T10:00:00.000Z" });
+  });
+});
