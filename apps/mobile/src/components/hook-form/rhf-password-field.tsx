@@ -24,12 +24,7 @@ export function RHFPasswordField({
       name={name}
       control={control}
       render={({ field, fieldState }) => (
-        <FormControl
-          isInvalid={!!fieldState.error}
-          isReadOnly={readOnly}
-          isDisabled={disabled}
-          isRequired={required}
-        >
+        <FormControl isInvalid={!!fieldState.error} isReadOnly={readOnly} isDisabled={disabled} isRequired={required}>
           <RHFLabel label={label} />
           <RHFInput
             field={field}

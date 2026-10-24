@@ -11,10 +11,5 @@ export type CardProps = ViewProps & {
 
 export function Card({ size = "md", variant = "elevated", selected = false, style, ...props }: CardProps) {
   const styles = useThemedStyles(createCardStyles);
-  return (
-    <View
-      style={[styles[size], styles[variant], selected && styles.selected, style]}
-      {...props}
-    />
-  );
+  return <View style={[styles[size], styles[variant], selected && styles.selected, style]} {...props} />;
 }

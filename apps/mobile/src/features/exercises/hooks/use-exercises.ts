@@ -27,7 +27,9 @@ export function useExercise(slug: string) {
   useEffect(() => {
     api(`/exercises/${encodeURIComponent(slug)}`)
       .then((json) => setExercise(Exercise.parse(json)))
-      .catch((err) => setError(err instanceof ApiError && err.status === 404 ? "Exercise not found" : errorMessage(err)));
+      .catch((err) =>
+        setError(err instanceof ApiError && err.status === 404 ? "Exercise not found" : errorMessage(err)),
+      );
   }, [api, slug]);
 
   return { exercise, error, isLoading: !exercise && !error };

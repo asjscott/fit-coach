@@ -43,17 +43,18 @@
     "zod": "^4.6.7"
   },
   "devDependencies": {
+    "@playwright/test": "1.49.1",
     "@types/react": "~19.2.2",
     "typescript": "~6.0.3"
   },
   "scripts": {
-    "start": "expo start",
-    "android": "expo start --android",
-    "ios": "expo start --ios",
-    "web": "expo start --web",
-    "lint": "expo lint",
+    "start": "sh scripts/with-dev-log.sh expo start",
+    "android": "sh scripts/with-dev-log.sh expo start --android",
+    "ios": "sh scripts/with-dev-log.sh expo start --ios",
+    "web": "sh scripts/with-dev-log.sh expo start --web",
     "typecheck": "tsc --noEmit",
-    "start:prod-api": "EXPO_PUBLIC_API_URL=https://fit-coach-evn9.onrender.com expo start --clear"
+    "start:prod-api": "EXPO_PUBLIC_API_URL=https://fit-coach-evn9.onrender.com sh scripts/with-dev-log.sh expo start --clear",
+    "test:web": "playwright test -c e2e/playwright.config.ts"
   },
   "private": true
 }

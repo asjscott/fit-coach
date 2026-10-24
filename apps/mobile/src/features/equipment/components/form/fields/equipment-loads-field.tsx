@@ -87,7 +87,12 @@ export function EquipmentLoadsField({ tags }: { tags: EquipmentTag[] }) {
       )}
 
       {bandTags.filter(has).map((tag) => (
-        <RHFChipSelect key={tag} name={`loads.${tag}.levels`} label={EQUIPMENT_LABELS[tag]} options={bandLevelOptions} />
+        <RHFChipSelect
+          key={tag}
+          name={`loads.${tag}.levels`}
+          label={EQUIPMENT_LABELS[tag]}
+          options={bandLevelOptions}
+        />
       ))}
     </Stack>
   );

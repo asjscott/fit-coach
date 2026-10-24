@@ -1,8 +1,7 @@
-import { getAuth } from "@clerk/fastify";
 import type { FastifyPluginAsyncZod } from "fastify-type-provider-zod";
 import { EquipmentProfileInput, ErrorResponse, User, UserUpdate } from "@fit/shared";
 import { z } from "zod";
-import { requireAuth } from "../auth";
+import { requireAuth, userIdOf } from "../auth";
 import { createEquipmentProfile, createUser, findUser, toUser, updateEquipmentProfile, updateUser } from "../users";
 
 // /user is the signed-in user's own record; /users is the collection it is created in
@@ -12,14 +11,14 @@ export const userRoutes: FastifyPluginAsyncZod = async (app) => {
 
   // 404 until POST /users has created the record
   app.get("/user", { schema: { response: { 200: User, 404: ErrorResponse } } }, async (req, reply) => {
-    const user = await findUser(getAuth(req).userId!);
+    const user = await findUser(userIdOf(req)!);
     if (!user) return reply.code(404).send({ error: "user not found" });
     return toUser(user);
   });
 
   // Idempotent: 201 when created, 200 with the existing record otherwise
   app.post("/users", { schema: { response: { 200: User, 201: User } } }, async (req, reply) => {
-    const { user, created } = await createUser(getAuth(req).userId!);
+    const { user, created } = await createUser(userIdOf(req)!);
     return reply
       .code(created ? 201 : 200)
       .header("Location", "/user")
@@ -32,7 +31,7 @@ export const userRoutes: FastifyPluginAsyncZod = async (app) => {
     "/user",
     { schema: { body: UserUpdate, response: { 200: User, 404: ErrorResponse } } },
     async (req, reply) => {
-      const user = await updateUser(getAuth(req).userId!, req.body);
+      const user = await updateUser(userIdOf(req)!, req.body);
       if (!user) return reply.code(404).send({ error: "user not found" });
       return toUser(user);
     },
@@ -43,7 +42,7 @@ export const userRoutes: FastifyPluginAsyncZod = async (app) => {
     "/user/equipment-profiles",
     { schema: { body: EquipmentProfileInput, response: { 201: User, 404: ErrorResponse } } },
     async (req, reply) => {
-      const user = await createEquipmentProfile(getAuth(req).userId!, req.body);
+      const user = await createEquipmentProfile(userIdOf(req)!, req.body);
       if (!user) return reply.code(404).send({ error: "user not found" });
       return reply.code(201).send(toUser(user));
     },
@@ -60,7 +59,7 @@ export const userRoutes: FastifyPluginAsyncZod = async (app) => {
       },
     },
     async (req, reply) => {
-      const user = await updateEquipmentProfile(getAuth(req).userId!, req.params.id, req.body);
+      const user = await updateEquipmentProfile(userIdOf(req)!, req.params.id, req.body);
       if (!user) return reply.code(404).send({ error: "equipment profile not found" });
       return toUser(user);
     },

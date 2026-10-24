@@ -106,12 +106,7 @@ export function ActionsheetItem({ style, disabled, ...props }: PressableProps & 
     <Pressable
       accessibilityRole="button"
       disabled={disabled}
-      style={({ pressed }) => [
-        styles.item,
-        pressed && styles.itemPressed,
-        disabled && styles.itemDisabled,
-        style,
-      ]}
+      style={({ pressed }) => [styles.item, pressed && styles.itemPressed, disabled && styles.itemDisabled, style]}
       {...props}
     />
   );

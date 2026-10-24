@@ -77,9 +77,9 @@ export default function ExerciseDetailView() {
           </Section>
         )}
 
-        {(exercise.regression || exercise.progression) && (
+        {!!(exercise.regression || exercise.progression) && (
           <ButtonGroup space={2} flexDirection="row" style={{ marginTop: "auto" }}>
-            {exercise.regression && (
+            {!!exercise.regression && (
               <LoadingButton
                 label="Easier"
                 action="secondary"
@@ -88,7 +88,7 @@ export default function ExerciseDetailView() {
                 style={{ flex: 1 }}
               />
             )}
-            {exercise.progression && (
+            {!!exercise.progression && (
               <LoadingButton
                 label="Harder"
                 action="secondary"

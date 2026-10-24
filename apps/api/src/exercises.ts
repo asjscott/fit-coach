@@ -7,7 +7,11 @@ export const exercises = db.collection<Exercise>("exercises");
 const byName = { locale: "en", strength: 2 };
 
 export function findExercises() {
-  return exercises.find({}, { projection: { _id: 0 } }).sort({ name: 1 }).collation(byName).toArray();
+  return exercises
+    .find({}, { projection: { _id: 0 } })
+    .sort({ name: 1 })
+    .collation(byName)
+    .toArray();
 }
 
 export function findExercise(slug: string) {

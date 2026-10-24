@@ -70,7 +70,11 @@ export function CurrentUserProvider({ children }: { children: ReactNode }) {
     [api],
   );
 
-  return <CurrentUserContext value={{ user, error, refresh, updateUser, saveEquipmentProfile }}>{children}</CurrentUserContext>;
+  return (
+    <CurrentUserContext value={{ user, error, refresh, updateUser, saveEquipmentProfile }}>
+      {children}
+    </CurrentUserContext>
+  );
 }
 
 export function useCurrentUser() {

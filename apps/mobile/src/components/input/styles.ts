@@ -20,7 +20,12 @@ export const createInputStyles = (colors: Colors) =>
       borderColor: colors.border,
     },
     outline: { borderWidth: 1, borderRadius: radii.md, backgroundColor: colors.surface },
-    rounded: { borderWidth: 1, borderRadius: radii.pill, backgroundColor: colors.surface, paddingHorizontal: spacing[1] },
+    rounded: {
+      borderWidth: 1,
+      borderRadius: radii.pill,
+      backgroundColor: colors.surface,
+      paddingHorizontal: spacing[1],
+    },
     underlined: { borderBottomWidth: 1, borderRadius: 0 },
     focused: { borderColor: colors.orange },
     invalid: { borderColor: colors.danger },

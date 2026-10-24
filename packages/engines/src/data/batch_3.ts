@@ -22,7 +22,11 @@ export const BATCH_3: Exercise[] = [
     regression: "single-leg-romanian-deadlift",
     progression: null,
     avoidWith: ["lower_back", "ankle"],
-    cues: ["Weight in the hand opposite your standing leg", "Hips square as you tip forward", "Weight travels close to your shin"],
+    cues: [
+      "Weight in the hand opposite your standing leg",
+      "Hips square as you tip forward",
+      "Weight travels close to your shin",
+    ],
     videoUrl: null,
   },
   {
@@ -60,7 +64,12 @@ export const BATCH_3: Exercise[] = [
     name: "Dumbbell step-up",
     patterns: [{ pattern: "squat", credit: 1 }],
     muscles: { primary: ["quads", "glutes"], secondary: ["hamstrings", "calves", "forearms"] },
-    equipmentOptions: [["dumbbells", "plyo_box"], ["dumbbells", "flat_bench"], ["kettlebells", "plyo_box"], ["kettlebells", "flat_bench"]],
+    equipmentOptions: [
+      ["dumbbells", "plyo_box"],
+      ["dumbbells", "flat_bench"],
+      ["kettlebells", "plyo_box"],
+      ["kettlebells", "flat_bench"],
+    ],
     loadType: "external",
     unilateral: true,
     secondsPerSet: 120,
@@ -82,7 +91,11 @@ export const BATCH_3: Exercise[] = [
     regression: "bodyweight-squat",
     progression: null,
     avoidWith: ["knee", "hip"],
-    cues: ["Very wide stance", "Sit into one hip, other leg straight with toes up", "Shift side to side without standing fully"],
+    cues: [
+      "Very wide stance",
+      "Sit into one hip, other leg straight with toes up",
+      "Shift side to side without standing fully",
+    ],
     videoUrl: null,
   },
   {
@@ -90,14 +103,21 @@ export const BATCH_3: Exercise[] = [
     name: "Dumbbell hip thrust",
     patterns: [{ pattern: "hinge", credit: 1 }],
     muscles: { primary: ["glutes"], secondary: ["hamstrings", "abs"] },
-    equipmentOptions: [["dumbbells", "flat_bench"], ["kettlebells", "flat_bench"]],
+    equipmentOptions: [
+      ["dumbbells", "flat_bench"],
+      ["kettlebells", "flat_bench"],
+    ],
     loadType: "external",
     unilateral: false,
     secondsPerSet: 105,
     regression: "glute-bridge",
     progression: null,
     avoidWith: [],
-    cues: ["Upper back on the bench, weight on your hips", "Drive your hips up until your body is flat", "Chin tucked, pause at the top"],
+    cues: [
+      "Upper back on the bench, weight on your hips",
+      "Drive your hips up until your body is flat",
+      "Chin tucked, pause at the top",
+    ],
     videoUrl: null,
   },
   {
@@ -144,7 +164,11 @@ export const BATCH_3: Exercise[] = [
     regression: "dumbbell-bench-press",
     progression: null,
     avoidWith: ["shoulder"],
-    cues: ["One weight, free hand on your stomach", "Don't let your body roll towards the weight", "Do all reps on one side, then switch"],
+    cues: [
+      "One weight, free hand on your stomach",
+      "Don't let your body roll towards the weight",
+      "Do all reps on one side, then switch",
+    ],
     videoUrl: null,
   },
   {
@@ -159,7 +183,11 @@ export const BATCH_3: Exercise[] = [
     regression: "dumbbell-overhead-press",
     progression: null,
     avoidWith: ["shoulder"],
-    cues: ["Weight at your shoulder, squeeze your glutes", "Press straight up without leaning sideways", "Do all reps on one side, then switch"],
+    cues: [
+      "Weight at your shoulder, squeeze your glutes",
+      "Press straight up without leaning sideways",
+      "Do all reps on one side, then switch",
+    ],
     videoUrl: null,
   },
   {
@@ -174,7 +202,11 @@ export const BATCH_3: Exercise[] = [
     regression: null,
     progression: null,
     avoidWith: ["shoulder"],
-    cues: ["Slight bend in your elbows", "Raise your arms out to shoulder height", "Lower slowly; light weight is fine"],
+    cues: [
+      "Slight bend in your elbows",
+      "Raise your arms out to shoulder height",
+      "Lower slowly; light weight is fine",
+    ],
     videoUrl: null,
   },
 
@@ -209,7 +241,11 @@ export const BATCH_3: Exercise[] = [
     regression: "one-arm-dumbbell-row",
     progression: null,
     avoidWith: ["wrist", "shoulder"],
-    cues: ["Push-up position, hands on the weights", "Feet wide for balance", "Row one side without twisting your hips"],
+    cues: [
+      "Push-up position, hands on the weights",
+      "Feet wide for balance",
+      "Row one side without twisting your hips",
+    ],
     videoUrl: null,
   },
 ];

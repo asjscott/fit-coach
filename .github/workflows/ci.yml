@@ -12,7 +12,26 @@ jobs:
           node-version: 22
           cache: pnpm
       - run: pnpm install --frozen-lockfile
-      - run: pnpm lint
+      # Generates expo-env.d.ts, which typechecking and the typed lint rule need
       - run: pnpm --filter @fit/mobile exec expo customize tsconfig.json
+      - run: pnpm format:check
+      - run: pnpm lint
       - run: pnpm typecheck
       - run: pnpm test
+      # What Render runs for the API, and what the app ships, so a broken build or import fails here first
+      - run: pnpm --filter @fit/api build
+      - run: pnpm --filter @fit/mobile exec expo export --platform web
+      - run: pnpm --filter @fit/mobile exec expo export --platform ios
+
+  web-storage:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter @fit/mobile exec playwright install --with-deps chromium webkit
+      - run: pnpm --filter @fit/mobile test:web

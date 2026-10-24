@@ -17,8 +17,7 @@ const ThemeContext = createContext<ThemeContextValue | null>(null);
 export function ThemeProvider({ children }: { children: ReactNode }) {
   const systemScheme = useColorScheme();
   const [preference, setPreference] = useState<ThemePreference>("system");
-  const scheme: ColorScheme =
-    preference === "system" ? (systemScheme === "light" ? "light" : "dark") : preference;
+  const scheme: ColorScheme = preference === "system" ? (systemScheme === "light" ? "light" : "dark") : preference;
   const colors = palettes[scheme];
 
   // Native root view shows behind screens during transitions and keyboard animations
@@ -26,10 +25,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     SystemUI.setBackgroundColorAsync(colors.bg);
   }, [colors.bg]);
 
-  const value = useMemo(
-    () => ({ scheme, colors, preference, setPreference }),
-    [scheme, colors, preference],
-  );
+  const value = useMemo(() => ({ scheme, colors, preference, setPreference }), [scheme, colors, preference]);
 
   return <ThemeContext value={value}>{children}</ThemeContext>;
 }

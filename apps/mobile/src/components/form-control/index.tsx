@@ -69,9 +69,7 @@ export function FormControlHelperText({ size, ...props }: TextProps) {
 export function FormControlError({ style, ...props }: ViewProps) {
   const { isInvalid } = useFormControlContext();
   if (!isInvalid) return null;
-  return (
-    <View style={[{ flexDirection: "row", alignItems: "center", gap: spacing[1] }, style]} {...props} />
-  );
+  return <View style={[{ flexDirection: "row", alignItems: "center", gap: spacing[1] }, style]} {...props} />;
 }
 
 export function FormControlErrorText({ size, ...props }: TextProps) {
@@ -79,6 +77,14 @@ export function FormControlErrorText({ size, ...props }: TextProps) {
   return <Text size={size ?? textSize[parentSize]} color="danger" {...props} />;
 }
 
-export function FormControlErrorIcon({ name = "circleAlert", as, size = 14 }: { name?: IconName; as?: IconComponent; size?: number }) {
+export function FormControlErrorIcon({
+  name = "circleAlert",
+  as,
+  size = 14,
+}: {
+  name?: IconName;
+  as?: IconComponent;
+  size?: number;
+}) {
   return <Icon name={name} as={as} size={size} color="danger" />;
 }

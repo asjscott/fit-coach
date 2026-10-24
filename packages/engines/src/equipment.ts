@@ -12,7 +12,10 @@ export function expandTags(tags: EquipmentTag[]): Set<EquipmentTag> {
   return owned;
 }
 
-export function isAvailable(exercise: Pick<Exercise, "equipmentOptions">, profile: Pick<EquipmentProfile, "tags">): boolean {
+export function isAvailable(
+  exercise: Pick<Exercise, "equipmentOptions">,
+  profile: Pick<EquipmentProfile, "tags">,
+): boolean {
   const owned = expandTags(profile.tags);
   return exercise.equipmentOptions.some((option) => option.every((tag) => owned.has(tag)));
 }

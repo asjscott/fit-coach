@@ -8,7 +8,7 @@ overrides:
   "@react-native/metro-config": "0.86.3"
 nodeLinker: hoisted
 permissions:
-  '@clerk/shared':
+  "@clerk/shared":
     build: false
   browser-tabs-lock:
     build: false
@@ -17,6 +17,9 @@ permissions:
   builds:
     skills: true
   core-js:
+    build: false
+  # Its postinstall only pre-downloads mongod, which it also fetches on first run (pnpm dev:local)
+  mongodb-memory-server:
     build: false
   utf-8-validate:
     build: false

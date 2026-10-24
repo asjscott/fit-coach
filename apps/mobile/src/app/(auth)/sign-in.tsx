@@ -39,7 +39,7 @@ export default function SignInScreen() {
       <ButtonGroup space={3}>
         <LoadingButton label="Create account" onPress={() => start("sign-up")} />
         <LoadingButton label="Sign in" action="secondary" onPress={() => start("sign-in")} />
-        {error && (
+        {!!error && (
           <Text size="xs" color="danger" centered>
             {error}
           </Text>
