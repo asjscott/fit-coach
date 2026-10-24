@@ -1,26 +1,18 @@
 import type { Workout } from "@fit/shared";
-import { useFocusEffect } from "expo-router";
+import { router, useFocusEffect } from "expo-router";
 import { useCallback } from "react";
 import { FlatList } from "react-native";
 import { Card } from "@/components/card";
 import { Loading } from "@/components/loading";
+import { Pressable } from "@/components/pressable";
 import { Screen } from "@/components/screen";
 import { HStack } from "@/components/stack";
 import { Spinner } from "@/components/spinner";
 import { Text } from "@/components/text";
 import { spacing } from "@/theme";
-import { useHistory } from "../hooks/use-history";
+import { dateLabel, durationLabel } from "../format";
+import { useHistory } from "../history-provider";
 import { libraryExercise } from "../library";
-
-const dateLabel = (iso: string) =>
-  new Date(iso).toLocaleDateString(undefined, { weekday: "short", day: "numeric", month: "short", year: "numeric" });
-
-const durationLabel = ({ startedAt, endedAt }: Workout) => {
-  const minutes = Math.round((Date.parse(endedAt) - Date.parse(startedAt)) / 60_000);
-  if (minutes < 60) return `${minutes} min`;
-  const rest = minutes % 60;
-  return rest ? `${Math.floor(minutes / 60)} h ${rest} min` : `${minutes / 60} h`;
-};
 
 // An Exercise this app version doesn't know shows as its slug
 const exerciseNames = (workout: Workout) =>
@@ -48,17 +40,22 @@ export default function HistoryView() {
         onEndReachedThreshold={0.5}
         ListHeaderComponent={error ? <Text color="danger">{error}</Text> : null}
         renderItem={({ item: workout }) => (
-          <Card size="sm">
-            <HStack justify="between" spacing={4}>
-              <Text weight="semiBold">{dateLabel(workout.startedAt)}</Text>
-              <Text color="textMuted" tabular>
-                {durationLabel(workout)}
+          <Pressable
+            accessibilityRole="button"
+            onPress={() => router.push({ pathname: "/history/[id]", params: { id: workout.id } })}
+          >
+            <Card size="sm">
+              <HStack justify="between" spacing={4}>
+                <Text weight="semiBold">{dateLabel(workout.startedAt)}</Text>
+                <Text color="textMuted" tabular>
+                  {durationLabel(workout)}
+                </Text>
+              </HStack>
+              <Text size="sm" color="textMuted">
+                {exerciseNames(workout)}
               </Text>
-            </HStack>
-            <Text size="sm" color="textMuted">
-              {exerciseNames(workout)}
-            </Text>
-          </Card>
+            </Card>
+          </Pressable>
         )}
         ListFooterComponent={isLoadingMore ? <Spinner /> : null}
         ListEmptyComponent={

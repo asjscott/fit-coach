@@ -1,4 +1,4 @@
-import type { InProgressWorkoutExercise, LoadType, Set, SetValues } from "@fit/shared";
+import type { InProgressWorkoutExercise, LoadType, SetValues } from "@fit/shared";
 import { router } from "expo-router";
 import { useState } from "react";
 import { Card } from "@/components/card";
@@ -9,6 +9,7 @@ import { HStack, Stack } from "@/components/stack";
 import { Text } from "@/components/text";
 import { useToast } from "@/contexts/toast-context";
 import { spacing } from "@/theme";
+import { describeSet } from "../format";
 import { libraryExercise } from "../library";
 import { useLogbook } from "../logbook-provider";
 
@@ -96,17 +97,6 @@ function WorkoutExerciseCard({ workoutExercise }: { workoutExercise: InProgressW
       </Stack>
     </Card>
   );
-}
-
-function describeSet(set: Set) {
-  switch (set.kind) {
-    case "external":
-      return `${set.kg} kg × ${set.reps}`;
-    case "bodyweight":
-      return `${set.reps} reps`;
-    case "timed":
-      return `${set.seconds} s`;
-  }
 }
 
 // The fields each Load Type asks for
