@@ -112,6 +112,7 @@ export default function Home() {
           loading={!logbook.isLoaded || starting}
           onPress={handleWorkout}
         />
+        <LoadingButton label="History" action="secondary" icon="calendar" href="/history" />
         <LoadingButton label="Exercises" action="secondary" icon="search" href="/exercises" />
         <LoadingButton label="Edit profile" action="secondary" icon="user" href="/onboarding" />
         {__DEV__ && (
