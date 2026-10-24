@@ -1,5 +1,6 @@
 import { z } from "zod";
 
+export * from "./exercises";
 export * from "./equipment";
 export * from "./health";
 export * from "./user";

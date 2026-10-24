@@ -14,5 +14,8 @@
   "type": "module",
   "devDependencies": {
     "vitest": "^5.0.5"
+  },
+  "dependencies": {
+    "@fit/shared": "workspace:*"
   }
 }

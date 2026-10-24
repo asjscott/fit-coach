@@ -193,6 +193,9 @@ importers:
       '@fastify/cors':
         specifier: ^11.3.1
         version: 11.3.1
+      '@fit/engines':
+        specifier: workspace:*
+        version: link:../../packages/engines
       '@fit/shared':
         specifier: workspace:*
         version: link:../../packages/shared
@@ -338,6 +341,10 @@ importers:
         version: 6.0.3
 
   packages/engines:
+    dependencies:
+      '@fit/shared':
+        specifier: workspace:*
+        version: link:../shared
     devDependencies:
       vitest:
         specifier: ^5.0.5
