@@ -28,7 +28,7 @@ node .claude/skills/run-mobile/driver.mjs shot /history --dark
 node .claude/skills/run-mobile/driver.mjs shot /exercises --tall
 ```
 
-- `tour` presses each tab in turn (Today, History, Exercises, Profile), then opens onboarding and the styleguide (`/profile/styleguide`), each at fold height and `-full`, then exercise detail and history detail. Then it starts a Workout from Today, opens the picker, logs 2 Goblet squat Sets and a 45 s Plank, stops on Finish **without saving**, and closes the Workout back to Today (`today-resume`). Last, `today-wide` and `profile-wide` show the desktop layout: the centred column and the side rail.
+- `tour` presses each tab in turn (Today, History, Exercises, Profile), then opens onboarding and the styleguide (`/profile/styleguide`), each at fold height and `-full`, then exercise detail and history detail. Then it starts a Workout from Today, opens the picker, logs 2 Goblet squat Sets and a 45 s Plank, stops on Finish **without saving**, and closes the Workout back to Today (`today-resume`). It then shows the Resume pill on History (`history-resume`) and presses it to reopen the Workout. Last, `today-wide` and `profile-wide` show the desktop layout: the centred column and the side rail, and `exercises-resume-wide` the pill at the rail's foot.
 - `shot <route>` captures one route. `--tall` renders the whole scroll height; `--wide` uses a 1280×860 desktop window. Query values join the filename: `shot "/history?variant=a"` lands as `history-a-<scheme>.png`.
 - Each screenshot path is printed with the pathname it actually landed on. A `/sign-in` or `/` where you expected something else means a redirect.
 - A failing tour step prints `FAILED at <url>`, saves `_failure-<scheme>.png` and exits 1.

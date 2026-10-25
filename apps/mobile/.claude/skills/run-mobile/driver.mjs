@@ -98,6 +98,9 @@ async function open(scheme, { wide = false } = {}) {
   return { ctx, page, snap, go, button, tab };
 }
 
+// Its label carries the elapsed time ("Resume workout, 12 min"), unlike Today's own Resume workout button
+const resumePill = (page) => page.getByRole("button", { name: /^Resume workout, / });
+
 if (cmd === "shot") {
   const route = args.find((a) => !a.startsWith("--")) ?? "/";
   const wide = args.includes("--wide");
@@ -190,6 +193,13 @@ if (cmd === "tour") {
       await button("Close").click();
       await page.waitForURL((u) => u.pathname === "/");
       await snap("today-resume");
+      // The Resume pill follows the running Workout to every tab and reopens it
+      await tab("History").click();
+      await snap("history-resume");
+      await resumePill(page).click();
+      await page.waitForURL(/\/workout$/);
+      await button("Close").click();
+      await page.waitForURL((u) => u.pathname === "/history");
     } catch (e) {
       console.log(`[${scheme}] FAILED at ${page.url()}: ${e.message.split("\n")[0]}`);
       await page.screenshot({ path: `${shots}/_failure-${scheme}.png` });
@@ -207,6 +217,14 @@ if (cmd === "tour") {
         await wide.go(route);
         await wide.snap(name);
       }
+      // With a Workout running, the Resume pill sits at the foot of the side rail
+      await wide.go("/");
+      await wide.button("Start workout").click();
+      await wide.page.waitForURL(/\/workout$/);
+      await wide.button("Close").click();
+      await wide.tab("Exercises").click();
+      await resumePill(wide.page).waitFor();
+      await wide.snap("exercises-resume-wide");
     } catch (e) {
       console.log(`[${scheme}] FAILED at ${wide.page.url()}: ${e.message.split("\n")[0]}`);
       await wide.page.screenshot({ path: `${shots}/_failure-wide-${scheme}.png` });
