@@ -145,6 +145,9 @@ if (cmd === "tour") {
 
       // Rows are Pressables calling router.push, not <a href>, so click through rather than following links
       await go("/exercises");
+      // Show all adds the Exercises the equipment doesn't support, each with what it needs
+      await page.getByRole("switch", { name: "Show all exercises" }).click();
+      await snap("exercises-all");
       await page.getByText("Goblet squat", { exact: true }).first().click();
       await snap("exercise-detail");
       await go("/history");
@@ -163,6 +166,8 @@ if (cmd === "tour") {
       await button("Add exercise").click();
       await page.waitForURL(/add-exercise/);
       await snap("add-exercise");
+      await page.getByPlaceholder("Search exercises").fill("squat");
+      await snap("add-exercise-search");
       await page.getByPlaceholder("Search exercises").fill("goblet");
       await page.getByText("Goblet squat", { exact: true }).first().click();
       await page.waitForURL(/\/workout$/);
