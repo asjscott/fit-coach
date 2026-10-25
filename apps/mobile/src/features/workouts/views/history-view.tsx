@@ -1,7 +1,6 @@
-import { historyByWeek, summarizeWorkout, weeklyVolume, type HistoryWeek } from "@fit/engines";
+import { historyByWeek, summarizeWorkout, weeklyVolume, withPending, type HistoryWeek } from "@fit/engines";
 import type { Workout } from "@fit/shared";
-import { router, useFocusEffect } from "expo-router";
-import { useCallback, useEffect, useRef } from "react";
+import { router } from "expo-router";
 import { Pressable, SectionList, StyleSheet, View } from "react-native";
 import { Alert, AlertText } from "@/components/alert";
 import { Loading } from "@/components/loading";
@@ -13,6 +12,7 @@ import { useCurrentUser } from "@/features/user/current-user-provider";
 import { spacing, useTheme } from "@/theme";
 import { durationLabel, kgLabel, relativeDateLabel, setsLabel, weekLabel } from "../format";
 import { useHistory } from "../history-provider";
+import { useRefreshHistory } from "../hooks/use-refresh-history";
 import { exerciseName } from "../library";
 import { useLogbook } from "../logbook-provider";
 import { WeeklyVolumeBars } from "../components/weekly-volume-bars";
@@ -22,33 +22,15 @@ type Row = Workout & { isPending: boolean };
 const exerciseNames = (workout: Workout) => workout.workoutExercises.map(({ slug }) => exerciseName(slug)).join(", ");
 
 export default function HistoryView() {
-  const { workouts, error, isLoading, isLoadingMore, refresh, loadMore } = useHistory();
+  const { workouts, error, isLoading, isLoadingMore, loadMore } = useHistory();
   const { pending } = useLogbook();
   const daysPerWeek = useCurrentUser().user?.profile.daysPerWeek;
-
-  // Reload on every visit, so a Workout just finished shows at the top
-  useFocusEffect(
-    useCallback(() => {
-      refresh();
-    }, [refresh]),
-  );
-
-  // A Pending Workout that just uploaded leaves the phone; reload so it shows from the server
-  const pendingCount = useRef(pending.length);
-  useEffect(() => {
-    if (pending.length < pendingCount.current) refresh();
-    pendingCount.current = pending.length;
-  }, [pending.length, refresh]);
+  useRefreshHistory();
 
   if (isLoading && !pending.length) return <Loading message="Loading History..." />;
 
-  // A Workout the server already has shows once
-  const pendingIds = new Set(pending.map((w) => w.id));
   const isOffline = !workouts && !!error;
-  const rows: Row[] = [
-    ...pending.map((workout) => ({ ...workout, isPending: true })),
-    ...(workouts ?? []).filter((w) => !pendingIds.has(w.id)).map((workout) => ({ ...workout, isPending: false })),
-  ];
+  const rows: Row[] = withPending(pending, workouts);
   const now = new Date();
   const weeks = historyByWeek(rows).map((week) => ({ ...week, data: week.workouts }));
 

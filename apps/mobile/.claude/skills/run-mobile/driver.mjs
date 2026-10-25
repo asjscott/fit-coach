@@ -5,7 +5,7 @@
 //   node .claude/skills/run-mobile/driver.mjs tour [light|dark]         every screen, plus a Workout logged but not saved
 // Screenshots and the saved session land in .expo/run-mobile/ (gitignored). BASE_URL overrides the dev server's
 // address (default http://localhost:8081)
-/* global console, fetch, process, URL */
+/* global console, fetch, localStorage, process, URL */
 import { chromium, devices } from "@playwright/test";
 import fs from "node:fs";
 
@@ -117,6 +117,19 @@ if (cmd === "shot") {
   await ctx.close();
 }
 
+// A finished Workout from an hour ago, as the Logbook stores it on the phone until it uploads
+function pendingWorkout() {
+  const startedAt = new Date(Date.now() - 60 * 60_000).toISOString();
+  const endedAt = new Date(Date.now() - 15 * 60_000).toISOString();
+  const sets = [10, 10, 8].map((reps) => ({ kind: "external", kg: 16, reps, loggedAt: startedAt }));
+  return {
+    id: "8f1d7c2e-3b4a-4c5d-9e6f-7a8b9c0d1e2f",
+    startedAt,
+    endedAt,
+    workoutExercises: [{ slug: "goblet-squat", loadType: "external", sets }],
+  };
+}
+
 if (cmd === "tour") {
   if (!fs.existsSync(statePath)) console.log("No saved session: signed-in screens will redirect to /sign-in");
   for (const scheme of args[0] ? [args[0]] : ["light", "dark"]) {
@@ -134,6 +147,25 @@ if (cmd === "tour") {
         await snap(name);
         await snap(name, { tall: true });
       }
+      // Today's other states, by standing in for the History request: a first run (no Workouts), and offline
+      // (History fails), first with nothing on the phone and then with a Pending Workout from earlier today
+      const history = "**/workouts*";
+      await page.route(history, (route) => route.fulfill({ json: [] }));
+      await go("/");
+      await snap("today-first-run");
+      await page.unroute(history);
+      await page.route(history, (route) => route.abort("internetdisconnected"));
+      await go("/");
+      await snap("today-offline");
+      await page.evaluate(
+        (workout) => localStorage.setItem("logbook:pending", JSON.stringify([workout])),
+        pendingWorkout(),
+      );
+      await go("/");
+      await snap("today-offline-pending");
+      await page.evaluate(() => localStorage.removeItem("logbook:pending"));
+      await page.unroute(history);
+
       for (const [route, name] of [
         ["/onboarding", "onboarding"],
         ["/profile/styleguide", "styleguide"],
@@ -193,9 +225,10 @@ if (cmd === "tour") {
       await page.getByPlaceholder("Search exercises").fill("squat");
       await snap("add-exercise-search");
       await page.getByPlaceholder("Search exercises").fill("goblet");
-      await page.getByText("Goblet squat", { exact: true }).first().click();
+      // Today stays mounted under the Workout, and its Last workout rows name Exercises too: click the visible one
+      await page.getByText("Goblet squat", { exact: true }).locator("visible=true").first().click();
       await page.waitForURL(/\/workout$/);
-      await page.getByText(/^Last: /).waitFor();
+      await page.getByText(/^Last: /).locator("visible=true").first().waitFor();
       await snap("workout-previous-sets");
       // The current Exercise's steppers are labelled by field (kg, reps, seconds); the next Set starts from the
       // previous one, so Set 2 is two taps of "Minus 1 rep"
@@ -215,7 +248,7 @@ if (cmd === "tour") {
       await button("Add exercise").click();
       await page.waitForURL(/add-exercise/);
       await page.getByPlaceholder("Search exercises").fill("plank");
-      await page.getByText("Plank", { exact: true }).first().click();
+      await page.getByText("Plank", { exact: true }).locator("visible=true").first().click();
       await page.waitForURL(/\/workout$/);
       await page.getByLabel("seconds", { exact: true }).fill("45");
       await button("Log set 1").click();
@@ -234,6 +267,17 @@ if (cmd === "tour") {
       await button("Finish").click();
       await page.waitForURL(/finish/);
       await snap("workout-finish");
+      // Edit times opens the web's date and time inputs. An end the day before the start is refused, so
+      // Save workout leaves the Workout in progress with the error under End
+      await button("Edit times").click();
+      await snap("workout-finish-edit-times");
+      const end = page.getByLabel("End date", { exact: true });
+      const dayBefore = new Date(`${await end.inputValue()}T12:00`);
+      dayBefore.setDate(dayBefore.getDate() - 1);
+      await end.fill(dayBefore.toLocaleDateString("en-CA"));
+      await button("Save workout").click();
+      await page.getByText("The end must be after the start").waitFor();
+      await snap("workout-finish-end-error");
       // Leaving keeps the Workout running and returns to the tab it was started from
       await page.goBack();
       await page.waitForURL(/\/workout$/);

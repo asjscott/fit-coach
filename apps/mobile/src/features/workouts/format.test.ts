@@ -1,6 +1,14 @@
 import type { Set } from "@fit/shared";
 import { describe, expect, it } from "vitest";
-import { elapsedClockLabel, elapsedLabel, previousSetsLabel, setsSummary, workoutExerciseSummary } from "./format";
+import {
+  elapsedClockLabel,
+  elapsedLabel,
+  previousSetsLabel,
+  setsSummary,
+  timeStat,
+  weekDatesLabel,
+  workoutExerciseSummary,
+} from "./format";
 
 const startedAt = "2026-10-25T09:00:00.000Z";
 const at = (time: string) => new Date(`2026-10-25T${time}Z`);
@@ -77,5 +85,25 @@ describe("workoutExerciseSummary", () => {
 describe("previousSetsLabel", () => {
   it("reads like the Sets summary, after Last", () => {
     expect(previousSetsLabel([lifted(18, 10), lifted(18, 10), lifted(18, 8)])).toBe("Last: 18 kg × 10, 10, 8");
+  });
+});
+
+describe("timeStat", () => {
+  it("gives under an hour in minutes", () => {
+    expect(timeStat(48.5 * 60_000)).toEqual({ value: "49", unit: "min" });
+  });
+
+  it("gives an hour or more as hours and minutes", () => {
+    expect(timeStat(125 * 60_000)).toEqual({ value: "2:05", unit: "h" });
+  });
+});
+
+describe("weekDatesLabel", () => {
+  it("gives a week inside one month as its days and month", () => {
+    expect(weekDatesLabel(new Date(2026, 9, 12), new Date(2026, 9, 24))).toBe("12–18 Oct");
+  });
+
+  it("names both months when the week crosses into the next", () => {
+    expect(weekDatesLabel(new Date(2026, 9, 26), new Date(2026, 9, 29))).toBe("26 Oct – 1 Nov");
   });
 });
