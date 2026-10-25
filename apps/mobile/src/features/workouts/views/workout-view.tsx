@@ -1,67 +1,104 @@
-import type { InProgressWorkoutExercise, LoadType, SetValues } from "@fit/shared";
+import { setCount, workoutVolume } from "@fit/engines";
+import type { InProgressWorkout } from "@fit/shared";
+import { Stack as NavStack, router } from "expo-router";
 import { useState } from "react";
-import { Button, ButtonIcon } from "@/components/button";
-import { Card } from "@/components/card";
+import { StyleSheet, View } from "react-native";
 import { ConfirmModal } from "@/components/choice-modal";
-import type { IconName } from "@/components/icons";
-import { Input, InputField } from "@/components/input";
+import { Icon } from "@/components/icons";
+import { KeyboardAwareScrollView } from "@/components/keyboard-aware-scroll-view";
 import { LoadingButton } from "@/components/loading-button";
+import { OverflowMenu } from "@/components/overflow-menu";
 import { Pressable } from "@/components/pressable";
 import { Screen } from "@/components/screen";
-import { HStack, Stack } from "@/components/stack";
+import { Stack } from "@/components/stack";
+import { Stat } from "@/components/stat";
 import { Text } from "@/components/text";
 import { useToast } from "@/contexts/toast-context";
-import { spacing } from "@/theme";
+import { useNow } from "@/hooks/use-now";
+import { fonts, spacing, useTheme } from "@/theme";
 import { errorMessage } from "@/utils/error-message";
-import { SetRow } from "../components/set-row";
-import { describeSet, timeLabel } from "../format";
+import { CurrentExerciseBox } from "../components/current-exercise-box";
+import { WorkoutExerciseRow } from "../components/workout-exercise-row";
+import { useCurrentWorkoutExercise } from "../current-workout-exercise";
+import { elapsedLabel, kgLabel, timeLabel } from "../format";
 import { useHasEnded } from "../hooks/use-has-ended";
 import { useLeaveWorkout } from "../hooks/use-leave-workout";
-import { exerciseName, libraryExercise } from "../library";
 import { useLogbook } from "../logbook-provider";
 
+// The In-progress Workout, laid out for logging between sets: Elapsed, Sets and Volume at the top, the current
+// Workout Exercise open in a box and the others collapsed to rows, Add exercise, and Finish alone at the bottom.
+// Discard workout sits in the header's ⋯ menu
 export default function WorkoutView() {
-  const { workout, discard } = useLogbook();
-  const { showToast } = useToast();
-  const [confirmingDiscard, setConfirmingDiscard] = useState(false);
+  const { workout } = useLogbook();
   const hasEnded = useHasEnded(workout);
-  const leaveWorkout = useLeaveWorkout();
 
   // Finished or discarded: blank until the navigation away lands
   if (hasEnded) return <Screen edges={["bottom"]}>{null}</Screen>;
-  if (!workout) {
-    return (
-      <Screen edges={["bottom"]}>
-        <Text color="muted">No Workout in progress.</Text>
-      </Screen>
-    );
-  }
+  if (!workout) return <NoWorkout />;
+  return <InProgress workout={workout} />;
+}
+
+function InProgress({ workout }: { workout: InProgressWorkout }) {
+  const { colors } = useTheme();
+  const { discard } = useLogbook();
+  const { showToast } = useToast();
+  const leaveWorkout = useLeaveWorkout();
+  const [confirmingDiscard, setConfirmingDiscard] = useState(false);
+  const { workoutExercises } = workout;
+  const [currentId, choose] = useCurrentWorkoutExercise(workoutExercises.map((we) => we.id));
 
   return (
-    <Screen scroll edges={["bottom"]}>
-      <Stack spacing={4} flex>
-        <Text color="muted">Started {timeLabel(workout.startedAt)}</Text>
-        {workout.workoutExercises.map((workoutExercise, i) => (
-          <WorkoutExerciseCard
-            key={workoutExercise.id}
-            workoutExercise={workoutExercise}
-            position={i}
-            count={workout.workoutExercises.length}
-          />
-        ))}
-        {workout.workoutExercises.length === 0 && <Text color="muted">Add an Exercise to start logging Sets.</Text>}
-      </Stack>
-      <Stack spacing={2} style={{ marginTop: spacing[6] }}>
-        <LoadingButton label="Add exercise" action="secondary" icon="plus" href="/workout/add-exercise" />
-        <LoadingButton label="Finish" icon="check" href="/workout/finish" />
-        <LoadingButton
-          label="Discard workout"
-          action="negative"
-          variant="outline"
-          icon="trash"
-          onPress={() => setConfirmingDiscard(true)}
-        />
-      </Stack>
+    <Screen padded={false} edges={["bottom"]}>
+      <NavStack.Screen
+        options={{
+          headerTitle: () => <WorkoutTitle startedAt={workout.startedAt} />,
+          headerRight: () => (
+            <OverflowMenu
+              label="Workout actions"
+              items={[{ label: "Discard workout", destructive: true, onPress: () => setConfirmingDiscard(true) }]}
+            />
+          ),
+        }}
+      />
+      <KeyboardAwareScrollView contentContainerStyle={styles.content}>
+        <WorkoutStats workout={workout} />
+        <View>
+          {workoutExercises.length === 0 ? (
+            <Text color="muted" style={styles.empty}>
+              Add an Exercise to start logging Sets.
+            </Text>
+          ) : null}
+          {workoutExercises.map((workoutExercise, i) =>
+            workoutExercise.id === currentId ? (
+              <View key={workoutExercise.id} style={styles.current}>
+                <CurrentExerciseBox workoutExercise={workoutExercise} position={i} count={workoutExercises.length} />
+              </View>
+            ) : (
+              <WorkoutExerciseRow
+                key={workoutExercise.id}
+                workoutExercise={workoutExercise}
+                position={i}
+                count={workoutExercises.length}
+                onPress={() => choose(workoutExercise.id)}
+              />
+            ),
+          )}
+        </View>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Add exercise"
+          onPress={() => router.push("/workout/add-exercise")}
+          style={[styles.addRow, { borderColor: colors.line }]}
+        >
+          <Icon name="plus" color="accent" size={22} />
+          <Text color="accent" style={styles.addLabel}>
+            Add exercise
+          </Text>
+        </Pressable>
+      </KeyboardAwareScrollView>
+      <View style={[styles.footer, { borderTopColor: colors.line, backgroundColor: colors.bg }]}>
+        <LoadingButton label="Finish" action="secondary" href="/workout/finish" fullWidth />
+      </View>
       <ConfirmModal
         isOpen={confirmingDiscard}
         title="Discard Workout?"
@@ -82,225 +119,76 @@ export default function WorkoutView() {
   );
 }
 
-// A small icon-only button for the controls on a Workout Exercise or Set
-function IconButton({
-  icon,
-  label,
-  onPress,
-  disabled,
-}: {
-  icon: IconName;
-  label: string;
-  onPress: () => void;
-  disabled?: boolean;
-}) {
+// "Workout" over its start time, in the header
+function WorkoutTitle({ startedAt }: { startedAt: string }) {
   return (
-    <Button
-      size="xs"
-      action="default"
-      variant="link"
-      onPress={onPress}
-      disabled={disabled}
-      accessibilityLabel={label}
-      hitSlop={spacing[2]}
-    >
-      <ButtonIcon name={icon} />
-    </Button>
+    <View style={styles.title}>
+      <Text accessibilityRole="header" style={styles.titleText}>
+        Workout
+      </Text>
+      <Text size="xs" color="muted">
+        Started {timeLabel(startedAt)}
+      </Text>
+    </View>
   );
 }
 
-function WorkoutExerciseCard({
-  workoutExercise,
-  position,
-  count,
-}: {
-  workoutExercise: InProgressWorkoutExercise;
-  position: number;
-  count: number;
-}) {
-  const { removeWorkoutExercise, moveWorkoutExercise, logSet, editSet, deleteSet, nextSetDraft } = useLogbook();
-  const { showToast } = useToast();
-  // The Set being corrected, or null while logging a new one
-  const [editingIndex, setEditingIndex] = useState<number | null>(null);
-  const [confirmingRemove, setConfirmingRemove] = useState(false);
-  const exercise = libraryExercise(workoutExercise.slug);
-  const name = exerciseName(workoutExercise.slug);
-  const perSide = exercise?.unilateral ? " per side" : "";
-  const { id, loadType, sets } = workoutExercise;
-  const editingSet = editingIndex === null ? undefined : sets[editingIndex];
-
-  const attempt = async (change: () => Promise<void>) => {
-    try {
-      await change();
-    } catch (err) {
-      showToast(errorMessage(err), { error: err });
-    }
-  };
-
-  const remove = () => attempt(() => removeWorkoutExercise(id));
-
+// Elapsed (ticking), Sets and Volume so far
+function WorkoutStats({ workout }: { workout: InProgressWorkout }) {
+  const now = useNow();
   return (
-    <Card>
-      <Stack spacing={3}>
-        <HStack spacing={2} align="start">
-          <Stack spacing={1} style={{ flex: 1 }}>
-            <Text weight="semiBold">{name}</Text>
-            {exercise?.unilateral && (
-              <Text size="sm" color="muted">
-                Log one side; the values count for each side
-              </Text>
-            )}
-          </Stack>
-          <IconButton
-            icon="chevronUp"
-            label={`Move ${name} up`}
-            disabled={position === 0}
-            onPress={() => attempt(() => moveWorkoutExercise(id, position - 1))}
-          />
-          <IconButton
-            icon="chevronDown"
-            label={`Move ${name} down`}
-            disabled={position === count - 1}
-            onPress={() => attempt(() => moveWorkoutExercise(id, position + 1))}
-          />
-          <IconButton
-            icon="trash"
-            label={`Remove ${name}`}
-            onPress={() => (sets.length > 0 ? setConfirmingRemove(true) : remove())}
-          />
-        </HStack>
-        {sets.map((set, i) => (
-          <Pressable
-            key={set.loggedAt + i}
-            onPress={() => setEditingIndex(editingIndex === i ? null : i)}
-            accessibilityRole="button"
-            accessibilityLabel={`Set ${i + 1}, ${describeSet(set)}${perSide}. Edit`}
-          >
-            <SetRow set={set} index={i} unilateral={exercise?.unilateral} highlighted={editingIndex === i} />
-          </Pressable>
-        ))}
-        {editingSet && editingIndex !== null ? (
-          <Stack spacing={2}>
-            <Text size="sm" color="muted">
-              Editing Set {editingIndex + 1}
-            </Text>
-            <SetForm
-              key={`edit-${editingIndex}`}
-              loadType={loadType}
-              initial={editingSet}
-              submitLabel="Save"
-              onSubmit={async (values) => {
-                await editSet(id, editingIndex, values);
-                setEditingIndex(null);
-              }}
-            />
-            <HStack spacing={2}>
-              <LoadingButton
-                label="Delete set"
-                size="sm"
-                action="negative"
-                variant="outline"
-                icon="trash"
-                onPress={() =>
-                  attempt(async () => {
-                    await deleteSet(id, editingIndex);
-                    setEditingIndex(null);
-                  })
-                }
-              />
-              <LoadingButton label="Cancel" size="sm" action="default" onPress={() => setEditingIndex(null)} />
-            </HStack>
-          </Stack>
-        ) : (
-          // Remounts after each Set, so the fields start from the Set just logged
-          <SetForm
-            key={`new-${sets.length}`}
-            loadType={loadType}
-            initial={nextSetDraft(workoutExercise)}
-            submitLabel="Log set"
-            onSubmit={(values) => logSet(id, values)}
-          />
-        )}
+    <View style={styles.stats}>
+      <Stat size="3xl" value={elapsedLabel(now - Date.parse(workout.startedAt))} label="Elapsed" />
+      <Stat size="3xl" value={String(setCount(workout))} label="Sets" />
+      <Stat size="3xl" value={kgLabel(workoutVolume(workout))} unit="kg" label="Volume" />
+    </View>
+  );
+}
+
+// Reached with no Workout in progress, e.g. by reloading on web after finishing
+function NoWorkout() {
+  const { start } = useLogbook();
+  const { showToast } = useToast();
+  const [starting, setStarting] = useState(false);
+  return (
+    <Screen edges={["bottom"]}>
+      <Stack spacing={4}>
+        <Text color="muted">No Workout in progress.</Text>
+        <LoadingButton
+          label="Start workout"
+          icon="plus"
+          loading={starting}
+          onPress={async () => {
+            setStarting(true);
+            try {
+              await start();
+            } catch (err) {
+              showToast("Couldn't start a Workout", { error: err });
+            } finally {
+              setStarting(false);
+            }
+          }}
+        />
       </Stack>
-      <ConfirmModal
-        isOpen={confirmingRemove}
-        title={`Remove ${name}?`}
-        message={`Its ${sets.length === 1 ? "Set" : `${sets.length} Sets`} will be deleted too.`}
-        confirmLabel="Remove"
-        onCancel={() => setConfirmingRemove(false)}
-        onConfirm={async () => {
-          setConfirmingRemove(false);
-          await remove();
-        }}
-      />
-    </Card>
+    </Screen>
   );
 }
 
-// The fields each Load Type asks for
-const FIELDS: Record<LoadType, { key: "kg" | "reps" | "seconds"; label: string; decimal?: boolean }[]> = {
-  external: [
-    { key: "kg", label: "kg", decimal: true },
-    { key: "reps", label: "reps" },
-  ],
-  bodyweight: [{ key: "reps", label: "reps" }],
-  timed: [{ key: "seconds", label: "seconds" }],
-};
-
-// Entry row for a Set's values, starting from `initial` (the previous Set, or the Set being edited)
-function SetForm({
-  loadType,
-  initial,
-  submitLabel,
-  onSubmit,
-}: {
-  loadType: LoadType;
-  initial: SetValues | null;
-  submitLabel: string;
-  onSubmit: (values: SetValues) => Promise<void>;
-}) {
-  const { showToast } = useToast();
-  const fields = FIELDS[loadType];
-  const [values, setValues] = useState<Record<string, string>>(() =>
-    Object.fromEntries(
-      fields.flatMap(({ key }) => {
-        const value = initial && key in initial ? (initial as Record<string, unknown>)[key] : undefined;
-        return typeof value === "number" ? [[key, String(value)]] : [];
-      }),
-    ),
-  );
-  const [saving, setSaving] = useState(false);
-
-  const handleSubmit = async () => {
-    const numbers = Object.fromEntries(fields.map(({ key }) => [key, Number(values[key]?.replace(",", "."))]));
-    if (fields.some(({ key }) => !values[key]?.trim() || Number.isNaN(numbers[key]))) {
-      showToast(`Enter ${fields.map((f) => f.label).join(" and ")}`, { type: "warning" });
-      return;
-    }
-    setSaving(true);
-    try {
-      await onSubmit({ kind: loadType, ...numbers } as SetValues);
-    } catch (err) {
-      showToast(errorMessage(err), { error: err });
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  return (
-    <HStack spacing={2} align="center">
-      {fields.map(({ key, label, decimal }) => (
-        <Input key={key} size="md" style={{ flex: 1 }}>
-          <InputField
-            value={values[key] ?? ""}
-            onChangeText={(text) => setValues((prev) => ({ ...prev, [key]: text }))}
-            placeholder={label}
-            keyboardType={decimal ? "decimal-pad" : "number-pad"}
-            accessibilityLabel={label}
-          />
-        </Input>
-      ))}
-      <LoadingButton label={submitLabel} size="md" action="secondary" loading={saving} onPress={handleSubmit} />
-    </HStack>
-  );
-}
+const styles = StyleSheet.create({
+  content: { padding: spacing[5], paddingBottom: spacing[8] },
+  title: { alignItems: "center" },
+  titleText: { fontFamily: fonts.semiBold },
+  stats: { flexDirection: "row", gap: spacing[3], marginBottom: spacing[5] },
+  empty: { paddingVertical: spacing[4] },
+  current: { marginVertical: spacing[3] },
+  addRow: {
+    minHeight: 56,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing[3],
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+  },
+  addLabel: { fontFamily: fonts.semiBold },
+  footer: { paddingHorizontal: spacing[5], paddingVertical: spacing[3], borderTopWidth: StyleSheet.hairlineWidth },
+});
