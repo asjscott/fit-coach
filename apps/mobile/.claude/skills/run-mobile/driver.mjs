@@ -206,7 +206,8 @@ if (cmd === "tour") {
       await page.getByPlaceholder("Search exercises").fill("squat");
       await snap("add-exercise-search");
       await page.getByPlaceholder("Search exercises").fill("goblet");
-      await page.getByText("Goblet squat", { exact: true }).first().click();
+      // Today stays mounted under the Workout, and its Last workout rows name Exercises too: click the visible one
+      await page.getByText("Goblet squat", { exact: true }).locator("visible=true").first().click();
       await page.waitForURL(/\/workout$/);
       for (const [kg, reps] of [
         ["16", "10"],
@@ -220,7 +221,7 @@ if (cmd === "tour") {
       await button("Add exercise").click();
       await page.waitForURL(/add-exercise/);
       await page.getByPlaceholder("Search exercises").fill("plank");
-      await page.getByText("Plank", { exact: true }).first().click();
+      await page.getByText("Plank", { exact: true }).locator("visible=true").first().click();
       await page.waitForURL(/\/workout$/);
       await page.getByPlaceholder("seconds").last().fill("45");
       await button("Log set").click();
