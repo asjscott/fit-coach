@@ -20,7 +20,7 @@ import { errorMessage } from "@/utils/error-message";
 import { CurrentExerciseBox } from "../components/current-exercise-box";
 import { WorkoutExerciseRow } from "../components/workout-exercise-row";
 import { useCurrentWorkoutExercise } from "../current-workout-exercise";
-import { elapsedLabel, kgLabel, timeLabel } from "../format";
+import { elapsedClockLabel, kgLabel, timeLabel } from "../format";
 import { useHasEnded } from "../hooks/use-has-ended";
 import { useLeaveWorkout } from "../hooks/use-leave-workout";
 import { useLogbook } from "../logbook-provider";
@@ -138,7 +138,7 @@ function WorkoutStats({ workout }: { workout: InProgressWorkout }) {
   const now = useNow();
   return (
     <View style={styles.stats}>
-      <Stat size="3xl" value={elapsedLabel(now - Date.parse(workout.startedAt))} label="Elapsed" />
+      <Stat size="3xl" value={elapsedClockLabel(now - Date.parse(workout.startedAt))} label="Elapsed" />
       <Stat size="3xl" value={String(setCount(workout))} label="Sets" />
       <Stat size="3xl" value={kgLabel(workoutVolume(workout))} unit="kg" label="Volume" />
     </View>

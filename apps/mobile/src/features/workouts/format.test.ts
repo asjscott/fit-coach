@@ -1,6 +1,37 @@
 import type { Set } from "@fit/shared";
 import { describe, expect, it } from "vitest";
-import { elapsedLabel, setsSummary, workoutExerciseSummary } from "./format";
+import { elapsedClockLabel, elapsedLabel, setsSummary, workoutExerciseSummary } from "./format";
+
+const startedAt = "2026-10-25T09:00:00.000Z";
+const at = (time: string) => new Date(`2026-10-25T${time}Z`);
+
+describe("elapsedLabel", () => {
+  it("counts the whole minutes since the Workout started", () => {
+    expect(elapsedLabel(startedAt, at("09:12:59"))).toBe("12 min");
+  });
+
+  it("switches to hours after an hour", () => {
+    expect(elapsedLabel(startedAt, at("10:05:00"))).toBe("1 h 5 min");
+    expect(elapsedLabel(startedAt, at("11:00:30"))).toBe("2 h");
+  });
+
+  it("reads 0 min when the phone's clock is behind the start", () => {
+    expect(elapsedLabel(startedAt, at("08:58:00"))).toBe("0 min");
+  });
+});
+
+describe("elapsedClockLabel", () => {
+  it("reads as minutes and seconds, then hours", () => {
+    expect(elapsedClockLabel(0)).toBe("0:00");
+    expect(elapsedClockLabel(65_000)).toBe("1:05");
+    expect(elapsedClockLabel((48 * 60 + 12) * 1000 + 999)).toBe("48:12");
+    expect(elapsedClockLabel((3600 + 5 * 60 + 9) * 1000)).toBe("1:05:09");
+  });
+
+  it("shows a start in the future (a clock change) as zero", () => {
+    expect(elapsedClockLabel(-5000)).toBe("0:00");
+  });
+});
 
 const loggedAt = "2026-10-24T09:05:00.000Z";
 const lifted = (kg: number, reps: number): Set => ({ kind: "external", kg, reps, loggedAt });
@@ -34,18 +65,5 @@ describe("workoutExerciseSummary", () => {
 
   it("says when nothing is logged yet", () => {
     expect(workoutExerciseSummary([])).toBe("Not started");
-  });
-});
-
-describe("elapsedLabel", () => {
-  it("reads as minutes and seconds, then hours", () => {
-    expect(elapsedLabel(0)).toBe("0:00");
-    expect(elapsedLabel(65_000)).toBe("1:05");
-    expect(elapsedLabel((48 * 60 + 12) * 1000 + 999)).toBe("48:12");
-    expect(elapsedLabel((3600 + 5 * 60 + 9) * 1000)).toBe("1:05:09");
-  });
-
-  it("shows a start in the future (a clock change) as zero", () => {
-    expect(elapsedLabel(-5000)).toBe("0:00");
   });
 });

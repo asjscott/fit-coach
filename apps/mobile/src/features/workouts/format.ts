@@ -12,12 +12,19 @@ export const dateLabel = (iso: string) =>
 
 export const timeLabel = (iso: string) => new Date(iso).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
 
-export const durationLabel = ({ startedAt, endedAt }: Pick<Workout, "startedAt" | "endedAt">) => {
-  const minutes = Math.round((Date.parse(endedAt) - Date.parse(startedAt)) / 60_000);
+const minutesLabel = (minutes: number) => {
   if (minutes < 60) return `${minutes} min`;
   const rest = minutes % 60;
   return rest ? `${Math.floor(minutes / 60)} h ${rest} min` : `${minutes / 60} h`;
 };
+
+export const durationLabel = ({ startedAt, endedAt }: Pick<Workout, "startedAt" | "endedAt">) =>
+  minutesLabel(Math.round((Date.parse(endedAt) - Date.parse(startedAt)) / 60_000));
+
+// How long a Workout still in progress has run: whole minutes, like a clock, and never below 0 if the phone's
+// clock has moved back
+export const elapsedLabel = (startedAt: string, now: Date) =>
+  minutesLabel(Math.max(0, Math.floor((now.getTime() - Date.parse(startedAt)) / 60_000)));
 
 const DAY_MS = 86_400_000;
 const midnight = (date: Date) => new Date(date.getFullYear(), date.getMonth(), date.getDate());
@@ -61,8 +68,8 @@ export const kgLabel = (kg: number) => Math.round(kg).toLocaleString();
 
 export const setsLabel = (sets: number) => `${sets} ${sets === 1 ? "set" : "sets"}`;
 
-// How long an In-progress Workout has run, as a clock: "0:45", "48:12", "1:05:09"
-export function elapsedLabel(ms: number) {
+// How long an In-progress Workout has run, as a ticking clock for its own screen: "0:45", "48:12", "1:05:09"
+export function elapsedClockLabel(ms: number) {
   const total = Math.max(0, Math.floor(ms / 1000));
   const hours = Math.floor(total / 3600);
   const minutes = Math.floor(total / 60) % 60;
