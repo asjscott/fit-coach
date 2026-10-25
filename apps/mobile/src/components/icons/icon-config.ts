@@ -31,6 +31,7 @@ import Target from "lucide-react-native/icons/target";
 import Trash from "lucide-react-native/icons/trash";
 import TriangleAlert from "lucide-react-native/icons/triangle-alert";
 import User from "lucide-react-native/icons/user";
+import Video from "lucide-react-native/icons/video";
 import X from "lucide-react-native/icons/x";
 import type { LucideIcon } from "lucide-react-native";
 
@@ -66,6 +67,7 @@ export const IconMap = {
   trash: Trash,
   triangleAlert: TriangleAlert,
   user: User,
+  video: Video,
   weight: Scale,
   x: X,
 } satisfies Record<string, LucideIcon>;
