@@ -1,7 +1,6 @@
-import { LinearGradient } from "expo-linear-gradient";
 import { createContext, use, type ReactNode } from "react";
-import { Pressable, StyleSheet, View, type PressableProps, type StyleProp, type ViewStyle } from "react-native";
-import { accentGradient, fonts, spacing, useTheme, type SpaceToken } from "@/theme";
+import { Pressable, View, type PressableProps, type StyleProp, type ViewStyle } from "react-native";
+import { fonts, spacing, useTheme, type SpaceToken } from "@/theme";
 import { Icon, type IconComponent, type IconName } from "../icons";
 import { Spinner } from "../spinner";
 import { Text, type TextProps } from "../text";
@@ -47,7 +46,6 @@ export function Button({
   const { colors } = useTheme();
   const dims = buttonSizes[size];
   const foreground = buttonForeground(colors, action, variant);
-  const showGradient = action === "primary" && variant === "solid";
 
   return (
     <Pressable
@@ -69,14 +67,6 @@ export function Button({
     >
       {(state) => (
         <ButtonContext value={{ size, foreground }}>
-          {showGradient && (
-            <LinearGradient
-              colors={accentGradient(colors)}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 1 }}
-              style={StyleSheet.absoluteFill}
-            />
-          )}
           {typeof children === "function" ? children(state) : children}
         </ButtonContext>
       )}
@@ -87,7 +77,7 @@ export function Button({
 export function ButtonText({ style, ...props }: TextProps) {
   const { size, foreground } = useButtonContext();
   return (
-    <Text size={buttonSizes[size].text} style={[{ color: foreground, fontFamily: fonts.semiBold }, style]} {...props} />
+    <Text size={buttonSizes[size].text} style={[{ color: foreground, fontFamily: fonts.bold }, style]} {...props} />
   );
 }
 

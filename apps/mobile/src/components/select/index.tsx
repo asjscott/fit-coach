@@ -110,7 +110,7 @@ export function SelectInput({ value, placeholder }: { value?: string; placeholde
   return (
     <Text
       isTruncated
-      color={value ? "text" : "textSubtle"}
+      color={value ? "text" : "subtle"}
       style={[localStyles.input, { fontFamily: fonts.regular, fontSize: fontSizes[inputSizes[size].text] }]}
     >
       {value || placeholder}
@@ -119,7 +119,7 @@ export function SelectInput({ value, placeholder }: { value?: string; placeholde
 }
 
 export function SelectIcon({ name, as, size = 20 }: { name?: IconName; as?: IconComponent; size?: number }) {
-  return <Icon name={as ? undefined : (name ?? "chevronDown")} as={as} size={size} color="orange" />;
+  return <Icon name={as ? undefined : (name ?? "chevronDown")} as={as} size={size} color="accent" />;
 }
 
 export function SelectPortal({ children }: { children?: ReactNode }) {
@@ -163,10 +163,10 @@ export function SelectItem({ value, label, onPress, isDisabled }: SelectItemProp
         label
       ) : (
         <>
-          <Text weight={selected ? "semiBold" : "regular"} color={selected ? "orange" : "text"}>
+          <Text weight={selected ? "semiBold" : "regular"} color={selected ? "accent" : "text"}>
             {label}
           </Text>
-          {selected && <Icon name="check" size={18} color="orange" />}
+          {selected && <Icon name="check" size={18} color="accent" />}
         </>
       )}
     </ActionsheetItem>

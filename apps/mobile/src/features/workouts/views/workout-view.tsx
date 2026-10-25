@@ -31,7 +31,7 @@ export default function WorkoutView() {
   if (!workout) {
     return (
       <Screen edges={["bottom"]}>
-        <Text color="textMuted">No Workout in progress.</Text>
+        <Text color="muted">No Workout in progress.</Text>
       </Screen>
     );
   }
@@ -39,7 +39,7 @@ export default function WorkoutView() {
   return (
     <Screen scroll edges={["bottom"]}>
       <Stack spacing={4} flex>
-        <Text color="textMuted">Started {timeLabel(workout.startedAt)}</Text>
+        <Text color="muted">Started {timeLabel(workout.startedAt)}</Text>
         {workout.workoutExercises.map((workoutExercise, i) => (
           <WorkoutExerciseCard
             key={workoutExercise.id}
@@ -48,7 +48,7 @@ export default function WorkoutView() {
             count={workout.workoutExercises.length}
           />
         ))}
-        {workout.workoutExercises.length === 0 && <Text color="textMuted">Add an Exercise to start logging Sets.</Text>}
+        {workout.workoutExercises.length === 0 && <Text color="muted">Add an Exercise to start logging Sets.</Text>}
       </Stack>
       <Stack spacing={2} style={{ marginTop: spacing[6] }}>
         <LoadingButton label="Add exercise" action="secondary" icon="plus" href="/workout/add-exercise" />
@@ -145,7 +145,7 @@ function WorkoutExerciseCard({
           <Stack spacing={1} style={{ flex: 1 }}>
             <Text weight="semiBold">{name}</Text>
             {exercise?.unilateral && (
-              <Text size="sm" color="textMuted">
+              <Text size="sm" color="muted">
                 Log one side; the values count for each side
               </Text>
             )}
@@ -180,7 +180,7 @@ function WorkoutExerciseCard({
         ))}
         {editingSet && editingIndex !== null ? (
           <Stack spacing={2}>
-            <Text size="sm" color="textMuted">
+            <Text size="sm" color="muted">
               Editing Set {editingIndex + 1}
             </Text>
             <SetForm

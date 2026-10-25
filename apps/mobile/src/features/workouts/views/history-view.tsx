@@ -72,7 +72,7 @@ export default function HistoryView() {
         ListFooterComponent={isLoadingMore || isLoading ? <Spinner /> : null}
         ListEmptyComponent={
           error || isLoading ? null : (
-            <Text color="textMuted" centered style={{ marginTop: spacing[6] }}>
+            <Text color="muted" centered style={{ marginTop: spacing[6] }}>
               No Workouts yet. Finished Workouts show up here.
             </Text>
           )
@@ -91,11 +91,9 @@ function WorkoutCard({ workout, isPending }: Row) {
       <Card size="sm">
         <HStack justify="between" spacing={4}>
           <Text weight="semiBold">{dateLabel(workout.startedAt)}</Text>
-          <Text color="textMuted" tabular>
-            {durationLabel(workout)}
-          </Text>
+          <Text color="muted">{durationLabel(workout)}</Text>
         </HStack>
-        <Text size="sm" color="textMuted">
+        <Text size="sm" color="muted">
           {exerciseNames(workout)}
         </Text>
         {isPending ? <PendingActions workoutId={workout.id} /> : null}

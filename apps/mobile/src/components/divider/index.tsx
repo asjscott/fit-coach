@@ -13,7 +13,7 @@ export function Divider({ orientation = "horizontal", spacing: space = 0, style,
     <View
       aria-orientation={orientation}
       style={[
-        { backgroundColor: colors.border },
+        { backgroundColor: colors.line },
         horizontal
           ? { height: StyleSheet.hairlineWidth, alignSelf: "stretch", marginVertical: spacing[space] }
           : { width: StyleSheet.hairlineWidth, alignSelf: "stretch", marginHorizontal: spacing[space] },

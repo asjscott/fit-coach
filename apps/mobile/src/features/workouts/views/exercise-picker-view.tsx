@@ -81,7 +81,7 @@ export default function ExercisePickerView() {
                 )}
               </HStack>
               {!available && (
-                <Text size="sm" color="textMuted">
+                <Text size="sm" color="muted">
                   Needs: {neededEquipment(exercise, tags)}
                 </Text>
               )}
@@ -89,7 +89,7 @@ export default function ExercisePickerView() {
           </Pressable>
         )}
         ListEmptyComponent={
-          <Text color="textMuted" centered style={{ marginTop: spacing[6] }}>
+          <Text color="muted" centered style={{ marginTop: spacing[6] }}>
             No Exercises match “{query.trim()}”.
           </Text>
         }

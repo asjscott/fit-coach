@@ -1,7 +1,6 @@
-import { LinearGradient } from "expo-linear-gradient";
 import { createContext, use, useMemo, useRef, useState, type ReactNode } from "react";
 import { PanResponder, StyleSheet, View, type StyleProp, type ViewStyle } from "react-native";
-import { accentGradient, radii, useTheme } from "@/theme";
+import { radii, useTheme } from "@/theme";
 import { useFormControlContext } from "../form-control";
 import { sliderSizes, type SliderSize } from "./styles";
 
@@ -112,7 +111,7 @@ export function SliderTrack({ children }: { children?: ReactNode }) {
       style={{
         height: sliderSizes[size].track,
         borderRadius: radii.pill,
-        backgroundColor: colors.border,
+        backgroundColor: colors.line,
         overflow: "hidden",
       }}
     >
@@ -124,14 +123,7 @@ export function SliderTrack({ children }: { children?: ReactNode }) {
 export function SliderFilledTrack() {
   const { colors } = useTheme();
   const { fraction } = useSliderContext();
-  return (
-    <LinearGradient
-      colors={accentGradient(colors)}
-      start={{ x: 0, y: 0 }}
-      end={{ x: 1, y: 0 }}
-      style={[StyleSheet.absoluteFill, { width: `${fraction * 100}%` }]}
-    />
-  );
+  return <View style={[StyleSheet.absoluteFill, { width: `${fraction * 100}%`, backgroundColor: colors.accent }]} />;
 }
 
 export function SliderThumb() {
@@ -149,7 +141,7 @@ export function SliderThumb() {
         borderRadius: thumb / 2,
         backgroundColor: colors.onAccent,
         borderWidth: 3,
-        borderColor: colors.orange,
+        borderColor: colors.accent,
         shadowColor: "#000",
         shadowOpacity: 0.2,
         shadowRadius: 4,

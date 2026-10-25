@@ -57,7 +57,7 @@ export default function ExercisesView() {
             {error ? (
               <Text color="danger">{error}</Text>
             ) : (
-              <Text size="sm" color="textMuted">
+              <Text size="sm" color="muted">
                 {availableCount} of {rows.length} exercises match your equipment
               </Text>
             )}
@@ -67,7 +67,7 @@ export default function ExercisesView() {
           <Text
             size="xs"
             weight="semiBold"
-            color="textSubtle"
+            color="subtle"
             style={{ backgroundColor: colors.bg, paddingTop: spacing[4], paddingBottom: spacing[1] }}
           >
             {section.title.toUpperCase()}
@@ -78,7 +78,7 @@ export default function ExercisesView() {
             <Card size="sm" style={!available && { opacity: 0.5 }}>
               <Text weight="semiBold">{exercise.name}</Text>
               {!available && (
-                <Text size="sm" color="textMuted">
+                <Text size="sm" color="muted">
                   Needs: {neededEquipment(exercise, tags)}
                 </Text>
               )}
@@ -87,7 +87,7 @@ export default function ExercisesView() {
         )}
         ListEmptyComponent={
           error ? null : (
-            <Text color="textMuted" centered style={{ marginTop: spacing[6] }}>
+            <Text color="muted" centered style={{ marginTop: spacing[6] }}>
               Nothing matches your equipment yet. Turn on Show all to see everything.
             </Text>
           )

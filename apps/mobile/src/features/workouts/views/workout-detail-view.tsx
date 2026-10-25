@@ -59,7 +59,7 @@ export default function WorkoutDetailView() {
   if (isLoading) return <Loading message="Loading Workout..." />;
   return (
     <Screen edges={["bottom"]}>
-      <Text color={error ? "danger" : "textMuted"}>{error ?? "This Workout isn't in your History."}</Text>
+      <Text color={error ? "danger" : "muted"}>{error ?? "This Workout isn't in your History."}</Text>
     </Screen>
   );
 }
@@ -95,11 +95,11 @@ function WorkoutDetail({ workout, note, onDelete }: WorkoutDetailProps) {
       <Stack spacing={4} flex>
         <Stack spacing={1}>
           <Heading size="xl">{dateLabel(workout.startedAt)}</Heading>
-          <Text color="textMuted" tabular>
+          <Text color="muted">
             {timeLabel(workout.startedAt)} – {timeLabel(workout.endedAt)} · {durationLabel(workout)}
           </Text>
           {note !== undefined && (
-            <Text size="sm" color="textMuted">
+            <Text size="sm" color="muted">
               {note}
             </Text>
           )}

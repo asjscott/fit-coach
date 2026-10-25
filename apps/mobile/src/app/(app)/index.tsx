@@ -7,6 +7,7 @@ import { Card } from "@/components/card";
 import { Heading } from "@/components/heading";
 import { LoadingButton } from "@/components/loading-button";
 import { Screen } from "@/components/screen";
+import { SectionLabel } from "@/components/section-label";
 import { HStack, Stack } from "@/components/stack";
 import { Text } from "@/components/text";
 import { useToast } from "@/contexts/toast-context";
@@ -103,18 +104,14 @@ export default function Home() {
       <Stack spacing={6} flex>
         <Heading size="3xl">Fit Coach</Heading>
         <Card>
-          <Text size="xs" weight="medium" color="textSubtle">
-            YOUR PLAN
-          </Text>
+          <SectionLabel>Your plan</SectionLabel>
           <Text size="xl" weight="bold">
             {!!profile.goal && goalLabel(profile.goal)}
           </Text>
-          <Text color="textMuted">{profile.daysPerWeek} training days per week</Text>
+          <Text color="muted">{profile.daysPerWeek} training days per week</Text>
         </Card>
         <Card>
-          <Text size="xs" weight="medium" color="textSubtle">
-            PROFILE
-          </Text>
+          <SectionLabel>Profile</SectionLabel>
           <Row label="Gender" value={profile.gender && genderLabel(profile.gender)} />
           <Row label="Age" value={profile.birthYear && `${new Date().getFullYear() - profile.birthYear}`} />
           <Row label="Height" value={profile.heightCm && `${profile.heightCm} cm`} />
@@ -123,14 +120,12 @@ export default function Home() {
             label="Injuries"
             value={profile.injuries?.length ? profile.injuries.map(injuryLabel).join(", ") : "None"}
           />
-          <Text size="xs" color="textSubtle">
+          <Text size="xs" color="subtle">
             Member since {new Date(user.onboardedAt).toLocaleDateString()}
           </Text>
         </Card>
         <Card>
-          <Text size="xs" weight="medium" color="textSubtle">
-            STATUS
-          </Text>
+          <SectionLabel>Status</SectionLabel>
           <Text weight="semiBold">{status}</Text>
         </Card>
       </Stack>
@@ -161,7 +156,7 @@ export default function Home() {
 function Row({ label, value }: { label: string; value?: string | number }) {
   return (
     <HStack justify="between" spacing={4}>
-      <Text color="textMuted">{label}</Text>
+      <Text color="muted">{label}</Text>
       <Text weight="semiBold" style={{ flexShrink: 1, textAlign: "right" }}>
         {value || "—"}
       </Text>

@@ -69,7 +69,7 @@ export default function FinishView() {
   if (!workout) {
     return (
       <Screen edges={["bottom"]}>
-        <Text color="textMuted">No Workout in progress.</Text>
+        <Text color="muted">No Workout in progress.</Text>
       </Screen>
     );
   }
@@ -114,7 +114,7 @@ export default function FinishView() {
       <Stack spacing={6} flex>
         <TimeField label="Start" value={start} onChange={setStart} error={errors.start} />
         <TimeField label="End" value={end} onChange={setEnd} error={errors.end} />
-        <Text size="sm" color="textMuted">
+        <Text size="sm" color="muted">
           Exercises with no Sets are left out.
         </Text>
       </Stack>

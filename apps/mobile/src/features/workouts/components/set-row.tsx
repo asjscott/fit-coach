@@ -17,7 +17,7 @@ export function SetRow({
 }) {
   return (
     <HStack spacing={3}>
-      <Text weight="semiBold" color={highlighted ? "orange" : "textSubtle"}>
+      <Text weight="semiBold" color={highlighted ? "accent" : "subtle"}>
         {index + 1}
       </Text>
       <Text>

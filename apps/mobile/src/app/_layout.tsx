@@ -59,12 +59,12 @@ function ThemedNavigation() {
       ...base,
       colors: {
         ...base.colors,
-        primary: colors.orange,
+        primary: colors.accent,
         background: colors.bg,
         card: colors.bg,
         text: colors.text,
-        border: colors.border,
-        notification: colors.red,
+        border: colors.line,
+        notification: colors.accent,
       },
     };
   }, [scheme, colors]);

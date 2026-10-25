@@ -19,9 +19,9 @@ export const buttonForeground = (colors: Colors, action: ButtonAction, variant: 
     return action === "secondary" || action === "default" ? colors.text : colors.onAccent;
   }
   return {
-    primary: colors.orange,
+    primary: colors.accent,
     secondary: colors.text,
-    positive: colors.success,
+    positive: colors.accent,
     negative: colors.danger,
     default: colors.text,
   }[action];
@@ -29,21 +29,20 @@ export const buttonForeground = (colors: Colors, action: ButtonAction, variant: 
 
 export const buttonBackground = (colors: Colors, action: ButtonAction) =>
   ({
-    // Primary is drawn as a gradient on top of this
-    primary: colors.orange,
-    secondary: colors.surfaceRaised,
-    positive: colors.success,
+    primary: colors.accent,
+    secondary: colors.raised,
+    positive: colors.accent,
     negative: colors.danger,
     default: "transparent",
   })[action];
 
 export const buttonBorder = (colors: Colors, action: ButtonAction) =>
   ({
-    primary: colors.orange,
-    secondary: colors.border,
-    positive: colors.success,
+    primary: colors.accent,
+    secondary: colors.inputBorder,
+    positive: colors.accent,
     negative: colors.danger,
-    default: colors.border,
+    default: colors.inputBorder,
   })[action];
 
 export const styles = StyleSheet.create({

@@ -1,4 +1,4 @@
-export { accentGradient, palettes, statusColors } from "./colors";
+export { palettes, statusColors } from "./colors";
 export { radii } from "./radii";
 export { spacing } from "./spacing";
 export { fonts, fontSizes, lineHeight } from "./typography";

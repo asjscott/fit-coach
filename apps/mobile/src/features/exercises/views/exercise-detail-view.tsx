@@ -6,6 +6,7 @@ import { Heading } from "@/components/heading";
 import { Loading } from "@/components/loading";
 import { LoadingButton } from "@/components/loading-button";
 import { Screen } from "@/components/screen";
+import { SectionLabel } from "@/components/section-label";
 import { HStack, Stack } from "@/components/stack";
 import { Text } from "@/components/text";
 import { spacing, useTheme } from "@/theme";
@@ -35,7 +36,7 @@ export default function ExerciseDetailView() {
       <Stack spacing={4} flex>
         <Stack spacing={1}>
           <Heading size="2xl">{exercise.name}</Heading>
-          <Text color="textMuted">{exercise.patterns.map((p) => patternLabels[p.pattern]).join(" · ")}</Text>
+          <Text color="muted">{exercise.patterns.map((p) => patternLabels[p.pattern]).join(" · ")}</Text>
         </Stack>
 
         <View
@@ -44,12 +45,12 @@ export default function ExerciseDetailView() {
             height: maxVideoHeight,
             minHeight: 64,
             borderRadius: spacing[3],
-            backgroundColor: colors.border,
+            backgroundColor: colors.line,
             alignItems: "center",
             justifyContent: "center",
           }}
         >
-          <Text weight="semiBold" color="textMuted">
+          <Text weight="semiBold" color="muted">
             Video coming soon
           </Text>
         </View>
@@ -67,7 +68,7 @@ export default function ExerciseDetailView() {
             <Stack spacing={2}>
               {exercise.cues.map((cue, i) => (
                 <HStack key={cue} spacing={3} align="start">
-                  <Text weight="semiBold" color="orange">
+                  <Text weight="semiBold" color="accent">
                     {i + 1}.
                   </Text>
                   <Text style={{ flexShrink: 1 }}>{cue}</Text>
@@ -107,9 +108,7 @@ export default function ExerciseDetailView() {
 function Section({ title, children }: { title: string; children: ReactNode }) {
   return (
     <Stack spacing={2}>
-      <Text size="xs" weight="semiBold" color="textSubtle">
-        {title.toUpperCase()}
-      </Text>
+      <SectionLabel>{title}</SectionLabel>
       {children}
     </Stack>
   );

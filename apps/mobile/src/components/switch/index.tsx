@@ -14,10 +14,10 @@ export function Switch({ size = "md", disabled, style, ...props }: SwitchProps) 
   return (
     <RNSwitch
       disabled={isDisabled}
-      trackColor={{ false: colors.border, true: colors.orange }}
+      trackColor={{ false: colors.inputBorder, true: colors.accent }}
       // Android tints the thumb; iOS keeps its native white thumb
       thumbColor={Platform.OS === "android" ? colors.onAccent : undefined}
-      ios_backgroundColor={colors.border}
+      ios_backgroundColor={colors.inputBorder}
       style={[{ transform: [{ scale: scale[size] }] }, isDisabled && { opacity: 0.4 }, style]}
       {...props}
     />

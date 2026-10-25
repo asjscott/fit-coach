@@ -12,6 +12,7 @@ import { fonts, fontSizes, useTheme, useThemedStyles } from "@/theme";
 import { useFormControlContext } from "../form-control";
 import { Icon, type IconComponent, type IconName } from "../icons";
 import { KeyboardDoneBar } from "../input-accessory-view";
+import { TABULAR } from "../text";
 import { createInputStyles, inputSizes, type InputSize, type InputVariant } from "./styles";
 
 type InputContextValue = {
@@ -90,8 +91,8 @@ export function InputField({ type = "text", style, onFocus, onBlur, ...props }: 
       <TextInput
         editable={!isDisabled && !isReadOnly}
         secureTextEntry={type === "password"}
-        placeholderTextColor={colors.textSubtle}
-        selectionColor={colors.orange}
+        placeholderTextColor={colors.subtle}
+        selectionColor={colors.accent}
         keyboardAppearance={scheme}
         inputAccessoryViewID={accessoryId}
         onFocus={(e) => {
@@ -105,7 +106,7 @@ export function InputField({ type = "text", style, onFocus, onBlur, ...props }: 
         style={[
           styles.field,
           variant === "underlined" && styles.fieldUnderlined,
-          { fontFamily: fonts.regular, fontSize: fontSizes[inputSizes[size].text] },
+          { fontFamily: fonts.regular, fontSize: fontSizes[inputSizes[size].text], fontVariant: TABULAR },
           style,
         ]}
         {...props}
@@ -122,6 +123,6 @@ export function InputSlot({ style, ...props }: PressableProps & { style?: StyleP
 
 export function InputIcon({ name, as, size }: { name?: IconName; as?: IconComponent; size?: number }) {
   const context = useInputContext();
-  return <Icon name={name} as={as} size={size ?? inputSizes[context.size].icon} color="textSubtle" />;
+  return <Icon name={name} as={as} size={size ?? inputSizes[context.size].icon} color="subtle" />;
 }
 export type { InputSize, InputVariant } from "./styles";
