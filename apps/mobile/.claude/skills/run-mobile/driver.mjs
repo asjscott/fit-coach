@@ -1,7 +1,7 @@
 // Drives the mobile app's web build with Playwright (the app's own @playwright/test devDependency), at
 // iPhone 13 size. Run from apps/mobile:
 //   node .claude/skills/run-mobile/driver.mjs auth                      headed window; a human signs in, the session is saved
-//   node .claude/skills/run-mobile/driver.mjs shot <route> [--dark] [--tall]
+//   node .claude/skills/run-mobile/driver.mjs shot <route> [--dark] [--tall] [--wide]
 //   node .claude/skills/run-mobile/driver.mjs tour [light|dark]         every screen, plus a Workout logged but not saved
 // Screenshots and the saved session land in .expo/run-mobile/ (gitignored). BASE_URL overrides the dev server's
 // address (default http://localhost:8081)
@@ -49,15 +49,18 @@ if (cmd === "auth") {
 }
 
 if (cmd !== "shot" && cmd !== "tour") {
-  console.error("Usage: driver.mjs auth | shot <route> [--dark] [--tall] | tour [light|dark]");
+  console.error("Usage: driver.mjs auth | shot <route> [--dark] [--tall] [--wide] | tour [light|dark]");
   process.exit(1);
 }
 
 const browser = await chromium.launch();
 
-async function open(scheme) {
+// --wide: a desktop browser window instead of the phone
+const desktop = { viewport: { width: 1280, height: 860 }, deviceScaleFactor: 1 };
+
+async function open(scheme, { wide = false } = {}) {
   const ctx = await browser.newContext({
-    ...phone,
+    ...(wide ? desktop : phone),
     colorScheme: scheme,
     ...(fs.existsSync(statePath) ? { storageState: statePath } : {}),
   });
@@ -91,9 +94,14 @@ async function open(scheme) {
 
 if (cmd === "shot") {
   const route = args.find((a) => !a.startsWith("--")) ?? "/";
-  const { ctx, go, snap } = await open(args.includes("--dark") ? "dark" : "light");
+  const wide = args.includes("--wide");
+  const { ctx, go, snap } = await open(args.includes("--dark") ? "dark" : "light", { wide });
   await go(route);
-  await snap(route === "/" ? "home" : route.slice(1).replaceAll("/", "_"), { tall: args.includes("--tall") });
+  // "/history?variant=broadcast&state=first" lands as history-broadcast-first-<scheme>.png
+  const url = new URL(route, base);
+  const name = [url.pathname === "/" ? "home" : url.pathname.slice(1).replaceAll("/", "_"), ...url.searchParams.values()];
+  if (wide) name.push("wide");
+  await snap(name.join("-"), { tall: args.includes("--tall") });
   await ctx.close();
 }
 

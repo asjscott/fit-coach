@@ -29,7 +29,7 @@ node .claude/skills/run-mobile/driver.mjs shot /exercises --tall
 ```
 
 - `tour` captures: home, exercises, history, onboarding and styleguide (each at fold height and `-full`), then exercise detail and history detail. Then it starts a Workout, opens the picker, logs 2 Goblet squat Sets and a 45 s Plank, and stops on Finish **without saving**.
-- `shot <route>` captures one route. `--tall` renders the whole scroll height.
+- `shot <route>` captures one route. `--tall` renders the whole scroll height; `--wide` uses a 1280×860 desktop window. Query values join the filename: `shot "/history?variant=a"` lands as `history-a-<scheme>.png`.
 - Each screenshot path is printed with the pathname it actually landed on. A `/sign-in` or `/` where you expected something else means a redirect.
 - A failing tour step prints `FAILED at <url>`, saves `_failure-<scheme>.png` and exits 1.
 - **Look at the PNGs** with Read. A 200 from the dev server doesn't mean the screen rendered.
