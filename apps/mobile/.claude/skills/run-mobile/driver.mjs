@@ -163,7 +163,10 @@ if (cmd === "tour") {
         await page.getByLabel("Close", { exact: true }).click();
       }
 
-      // The Workout lives in this throwaway context's storage and is never saved, so nothing reaches the account
+      // The Workout lives in this throwaway context's storage and is never saved, so nothing reaches the account.
+      // Before it starts, /workout offers to start one
+      await go("/workout");
+      await snap("workout-none");
       await go("/");
       await button(/^(Start|Resume) workout$/).click();
       await page.waitForURL(/\/workout$/);
@@ -176,24 +179,40 @@ if (cmd === "tour") {
       await page.getByPlaceholder("Search exercises").fill("goblet");
       await page.getByText("Goblet squat", { exact: true }).first().click();
       await page.waitForURL(/\/workout$/);
-      for (const [kg, reps] of [
-        ["16", "10"],
-        ["16", "8"],
-      ]) {
-        await page.getByPlaceholder("kg").last().fill(kg);
-        await page.getByPlaceholder("reps").last().fill(reps);
-        await button("Log set").click();
-        await page.waitForTimeout(800);
-      }
+      // The current Exercise's steppers are labelled by field (kg, reps, seconds); the next Set starts from the
+      // previous one, so Set 2 is two taps of "Minus 1 rep"
+      await page.getByLabel("kg", { exact: true }).fill("16");
+      await page.getByLabel("reps", { exact: true }).fill("10");
+      await button("Log set 1").click();
+      await page.waitForTimeout(800);
+      await button("Minus 1 rep").click();
+      await button("Minus 1 rep").click();
+      await snap("workout-logging");
+      await button("Log set 2").click();
+      await page.waitForTimeout(800);
+      // Pressing a logged Set opens it for correcting or deleting
+      await page.getByRole("button", { name: /^Set 1, / }).click();
+      await snap("workout-edit-set");
+      await button("Cancel").click();
       await button("Add exercise").click();
       await page.waitForURL(/add-exercise/);
       await page.getByPlaceholder("Search exercises").fill("plank");
       await page.getByText("Plank", { exact: true }).first().click();
       await page.waitForURL(/\/workout$/);
-      await page.getByPlaceholder("seconds").last().fill("45");
-      await button("Log set").click();
+      await page.getByLabel("seconds", { exact: true }).fill("45");
+      await button("Log set 1").click();
       await snap("workout-in-progress");
       await snap("workout-in-progress", { tall: true });
+      // The other Exercises are rows; pressing one makes it current. Reorder and remove live in each ⋯ menu,
+      // Discard workout in the header's: the tour opens them and closes them again
+      await page.getByRole("button", { name: /^Goblet squat, / }).click();
+      await snap("workout-switched");
+      await button("Plank actions").click();
+      await snap("workout-exercise-menu");
+      await page.getByLabel("Close", { exact: true }).click();
+      await button("Workout actions").click();
+      await snap("workout-menu");
+      await page.getByLabel("Close", { exact: true }).click();
       await button("Finish").click();
       await page.waitForURL(/finish/);
       await snap("workout-finish");
@@ -211,7 +230,7 @@ if (cmd === "tour") {
       // Leaving keeps the Workout running and returns to the tab it was started from
       await page.goBack();
       await page.waitForURL(/\/workout$/);
-      await button("Close").click();
+      await button("Leave workout").click();
       await page.waitForURL((u) => u.pathname === "/");
       await snap("today-resume");
       // The Resume pill follows the running Workout to every tab and reopens it
@@ -219,7 +238,7 @@ if (cmd === "tour") {
       await snap("history-resume");
       await resumePill(page).click();
       await page.waitForURL(/\/workout$/);
-      await button("Close").click();
+      await button("Leave workout").click();
       await page.waitForURL((u) => u.pathname === "/history");
     } catch (e) {
       console.log(`[${scheme}] FAILED at ${page.url()}: ${e.message.split("\n")[0]}`);
@@ -242,7 +261,7 @@ if (cmd === "tour") {
       await wide.go("/");
       await wide.button("Start workout").click();
       await wide.page.waitForURL(/\/workout$/);
-      await wide.button("Close").click();
+      await wide.button("Leave workout").click();
       await wide.tab("Exercises").click();
       await resumePill(wide.page).waitFor();
       await wide.snap("exercises-resume-wide");
