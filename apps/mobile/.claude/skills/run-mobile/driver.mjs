@@ -194,6 +194,17 @@ if (cmd === "tour") {
       await button("Finish").click();
       await page.waitForURL(/finish/);
       await snap("workout-finish");
+      // Edit times opens the web's date and time inputs. An end the day before the start is refused, so
+      // Save workout leaves the Workout in progress with the error under End
+      await button("Edit times").click();
+      await snap("workout-finish-edit-times");
+      const end = page.getByLabel("End date", { exact: true });
+      const dayBefore = new Date(`${await end.inputValue()}T12:00`);
+      dayBefore.setDate(dayBefore.getDate() - 1);
+      await end.fill(dayBefore.toLocaleDateString("en-CA"));
+      await button("Save workout").click();
+      await page.getByText("The end must be after the start").waitFor();
+      await snap("workout-finish-end-error");
       // Leaving keeps the Workout running and returns to the tab it was started from
       await page.goBack();
       await page.waitForURL(/\/workout$/);

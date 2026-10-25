@@ -47,7 +47,20 @@ describe("summarizeWorkout", () => {
         { slug: "plank", sets: [seconds(45)] },
       ],
     };
-    expect(summarizeWorkout(workout)).toEqual({ volumeKg: 360, sets: 3, durationMs: 48.5 * 60_000 });
+    expect(summarizeWorkout(workout)).toEqual({ exercises: 2, volumeKg: 360, sets: 3, durationMs: 48.5 * 60_000 });
+  });
+
+  it("leaves out Workout Exercises with no Sets, as finishing does", () => {
+    const workout = {
+      startedAt: "2026-10-24T09:00:00.000Z",
+      endedAt: "2026-10-24T09:30:00.000Z",
+      workoutExercises: [
+        { slug: "goblet-squat", sets: [kg(20, 10)] },
+        { slug: "push-up", sets: [] },
+        { slug: "plank", sets: [seconds(45)] },
+      ],
+    };
+    expect(summarizeWorkout(workout)).toEqual({ exercises: 2, volumeKg: 200, sets: 2, durationMs: 30 * 60_000 });
   });
 });
 
