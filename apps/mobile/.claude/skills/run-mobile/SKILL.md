@@ -28,7 +28,7 @@ node .claude/skills/run-mobile/driver.mjs shot /history --dark
 node .claude/skills/run-mobile/driver.mjs shot /exercises --tall
 ```
 
-- `tour` captures: home, exercises, history, onboarding and styleguide (each at fold height and `-full`), then exercise detail and history detail. Then it starts a Workout, opens the picker, logs 2 Goblet squat Sets and a 45 s Plank, and stops on Finish **without saving**.
+- `tour` presses each tab in turn (Today, History, Exercises, Profile), then opens onboarding and the styleguide (`/profile/styleguide`), each at fold height and `-full`, then exercise detail and history detail. Then it starts a Workout from Today, opens the picker, logs 2 Goblet squat Sets and a 45 s Plank, stops on Finish **without saving**, and closes the Workout back to Today (`today-resume`). Last, `today-wide` and `profile-wide` show the desktop layout: the centred column and the side rail.
 - `shot <route>` captures one route. `--tall` renders the whole scroll height; `--wide` uses a 1280×860 desktop window. Query values join the filename: `shot "/history?variant=a"` lands as `history-a-<scheme>.png`.
 - Each screenshot path is printed with the pathname it actually landed on. A `/sign-in` or `/` where you expected something else means a redirect.
 - A failing tour step prints `FAILED at <url>`, saves `_failure-<scheme>.png` and exits 1.
@@ -55,7 +55,9 @@ It waits up to 10 minutes for the redirect back to the app, then saves `.expo/ru
 - **Rows aren't links.** Exercise and History rows are `Pressable`s that call `router.push`, so there's no `<a href>` to follow. Click the row's text, as `tour` does: the Exercise name, or the History row's `N min` duration.
 - **`LoadingButton` is a link when it has `href`** (Add exercise, Finish, History…) and a button otherwise (Log set, Start workout). `button()` in the driver matches either role.
 - **The Logbook lives in the browser context's storage**, and each run uses a fresh context, so a Workout started by the driver never touches the user's real browser. It doesn't reach the API either until Save workout, which `tour` never presses.
-- **Expo Router warns** that `src/app/(app)/profile.tsx` and `src/app/(auth)/sign-up.tsx` have no default export; both files are empty. Opening `/sign-up` directly throws "Element type is invalid", which the driver prints as a `pageerror`. Nothing in the app links there; sign-up goes through Clerk.
+- **Tabs are `role="tab"` links** in the bottom bar, or in the side rail above 900px wide. `tab()` in the driver matches either. Today stays at `/`, and the other tabs keep their old URLs (`/history`, `/exercises`, `/profile`).
+- **The Workout is presented over the tabs**, so the tab bar is hidden on `/workout`, `/workout/add-exercise` and `/workout/finish`. Its header's chevron (`Close`) leaves the Workout running and returns to the tab it was opened from.
+- **In a git worktree under `.claude/`, Metro may not pick up edits**: the page keeps the old code. Restart the dev server with `--clear` after changing files.
 
 ## Troubleshooting
 

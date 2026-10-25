@@ -1,5 +1,4 @@
 import { LogbookError } from "@fit/engines";
-import { router } from "expo-router";
 import { useState } from "react";
 import {
   FormControl,
@@ -17,6 +16,7 @@ import { useToast } from "@/contexts/toast-context";
 import { spacing } from "@/theme";
 import { NothingToSaveModal } from "../components/nothing-to-save-modal";
 import { useHasEnded } from "../hooks/use-has-ended";
+import { useLeaveWorkout } from "../hooks/use-leave-workout";
 import { useLogbook, type FinishOutcome } from "../logbook-provider";
 import { toastWhenUploaded } from "../upload-toast";
 
@@ -63,8 +63,9 @@ export default function FinishView() {
   const [finishing, setFinishing] = useState(false);
   const [confirmingDiscard, setConfirmingDiscard] = useState(false);
   const hasEnded = useHasEnded(workout);
+  const leaveWorkout = useLeaveWorkout();
 
-  // Finished: blank until the navigation back home lands
+  // Finished: blank until the navigation back to the tabs lands
   if (hasEnded) return <Screen edges={["bottom"]}>{null}</Screen>;
   if (!workout) {
     return (
@@ -85,7 +86,7 @@ export default function FinishView() {
       return;
     }
     toastWhenUploaded(showToast, outcome.uploaded);
-    router.dismissTo("/");
+    leaveWorkout();
   };
 
   const handleFinish = async () => {
@@ -124,7 +125,7 @@ export default function FinishView() {
       <NothingToSaveModal
         isOpen={confirmingDiscard}
         onClose={() => setConfirmingDiscard(false)}
-        onDiscarded={() => router.dismissTo("/")}
+        onDiscarded={leaveWorkout}
       />
     </Screen>
   );

@@ -89,7 +89,13 @@ async function open(scheme, { wide = false } = {}) {
       .getByRole("button", { name, exact: true })
       .or(page.getByRole("link", { name, exact: true }))
       .first();
-  return { ctx, page, snap, go, button };
+  // The tab bar's items, at the bottom or in the side rail
+  const tab = (name) =>
+    page
+      .getByRole("tab", { name, exact: true })
+      .or(page.getByRole("link", { name, exact: true }))
+      .first();
+  return { ctx, page, snap, go, button, tab };
 }
 
 if (cmd === "shot") {
@@ -100,7 +106,7 @@ if (cmd === "shot") {
   // "/history?variant=broadcast&state=first" lands as history-broadcast-first-<scheme>.png
   const url = new URL(route, base);
   const name = [
-    url.pathname === "/" ? "home" : url.pathname.slice(1).replaceAll("/", "_"),
+    url.pathname === "/" ? "today" : url.pathname.slice(1).replaceAll("/", "_"),
     ...url.searchParams.values(),
   ];
   if (wide) name.push("wide");
@@ -111,14 +117,23 @@ if (cmd === "shot") {
 if (cmd === "tour") {
   if (!fs.existsSync(statePath)) console.log("No saved session: signed-in screens will redirect to /sign-in");
   for (const scheme of args[0] ? [args[0]] : ["light", "dark"]) {
-    const { ctx, page, snap, go, button } = await open(scheme);
+    const { ctx, page, snap, go, button, tab } = await open(scheme);
     try {
+      // Each tab, reached by pressing it in the tab bar rather than by URL
+      await go("/");
+      for (const [title, name] of [
+        ["Today", "today"],
+        ["History", "history"],
+        ["Exercises", "exercises"],
+        ["Profile", "profile"],
+      ]) {
+        await tab(title).click();
+        await snap(name);
+        await snap(name, { tall: true });
+      }
       for (const [route, name] of [
-        ["/", "home"],
-        ["/exercises", "exercises"],
-        ["/history", "history"],
         ["/onboarding", "onboarding"],
-        ["/styleguide", "styleguide"],
+        ["/profile/styleguide", "styleguide"],
       ]) {
         await go(route);
         await snap(name);
@@ -169,12 +184,35 @@ if (cmd === "tour") {
       await button("Finish").click();
       await page.waitForURL(/finish/);
       await snap("workout-finish");
+      // Leaving keeps the Workout running and returns to the tab it was started from
+      await page.goBack();
+      await page.waitForURL(/\/workout$/);
+      await button("Close").click();
+      await page.waitForURL((u) => u.pathname === "/");
+      await snap("today-resume");
     } catch (e) {
       console.log(`[${scheme}] FAILED at ${page.url()}: ${e.message.split("\n")[0]}`);
       await page.screenshot({ path: `${shots}/_failure-${scheme}.png` });
       process.exitCode = 1;
     }
     await ctx.close();
+
+    // A desktop window: the centred column, with the tabs in a side rail
+    const wide = await open(scheme, { wide: true });
+    try {
+      for (const [route, name] of [
+        ["/", "today-wide"],
+        ["/profile", "profile-wide"],
+      ]) {
+        await wide.go(route);
+        await wide.snap(name);
+      }
+    } catch (e) {
+      console.log(`[${scheme}] FAILED at ${wide.page.url()}: ${e.message.split("\n")[0]}`);
+      await wide.page.screenshot({ path: `${shots}/_failure-wide-${scheme}.png` });
+      process.exitCode = 1;
+    }
+    await wide.ctx.close();
   }
 }
 

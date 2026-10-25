@@ -1,5 +1,4 @@
 import type { InProgressWorkoutExercise, LoadType, SetValues } from "@fit/shared";
-import { router } from "expo-router";
 import { useState } from "react";
 import { Button, ButtonIcon } from "@/components/button";
 import { Card } from "@/components/card";
@@ -17,6 +16,7 @@ import { errorMessage } from "@/utils/error-message";
 import { SetRow } from "../components/set-row";
 import { describeSet, timeLabel } from "../format";
 import { useHasEnded } from "../hooks/use-has-ended";
+import { useLeaveWorkout } from "../hooks/use-leave-workout";
 import { exerciseName, libraryExercise } from "../library";
 import { useLogbook } from "../logbook-provider";
 
@@ -25,6 +25,7 @@ export default function WorkoutView() {
   const { showToast } = useToast();
   const [confirmingDiscard, setConfirmingDiscard] = useState(false);
   const hasEnded = useHasEnded(workout);
+  const leaveWorkout = useLeaveWorkout();
 
   // Finished or discarded: blank until the navigation away lands
   if (hasEnded) return <Screen edges={["bottom"]}>{null}</Screen>;
@@ -71,7 +72,7 @@ export default function WorkoutView() {
           try {
             await discard();
             setConfirmingDiscard(false);
-            router.back();
+            leaveWorkout();
           } catch (err) {
             showToast(`Couldn't discard: ${errorMessage(err)}`, { error: err });
           }

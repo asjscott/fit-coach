@@ -8,3 +8,4 @@ export type { RadiusToken } from "./radii";
 export type { SpaceToken } from "./spacing";
 export type { FontSize, FontWeight } from "./typography";
 export type { ThemePreference } from "./theme-provider";
+export { columnMaxWidth, sideRailMinWidth } from "./layout";
