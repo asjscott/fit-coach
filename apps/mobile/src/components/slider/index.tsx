@@ -142,7 +142,7 @@ export function SliderThumb() {
         backgroundColor: colors.onAccent,
         borderWidth: 3,
         borderColor: colors.accent,
-        shadowColor: "#000",
+        shadowColor: colors.shadow,
         shadowOpacity: 0.2,
         shadowRadius: 4,
         shadowOffset: { width: 0, height: 2 },

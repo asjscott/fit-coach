@@ -1,40 +1,25 @@
-import { router, usePathname } from "expo-router";
+import { usePathname } from "expo-router";
 import Play from "lucide-react-native/icons/play";
-import { useEffect, useState } from "react";
 import { View } from "react-native";
 import { Pressable } from "@/components/pressable";
 import { Text } from "@/components/text";
+import { useNow } from "@/hooks/use-now";
 import { radii, spacing, useTheme } from "@/theme";
 import { elapsedLabel } from "../format";
+import { useResumeWorkout } from "../hooks/use-open-workout";
 import { useLogbook } from "../logbook-provider";
 import { showsResumePill } from "../resume-pill";
 import { ForgottenWorkoutModal } from "./forgotten-workout-modal";
 
-// Re-renders as each whole minute since the start passes, so the elapsed time keeps counting
-function useElapsed(startedAt: string | undefined) {
-  const [now, setNow] = useState(() => new Date());
-  useEffect(() => {
-    if (!startedAt) return;
-    const sinceStart = Math.max(0, Date.now() - Date.parse(startedAt));
-    const timer = setTimeout(() => setNow(new Date()), 60_000 - (sinceStart % 60_000));
-    return () => clearTimeout(timer);
-  }, [startedAt, now]);
-  return startedAt ? elapsedLabel(startedAt, now) : "";
-}
-
 // Takes the user back to the In-progress Workout from any tab, unless it was forgotten. Stacked puts the elapsed
 // time under the label, to fit the side rail's narrow foot
 export function ResumePill({ stacked = false }: { stacked?: boolean }) {
-  const { workout, isStale } = useLogbook();
+  const { workout } = useLogbook();
   const { colors } = useTheme();
   const pathname = usePathname();
-  const elapsed = useElapsed(workout?.startedAt);
-  const [forgotten, setForgotten] = useState(false);
-
-  const handlePress = async () => {
-    if (await isStale()) setForgotten(true);
-    else router.push("/workout");
-  };
+  const now = useNow();
+  const elapsed = workout ? elapsedLabel(now - Date.parse(workout.startedAt)) : "";
+  const { resumeWorkout, forgotten, setForgotten } = useResumeWorkout();
 
   return (
     <>
@@ -43,7 +28,7 @@ export function ResumePill({ stacked = false }: { stacked?: boolean }) {
           <Pressable
             role="button"
             accessibilityLabel={`Resume workout, ${elapsed}`}
-            onPress={handlePress}
+            onPress={resumeWorkout}
             style={{
               height: 52,
               flexDirection: "row",

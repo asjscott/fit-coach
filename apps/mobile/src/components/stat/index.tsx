@@ -1,5 +1,5 @@
 import { View, type StyleProp, type ViewStyle } from "react-native";
-import { fonts, fontSizes, lineHeight, type FontSize } from "@/theme";
+import { bigNumber, fonts, fontSizes, lineHeight, type FontSize } from "@/theme";
 import { Text } from "../text";
 
 export type StatProps = {
@@ -18,14 +18,7 @@ export function Stat({ value, unit, label, size = "2xl", style }: StatProps) {
   const fontSize = fontSizes[size];
   return (
     <View accessible accessibilityLabel={`${label}: ${value}${unit ? ` ${unit}` : ""}`} style={[{ flex: 1 }, style]}>
-      <Text
-        style={{
-          fontFamily: fonts.bold,
-          fontSize,
-          lineHeight: lineHeight(fontSize, true),
-          letterSpacing: -0.5,
-        }}
-      >
+      <Text style={{ ...bigNumber(fontSize), lineHeight: lineHeight(fontSize, true) }}>
         {value}
         {unit ? (
           <Text color="muted" style={{ fontFamily: fonts.semiBold, fontSize: Math.round(fontSize * 0.55) }}>

@@ -179,7 +179,7 @@ describe("weeklyVolume", () => {
 });
 
 describe("previousSets", () => {
-  const session = (startedAt: string, workoutExercises: { slug: string; sets: Set[] }[]) => ({
+  const workoutAt = (startedAt: string, workoutExercises: { slug: string; sets: Set[] }[]) => ({
     startedAt,
     endedAt: new Date(Date.parse(startedAt) + 45 * 60_000).toISOString(),
     workoutExercises,
@@ -187,14 +187,14 @@ describe("previousSets", () => {
 
   it("doesn't match a variant of the Exercise", () => {
     const workouts = [
-      session("2026-10-20T09:00:00.000Z", [{ slug: "dumbbell-bulgarian-split-squat", sets: [kg(16, 10)] }]),
+      workoutAt("2026-10-20T09:00:00.000Z", [{ slug: "dumbbell-bulgarian-split-squat", sets: [kg(16, 10)] }]),
     ];
     expect(previousSets(workouts, "bulgarian-split-squat")).toBeNull();
   });
 
   it("takes the later occurrence when the Exercise was done twice in that Workout", () => {
     const workouts = [
-      session("2026-10-20T09:00:00.000Z", [
+      workoutAt("2026-10-20T09:00:00.000Z", [
         { slug: "goblet-squat", sets: [kg(16, 10), kg(16, 10)] },
         { slug: "plank", sets: [seconds(45)] },
         { slug: "goblet-squat", sets: [kg(18, 10), kg(18, 10), kg(18, 8)] },
@@ -209,9 +209,9 @@ describe("previousSets", () => {
 
   it("takes the most recent Workout that included the Exercise, in any order", () => {
     const workouts = [
-      session("2026-10-22T09:00:00.000Z", [{ slug: "goblet-squat", sets: [kg(20, 8)] }]),
-      session("2026-10-24T09:00:00.000Z", [{ slug: "plank", sets: [seconds(60)] }]),
-      session("2026-10-15T09:00:00.000Z", [{ slug: "goblet-squat", sets: [kg(16, 10)] }]),
+      workoutAt("2026-10-22T09:00:00.000Z", [{ slug: "goblet-squat", sets: [kg(20, 8)] }]),
+      workoutAt("2026-10-24T09:00:00.000Z", [{ slug: "plank", sets: [seconds(60)] }]),
+      workoutAt("2026-10-15T09:00:00.000Z", [{ slug: "goblet-squat", sets: [kg(16, 10)] }]),
     ];
     expect(previousSets(workouts, "goblet-squat")).toMatchObject({
       startedAt: "2026-10-22T09:00:00.000Z",

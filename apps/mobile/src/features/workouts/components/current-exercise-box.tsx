@@ -2,6 +2,7 @@ import type { InProgressWorkoutExercise, LoadType, SetValues } from "@fit/shared
 import { useState, type ReactNode } from "react";
 import { StyleSheet, View } from "react-native";
 import { LoadingButton } from "@/components/loading-button";
+import { SectionLabel } from "@/components/section-label";
 import { HStack, Stack } from "@/components/stack";
 import { Text } from "@/components/text";
 import { useToast } from "@/contexts/toast-context";
@@ -11,7 +12,7 @@ import { previousSetsLabel } from "../format";
 import { exerciseName, libraryExercise } from "../library";
 import { useLogbook } from "../logbook-provider";
 import { draftValues, setDraft, SET_FIELDS, type SetDraft } from "../set-entry";
-import { LoggedSetRow } from "./logged-set-row";
+import { SetRow } from "./set-row";
 import { SetStepper } from "./set-stepper";
 import { WorkoutExerciseMenu } from "./workout-exercise-menu";
 
@@ -22,10 +23,8 @@ export type CurrentExerciseBoxProps = {
   count: number;
 };
 
-// The Workout Exercise being logged, in an accent-bordered box: "Exercise 2 of 4" and its name, its Previous Sets
-// faded ("Last: 18 kg × 10, 10, 8"; nothing when there are none), the Sets logged
-// so far (press one to correct or delete it), steppers for the next Set and "Log set 3", then the rest timer's
-// slot. The next Set starts from the previous one
+// The Workout Exercise being logged: its name, Previous Sets, the Sets so far (press one to correct it) and
+// steppers for the next Set, which starts from the previous one
 export function CurrentExerciseBox({ workoutExercise, position, count }: CurrentExerciseBoxProps) {
   const { colors } = useTheme();
   const { logSet, editSet, deleteSet, nextSetDraft } = useLogbook();
@@ -41,9 +40,7 @@ export function CurrentExerciseBox({ workoutExercise, position, count }: Current
     <View style={[styles.box, { backgroundColor: colors.surface, borderColor: colors.accent }]}>
       <HStack spacing={2} align="start">
         <Stack spacing={1} style={styles.title}>
-          <Text size="xs" color="accent" weight="semiBold" style={styles.overline}>
-            Exercise {position + 1} of {count}
-          </Text>
+          <SectionLabel color="accent">{`Exercise ${position + 1} of ${count}`}</SectionLabel>
           <Text accessibilityRole="header" style={styles.name}>
             {exerciseName(slug)}
           </Text>
@@ -64,7 +61,7 @@ export function CurrentExerciseBox({ workoutExercise, position, count }: Current
       {sets.length > 0 ? (
         <View style={styles.sets}>
           {sets.map((set, i) => (
-            <LoggedSetRow
+            <SetRow
               key={set.loggedAt + i}
               set={set}
               index={i}
@@ -187,7 +184,6 @@ function SetEntry({ heading, loadType, initial, submitLabel, onSubmit, children 
 const styles = StyleSheet.create({
   box: { borderWidth: 1.5, borderRadius: radii.md, padding: spacing[4] },
   title: { flex: 1, paddingTop: spacing[1] },
-  overline: { textTransform: "uppercase", letterSpacing: 0.6 },
   name: { fontFamily: fonts.bold, fontSize: 22, lineHeight: 28, letterSpacing: -0.3 },
   note: { marginTop: spacing[1] },
   sets: { marginTop: spacing[3] },

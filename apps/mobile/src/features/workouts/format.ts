@@ -12,27 +12,32 @@ export const dateLabel = (iso: string) =>
 
 export const timeLabel = (iso: string) => new Date(iso).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
 
-const minutesLabel = (minutes: number) => {
-  if (minutes < 60) return `${minutes} min`;
-  const rest = minutes % 60;
-  return rest ? `${Math.floor(minutes / 60)} h ${rest} min` : `${minutes / 60} h`;
-};
+// Two digits, for clocks: "05"
+export const twoDigits = (n: number) => String(n).padStart(2, "0");
+
+// Whole minutes as a value and unit: "49" min under an hour, then "2:05" h
+const minutesStat = (minutes: number) =>
+  minutes < 60
+    ? { value: String(minutes), unit: "min" }
+    : { value: `${Math.floor(minutes / 60)}:${twoDigits(minutes % 60)}`, unit: "h" };
+
+const statLabel = ({ value, unit }: { value: string; unit: string }) => `${value} ${unit}`;
+
+// A length of time as a Stat's value and unit, to the nearest minute
+export const timeStat = (ms: number) => minutesStat(Math.round(ms / 60_000));
 
 export const durationLabel = ({ startedAt, endedAt }: Pick<Workout, "startedAt" | "endedAt">) =>
-  minutesLabel(Math.round((Date.parse(endedAt) - Date.parse(startedAt)) / 60_000));
+  statLabel(timeStat(Date.parse(endedAt) - Date.parse(startedAt)));
 
-// How long a Workout still in progress has run: whole minutes, like a clock, and never below 0 if the phone's
-// clock has moved back
-export const elapsedLabel = (startedAt: string, now: Date) =>
-  minutesLabel(Math.max(0, Math.floor((now.getTime() - Date.parse(startedAt)) / 60_000)));
+// How long an In-progress Workout has run, in whole minutes; 0 if the phone's clock has moved back
+export const elapsedLabel = (ms: number) => statLabel(minutesStat(Math.max(0, Math.floor(ms / 60_000))));
 
 const DAY_MS = 86_400_000;
 const midnight = (date: Date) => new Date(date.getFullYear(), date.getMonth(), date.getDate());
 // Whole calendar days between two moments' dates; rounded, so a daylight-saving day still counts as one
 const daysBetween = (from: Date, to: Date) => Math.round((midnight(to).getTime() - midnight(from).getTime()) / DAY_MS);
 
-// When a Workout was, by how long ago: "Today, 1:33 PM", "Yesterday, 6:10 PM", "Tuesday, 7:02 AM" this past week,
-// then "Sat 17 Oct, 9:40 AM"
+// When a Workout was: "Today, 1:33 PM", "Yesterday, 6:10 PM", "Tuesday, 7:02 AM", then "Sat 17 Oct, 9:40 AM"
 export function relativeDateLabel(iso: string, now = new Date()) {
   const date = new Date(iso);
   const days = daysBetween(date, now);
@@ -50,7 +55,7 @@ export function relativeDateLabel(iso: string, now = new Date()) {
   return `${day.replace(",", "")}, ${time}`;
 }
 
-// A week of History by its Monday: "This week", "Last week", then "12–18 Oct" or "28 Sep – 4 Oct"
+// A week of History by its Monday: "This week", "Last week", then its dates
 export function weekLabel(start: Date, now = new Date()) {
   const weeksAgo = Math.floor(daysBetween(start, now) / 7);
   if (weeksAgo <= 0) return "This week";
@@ -58,14 +63,19 @@ export function weekLabel(start: Date, now = new Date()) {
   return weekDatesLabel(start, now);
 }
 
-// A week by its dates, Monday to Sunday: "12–18 Oct" or "28 Sep – 4 Oct", with the year when it isn't this one
-export function weekDatesLabel(start: Date, now = new Date()) {
+// A week's dates, Monday to Sunday, in the locale's order: "12–18 Oct" or "Oct 12 – 18", with the year when it
+// isn't this one. Engines without formatRange (some Hermes builds) get "12 Oct – 18 Oct"
+export function weekDatesLabel(start: Date, now = new Date(), locale?: string) {
   const end = new Date(start.getFullYear(), start.getMonth(), start.getDate() + 6);
-  const month = (date: Date) => date.toLocaleDateString([], { month: "short" });
-  const year = end.getFullYear() === now.getFullYear() ? "" : ` ${end.getFullYear()}`;
-  return start.getMonth() === end.getMonth()
-    ? `${start.getDate()}–${end.getDate()} ${month(end)}${year}`
-    : `${start.getDate()} ${month(start)} – ${end.getDate()} ${month(end)}${year}`;
+  const sameYear = end.getFullYear() === now.getFullYear();
+  const format = new Intl.DateTimeFormat(locale, {
+    day: "numeric",
+    month: "short",
+    year: sameYear ? undefined : "numeric",
+  });
+  return typeof format.formatRange === "function"
+    ? format.formatRange(start, end)
+    : `${format.format(start)} – ${format.format(end)}`;
 }
 
 // A Volume in whole kg with thousands separators, e.g. "6,420"; the unit is drawn separately
@@ -78,56 +88,50 @@ export function elapsedClockLabel(ms: number) {
   const total = Math.max(0, Math.floor(ms / 1000));
   const hours = Math.floor(total / 3600);
   const minutes = Math.floor(total / 60) % 60;
-  const seconds = String(total % 60).padStart(2, "0");
-  return hours ? `${hours}:${String(minutes).padStart(2, "0")}:${seconds}` : `${minutes}:${seconds}`;
+  const seconds = twoDigits(total % 60);
+  return hours ? `${hours}:${twoDigits(minutes)}:${seconds}` : `${minutes}:${seconds}`;
 }
 
-// A Workout Exercise's Sets on one line, with each unit said once where it can be: "18 kg × 10, 10, 8",
+// A Workout Exercise's Sets on one line, each unit said once where it can be: "18 kg × 10, 10, 8",
 // "16 kg × 10, 18 kg × 8", "12, 10 reps", "45, 40 s". Empty with no Sets
 export function setsSummary(sets: readonly Set[]) {
-  const values = (pick: (set: Set) => number | undefined) => sets.map((set) => pick(set) ?? "").join(", ");
-  const first = sets[0];
-  switch (first?.kind) {
-    case undefined:
-      return "";
-    case "external": {
-      const sameWeight = sets.every((set) => set.kind === "external" && set.kg === first.kg);
-      return sameWeight
-        ? `${first.kg} kg × ${values((set) => (set.kind === "external" ? set.reps : undefined))}`
-        : sets.map(describeSet).join(", ");
-    }
-    case "bodyweight":
-      return `${values((set) => (set.kind === "bodyweight" ? set.reps : undefined))} reps`;
-    case "timed":
-      return `${values((set) => (set.kind === "timed" ? set.seconds : undefined))} s`;
-  }
+  const parts = sets.map(setParts);
+  const first = parts[0];
+  if (!first) return "";
+  // Everything about a Set but its last number, e.g. 18 "kg ×" for weighted Sets, or "reps"
+  const frame = (set: [number, string][]) => JSON.stringify([...set.slice(0, -1), set.at(-1)?.[1]]);
+  if (!parts.every((set) => frame(set) === frame(first))) return sets.map(describeSet).join(", ");
+  const lead = first.slice(0, -1).map(([value, unit]) => `${value} ${unit} `);
+  const unit = first.at(-1)?.[1];
+  return `${lead.join("")}${parts.map((set) => set.at(-1)?.[0]).join(", ")}${unit ? ` ${unit}` : ""}`;
 }
 
 // Previous Sets as a reference while logging: "Last: 18 kg × 10, 10, 8"
 export const previousSetsLabel = (sets: readonly Set[]) => `Last: ${setsSummary(sets)}`;
 
-// A collapsed Workout Exercise's line: "3 sets · 18 kg × 10, 10, 8", or before any Set its Previous Sets, or
-// "Not started"
+// A collapsed Workout Exercise's line: "3 sets · 18 kg × 10, 10, 8", else its Previous Sets, else "Not started"
 export function workoutExerciseSummary(sets: readonly Set[], previous?: readonly Set[]) {
   if (sets.length) return `${setsLabel(sets.length)} · ${setsSummary(sets)}`;
   return previous?.length ? previousSetsLabel(previous) : "Not started";
 }
 
-// A Set as its Load Type records it; add " per side" for a one-sided Exercise
-export function describeSet(set: Set) {
+// A Set's numbers and the units after them, as it reads: 16 "kg ×" 10, 12 "reps", 45 "s"
+export function setParts(set: Set): [number, string][] {
   switch (set.kind) {
     case "external":
-      return `${set.kg} kg × ${set.reps}`;
+      return [
+        [set.kg, "kg ×"],
+        [set.reps, ""],
+      ];
     case "bodyweight":
-      return `${set.reps} reps`;
+      return [[set.reps, "reps"]];
     case "timed":
-      return `${set.seconds} s`;
+      return [[set.seconds, "s"]];
   }
 }
 
-// A length of time as a Stat's value and unit: "49" min under an hour, then "2:05" h
-export function timeStat(ms: number) {
-  const minutes = Math.round(ms / 60_000);
-  if (minutes < 60) return { value: String(minutes), unit: "min" };
-  return { value: `${Math.floor(minutes / 60)}:${String(minutes % 60).padStart(2, "0")}`, unit: "h" };
-}
+// A Set as its Load Type records it: "16 kg × 10"; add " per side" for a one-sided Exercise
+export const describeSet = (set: Set) =>
+  setParts(set)
+    .map(([value, unit]) => (unit ? `${value} ${unit}` : String(value)))
+    .join(" ");

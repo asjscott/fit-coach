@@ -2,6 +2,21 @@
 // unavailable offline, when only the Pending Workouts on the phone are known (ADR 0001)
 export type TodayState = "loading" | "loaded" | "first-run" | "offline";
 
+// Which state Today is in, from whether History has loaded or failed, and how many Workouts there are
+// with the Pending ones
+export function todayState({
+  historyLoaded,
+  failed,
+  workoutCount,
+}: {
+  historyLoaded: boolean;
+  failed: boolean;
+  workoutCount: number;
+}): TodayState {
+  if (historyLoaded) return workoutCount ? "loaded" : "first-run";
+  return failed ? "offline" : "loading";
+}
+
 // The one line under Start/Resume workout, e.g. "Workout 3 of 4 this week"
 export function todayStatus({
   state,

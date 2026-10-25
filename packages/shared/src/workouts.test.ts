@@ -53,6 +53,11 @@ describe("Workout", () => {
     expect(Workout.safeParse(workout([{ ...gobletSquat, previousSets }])).success).toBe(false);
   });
 
+  it("drops other fields it doesn't know from a Workout Exercise, as before", () => {
+    const parsed = Workout.parse(workout([{ ...gobletSquat, note: "from a later version" }]));
+    expect(parsed.workoutExercises[0]).toEqual(gobletSquat);
+  });
+
   it("rejects a weight that isn't in 0.25 kg steps", () => {
     const awkward = { ...gobletSquat, sets: [{ kind: "external", kg: 22.3, reps: 10, loggedAt }] };
     expect(Workout.safeParse(workout([awkward])).success).toBe(false);

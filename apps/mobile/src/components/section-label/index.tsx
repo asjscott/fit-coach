@@ -1,5 +1,5 @@
 import { StyleSheet, View, type StyleProp, type ViewStyle } from "react-native";
-import { fonts } from "@/theme";
+import { fonts, type ColorToken } from "@/theme";
 import { Text } from "../text";
 
 export type SectionLabelProps = {
@@ -7,14 +7,15 @@ export type SectionLabelProps = {
   children: string;
   // Optional muted detail on the right, e.g. "Mon 20 – Sun 26"
   right?: string;
+  color?: ColorToken;
   style?: StyleProp<ViewStyle>;
 };
 
 // The small capitalised label that opens a section, e.g. "This week"
-export function SectionLabel({ children, right, style }: SectionLabelProps) {
+export function SectionLabel({ children, right, color = "muted", style }: SectionLabelProps) {
   return (
     <View style={[styles.row, style]}>
-      <Text size="xs" color="muted" accessibilityRole="header" style={styles.label}>
+      <Text size="xs" color={color} accessibilityRole="header" style={styles.label}>
         {children}
       </Text>
       {right ? (

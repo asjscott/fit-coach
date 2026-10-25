@@ -31,7 +31,7 @@ Schemas shared by app and API: packages/shared/src/workouts.ts
   that queue so logging a Set never waits on the network.
 - **Previous Sets are a snapshot saved on the In-progress Workout's Workout Exercise** when it's added (ADR 0002): the
   server's answer or a Pending Workout's, whichever Workout is newer. A failing source counts as no answer. The finished
-  `WorkoutExercise` schema is strict, so an upload carrying `previousSets` is refused (400).
+  `WorkoutExercise` schema refuses `previousSets` (400), while still dropping other unknown fields.
 - **The finished Workout's `id` is generated on the phone**, which is what makes a retried upload idempotent (201 then
   200).
 - **Exercises come from the library built into the app** (`EXERCISES` in `@fit/engines`), not `/exercises`, so the picker

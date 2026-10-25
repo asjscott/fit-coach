@@ -10,6 +10,8 @@ const dark = {
   // Outlines the user must see: inputs, checkboxes, radios
   inputBorder: "#6E727B",
   backdrop: "rgba(0, 0, 0, 0.6)",
+  // Drop shadows under floating pieces, such as toasts and slider thumbs
+  shadow: "#000000",
 
   text: "#F4F5F7",
   muted: "#A9ACB3",
@@ -31,6 +33,7 @@ const light: typeof dark = {
   line: "#E2E3E6",
   inputBorder: "#8A8D95",
   backdrop: "rgba(0, 0, 0, 0.4)",
+  shadow: "#000000",
 
   text: "#121316",
   muted: "#4A4D55",

@@ -1,5 +1,6 @@
 import { createContext, use, useId, useState, type ReactNode, type Ref } from "react";
 import {
+  Platform,
   Pressable,
   TextInput,
   View,
@@ -107,6 +108,8 @@ export function InputField({ type = "text", style, onFocus, onBlur, ...props }: 
           styles.field,
           variant === "underlined" && styles.fieldUnderlined,
           { fontFamily: fonts.regular, fontSize: fontSizes[inputSizes[size].text], fontVariant: TABULAR },
+          // The root's accent border shows focus, so the browser's outline would draw a second one
+          Platform.OS === "web" && { outlineWidth: 0 },
           style,
         ]}
         {...props}

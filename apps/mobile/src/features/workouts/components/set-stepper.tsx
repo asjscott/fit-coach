@@ -3,7 +3,7 @@ import { Icon, type IconName } from "@/components/icons";
 import { Input, InputField } from "@/components/input";
 import { Pressable } from "@/components/pressable";
 import { Text } from "@/components/text";
-import { fonts, radii, spacing, useTheme } from "@/theme";
+import { bigNumber, radii, spacing, useTheme } from "@/theme";
 import { stepValue, STEPS, type SetField } from "../set-entry";
 
 // The unit drawn beside each field, filled or not
@@ -68,9 +68,7 @@ const styles = StyleSheet.create({
   field: {
     textAlign: "right",
     paddingHorizontal: 0,
-    fontFamily: fonts.bold,
-    fontSize: 26,
-    letterSpacing: -0.5,
+    ...bigNumber(26),
     minWidth: 0,
   },
   unit: { flex: 1, marginLeft: spacing[1] + 2, fontSize: 16 },

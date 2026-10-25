@@ -32,9 +32,13 @@ const setsMatchLoadType = (workoutExercise: { loadType: LoadType; sets: Set[] })
   workoutExercise.sets.every((set) => set.kind === workoutExercise.loadType);
 const setsMatchLoadTypeError = { error: "Every Set must match its Workout Exercise's Load Type" };
 
-// Strict, so a finished Workout can't carry the In-progress Workout's Previous Sets (ADR 0002)
+// Other unknown fields are dropped, but a finished Workout can't carry the In-progress Workout's Previous Sets (ADR 0002)
 export const WorkoutExercise = z
-  .strictObject({ ...workoutExerciseFields, sets: z.array(Set).min(1) })
+  .object({
+    ...workoutExerciseFields,
+    sets: z.array(Set).min(1),
+    previousSets: z.never({ error: "A finished Workout can't carry Previous Sets" }).optional(),
+  })
   .refine(setsMatchLoadType, setsMatchLoadTypeError);
 export type WorkoutExercise = z.infer<typeof WorkoutExercise>;
 

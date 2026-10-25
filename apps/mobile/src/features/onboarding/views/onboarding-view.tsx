@@ -18,7 +18,7 @@ export function OnboardingView() {
 
   // Signing out is the only way off this screen before onboarding is done
   const exit = user.onboardedAt
-    ? { label: "Cancel", onPress: () => router.replace("/") }
+    ? { label: "Cancel", onPress: () => (router.canGoBack() ? router.back() : router.replace("/profile")) }
     : { label: "Sign out", onPress: () => signOut() };
 
   return (

@@ -47,7 +47,10 @@ export function Toast({ message, type = "info", duration = 3000, onHide, isVisib
   return (
     <Animated.View
       accessibilityRole="alert"
-      style={[styles.container, { top: insets.top + spacing[2], transform: [{ translateY }] }]}
+      style={[
+        styles.container,
+        { top: insets.top + spacing[2], shadowColor: colors.shadow, transform: [{ translateY }] },
+      ]}
     >
       {/* Solid surface underneath so the tinted status colour stays readable */}
       <View style={[styles.toast, { backgroundColor: colors.surface, borderColor: fg }]}>
@@ -67,7 +70,6 @@ const styles = StyleSheet.create({
     left: spacing[4],
     right: spacing[4],
     zIndex: 1000,
-    shadowColor: "#000",
     shadowOpacity: 0.2,
     shadowRadius: 8,
     shadowOffset: { width: 0, height: 4 },

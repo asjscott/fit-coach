@@ -14,7 +14,7 @@ import { useToast } from "@/contexts/toast-context";
 import { spacing, useTheme } from "@/theme";
 import { errorMessage } from "@/utils/error-message";
 import { SetRow } from "../components/set-row";
-import { dateLabel, kgLabel, timeLabel } from "../format";
+import { dateLabel, kgLabel, timeLabel, timeStat } from "../format";
 import { useHistory } from "../history-provider";
 import { exerciseName, libraryExercise } from "../library";
 import { useLogbook } from "../logbook-provider";
@@ -120,7 +120,7 @@ function WorkoutDetail({ workout, note, onDelete }: WorkoutDetailProps) {
       <View style={[styles.stats, { borderColor: colors.line }]}>
         <Stat value={kgLabel(summary.volumeKg)} unit="kg" label="Volume" />
         <Stat value={String(summary.sets)} label="Sets" />
-        <Stat value={String(Math.round(summary.durationMs / 60_000))} unit="min" label="Time" />
+        <Stat {...timeStat(summary.durationMs)} label="Time" />
       </View>
       {workout.workoutExercises.map((workoutExercise, i) => (
         <WorkoutExerciseSection key={`${workoutExercise.slug}-${i}`} workoutExercise={workoutExercise} />

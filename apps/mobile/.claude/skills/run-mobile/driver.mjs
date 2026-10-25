@@ -228,7 +228,11 @@ if (cmd === "tour") {
       // Today stays mounted under the Workout, and its Last workout rows name Exercises too: click the visible one
       await page.getByText("Goblet squat", { exact: true }).locator("visible=true").first().click();
       await page.waitForURL(/\/workout$/);
-      await page.getByText(/^Last: /).locator("visible=true").first().waitFor();
+      await page
+        .getByText(/^Last: /)
+        .locator("visible=true")
+        .first()
+        .waitFor();
       await snap("workout-previous-sets");
       // The current Exercise's steppers are labelled by field (kg, reps, seconds); the next Set starts from the
       // previous one, so Set 2 is two taps of "Minus 1 rep"

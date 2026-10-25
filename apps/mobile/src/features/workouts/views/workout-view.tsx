@@ -23,6 +23,7 @@ import { useCurrentWorkoutExercise } from "../current-workout-exercise";
 import { elapsedClockLabel, kgLabel, timeLabel } from "../format";
 import { useHasEnded } from "../hooks/use-has-ended";
 import { useLeaveWorkout } from "../hooks/use-leave-workout";
+import { useStartWorkout } from "../hooks/use-open-workout";
 import { useLogbook } from "../logbook-provider";
 
 // The In-progress Workout, laid out for logging between sets: Elapsed, Sets and Volume at the top, the current
@@ -147,28 +148,12 @@ function WorkoutStats({ workout }: { workout: InProgressWorkout }) {
 
 // Reached with no Workout in progress, e.g. by reloading on web after finishing
 function NoWorkout() {
-  const { start } = useLogbook();
-  const { showToast } = useToast();
-  const [starting, setStarting] = useState(false);
+  const { startWorkout, starting } = useStartWorkout();
   return (
     <Screen edges={["bottom"]}>
       <Stack spacing={4}>
         <Text color="muted">No Workout in progress.</Text>
-        <LoadingButton
-          label="Start workout"
-          icon="plus"
-          loading={starting}
-          onPress={async () => {
-            setStarting(true);
-            try {
-              await start();
-            } catch (err) {
-              showToast("Couldn't start a Workout", { error: err });
-            } finally {
-              setStarting(false);
-            }
-          }}
-        />
+        <LoadingButton label="Start workout" icon="plus" loading={starting} onPress={startWorkout} />
       </Stack>
     </Screen>
   );
