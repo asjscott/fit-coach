@@ -1,6 +1,13 @@
 import type { Set, Workout } from "@fit/shared";
 import { describe, expect, it } from "vitest";
-import { historyByWeek, summarizeWorkout, weekStart, weeklyVolume, workoutVolume } from "./training-summaries";
+import {
+  historyByWeek,
+  previousSets,
+  summarizeWorkout,
+  weekStart,
+  weeklyVolume,
+  workoutVolume,
+} from "./training-summaries";
 
 const loggedAt = "2026-10-24T09:00:00.000Z";
 const kg = (kg: number, reps: number): Set => ({ kind: "external", kg, reps, loggedAt });
@@ -152,5 +159,51 @@ describe("weeklyVolume", () => {
 
   it("is 8 empty weeks with no Workouts", () => {
     expect(weeklyVolume([], now).map((week) => week.volumeKg)).toEqual([0, 0, 0, 0, 0, 0, 0, 0]);
+  });
+});
+
+describe("previousSets", () => {
+  const session = (startedAt: string, workoutExercises: { slug: string; sets: Set[] }[]) => ({
+    startedAt,
+    endedAt: new Date(Date.parse(startedAt) + 45 * 60_000).toISOString(),
+    workoutExercises,
+  });
+
+  it("doesn't match a variant of the Exercise", () => {
+    const workouts = [
+      session("2026-10-20T09:00:00.000Z", [{ slug: "dumbbell-bulgarian-split-squat", sets: [kg(16, 10)] }]),
+    ];
+    expect(previousSets(workouts, "bulgarian-split-squat")).toBeNull();
+  });
+
+  it("takes the later occurrence when the Exercise was done twice in that Workout", () => {
+    const workouts = [
+      session("2026-10-20T09:00:00.000Z", [
+        { slug: "goblet-squat", sets: [kg(16, 10), kg(16, 10)] },
+        { slug: "plank", sets: [seconds(45)] },
+        { slug: "goblet-squat", sets: [kg(18, 10), kg(18, 10), kg(18, 8)] },
+      ]),
+    ];
+    expect(previousSets(workouts, "goblet-squat")).toEqual({
+      startedAt: "2026-10-20T09:00:00.000Z",
+      endedAt: "2026-10-20T09:45:00.000Z",
+      sets: [kg(18, 10), kg(18, 10), kg(18, 8)],
+    });
+  });
+
+  it("takes the most recent Workout that included the Exercise, in any order", () => {
+    const workouts = [
+      session("2026-10-22T09:00:00.000Z", [{ slug: "goblet-squat", sets: [kg(20, 8)] }]),
+      session("2026-10-24T09:00:00.000Z", [{ slug: "plank", sets: [seconds(60)] }]),
+      session("2026-10-15T09:00:00.000Z", [{ slug: "goblet-squat", sets: [kg(16, 10)] }]),
+    ];
+    expect(previousSets(workouts, "goblet-squat")).toMatchObject({
+      startedAt: "2026-10-22T09:00:00.000Z",
+      sets: [kg(20, 8)],
+    });
+  });
+
+  it("is null when no Workout included the Exercise", () => {
+    expect(previousSets([], "goblet-squat")).toBeNull();
   });
 });

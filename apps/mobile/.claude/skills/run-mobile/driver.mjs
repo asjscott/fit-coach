@@ -167,6 +167,22 @@ if (cmd === "tour") {
       // Before it starts, /workout offers to start one
       await go("/workout");
       await snap("workout-none");
+      // Previous Sets come from the API when an Exercise is added. Goblet squat shows the account's own, or a
+      // canned answer when the account has none, so its faded "Last: …" line always shows; Plank shows the
+      // account's own, if any
+      await page.route(/\/workouts\/previous-sets\?/, async (route) => {
+        const response = await route.fetch();
+        const slug = new URL(route.request().url()).searchParams.get("slug");
+        if (slug !== "goblet-squat" || (response.ok() && (await response.json()) !== null)) {
+          return route.fulfill({ response });
+        }
+        const day = new Date(Date.now() - 3 * 86_400_000);
+        const at = (minutes) => new Date(day.getTime() + minutes * 60_000).toISOString();
+        const set = (reps, minutes) => ({ kind: "external", kg: 14, reps, loggedAt: at(minutes) });
+        await route.fulfill({
+          json: { startedAt: at(0), endedAt: at(45), sets: [set(10, 5), set(10, 8), set(8, 11)] },
+        });
+      });
       await go("/");
       await button(/^(Start|Resume) workout$/).click();
       await page.waitForURL(/\/workout$/);
@@ -179,6 +195,8 @@ if (cmd === "tour") {
       await page.getByPlaceholder("Search exercises").fill("goblet");
       await page.getByText("Goblet squat", { exact: true }).first().click();
       await page.waitForURL(/\/workout$/);
+      await page.getByText(/^Last: /).waitFor();
+      await snap("workout-previous-sets");
       // The current Exercise's steppers are labelled by field (kg, reps, seconds); the next Set starts from the
       // previous one, so Set 2 is two taps of "Minus 1 rep"
       await page.getByLabel("kg", { exact: true }).fill("16");

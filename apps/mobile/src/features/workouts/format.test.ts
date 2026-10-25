@@ -1,6 +1,6 @@
 import type { Set } from "@fit/shared";
 import { describe, expect, it } from "vitest";
-import { elapsedClockLabel, elapsedLabel, setsSummary, workoutExerciseSummary } from "./format";
+import { elapsedClockLabel, elapsedLabel, previousSetsLabel, setsSummary, workoutExerciseSummary } from "./format";
 
 const startedAt = "2026-10-25T09:00:00.000Z";
 const at = (time: string) => new Date(`2026-10-25T${time}Z`);
@@ -65,5 +65,17 @@ describe("workoutExerciseSummary", () => {
 
   it("says when nothing is logged yet", () => {
     expect(workoutExerciseSummary([])).toBe("Not started");
+  });
+
+  it("shows the Previous Sets until something is logged", () => {
+    const previous = [lifted(18, 10), lifted(18, 10), lifted(18, 8)];
+    expect(workoutExerciseSummary([], previous)).toBe("Last: 18 kg × 10, 10, 8");
+    expect(workoutExerciseSummary([lifted(20, 6)], previous)).toBe("1 set · 20 kg × 6");
+  });
+});
+
+describe("previousSetsLabel", () => {
+  it("reads like the Sets summary, after Last", () => {
+    expect(previousSetsLabel([lifted(18, 10), lifted(18, 10), lifted(18, 8)])).toBe("Last: 18 kg × 10, 10, 8");
   });
 });

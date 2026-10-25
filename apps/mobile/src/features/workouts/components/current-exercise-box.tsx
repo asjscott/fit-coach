@@ -7,6 +7,7 @@ import { Text } from "@/components/text";
 import { useToast } from "@/contexts/toast-context";
 import { fonts, radii, spacing, useTheme } from "@/theme";
 import { errorMessage } from "@/utils/error-message";
+import { previousSetsLabel } from "../format";
 import { exerciseName, libraryExercise } from "../library";
 import { useLogbook } from "../logbook-provider";
 import { draftValues, setDraft, SET_FIELDS, type SetDraft } from "../set-entry";
@@ -21,7 +22,8 @@ export type CurrentExerciseBoxProps = {
   count: number;
 };
 
-// The Workout Exercise being logged, in an accent-bordered box: "Exercise 2 of 4" and its name, the Sets logged
+// The Workout Exercise being logged, in an accent-bordered box: "Exercise 2 of 4" and its name, its Previous Sets
+// faded ("Last: 18 kg × 10, 10, 8"; nothing when there are none), the Sets logged
 // so far (press one to correct or delete it), steppers for the next Set and "Log set 3", then the rest timer's
 // slot. The next Set starts from the previous one
 export function CurrentExerciseBox({ workoutExercise, position, count }: CurrentExerciseBoxProps) {
@@ -30,7 +32,7 @@ export function CurrentExerciseBox({ workoutExercise, position, count }: Current
   const { showToast } = useToast();
   // The Set being corrected, or null while logging a new one
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
-  const { id, slug, loadType, sets } = workoutExercise;
+  const { id, slug, loadType, sets, previousSets } = workoutExercise;
   const unilateral = libraryExercise(slug)?.unilateral ?? false;
   const editingSet = editingIndex === null ? undefined : sets[editingIndex];
   const nextNumber = sets.length + 1;
@@ -48,7 +50,11 @@ export function CurrentExerciseBox({ workoutExercise, position, count }: Current
         </Stack>
         <WorkoutExerciseMenu workoutExercise={workoutExercise} position={position} count={count} />
       </HStack>
-      {/* #22: Previous Sets go here, faded, under the name ("Last: 18 kg × 10, 10, 8"; setsSummary in format.ts) */}
+      {previousSets ? (
+        <Text size="sm" color="subtle" style={styles.note}>
+          {previousSetsLabel(previousSets.sets)}
+        </Text>
+      ) : null}
       {unilateral ? (
         <Text size="sm" color="muted" style={styles.note}>
           Log one side; the values count for each side

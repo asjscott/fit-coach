@@ -18,11 +18,11 @@ export type WorkoutExerciseRowProps = {
 };
 
 // A Workout Exercise that isn't current, collapsed to one row: a tick once it has Sets (else its number), its
-// name and a one-line summary of its Sets, and its ⋯ menu. Pressing the row makes it current
+// name and a one-line summary of its Sets (its Previous Sets before any), and its ⋯ menu. Pressing the row makes it current
 export function WorkoutExerciseRow({ workoutExercise, position, count, onPress }: WorkoutExerciseRowProps) {
   const { colors } = useTheme();
   const name = exerciseName(workoutExercise.slug);
-  const summary = workoutExerciseSummary(workoutExercise.sets);
+  const summary = workoutExerciseSummary(workoutExercise.sets, workoutExercise.previousSets?.sets);
   const done = workoutExercise.sets.length > 0;
 
   return (

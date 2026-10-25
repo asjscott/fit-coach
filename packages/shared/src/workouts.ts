@@ -32,8 +32,9 @@ const setsMatchLoadType = (workoutExercise: { loadType: LoadType; sets: Set[] })
   workoutExercise.sets.every((set) => set.kind === workoutExercise.loadType);
 const setsMatchLoadTypeError = { error: "Every Set must match its Workout Exercise's Load Type" };
 
+// Strict, so a finished Workout can't carry the In-progress Workout's Previous Sets (ADR 0002)
 export const WorkoutExercise = z
-  .object({ ...workoutExerciseFields, sets: z.array(Set).min(1) })
+  .strictObject({ ...workoutExerciseFields, sets: z.array(Set).min(1) })
   .refine(setsMatchLoadType, setsMatchLoadTypeError);
 export type WorkoutExercise = z.infer<typeof WorkoutExercise>;
 
@@ -51,14 +52,28 @@ export const Workout = z
   });
 export type Workout = z.infer<typeof Workout>;
 
+// Previous Sets (GLOSSARY.md, ADR 0002): the Sets of one Exercise from the user's most recent Workout that
+// included it, with that Workout's times so a newer Pending Workout can beat it
+export const PreviousSets = z.object({
+  startedAt: z.iso.datetime(),
+  endedAt: z.iso.datetime(),
+  sets: z.array(Set).min(1),
+});
+export type PreviousSets = z.infer<typeof PreviousSets>;
+
+// GET /workouts/previous-sets?slug=goblet-squat answers with PreviousSets, or null when no Workout has the Exercise
+export const PreviousSetsQuery = z.object({ slug: workoutExerciseFields.slug });
+export type PreviousSetsQuery = z.infer<typeof PreviousSetsQuery>;
+
 // The Workout being logged, saved on the phone after every change and never uploaded as is.
-// Workout Exercises carry a phone id so the same Exercise can be added twice
+// Workout Exercises carry a phone id so the same Exercise can be added twice, and may carry a
+// read-only snapshot of their Previous Sets, dropped at Finish
 export const InProgressWorkout = z.object({
   id: z.uuid(),
   startedAt: z.iso.datetime(),
   workoutExercises: z.array(
     z
-      .object({ id: z.string(), ...workoutExerciseFields, sets: z.array(Set) })
+      .object({ id: z.string(), ...workoutExerciseFields, sets: z.array(Set), previousSets: PreviousSets.optional() })
       .refine(setsMatchLoadType, setsMatchLoadTypeError),
   ),
 });

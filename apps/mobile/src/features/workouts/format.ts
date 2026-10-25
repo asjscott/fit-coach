@@ -98,9 +98,15 @@ export function setsSummary(sets: readonly Set[]) {
   }
 }
 
-// A collapsed Workout Exercise's line: "3 sets · 18 kg × 10, 10, 8", or "Not started"
-export const workoutExerciseSummary = (sets: readonly Set[]) =>
-  sets.length ? `${setsLabel(sets.length)} · ${setsSummary(sets)}` : "Not started";
+// Previous Sets as a reference while logging: "Last: 18 kg × 10, 10, 8"
+export const previousSetsLabel = (sets: readonly Set[]) => `Last: ${setsSummary(sets)}`;
+
+// A collapsed Workout Exercise's line: "3 sets · 18 kg × 10, 10, 8", or before any Set its Previous Sets, or
+// "Not started"
+export function workoutExerciseSummary(sets: readonly Set[], previous?: readonly Set[]) {
+  if (sets.length) return `${setsLabel(sets.length)} · ${setsSummary(sets)}`;
+  return previous?.length ? previousSetsLabel(previous) : "Not started";
+}
 
 // A Set as its Load Type records it; add " per side" for a one-sided Exercise
 export function describeSet(set: Set) {

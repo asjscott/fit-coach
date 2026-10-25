@@ -10,12 +10,15 @@ screens (apps/mobile/src/features/workouts/views)
   └─ LogbookProvider (logbook-provider.tsx): one Logbook per app, its state, and finish → toast
        ├─ Logbook (packages/engines/src/logbook.ts): every rule with no UI; the main test seam
        │    ├─ DeviceStorage: device-storage.ts (phone, SQLite) / device-storage.web.ts (web, localStorage)
-       │    └─ WorkoutUploader: POST /workouts through useApi
+       │    ├─ WorkoutUploader: POST /workouts through useApi
+       │    └─ PreviousSetsSource: GET /workouts/previous-sets?slug= through useApi (4 s timeout)
        └─ useSyncTriggers: sync() on foreground and on reconnect (expo-network)
 History (history-provider.tsx, hooks/use-history.ts): GET /workouts, held in memory only, paged back far enough to
   cover the 8 weeks of weekly Volume; Pending Workouts merged in
-Training summaries (packages/engines/src/training-summaries.ts): Volume, Sets, weeks and weekly Volume, pure functions
-API (apps/api/src/workouts.ts, routes/workouts.ts): idempotent POST, paged GET (before + beforeId), DELETE
+Training summaries (packages/engines/src/training-summaries.ts): Volume, Sets, weeks, weekly Volume and the Previous
+  Sets selection, pure functions
+API (apps/api/src/workouts.ts, routes/workouts.ts): idempotent POST, paged GET (before + beforeId), DELETE, and
+  GET /workouts/previous-sets (newest Workout with the Exercise, then the shared selection; null when none)
 Schemas shared by app and API: packages/shared/src/workouts.ts
 ```
 
@@ -26,6 +29,9 @@ Schemas shared by app and API: packages/shared/src/workouts.ts
   Chromium.
 - **The Logbook serialises its calls** (`serially`) so quick taps can't overwrite each other; `sync()` uploads outside
   that queue so logging a Set never waits on the network.
+- **Previous Sets are a snapshot saved on the In-progress Workout's Workout Exercise** when it's added (ADR 0002): the
+  server's answer or a Pending Workout's, whichever Workout is newer. A failing source counts as no answer. The finished
+  `WorkoutExercise` schema is strict, so an upload carrying `previousSets` is refused (400).
 - **The finished Workout's `id` is generated on the phone**, which is what makes a retried upload idempotent (201 then
   200).
 - **Exercises come from the library built into the app** (`EXERCISES` in `@fit/engines`), not `/exercises`, so the picker

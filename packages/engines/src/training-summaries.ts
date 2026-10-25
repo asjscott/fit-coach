@@ -1,8 +1,9 @@
-import type { Set as LoggedSet } from "@fit/shared";
+import type { Set as LoggedSet, PreviousSets } from "@fit/shared";
 import { EXERCISES } from "./data/exercises";
 
 // Training summaries: pure functions that sum up Workouts for Today, History, the In-progress Workout and Finish.
 // - One Workout: workoutVolume, setCount, summarizeWorkout
+// - Previous Sets: previousSets
 // - Weeks (Monday to Sunday, the phone's local time): weekStart, historyByWeek, weeklyVolume, weeklyVolumeStart
 
 // What Volume and Sets need from a Workout, so a finished, Pending or In-progress Workout all fit
@@ -99,4 +100,16 @@ export function weeklyVolume(
     if (week) week.volumeKg += workoutVolume(workout);
   }
   return series;
+}
+
+// Previous Sets (GLOSSARY.md): the Sets of the later occurrence of exactly this Exercise in the most recent
+// Workout that included it, or null when none did. A variant has its own slug, so it never matches
+export function previousSets(workouts: readonly FinishedWorkoutSets[], slug: string): PreviousSets | null {
+  let found: PreviousSets | null = null;
+  for (const { startedAt, endedAt, workoutExercises } of workouts) {
+    const latest = workoutExercises.filter((we) => we.slug === slug && we.sets.length > 0).at(-1);
+    if (!latest || (found && Date.parse(found.startedAt) >= Date.parse(startedAt))) continue;
+    found = { startedAt, endedAt, sets: [...latest.sets] };
+  }
+  return found;
 }

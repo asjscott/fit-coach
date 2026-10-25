@@ -1,8 +1,8 @@
 import type { FastifyPluginAsyncZod } from "fastify-type-provider-zod";
-import { ErrorResponse, Workout, WorkoutsQuery } from "@fit/shared";
+import { ErrorResponse, PreviousSets, PreviousSetsQuery, Workout, WorkoutsQuery } from "@fit/shared";
 import { z } from "zod";
 import { requireAuth, userIdOf } from "../auth";
-import { createWorkout, deleteWorkout, findWorkouts, toWorkout } from "../workouts";
+import { createWorkout, deleteWorkout, findPreviousSets, findWorkouts, toWorkout } from "../workouts";
 
 // The signed-in user's finished Workouts. Checks shape only: an Exercise slug the
 // server's library doesn't know is accepted, so an upload can never get stuck
@@ -14,6 +14,13 @@ export const workoutRoutes: FastifyPluginAsyncZod = async (app) => {
   // before and beforeId for the next page
   app.get("/workouts", { schema: { querystring: WorkoutsQuery, response: { 200: z.array(Workout) } } }, async (req) =>
     (await findWorkouts(userIdOf(req)!, req.query)).map(toWorkout),
+  );
+
+  // The user's Previous Sets for one Exercise with that Workout's times, or null when no Workout has it
+  app.get(
+    "/workouts/previous-sets",
+    { schema: { querystring: PreviousSetsQuery, response: { 200: PreviousSets.nullable() } } },
+    async (req) => findPreviousSets(userIdOf(req)!, req.query.slug),
   );
 
   // Idempotent on the phone-generated id: 201 when stored, 200 with the stored Workout
