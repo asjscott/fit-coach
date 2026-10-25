@@ -1,19 +1,20 @@
+import { summarizeWorkout } from "@fit/engines";
 import type { Workout, WorkoutExercise } from "@fit/shared";
-import { router, useLocalSearchParams } from "expo-router";
+import { Stack as NavStack, router, useLocalSearchParams } from "expo-router";
 import { useEffect, useState } from "react";
-import { Card } from "@/components/card";
+import { StyleSheet, View } from "react-native";
 import { ConfirmModal } from "@/components/choice-modal";
-import { Heading } from "@/components/heading";
 import { Loading } from "@/components/loading";
-import { LoadingButton } from "@/components/loading-button";
+import { OverflowMenu } from "@/components/overflow-menu";
 import { Screen } from "@/components/screen";
 import { Stack } from "@/components/stack";
+import { Stat } from "@/components/stat";
 import { Text } from "@/components/text";
 import { useToast } from "@/contexts/toast-context";
-import { spacing } from "@/theme";
+import { spacing, useTheme } from "@/theme";
 import { errorMessage } from "@/utils/error-message";
 import { SetRow } from "../components/set-row";
-import { dateLabel, durationLabel, timeLabel } from "../format";
+import { dateLabel, kgLabel, timeLabel } from "../format";
 import { useHistory } from "../history-provider";
 import { exerciseName, libraryExercise } from "../library";
 import { useLogbook } from "../logbook-provider";
@@ -49,7 +50,7 @@ export default function WorkoutDetailView() {
     return (
       <WorkoutDetail
         workout={pendingWorkout}
-        note="Not uploaded yet. It uploads when you're back online."
+        note="Waiting to sync. It uploads when you're back online."
         onDelete={deleting(() => deletePending(pendingWorkout.id))}
       />
     );
@@ -66,17 +67,20 @@ export default function WorkoutDetailView() {
 
 type WorkoutDetailProps = {
   workout: Workout;
-  // A line under the date, e.g. that a Pending Workout hasn't uploaded yet
+  // A line under the times, e.g. that a Pending Workout hasn't uploaded yet
   note?: string;
   // Deletes the Workout wherever it lives; rejects to leave it in place
   onDelete: () => Promise<void>;
 };
 
-// Every Workout Exercise in order with its Sets, and Delete behind a confirmation.
-// Takes the Workout and how to delete it, so an uploaded or a Pending Workout can use it
+// Titled with its date: the times, Volume, Sets and duration, then every Workout Exercise in order with its Sets.
+// Delete workout sits in the header menu, behind a confirmation. Takes the Workout and how to delete it, so an
+// uploaded or a Pending Workout can use it
 function WorkoutDetail({ workout, note, onDelete }: WorkoutDetailProps) {
+  const { colors } = useTheme();
   const { showToast } = useToast();
   const [confirming, setConfirming] = useState(false);
+  const summary = summarizeWorkout(workout);
 
   const handleDelete = async () => {
     try {
@@ -92,30 +96,35 @@ function WorkoutDetail({ workout, note, onDelete }: WorkoutDetailProps) {
 
   return (
     <Screen scroll edges={["bottom"]}>
-      <Stack spacing={4} flex>
-        <Stack spacing={1}>
-          <Heading size="xl">{dateLabel(workout.startedAt)}</Heading>
-          <Text color="muted">
-            {timeLabel(workout.startedAt)} – {timeLabel(workout.endedAt)} · {durationLabel(workout)}
-          </Text>
-          {note !== undefined && (
-            <Text size="sm" color="muted">
-              {note}
-            </Text>
-          )}
-        </Stack>
-        {workout.workoutExercises.map((workoutExercise, i) => (
-          <WorkoutExerciseCard key={`${workoutExercise.slug}-${i}`} workoutExercise={workoutExercise} />
-        ))}
-      </Stack>
-      <LoadingButton
-        label="Delete workout"
-        action="negative"
-        variant="outline"
-        icon="trash"
-        style={{ marginTop: spacing[6] }}
-        onPress={() => setConfirming(true)}
+      <NavStack.Screen
+        options={{
+          title: dateLabel(workout.startedAt),
+          headerRight: () => (
+            <OverflowMenu
+              label="Workout actions"
+              items={[{ label: "Delete workout", destructive: true, onPress: () => setConfirming(true) }]}
+            />
+          ),
+        }}
       />
+      <Stack spacing={1}>
+        <Text color="muted">
+          {timeLabel(workout.startedAt)} – {timeLabel(workout.endedAt)}
+        </Text>
+        {note !== undefined && (
+          <Text size="sm" color="muted">
+            {note}
+          </Text>
+        )}
+      </Stack>
+      <View style={[styles.stats, { borderColor: colors.line }]}>
+        <Stat value={kgLabel(summary.volumeKg)} unit="kg" label="Volume" />
+        <Stat value={String(summary.sets)} label="Sets" />
+        <Stat value={String(Math.round(summary.durationMs / 60_000))} unit="min" label="Time" />
+      </View>
+      {workout.workoutExercises.map((workoutExercise, i) => (
+        <WorkoutExerciseSection key={`${workoutExercise.slug}-${i}`} workoutExercise={workoutExercise} />
+      ))}
       <ConfirmModal
         isOpen={confirming}
         title="Delete this Workout?"
@@ -128,16 +137,25 @@ function WorkoutDetail({ workout, note, onDelete }: WorkoutDetailProps) {
   );
 }
 
-function WorkoutExerciseCard({ workoutExercise: { slug, sets } }: { workoutExercise: WorkoutExercise }) {
+function WorkoutExerciseSection({ workoutExercise: { slug, sets } }: { workoutExercise: WorkoutExercise }) {
+  const { colors } = useTheme();
   const unilateral = libraryExercise(slug)?.unilateral;
   return (
-    <Card>
-      <Stack spacing={2}>
-        <Text weight="semiBold">{exerciseName(slug)}</Text>
-        {sets.map((set, i) => (
-          <SetRow key={set.loggedAt + i} set={set} index={i} unilateral={unilateral} />
-        ))}
-      </Stack>
-    </Card>
+    <View style={[styles.exercise, { borderColor: colors.line }]}>
+      <Text weight="semiBold">{exerciseName(slug)}</Text>
+      {sets.map((set, i) => (
+        <SetRow key={set.loggedAt + i} set={set} index={i} unilateral={unilateral} />
+      ))}
+    </View>
   );
 }
+
+const styles = StyleSheet.create({
+  stats: {
+    flexDirection: "row",
+    marginTop: spacing[4],
+    paddingVertical: spacing[4],
+    borderTopWidth: StyleSheet.hairlineWidth,
+  },
+  exercise: { gap: spacing[2], paddingVertical: spacing[4], borderTopWidth: StyleSheet.hairlineWidth },
+});
