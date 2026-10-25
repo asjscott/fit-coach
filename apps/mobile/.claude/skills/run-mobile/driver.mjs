@@ -114,6 +114,19 @@ if (cmd === "shot") {
   await ctx.close();
 }
 
+// A finished Workout from an hour ago, as the Logbook stores it on the phone until it uploads
+function pendingWorkout() {
+  const startedAt = new Date(Date.now() - 60 * 60_000).toISOString();
+  const endedAt = new Date(Date.now() - 15 * 60_000).toISOString();
+  const sets = [10, 10, 8].map((reps) => ({ kind: "external", kg: 16, reps, loggedAt: startedAt }));
+  return {
+    id: "8f1d7c2e-3b4a-4c5d-9e6f-7a8b9c0d1e2f",
+    startedAt,
+    endedAt,
+    workoutExercises: [{ slug: "goblet-squat", loadType: "external", sets }],
+  };
+}
+
 if (cmd === "tour") {
   if (!fs.existsSync(statePath)) console.log("No saved session: signed-in screens will redirect to /sign-in");
   for (const scheme of args[0] ? [args[0]] : ["light", "dark"]) {
@@ -131,6 +144,25 @@ if (cmd === "tour") {
         await snap(name);
         await snap(name, { tall: true });
       }
+      // Today's other states, by standing in for the History request: a first run (no Workouts), and offline
+      // (History fails), first with nothing on the phone and then with a Pending Workout from earlier today
+      const history = "**/workouts*";
+      await page.route(history, (route) => route.fulfill({ json: [] }));
+      await go("/");
+      await snap("today-first-run");
+      await page.unroute(history);
+      await page.route(history, (route) => route.abort("internetdisconnected"));
+      await go("/");
+      await snap("today-offline");
+      await page.evaluate(
+        (workout) => localStorage.setItem("logbook:pending", JSON.stringify([workout])),
+        pendingWorkout(),
+      );
+      await go("/");
+      await snap("today-offline-pending");
+      await page.evaluate(() => localStorage.removeItem("logbook:pending"));
+      await page.unroute(history);
+
       for (const [route, name] of [
         ["/onboarding", "onboarding"],
         ["/profile/styleguide", "styleguide"],

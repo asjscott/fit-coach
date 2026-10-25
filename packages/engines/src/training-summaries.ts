@@ -3,7 +3,9 @@ import { EXERCISES } from "./data/exercises";
 
 // Training summaries: pure functions that sum up Workouts for Today, History, the In-progress Workout and Finish.
 // - One Workout: workoutVolume, setCount, summarizeWorkout
-// - Weeks (Monday to Sunday, the phone's local time): weekStart, historyByWeek, weeklyVolume, weeklyVolumeStart
+// - Weeks (Monday to Sunday, the phone's local time): weekStart, historyByWeek, weeklyVolume, weeklyVolumeStart,
+//   thisWeek
+// - Pending Workouts and History together: withPending, lastWorkout
 
 // What Volume and Sets need from a Workout, so a finished, Pending or In-progress Workout all fit
 export type WorkoutSets = { workoutExercises: readonly { slug: string; sets: readonly LoggedSet[] }[] };
@@ -100,3 +102,58 @@ export function weeklyVolume(
   }
   return series;
 }
+
+export type TrainingDay = { date: Date; trained: boolean; isToday: boolean };
+
+// This week (Monday to Sunday, local time) so far, against the user's days per week when they've set it
+export type ThisWeek = {
+  // Monday at midnight, local time
+  start: Date;
+  workoutCount: number;
+  target: number | undefined;
+  // Monday to Sunday at local midnight: whether the user trained that day, and which day is today
+  days: TrainingDay[];
+  volumeKg: number;
+  sets: number;
+  durationMs: number;
+};
+
+export function thisWeek(workouts: readonly FinishedWorkoutSets[], now: Date, daysPerWeek?: number): ThisWeek {
+  const start = weekStart(now);
+  // By the calendar, so a daylight-saving change inside the week doesn't shift a day
+  const days = Array.from({ length: 7 }, (_, i) => {
+    const date = new Date(start.getFullYear(), start.getMonth(), start.getDate() + i);
+    return { date, trained: false, isToday: date.getDate() === now.getDate() && date.getMonth() === now.getMonth() };
+  });
+  const week: ThisWeek = { start, workoutCount: 0, target: daysPerWeek, days, volumeKg: 0, sets: 0, durationMs: 0 };
+  for (const workout of workouts) {
+    const startedAt = new Date(workout.startedAt);
+    if (weekStart(startedAt).getTime() !== start.getTime()) continue;
+    const summary = summarizeWorkout(workout);
+    days[(startedAt.getDay() + 6) % 7]!.trained = true;
+    week.workoutCount += 1;
+    week.volumeKg += summary.volumeKg;
+    week.sets += summary.sets;
+    week.durationMs += summary.durationMs;
+  }
+  return week;
+}
+
+// The Pending Workouts, marked, then the History loaded from the server (null while it isn't, such as offline).
+// A Workout that uploaded while History was loading shows once, as Pending
+export function withPending<W extends { id: string }>(
+  pending: readonly W[],
+  history: readonly W[] | null,
+): (W & { isPending: boolean })[] {
+  const pendingIds = new Set(pending.map((workout) => workout.id));
+  return [
+    ...pending.map((workout) => ({ ...workout, isPending: true })),
+    ...(history ?? [])
+      .filter((workout) => !pendingIds.has(workout.id))
+      .map((workout) => ({ ...workout, isPending: false })),
+  ];
+}
+
+// The Workout that started most recently, for Today's Last workout
+export const lastWorkout = <W extends { startedAt: string }>(workouts: readonly W[]): W | undefined =>
+  newestFirst(workouts)[0];

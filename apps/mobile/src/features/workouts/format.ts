@@ -48,6 +48,11 @@ export function weekLabel(start: Date, now = new Date()) {
   const weeksAgo = Math.floor(daysBetween(start, now) / 7);
   if (weeksAgo <= 0) return "This week";
   if (weeksAgo === 1) return "Last week";
+  return weekDatesLabel(start, now);
+}
+
+// A week by its dates, Monday to Sunday: "12–18 Oct" or "28 Sep – 4 Oct", with the year when it isn't this one
+export function weekDatesLabel(start: Date, now = new Date()) {
   const end = new Date(start.getFullYear(), start.getMonth(), start.getDate() + 6);
   const month = (date: Date) => date.toLocaleDateString([], { month: "short" });
   const year = end.getFullYear() === now.getFullYear() ? "" : ` ${end.getFullYear()}`;
@@ -71,4 +76,31 @@ export function describeSet(set: Set) {
     case "timed":
       return `${set.seconds} s`;
   }
+}
+
+// A Workout Exercise's Sets on one line: "18 kg × 10, 10, 8", "20 kg × 10 · 22.5 kg × 8, 6", "15, 12 reps", "45, 40 s"
+export function setsSummary(sets: readonly Set[]) {
+  const weighted: { kg: number; reps: number[] }[] = [];
+  const values: number[] = [];
+  let unit = "";
+  for (const set of sets) {
+    if (set.kind === "external") {
+      const run = weighted.at(-1);
+      if (run?.kg === set.kg) run.reps.push(set.reps);
+      else weighted.push({ kg: set.kg, reps: [set.reps] });
+    } else {
+      values.push(set.kind === "bodyweight" ? set.reps : set.seconds);
+      unit = set.kind === "bodyweight" ? "reps" : "s";
+    }
+  }
+  const parts = weighted.map((run) => `${run.kg} kg × ${run.reps.join(", ")}`);
+  if (values.length) parts.push(`${values.join(", ")} ${unit}`);
+  return parts.join(" · ");
+}
+
+// A length of time as a Stat's value and unit: "49" min under an hour, then "2:05" h
+export function timeStat(ms: number) {
+  const minutes = Math.round(ms / 60_000);
+  if (minutes < 60) return { value: String(minutes), unit: "min" };
+  return { value: `${Math.floor(minutes / 60)}:${String(minutes % 60).padStart(2, "0")}`, unit: "h" };
 }

@@ -1,6 +1,15 @@
 import type { Set, Workout } from "@fit/shared";
 import { describe, expect, it } from "vitest";
-import { historyByWeek, summarizeWorkout, weekStart, weeklyVolume, workoutVolume } from "./training-summaries";
+import {
+  historyByWeek,
+  lastWorkout,
+  summarizeWorkout,
+  thisWeek,
+  weekStart,
+  weeklyVolume,
+  withPending,
+  workoutVolume,
+} from "./training-summaries";
 
 const loggedAt = "2026-10-24T09:00:00.000Z";
 const kg = (kg: number, reps: number): Set => ({ kind: "external", kg, reps, loggedAt });
@@ -152,5 +161,125 @@ describe("weeklyVolume", () => {
 
   it("is 8 empty weeks with no Workouts", () => {
     expect(weeklyVolume([], now).map((week) => week.volumeKg)).toEqual([0, 0, 0, 0, 0, 0, 0, 0]);
+  });
+});
+
+describe("thisWeek", () => {
+  // Thursday 29 Oct 2026, 18:00 local; the clocks go back on Sunday 1 Nov, inside this week
+  const now = new Date("2026-10-30T01:00:00.000Z");
+
+  it("counts this week's Workouts against days per week, with their Volume, Sets and Time", () => {
+    const week = thisWeek(
+      [
+        workout("mon", "2026-10-26T15:00:00.000Z", 400), // Mon 26 Oct, 08:00 local
+        workout("wed", "2026-10-28T16:00:00.000Z", 200), // Wed 28 Oct, 09:00 local
+      ],
+      now,
+      4,
+    );
+    expect({
+      workoutCount: week.workoutCount,
+      target: week.target,
+      volumeKg: week.volumeKg,
+      sets: week.sets,
+      durationMs: week.durationMs,
+    }).toEqual({ workoutCount: 2, target: 4, volumeKg: 600, sets: 3, durationMs: 90 * 60_000 });
+  });
+
+  it("has the days Monday to Sunday at local midnight, across the clocks going back, with today marked", () => {
+    const week = thisWeek([], now, 3);
+    expect(week.days.map((day) => day.date.toISOString())).toEqual([
+      "2026-10-26T07:00:00.000Z",
+      "2026-10-27T07:00:00.000Z",
+      "2026-10-28T07:00:00.000Z",
+      "2026-10-29T07:00:00.000Z",
+      "2026-10-30T07:00:00.000Z",
+      "2026-10-31T07:00:00.000Z",
+      "2026-11-01T07:00:00.000Z",
+    ]);
+    expect(week.days.map((day) => day.isToday)).toEqual([false, false, false, true, false, false, false]);
+  });
+
+  it("ticks the weekdays trained, by the phone's local time", () => {
+    const week = thisWeek(
+      [
+        workout("mon-early", "2026-10-26T08:00:00.000Z"), // Mon 26 Oct, 01:00 local
+        workout("mon-again", "2026-10-26T23:00:00.000Z"), // Mon 26 Oct, 16:00 local
+        workout("wed-late", "2026-10-29T06:30:00.000Z"), // Wed 28 Oct, 23:30 local; Thursday in UTC
+      ],
+      now,
+      4,
+    );
+    expect(week.days.map((day) => day.trained)).toEqual([true, false, true, false, false, false, false]);
+    // Two Workouts on one day are two of the week's Workouts
+    expect(week.workoutCount).toBe(3);
+  });
+
+  it("leaves out last week's Workouts, even late on Sunday night", () => {
+    const week = thisWeek(
+      [
+        workout("sun-late", "2026-10-26T06:30:00.000Z"), // Sun 25 Oct, 23:30 local; Monday in UTC
+        workout("mon-midnight", "2026-10-26T07:00:00.000Z"), // Mon 26 Oct, 00:00 local
+      ],
+      now,
+      4,
+    );
+    expect(week.workoutCount).toBe(1);
+    expect(week.days.map((day) => day.trained)).toEqual([true, false, false, false, false, false, false]);
+  });
+
+  it("has no target when the user hasn't set days per week", () => {
+    expect(thisWeek([], now).target).toBeUndefined();
+  });
+
+  it("is an empty week with no Workouts", () => {
+    const week = thisWeek([], now, 4);
+    expect([week.workoutCount, week.volumeKg, week.sets, week.durationMs]).toEqual([0, 0, 0, 0]);
+    expect(week.days.some((day) => day.trained)).toBe(false);
+  });
+});
+
+describe("lastWorkout", () => {
+  it("is the Workout that started most recently, Pending or not", () => {
+    const merged = withPending(
+      [workout("older-pending", "2026-10-20T16:00:00.000Z"), workout("newest-pending", "2026-10-28T16:00:00.000Z")],
+      [workout("uploaded", "2026-10-26T15:00:00.000Z"), workout("backfilled", "2026-10-28T17:00:00.000Z")],
+    );
+    expect(lastWorkout(merged)?.id).toBe("backfilled");
+  });
+
+  it("is undefined with no Workouts", () => {
+    expect(lastWorkout([])).toBeUndefined();
+  });
+});
+
+describe("withPending", () => {
+  // Thursday 29 Oct 2026, 18:00 local
+  const now = new Date("2026-10-30T01:00:00.000Z");
+  const marked = (workouts: (Workout & { isPending: boolean })[]) => workouts.map((w) => [w.id, w.isPending]);
+
+  it("puts the Pending Workouts first, marked, then the History loaded from the server", () => {
+    const merged = withPending(
+      [workout("pending", "2026-10-28T16:00:00.000Z")],
+      [workout("uploaded", "2026-10-26T15:00:00.000Z")],
+    );
+    expect(marked(merged)).toEqual([
+      ["pending", true],
+      ["uploaded", false],
+    ]);
+  });
+
+  it("counts a Workout once in this week when the server already has it while it's still Pending", () => {
+    const both = workout("both", "2026-10-28T16:00:00.000Z");
+    const merged = withPending([both], [both]);
+    expect(marked(merged)).toEqual([["both", true]]);
+    expect(thisWeek(merged, now, 4).workoutCount).toBe(1);
+  });
+
+  it("still counts Pending Workouts towards this week while History isn't loaded (offline)", () => {
+    const merged = withPending([workout("offline", "2026-10-28T16:00:00.000Z")], null);
+    const week = thisWeek(merged, now, 4);
+    expect(week.workoutCount).toBe(1);
+    expect(week.days.map((day) => day.trained)).toEqual([false, false, true, false, false, false, false]);
   });
 });
