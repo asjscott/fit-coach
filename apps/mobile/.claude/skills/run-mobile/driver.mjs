@@ -99,7 +99,10 @@ if (cmd === "shot") {
   await go(route);
   // "/history?variant=broadcast&state=first" lands as history-broadcast-first-<scheme>.png
   const url = new URL(route, base);
-  const name = [url.pathname === "/" ? "home" : url.pathname.slice(1).replaceAll("/", "_"), ...url.searchParams.values()];
+  const name = [
+    url.pathname === "/" ? "home" : url.pathname.slice(1).replaceAll("/", "_"),
+    ...url.searchParams.values(),
+  ];
   if (wide) name.push("wide");
   await snap(name.join("-"), { tall: args.includes("--tall") });
   await ctx.close();
