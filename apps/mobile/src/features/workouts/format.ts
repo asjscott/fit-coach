@@ -73,6 +73,40 @@ export const kgLabel = (kg: number) => Math.round(kg).toLocaleString();
 
 export const setsLabel = (sets: number) => `${sets} ${sets === 1 ? "set" : "sets"}`;
 
+// How long an In-progress Workout has run, as a ticking clock for its own screen: "0:45", "48:12", "1:05:09"
+export function elapsedClockLabel(ms: number) {
+  const total = Math.max(0, Math.floor(ms / 1000));
+  const hours = Math.floor(total / 3600);
+  const minutes = Math.floor(total / 60) % 60;
+  const seconds = String(total % 60).padStart(2, "0");
+  return hours ? `${hours}:${String(minutes).padStart(2, "0")}:${seconds}` : `${minutes}:${seconds}`;
+}
+
+// A Workout Exercise's Sets on one line, with each unit said once where it can be: "18 kg × 10, 10, 8",
+// "16 kg × 10, 18 kg × 8", "12, 10 reps", "45, 40 s". Empty with no Sets
+export function setsSummary(sets: readonly Set[]) {
+  const values = (pick: (set: Set) => number | undefined) => sets.map((set) => pick(set) ?? "").join(", ");
+  const first = sets[0];
+  switch (first?.kind) {
+    case undefined:
+      return "";
+    case "external": {
+      const sameWeight = sets.every((set) => set.kind === "external" && set.kg === first.kg);
+      return sameWeight
+        ? `${first.kg} kg × ${values((set) => (set.kind === "external" ? set.reps : undefined))}`
+        : sets.map(describeSet).join(", ");
+    }
+    case "bodyweight":
+      return `${values((set) => (set.kind === "bodyweight" ? set.reps : undefined))} reps`;
+    case "timed":
+      return `${values((set) => (set.kind === "timed" ? set.seconds : undefined))} s`;
+  }
+}
+
+// A collapsed Workout Exercise's line: "3 sets · 18 kg × 10, 10, 8", or "Not started"
+export const workoutExerciseSummary = (sets: readonly Set[]) =>
+  sets.length ? `${setsLabel(sets.length)} · ${setsSummary(sets)}` : "Not started";
+
 // A Set as its Load Type records it; add " per side" for a one-sided Exercise
 export function describeSet(set: Set) {
   switch (set.kind) {
@@ -83,26 +117,6 @@ export function describeSet(set: Set) {
     case "timed":
       return `${set.seconds} s`;
   }
-}
-
-// A Workout Exercise's Sets on one line: "18 kg × 10, 10, 8", "20 kg × 10 · 22.5 kg × 8, 6", "15, 12 reps", "45, 40 s"
-export function setsSummary(sets: readonly Set[]) {
-  const weighted: { kg: number; reps: number[] }[] = [];
-  const values: number[] = [];
-  let unit = "";
-  for (const set of sets) {
-    if (set.kind === "external") {
-      const run = weighted.at(-1);
-      if (run?.kg === set.kg) run.reps.push(set.reps);
-      else weighted.push({ kg: set.kg, reps: [set.reps] });
-    } else {
-      values.push(set.kind === "bodyweight" ? set.reps : set.seconds);
-      unit = set.kind === "bodyweight" ? "reps" : "s";
-    }
-  }
-  const parts = weighted.map((run) => `${run.kg} kg × ${run.reps.join(", ")}`);
-  if (values.length) parts.push(`${values.join(", ")} ${unit}`);
-  return parts.join(" · ");
 }
 
 // A length of time as a Stat's value and unit: "49" min under an hour, then "2:05" h

@@ -1,24 +1,77 @@
 import type { Set } from "@fit/shared";
 import { describe, expect, it } from "vitest";
-import { elapsedLabel, setsSummary, timeStat, weekDatesLabel } from "./format";
+import {
+  elapsedClockLabel,
+  elapsedLabel,
+  setsSummary,
+  timeStat,
+  weekDatesLabel,
+  workoutExerciseSummary,
+} from "./format";
 
-const loggedAt = "2026-10-24T09:00:00.000Z";
-const kg = (kg: number, reps: number): Set => ({ kind: "external", kg, reps, loggedAt });
-const reps = (reps: number): Set => ({ kind: "bodyweight", reps, loggedAt });
-const seconds = (seconds: number): Set => ({ kind: "timed", seconds, loggedAt });
+const startedAt = "2026-10-25T09:00:00.000Z";
+const at = (time: string) => new Date(`2026-10-25T${time}Z`);
 
-describe("setsSummary", () => {
-  it("gives the reps once per weight", () => {
-    expect(setsSummary([kg(18, 10), kg(18, 10), kg(18, 8)])).toBe("18 kg × 10, 10, 8");
+describe("elapsedLabel", () => {
+  it("counts the whole minutes since the Workout started", () => {
+    expect(elapsedLabel(startedAt, at("09:12:59"))).toBe("12 min");
   });
 
-  it("starts again when the weight changes", () => {
-    expect(setsSummary([kg(20, 10), kg(22.5, 8), kg(22.5, 6)])).toBe("20 kg × 10 · 22.5 kg × 8, 6");
+  it("switches to hours after an hour", () => {
+    expect(elapsedLabel(startedAt, at("10:05:00"))).toBe("1 h 5 min");
+    expect(elapsedLabel(startedAt, at("11:00:30"))).toBe("2 h");
+  });
+
+  it("reads 0 min when the phone's clock is behind the start", () => {
+    expect(elapsedLabel(startedAt, at("08:58:00"))).toBe("0 min");
+  });
+});
+
+describe("elapsedClockLabel", () => {
+  it("reads as minutes and seconds, then hours", () => {
+    expect(elapsedClockLabel(0)).toBe("0:00");
+    expect(elapsedClockLabel(65_000)).toBe("1:05");
+    expect(elapsedClockLabel((48 * 60 + 12) * 1000 + 999)).toBe("48:12");
+    expect(elapsedClockLabel((3600 + 5 * 60 + 9) * 1000)).toBe("1:05:09");
+  });
+
+  it("shows a start in the future (a clock change) as zero", () => {
+    expect(elapsedClockLabel(-5000)).toBe("0:00");
+  });
+});
+
+const loggedAt = "2026-10-24T09:05:00.000Z";
+const lifted = (kg: number, reps: number): Set => ({ kind: "external", kg, reps, loggedAt });
+
+describe("setsSummary", () => {
+  it("says the weight once when every Set used it", () => {
+    expect(setsSummary([lifted(18, 10), lifted(18, 10), lifted(18, 8)])).toBe("18 kg × 10, 10, 8");
+  });
+
+  it("gives each Set its weight when the weight changed", () => {
+    expect(setsSummary([lifted(16, 10), lifted(18.5, 8)])).toBe("16 kg × 10, 18.5 kg × 8");
   });
 
   it("lists reps or seconds with the unit once", () => {
-    expect(setsSummary([reps(15), reps(12)])).toBe("15, 12 reps");
-    expect(setsSummary([seconds(45), seconds(40)])).toBe("45, 40 s");
+    const reps = (n: number): Set => ({ kind: "bodyweight", reps: n, loggedAt });
+    const hold = (seconds: number): Set => ({ kind: "timed", seconds, loggedAt });
+    expect(setsSummary([reps(12), reps(10)])).toBe("12, 10 reps");
+    expect(setsSummary([hold(45)])).toBe("45 s");
+  });
+
+  it("is empty with no Sets", () => {
+    expect(setsSummary([])).toBe("");
+  });
+});
+
+describe("workoutExerciseSummary", () => {
+  it("counts the Sets before summarising them", () => {
+    expect(workoutExerciseSummary([lifted(18, 10), lifted(18, 8)])).toBe("2 sets · 18 kg × 10, 8");
+    expect(workoutExerciseSummary([lifted(18, 10)])).toBe("1 set · 18 kg × 10");
+  });
+
+  it("says when nothing is logged yet", () => {
+    expect(workoutExerciseSummary([])).toBe("Not started");
   });
 });
 
@@ -39,23 +92,5 @@ describe("weekDatesLabel", () => {
 
   it("names both months when the week crosses into the next", () => {
     expect(weekDatesLabel(new Date(2026, 9, 26), new Date(2026, 9, 29))).toBe("26 Oct – 1 Nov");
-  });
-});
-
-const startedAt = "2026-10-25T09:00:00.000Z";
-const at = (time: string) => new Date(`2026-10-25T${time}Z`);
-
-describe("elapsedLabel", () => {
-  it("counts the whole minutes since the Workout started", () => {
-    expect(elapsedLabel(startedAt, at("09:12:59"))).toBe("12 min");
-  });
-
-  it("switches to hours after an hour", () => {
-    expect(elapsedLabel(startedAt, at("10:05:00"))).toBe("1 h 5 min");
-    expect(elapsedLabel(startedAt, at("11:00:30"))).toBe("2 h");
-  });
-
-  it("reads 0 min when the phone's clock is behind the start", () => {
-    expect(elapsedLabel(startedAt, at("08:58:00"))).toBe("0 min");
   });
 });

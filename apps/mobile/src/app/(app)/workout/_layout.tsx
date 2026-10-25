@@ -14,7 +14,12 @@ export default function WorkoutLayout() {
       <Stack screenOptions={useStackScreenOptions()}>
         <Stack.Screen
           name="index"
-          options={{ title: "Workout", headerBackVisible: false, headerLeft: () => <CloseButton /> }}
+          options={{
+            title: "Workout",
+            headerTitleAlign: "center",
+            headerBackVisible: false,
+            headerLeft: () => <LeaveButton />,
+          }}
         />
         <Stack.Screen name="add-exercise" options={{ title: "Add exercise", presentation: "modal" }} />
         <Stack.Screen name="finish" options={{ title: "Finish workout" }} />
@@ -23,12 +28,17 @@ export default function WorkoutLayout() {
   );
 }
 
-// Leaves the Workout running and goes back to the tabs
-function CloseButton() {
+// Leaves the Workout running and goes back to the tabs, where the Resume pill brings it back
+function LeaveButton() {
   const leaveWorkout = useLeaveWorkout();
   return (
-    <Pressable accessibilityRole="button" accessibilityLabel="Close" hitSlop={12} onPress={leaveWorkout}>
-      <Icon name="chevronDown" color="text" />
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel="Leave workout"
+      onPress={leaveWorkout}
+      style={{ width: 44, height: 44, alignItems: "center", justifyContent: "center" }}
+    >
+      <Icon name="chevronDown" color="text" size={26} />
     </Pressable>
   );
 }

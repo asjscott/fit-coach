@@ -29,10 +29,13 @@ export function workoutVolume(workout: WorkoutSets): number {
 export const setCount = (workout: WorkoutSets) =>
   workout.workoutExercises.reduce((count, { sets }) => count + sets.length, 0);
 
-export type WorkoutSummary = { volumeKg: number; sets: number; durationMs: number };
+// Exercises counts only Workout Exercises with Sets: finishing drops the others, so an In-progress Workout's
+// summary matches what will be saved
+export type WorkoutSummary = { exercises: number; volumeKg: number; sets: number; durationMs: number };
 
 export function summarizeWorkout(workout: FinishedWorkoutSets): WorkoutSummary {
   return {
+    exercises: workout.workoutExercises.filter(({ sets }) => sets.length > 0).length,
     volumeKg: workoutVolume(workout),
     sets: setCount(workout),
     durationMs: Date.parse(workout.endedAt) - Date.parse(workout.startedAt),
