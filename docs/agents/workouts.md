@@ -12,7 +12,9 @@ screens (apps/mobile/src/features/workouts/views)
        │    ├─ DeviceStorage: device-storage.ts (phone, SQLite) / device-storage.web.ts (web, localStorage)
        │    └─ WorkoutUploader: POST /workouts through useApi
        └─ useSyncTriggers: sync() on foreground and on reconnect (expo-network)
-History (history-provider.tsx, hooks/use-history.ts): GET /workouts, held in memory only, Pending Workouts on top
+History (history-provider.tsx, hooks/use-history.ts): GET /workouts, held in memory only, paged back far enough to
+  cover the 8 weeks of weekly Volume; Pending Workouts merged in
+Training summaries (packages/engines/src/training-summaries.ts): Volume, Sets, weeks and weekly Volume, pure functions
 API (apps/api/src/workouts.ts, routes/workouts.ts): idempotent POST, paged GET (before + beforeId), DELETE
 Schemas shared by app and API: packages/shared/src/workouts.ts
 ```

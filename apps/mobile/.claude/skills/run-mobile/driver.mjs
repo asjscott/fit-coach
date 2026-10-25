@@ -145,11 +145,16 @@ if (cmd === "tour") {
       await page.getByText("Goblet squat", { exact: true }).first().click();
       await snap("exercise-detail");
       await go("/history");
-      // Each History row shows its duration; clicking it presses the row
-      const firstWorkout = page.getByText(/^\d+ min$/).first();
+      // Each History row ends "3 sets · 45 min"; clicking it presses the row. The detail's ⋯ menu holds
+      // Delete workout: the tour opens it and closes it again, never deleting
+      const firstWorkout = page.getByText(/^\d+ sets? · /).first();
       if (await firstWorkout.count()) {
         await firstWorkout.click();
         await snap("history-detail");
+        await snap("history-detail", { tall: true });
+        await button("Workout actions").click();
+        await snap("history-detail-menu");
+        await page.getByLabel("Close", { exact: true }).click();
       }
 
       // The Workout lives in this throwaway context's storage and is never saved, so nothing reaches the account

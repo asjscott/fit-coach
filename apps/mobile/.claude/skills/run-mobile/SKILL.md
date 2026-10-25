@@ -28,7 +28,7 @@ node .claude/skills/run-mobile/driver.mjs shot /history --dark
 node .claude/skills/run-mobile/driver.mjs shot /exercises --tall
 ```
 
-- `tour` presses each tab in turn (Today, History, Exercises, Profile), then opens onboarding and the styleguide (`/profile/styleguide`), each at fold height and `-full`, then exercise detail and history detail. Then it starts a Workout from Today, opens the picker, logs 2 Goblet squat Sets and a 45 s Plank, stops on Finish **without saving**, and closes the Workout back to Today (`today-resume`). Last, `today-wide` and `profile-wide` show the desktop layout: the centred column and the side rail.
+- `tour` presses each tab in turn (Today, History, Exercises, Profile), then opens onboarding and the styleguide (`/profile/styleguide`), each at fold height and `-full`, then exercise detail and history detail (with its ⋯ menu open, never deleting). Then it starts a Workout from Today, opens the picker, logs 2 Goblet squat Sets and a 45 s Plank, stops on Finish **without saving**, and closes the Workout back to Today (`today-resume`). Last, `today-wide` and `profile-wide` show the desktop layout: the centred column and the side rail.
 - `shot <route>` captures one route. `--tall` renders the whole scroll height; `--wide` uses a 1280×860 desktop window. Query values join the filename: `shot "/history?variant=a"` lands as `history-a-<scheme>.png`.
 - Each screenshot path is printed with the pathname it actually landed on. A `/sign-in` or `/` where you expected something else means a redirect.
 - A failing tour step prints `FAILED at <url>`, saves `_failure-<scheme>.png` and exits 1.
@@ -52,7 +52,7 @@ It waits up to 10 minutes for the redirect back to the app, then saves `.expo/ru
 
 - **The web app must be served from `http://localhost:8081`.** The API's CORS allowlist defaults to that one origin (`CORS_ORIGINS` in `apps/api/.env`). On another port, Clerk still signs you in, but every API call fails and the app shows "Couldn't load your account / Failed to fetch". `BASE_URL` overrides the driver's target only if you've also added that origin to `CORS_ORIGINS`.
 - **`fullPage: true` screenshots stop at the fold.** React Native Web scrolls an inner view, not the document, so the driver uses a 2400px-tall viewport instead. In those `-full` shots, buttons pinned to the bottom sit far below the content with a big gap; a real phone doesn't do that.
-- **Rows aren't links.** Exercise and History rows are `Pressable`s that call `router.push`, so there's no `<a href>` to follow. Click the row's text, as `tour` does: the Exercise name, or the History row's `N min` duration.
+- **Rows aren't links.** Exercise and History rows are `Pressable`s that call `router.push`, so there's no `<a href>` to follow. Click the row's text, as `tour` does: the Exercise name, or the History row's `N sets · M min` line.
 - **`LoadingButton` is a link when it has `href`** (Add exercise, Finish, History…) and a button otherwise (Log set, Start workout). `button()` in the driver matches either role.
 - **The Logbook lives in the browser context's storage**, and each run uses a fresh context, so a Workout started by the driver never touches the user's real browser. It doesn't reach the API either until Save workout, which `tour` never presses.
 - **Tabs are `role="tab"` links** in the bottom bar, or in the side rail above 900px wide. `tab()` in the driver matches either. Today stays at `/`, and the other tabs keep their old URLs (`/history`, `/exercises`, `/profile`).
