@@ -21,6 +21,10 @@ describe("chooseTests", () => {
     });
   });
 
+  it("gives a full home gym the pull-up for pull", () => {
+    expect(chooseTests(preset("Full home gym"), []).pull?.slug).toBe("pull-up");
+  });
+
   it("gives dumbbells only the dumbbell lifts", () => {
     expect(slugsOf(chooseTests({ tags: ["dumbbells"] }, []))).toMatchObject({
       squat: "goblet-squat",
@@ -28,6 +32,21 @@ describe("chooseTests", () => {
       push: "dumbbell-floor-press",
       pull: "one-arm-dumbbell-row",
     });
+  });
+
+  it("gives bodyweight only a bodyweight test for every Pattern", () => {
+    expect(slugsOf(chooseTests({ tags: [] }, []))).toEqual({
+      squat: "bodyweight-squat",
+      hinge: "single-leg-glute-bridge",
+      push: "push-up",
+      pull: "inverted-row",
+      core: "plank",
+    });
+  });
+
+  it("gives everyone the plank for core", () => {
+    const profiles: { tags: EquipmentTag[] }[] = [...PRESETS, { tags: [] }, { tags: EQUIPMENT_EVERYTHING }];
+    expect(profiles.map((profile) => chooseTests(profile, []).core?.slug)).toEqual(profiles.map(() => "plank"));
   });
 
   it("presses on a bench when there is one", () => {
@@ -42,11 +61,18 @@ describe("chooseTests", () => {
   });
 
   it("skips tests flagged against the user's injuries", () => {
-    // Back squat and every hinge on the list are flagged for a lower back injury
-    expect(slugsOf(chooseTests(preset("Full home gym"), ["lower_back"]))).toMatchObject({
+    // Back squat and every weighted hinge on the list are flagged for a lower back injury, and pull-up for a
+    // shoulder one
+    expect(slugsOf(chooseTests(preset("Full home gym"), ["lower_back", "shoulder"]))).toMatchObject({
       squat: "goblet-squat",
-      hinge: null,
+      hinge: "single-leg-glute-bridge",
+      pull: "one-arm-dumbbell-row",
     });
+  });
+
+  it("gives a Pattern no test when nothing on its list is safe", () => {
+    // Every push on the list, push-up included, is flagged for a wrist injury
+    expect(chooseTests({ tags: [] }, ["wrist"]).push).toBeNull();
   });
 
   // The one-arm dumbbell row is the spec's deliberate exception: ranked for pull after the two-sided options

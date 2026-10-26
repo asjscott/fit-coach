@@ -30,9 +30,6 @@ const exerciseBySlug = (slug: string) => {
   return exercise;
 };
 
-// Only weighted tests have a protocol so far; bodyweight and timed tests follow (#37)
-const hasProtocol = (exercise: Exercise) => exercise.loadType === "external";
-
 // One test Exercise per tested Pattern from the Equipment Profile: the first on its list that's available and safe,
 // or null when none is
 export function chooseTests(
@@ -43,7 +40,7 @@ export function chooseTests(
     slugs
       .map(exerciseBySlug)
       .find(
-        (exercise) => hasProtocol(exercise) && isAvailable(exercise, equipmentProfile) && isSafeFor(exercise, injuries),
+        (exercise) => isAvailable(exercise, equipmentProfile) && isSafeFor(exercise, injuries),
       ) ?? null;
   return {
     squat: choose(RANKED.squat),
