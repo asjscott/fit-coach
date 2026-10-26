@@ -1,6 +1,7 @@
 import type { FastifyPluginAsyncZod } from "fastify-type-provider-zod";
 import { ErrorResponse, PreviousSets, PreviousSetsQuery, Workout, WorkoutsQuery } from "@fit/shared";
 import { z } from "zod";
+import { assessIfPaired } from "../assessments";
 import { requireAuth, userIdOf } from "../auth";
 import { createWorkout, deleteWorkout, findPreviousSets, findWorkouts, toWorkout } from "../workouts";
 
@@ -24,10 +25,15 @@ export const workoutRoutes: FastifyPluginAsyncZod = async (app) => {
   );
 
   // Idempotent on the phone-generated id: 201 when stored, 200 with the stored Workout
-  // when it was already uploaded, so a retried upload never makes a duplicate
+  // when it was already uploaded, so a retried upload never makes a duplicate. A new Workout that completes a pair of
+  // Assessment Workouts also works out the Assessment; a retry recomputes nothing
   app.post("/workouts", { schema: { body: Workout, response: { 200: Workout, 201: Workout } } }, async (req, reply) => {
-    const { workout, created } = await createWorkout(userIdOf(req)!, req.body);
-    return reply.code(created ? 201 : 200).send(toWorkout(workout));
+    const clerkUserId = userIdOf(req)!;
+    const { workout, created } = await createWorkout(clerkUserId, req.body);
+    const stored = toWorkout(workout);
+    // The Workout is stored either way, so a failure here mustn't fail the upload
+    if (created) await assessIfPaired(clerkUserId, stored).catch((err) => req.log.error(err, "Assessment failed"));
+    return reply.code(created ? 201 : 200).send(stored);
   });
 
   // 204 when deleted; 404 when the Workout isn't this user's or doesn't exist
