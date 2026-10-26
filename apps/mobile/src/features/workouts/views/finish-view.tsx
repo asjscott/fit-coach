@@ -62,7 +62,7 @@ export default function FinishView() {
       setConfirmingDiscard(true);
       return;
     }
-    toastWhenUploaded(showToast, outcome.uploaded);
+    toastWhenUploaded(showToast, outcome.uploaded, workout.assessment);
     leaveWorkout();
   };
 

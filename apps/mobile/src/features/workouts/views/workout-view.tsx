@@ -52,7 +52,12 @@ function InProgress({ workout }: { workout: InProgressWorkout }) {
     <Screen padded={false} edges={["bottom"]}>
       <NavStack.Screen
         options={{
-          headerTitle: () => <WorkoutTitle startedAt={workout.startedAt} />,
+          headerTitle: () => (
+            <WorkoutTitle
+              title={workout.assessment ? `Assessment ${workout.assessment}` : "Workout"}
+              startedAt={workout.startedAt}
+            />
+          ),
           headerRight: () => (
             <OverflowMenu
               label="Workout actions"
@@ -85,17 +90,20 @@ function InProgress({ workout }: { workout: InProgressWorkout }) {
             ),
           )}
         </View>
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel="Add exercise"
-          onPress={() => router.push("/workout/add-exercise")}
-          style={[styles.addRow, { borderColor: colors.line }]}
-        >
-          <Icon name="plus" color="accent" size={22} />
-          <Text color="accent" style={styles.addLabel}>
-            Add exercise
-          </Text>
-        </Pressable>
+        {/* An Assessment Workout's tests are fixed */}
+        {workout.assessment ? null : (
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Add exercise"
+            onPress={() => router.push("/workout/add-exercise")}
+            style={[styles.addRow, { borderColor: colors.line }]}
+          >
+            <Icon name="plus" color="accent" size={22} />
+            <Text color="accent" style={styles.addLabel}>
+              Add exercise
+            </Text>
+          </Pressable>
+        )}
       </KeyboardAwareScrollView>
       <View style={[styles.footer, { borderTopColor: colors.line, backgroundColor: colors.bg }]}>
         <LoadingButton label="Finish" action="secondary" href="/workout/finish" fullWidth />
@@ -120,12 +128,12 @@ function InProgress({ workout }: { workout: InProgressWorkout }) {
   );
 }
 
-// "Workout" over its start time, in the header
-function WorkoutTitle({ startedAt }: { startedAt: string }) {
+// "Workout" (or "Assessment A") over its start time, in the header
+function WorkoutTitle({ title, startedAt }: { title: string; startedAt: string }) {
   return (
     <View style={styles.title}>
       <Text accessibilityRole="header" style={styles.titleText}>
-        Workout
+        {title}
       </Text>
       <Text size="xs" color="muted">
         Started {timeLabel(startedAt)}

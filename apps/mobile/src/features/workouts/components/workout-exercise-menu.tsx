@@ -14,8 +14,14 @@ export type WorkoutExerciseMenuProps = {
   count: number;
 };
 
-// A Workout Exercise's ⋯ menu: move it up or down, or remove it (confirming first when it has Sets)
-export function WorkoutExerciseMenu({ workoutExercise, position, count }: WorkoutExerciseMenuProps) {
+// A Workout Exercise's ⋯ menu: move it up or down, or remove it (confirming first when it has Sets). None in an
+// Assessment Workout, whose Exercises can't be changed
+export function WorkoutExerciseMenu(props: WorkoutExerciseMenuProps) {
+  const { workout } = useLogbook();
+  return workout?.assessment ? null : <Menu {...props} />;
+}
+
+function Menu({ workoutExercise, position, count }: WorkoutExerciseMenuProps) {
   const { moveWorkoutExercise, removeWorkoutExercise } = useLogbook();
   const { showToast } = useToast();
   const [confirmingRemove, setConfirmingRemove] = useState(false);
