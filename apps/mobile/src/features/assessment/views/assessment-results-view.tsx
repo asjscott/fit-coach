@@ -10,7 +10,9 @@ import { spacing, useTheme } from "@/theme";
 import { useCurrentUser } from "@/features/user/current-user-provider";
 import { describeSet } from "@/features/workouts/format";
 import { exerciseName } from "@/features/workouts/library";
+import { useLogbook } from "@/features/workouts/logbook-provider";
 import { useLatestAssessment } from "../hooks/use-latest-assessment";
+import { useStartAssessment } from "../hooks/use-start-assessment";
 import { workingLevelSections, type WorkingLevelRow } from "../working-level-sections";
 
 // In the order the tests were done: A's, then B's
@@ -18,12 +20,24 @@ const PATTERN_ORDER = [...ASSESSMENT_PATTERNS.A, ...ASSESSMENT_PATTERNS.B];
 
 const maximumLabel = (kg: number) => `${kg.toLocaleString(undefined, { maximumFractionDigits: 1 })} kg`;
 
-// The latest Assessment: each test's Exercise, top Set and estimated maximum, then the starting Working Levels by
-// Pattern for what the primary Equipment Profile supports, rounded to its loads.
-// Still to come: load-limited and estimated Patterns (#38), and "Results once synced" while B is Pending (#39)
+// The latest Assessment: each test's Exercise, top Set and estimated maximum, the starting Working Levels by Pattern
+// for what the primary Equipment Profile supports (rounded to its loads), and Retake. "Results once synced" while a
+// B is Pending, since the server works out the Assessment once it has both.
+// Still to come: load-limited and estimated Patterns (#38)
 export default function AssessmentResultsView() {
   const { latest, error, refresh } = useLatestAssessment();
+  const { pending, workout } = useLogbook();
+  const { start, starting } = useStartAssessment();
   const primary = useCurrentUser().user?.equipmentProfiles.find((profile) => profile.isPrimary);
+
+  if (pending.some((pendingWorkout) => pendingWorkout.assessment === "B")) {
+    return (
+      <Screen edges={["bottom"]}>
+        <Text weight="semiBold">Results once synced</Text>
+        <Text color="muted">Assessment B is saved on your phone and uploads when you have signal.</Text>
+      </Screen>
+    );
+  }
 
   if (latest === undefined && !error) return <Loading message="Loading results..." />;
   if (latest === undefined) {
@@ -66,6 +80,21 @@ export default function AssessmentResultsView() {
           ))}
         </>
       ) : null}
+      {workout ? null : (
+        <View style={styles.retake}>
+          <Text size="sm" color="muted">
+            Retake after a break or a big change. A new Assessment replaces these Working Levels.
+          </Text>
+          <LoadingButton
+            label="Retake: start Assessment A"
+            action="secondary"
+            variant="outline"
+            fullWidth
+            loading={starting === "A"}
+            onPress={() => start("A")}
+          />
+        </View>
+      )}
     </Screen>
   );
 }
@@ -125,4 +154,5 @@ const styles = StyleSheet.create({
     borderTopWidth: StyleSheet.hairlineWidth,
   },
   retry: { marginTop: spacing[4] },
+  retake: { marginTop: spacing[6], gap: spacing[2] },
 });

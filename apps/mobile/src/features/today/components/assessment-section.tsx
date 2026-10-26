@@ -1,12 +1,12 @@
 import type { AssessmentPart } from "@fit/shared";
 import { router } from "expo-router";
-import { useState } from "react";
-import { View } from "react-native";
+import { StyleSheet, View } from "react-native";
+import { Icon } from "@/components/icons";
 import { LoadingButton } from "@/components/loading-button";
+import { Pressable } from "@/components/pressable";
 import { SectionLabel } from "@/components/section-label";
 import { Text } from "@/components/text";
-import { useToast } from "@/contexts/toast-context";
-import { useCurrentUser } from "@/features/user/current-user-provider";
+import { useStartAssessment } from "@/features/assessment/hooks/use-start-assessment";
 import { useLogbook } from "@/features/workouts/logbook-provider";
 import { spacing } from "@/theme";
 import type { AssessmentOffer } from "../today-status";
@@ -16,60 +16,69 @@ const WHAT_IT_TESTS: Record<AssessmentPart, string> = {
   B: "Tests your push and pull, and finishes your Assessment.",
 };
 
-// Today's Assessment offer: start A or B, or open the Results. Starting needs no Workout in progress
-export function AssessmentSection({ offer }: { offer: Exclude<AssessmentOffer, null> }) {
-  const { workout, startAssessment } = useLogbook();
-  const { user } = useCurrentUser();
-  const { showToast } = useToast();
-  const [starting, setStarting] = useState(false);
+// Today's Assessment offer: start A or B (and redo a stale A), "Results once synced", or open the Results. Every
+// offer can be dismissed. Starting needs no Workout in progress
+export function AssessmentSection({ offer, onDismiss }: { offer: AssessmentOffer; onDismiss: () => void }) {
+  const { workout } = useLogbook();
+  const { start, starting } = useStartAssessment();
 
-  if (offer.kind === "results") {
-    return (
+  const startButton = (part: AssessmentPart, label: string, variant: "solid" | "outline" = "solid") =>
+    workout ? null : (
       <LoadingButton
-        label="Assessment results"
-        icon="chevronRight"
+        label={label}
         action="secondary"
-        variant="outline"
+        variant={variant}
         fullWidth
-        onPress={() => router.push("/assessment-results")}
+        loading={starting === part}
+        disabled={starting !== null}
+        onPress={() => start(part)}
       />
     );
-  }
-
-  const { part } = offer;
-  const start = async () => {
-    const equipmentProfile = user?.equipmentProfiles.find((p) => p.isPrimary);
-    const { injuries = [], weightKg, gender } = user?.profile ?? {};
-    if (!equipmentProfile || weightKg === undefined || !gender) {
-      showToast("Finish your profile and equipment first", { type: "warning" });
-      return;
-    }
-    setStarting(true);
-    try {
-      await startAssessment({ part, equipmentProfile, injuries, weightKg, gender });
-      router.push("/workout");
-    } catch (err) {
-      showToast(`Couldn't start Assessment ${part}`, { error: err });
-    } finally {
-      setStarting(false);
-    }
-  };
 
   return (
     <View style={{ gap: spacing[2] }}>
-      <SectionLabel>{`Assessment ${part}`}</SectionLabel>
-      <Text size="sm" color="muted">
-        {WHAT_IT_TESTS[part]}
-      </Text>
-      {workout ? null : (
+      <View style={styles.header}>
+        <SectionLabel style={styles.label}>
+          {offer.kind === "start" ? `Assessment ${offer.part}` : "Assessment"}
+        </SectionLabel>
+        <Pressable onPress={onDismiss} accessibilityRole="button" accessibilityLabel="Dismiss" hitSlop={12}>
+          <Icon name="x" size={18} />
+        </Pressable>
+      </View>
+      {offer.kind === "results" ? (
         <LoadingButton
-          label={`Start Assessment ${part}`}
+          label="Assessment results"
+          icon="chevronRight"
           action="secondary"
+          variant="outline"
           fullWidth
-          loading={starting}
-          onPress={start}
+          onPress={() => router.push("/assessment-results")}
         />
+      ) : offer.kind === "syncing" ? (
+        <Text size="sm" color="muted">
+          Results once synced. Assessment B is saved on your phone and uploads when you have signal.
+        </Text>
+      ) : (
+        <>
+          <Text size="sm" color="muted">
+            {WHAT_IT_TESTS[offer.part]}
+          </Text>
+          {startButton(offer.part, `Start Assessment ${offer.part}`)}
+          {offer.part === "B" && offer.redoA ? (
+            <>
+              <Text size="sm" color="muted">
+                Your Assessment A was over 2 weeks ago. Redo it if your strength may have changed.
+              </Text>
+              {startButton("A", "Redo Assessment A", "outline")}
+            </>
+          ) : null}
+        </>
       )}
     </View>
   );
 }
+
+const styles = StyleSheet.create({
+  header: { flexDirection: "row", alignItems: "center", gap: spacing[2] },
+  label: { flex: 1 },
+});

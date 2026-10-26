@@ -7,3 +7,4 @@ export * from "./equipment";
 export * from "./logbook";
 export * from "./picker";
 export * from "./training-summaries";
+export * from "./assessment-pairing";

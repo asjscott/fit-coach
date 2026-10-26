@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { assess } from "@fit/engines";
+import { assess, pairToAssess } from "@fit/engines";
 import { Assessment, LatestAssessment, WorkingLevel, type Workout } from "@fit/shared";
 import { db } from "./db";
 import { findUser } from "./users";
@@ -19,31 +19,31 @@ export async function ensureAssessmentIndexes() {
   await workingLevels.createIndex({ clerkUserId: 1, slug: 1 }, { unique: true });
 }
 
-// The A paired with a B: the user's latest A that started before it
-const latestABefore = (clerkUserId: string, startedAt: Date) =>
-  workouts.findOne({ clerkUserId, assessment: "A", startedAt: { $lt: startedAt } }, { sort: { startedAt: -1 } });
-
-// The B an A pairs with when they synced out of order: the first B after it, if this A is still the latest before
-// that B
-async function bAfter(clerkUserId: string, a: Pick<Workout, "id" | "startedAt">) {
-  const b = await workouts.findOne(
-    { clerkUserId, assessment: "B", startedAt: { $gt: new Date(a.startedAt) } },
-    { sort: { startedAt: 1 } },
-  );
-  return b && (await latestABefore(clerkUserId, b.startedAt))?.id === a.id ? b : null;
-}
-
-// Called for a newly stored Workout: when it completes a pair of Assessment Workouts, works out the Assessment with
-// `assess` and stores it and its Working Levels. A Workout that isn't part of a pair does nothing
+// Called for a newly stored Workout: when it completes a new pair of Assessment Workouts (`pairToAssess`), works out
+// the Assessment with `assess` and stores it and its Working Levels. Anything else does nothing
 export async function assessIfPaired(clerkUserId: string, workout: Workout) {
-  if (!workout.assessment) return;
-  const pairedDoc =
-    workout.assessment === "B"
-      ? await latestABefore(clerkUserId, new Date(workout.startedAt))
-      : await bAfter(clerkUserId, workout);
+  const { assessment: part } = workout;
+  if (!part) return;
+  const [assessmentWorkouts, assessed] = await Promise.all([
+    workouts
+      .find({ clerkUserId, assessment: { $in: ["A", "B"] } }, { projection: { id: 1, startedAt: 1, assessment: 1 } })
+      .toArray(),
+    assessments.find({ clerkUserId }, { projection: { aWorkoutId: 1, bWorkoutId: 1 } }).toArray(),
+  ]);
+  const pair = pairToAssess(
+    { id: workout.id, startedAt: workout.startedAt, assessment: part },
+    {
+      workouts: assessmentWorkouts.flatMap(({ id, startedAt, assessment }) =>
+        assessment ? [{ id, startedAt: startedAt.toISOString(), assessment }] : [],
+      ),
+      assessments: assessed,
+    },
+  );
+  if (!pair) return;
+  const pairedDoc = await workouts.findOne({ clerkUserId, id: part === "B" ? pair.aWorkoutId : pair.bWorkoutId });
   if (!pairedDoc) return;
   const paired = toWorkout(pairedDoc);
-  const [a, b] = workout.assessment === "B" ? [paired, workout] : [workout, paired];
+  const [a, b] = part === "B" ? [paired, workout] : [workout, paired];
   const user = await findUser(clerkUserId);
   const weightKg = user?.profile.weightKg;
   if (!user || weightKg === undefined) throw new Error("Can't assess without the user's weight");
@@ -52,6 +52,7 @@ export async function assessIfPaired(clerkUserId: string, workout: Workout) {
   const result = assess(a, b, { weightKg }, user.equipmentProfiles);
   const id = randomUUID();
   await assessments.insertOne({ ...result.assessment, id, clerkUserId, createdAt: new Date() });
+  // A retake replaces every Working Level, even one for an Exercise the new Assessment leaves out
   await workingLevels.deleteMany({ clerkUserId });
   if (result.workingLevels.length) {
     await workingLevels.insertMany(result.workingLevels.map((level) => ({ ...level, clerkUserId, assessmentId: id })));
