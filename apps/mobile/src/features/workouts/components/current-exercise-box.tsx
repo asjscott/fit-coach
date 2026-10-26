@@ -31,7 +31,9 @@ export type CurrentExerciseBoxProps = {
 export function CurrentExerciseBox({ workoutExercise, position, count }: CurrentExerciseBoxProps) {
   const { colors } = useTheme();
   const { workout, logSet, editSet, deleteSet, nextSetDraft, protocolState } = useLogbook();
-  const primaryEquipment = useCurrentUser().user?.equipmentProfiles.find((p) => p.isPrimary);
+  const { user } = useCurrentUser();
+  const primaryEquipment = user?.equipmentProfiles.find((p) => p.isPrimary);
+  const { weightKg, gender } = user?.profile ?? {};
   const { showToast } = useToast();
   // The Set being corrected, or null while logging a new one
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
@@ -39,9 +41,12 @@ export function CurrentExerciseBox({ workoutExercise, position, count }: Current
   const unilateral = libraryExercise(slug)?.unilateral ?? false;
   const editingSet = editingIndex === null ? undefined : sets[editingIndex];
   const nextNumber = sets.length + 1;
-  // In an Assessment Workout every Exercise is a test: Sets of 5, each rated, at the suggested load
+  // In an Assessment Workout every Exercise is a test: Sets of 5, each rated, at the suggested load. The first load
+  // is worked out from body weight and gender
   const protocol =
-    workout?.assessment && primaryEquipment ? protocolState(workoutExercise, primaryEquipment) : undefined;
+    workout?.assessment && primaryEquipment && weightKg !== undefined && gender
+      ? protocolState(workoutExercise, primaryEquipment, { weightKg, gender })
+      : undefined;
   const isTest = !!workout?.assessment;
   const nextDraft: SetValues | null =
     protocol?.status === "working-up" && protocol.suggestedKg !== null
@@ -151,6 +156,9 @@ export function CurrentExerciseBox({ workoutExercise, position, count }: Current
 // What the test asks for next: "Sets of 5 …" before the first, then the suggested load, then done
 function protocolLabel(protocol: ProtocolState, setCount: number) {
   if (protocol.status === "done") return "Done: that Set was your top Set. On to the next test.";
+  if (protocol.suggestedKg !== null && setCount === 0) {
+    return `Sets of ${TEST_REPS}, adding weight each Set until one is RPE 9. Start at ${protocol.suggestedKg} kg.`;
+  }
   if (protocol.suggestedKg !== null) return `Next: ${protocol.suggestedKg} kg × ${TEST_REPS}, then rate it`;
   if (setCount === 0) return `Sets of ${TEST_REPS}, adding weight each Set until one is RPE 9. Start light.`;
   return `Add weight for the next Set of ${TEST_REPS}`;

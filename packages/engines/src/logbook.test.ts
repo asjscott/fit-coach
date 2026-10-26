@@ -723,7 +723,7 @@ describe("Logbook: Assessment Workouts", () => {
     const squatId = workoutExercises[0].id;
     const logAndSuggest = async (kg: number, rpe: number) => {
       const squat = await logbook.logSet(squatId, { kind: "external", kg, reps: 5, rpe }, at("09:05"));
-      return logbook.protocolState(squat, dumbbellsOnly);
+      return logbook.protocolState(squat, dumbbellsOnly, user);
     };
 
     // An easy Set jumps further; the suggestion is always a dumbbell the user has
@@ -734,16 +734,54 @@ describe("Logbook: Assessment Workouts", () => {
     expect(await logAndSuggest(16, 9)).toEqual({ status: "done" });
   });
 
-  it("leaves the first load to the user", async () => {
+  it("suggests a conservative first load the dumbbells actually have", async () => {
     const { logbook } = setup();
     const { workoutExercises } = await logbook.startAssessment(
       { part: "A", equipmentProfile: dumbbellsOnly, ...user },
       at("09:00"),
     );
+    const [squat, hinge] = workoutExercises.map((we) => logbook.protocolState(we, dumbbellsOnly, user));
 
-    expect(logbook.protocolState(workoutExercises[0], dumbbellsOnly)).toEqual({
+    // An 80 kg man likely has a goblet squat maximum of about 32 kg and a dumbbell Romanian deadlift of about 30 kg
+    // per dumbbell
+    for (const state of [squat, hinge]) {
+      expect(state.status).toBe("working-up");
+      const kg = state.status === "working-up" ? state.suggestedKg : null;
+      expect([8, 10, 12, 14, 16, 20]).toContain(kg);
+      expect(kg).toBeLessThan(25);
+    }
+  });
+
+  it("suggests a lighter first load for a lighter user", async () => {
+    const { logbook } = setup();
+    const { workoutExercises } = await logbook.startAssessment(
+      { part: "A", equipmentProfile: dumbbellsOnly, ...user },
+      at("09:00"),
+    );
+    const firstLoad = (profile: Pick<UserProfile, "weightKg" | "gender">) => {
+      const state = logbook.protocolState(workoutExercises[0], dumbbellsOnly, profile);
+      return state.status === "working-up" ? state.suggestedKg : null;
+    };
+
+    expect(firstLoad({ weightKg: 55, gender: "female" })).toBeLessThan(firstLoad(user) ?? 0);
+  });
+
+  it("starts a barbell test no lighter than the bar", async () => {
+    const homeGym: EquipmentProfile = {
+      ...dumbbellsOnly,
+      tags: ["barbell", "plates", "power_rack", "flat_bench"],
+      loads: { barbell: { barKg: 20, platesKg: [5, 10, 20] } },
+    };
+    const { logbook } = setup();
+    const { workoutExercises } = await logbook.startAssessment(
+      { part: "B", equipmentProfile: homeGym, ...user },
+      at("09:00"),
+    );
+
+    expect(workoutExercises[0].slug).toBe("barbell-bench-press");
+    expect(logbook.protocolState(workoutExercises[0], homeGym, { weightKg: 45, gender: "female" })).toEqual({
       status: "working-up",
-      suggestedKg: null,
+      suggestedKg: 20,
     });
   });
 
@@ -766,7 +804,7 @@ describe("Logbook: Assessment Workouts", () => {
 
     expect(squat.slug).toBe("back-squat");
     // The smallest pair is 2 x 5 kg, so the next load up is 70
-    expect(logbook.protocolState(squat, homeGym)).toEqual({ status: "working-up", suggestedKg: 70 });
+    expect(logbook.protocolState(squat, homeGym, user)).toEqual({ status: "working-up", suggestedKg: 70 });
   });
 
   it("drafts the next Set without the last Set's RPE, so each Set is rated afresh", async () => {
