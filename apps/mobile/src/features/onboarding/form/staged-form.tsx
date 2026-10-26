@@ -1,6 +1,6 @@
 import { router } from "expo-router";
 import { Children, createContext, isValidElement, use, useEffect, useRef, type ReactNode } from "react";
-import { View, type ScrollView as RNScrollView } from "react-native";
+import { View, type ScrollViewInstance } from "react-native";
 import type { FieldPath, FieldValues } from "react-hook-form";
 import { Button, ButtonBanner, ButtonText, LeftButtons, RightButtons } from "@/components/button";
 import { Heading } from "@/components/heading";
@@ -101,7 +101,7 @@ export function StagedForm<T extends FieldValues>({
   children,
   renderComplete = () => <CompleteStage />,
 }: StagedFormProps<T>) {
-  const scrollRef = useRef<RNScrollView>(null);
+  const scrollRef = useRef<ScrollViewInstance>(null);
   const stages = Children.toArray(children);
   const stageCount = stages.length;
   const showComplete = stage === "complete";
