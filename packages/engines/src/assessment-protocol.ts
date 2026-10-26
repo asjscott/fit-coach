@@ -1,4 +1,4 @@
-import type { EquipmentProfile, InProgressWorkoutExercise, Set, UserProfile } from "@fit/shared";
+import type { BodyProfile, EquipmentProfile, InProgressWorkoutExercise, Set } from "@fit/shared";
 import { EXERCISES } from "./data/exercises";
 import { MAX_E1RM_REPS } from "./e1rm";
 import { availableLoadsKg } from "./equipment";
@@ -35,10 +35,12 @@ const bySlug = new Map(EXERCISES.map((exercise) => [exercise.slug, exercise]));
 // The first Set is at this share of the likely maximum, so it's easy even for a weaker user
 const FIRST_LOAD_SHARE = 0.5;
 
-// The first load: half the likely maximum, down to a load the equipment has (the lightest when all are heavier)
-function firstLoadKg(slug: string, loads: number[], { weightKg, gender }: Pick<UserProfile, "weightKg" | "gender">) {
+// The first load: half the likely maximum, down to a load the equipment has (the lightest when all are heavier). None
+// without the body weight and gender to judge it by
+function firstLoadKg(slug: string, loads: number[], bodyProfile: BodyProfile | undefined) {
   const entry = STRENGTH_RATIOS[slug];
-  if (entry?.kind !== "weighted" || entry.pattern === "core" || !loads.length) return null;
+  if (!bodyProfile || entry?.kind !== "weighted" || entry.pattern === "core" || !loads.length) return null;
+  const { weightKg, gender } = bodyProfile;
   const likelyMaximum = exerciseMaximum(slug, weightKg * TYPICAL_REFERENCE_PER_KG[gender][entry.pattern]);
   return loads.filter((kg) => kg <= likelyMaximum * FIRST_LOAD_SHARE).at(-1) ?? loads[0];
 }
@@ -46,7 +48,7 @@ function firstLoadKg(slug: string, loads: number[], { weightKg, gender }: Pick<U
 export function protocolState(
   { slug, sets }: Pick<InProgressWorkoutExercise, "slug" | "sets">,
   equipmentProfile: Pick<EquipmentProfile, "tags" | "loads">,
-  profile: Pick<UserProfile, "weightKg" | "gender">,
+  bodyProfile: BodyProfile | undefined,
 ): ProtocolState {
   const exercise = bySlug.get(slug);
   if (exercise && exercise.loadType !== "external") return sets.length ? { status: "done" } : { status: "one-set" };
@@ -55,7 +57,7 @@ export function protocolState(
   const last = sets.at(-1);
   if (!exercise) return { status: "working-up", suggestedKg: null };
   const loads = availableLoadsKg(exercise, equipmentProfile);
-  if (!last) return { status: "working-up", suggestedKg: firstLoadKg(slug, loads, profile) };
+  if (!last) return { status: "working-up", suggestedKg: firstLoadKg(slug, loads, bodyProfile) };
   if (last.kind !== "external") return { status: "working-up", suggestedKg: null };
   const target = last.kg * (1 + (JUMP_BY_RPE[last.rpe ?? 8] ?? 0));
   // The first load the equipment allows at or past the target, and always heavier than the last; at the heaviest,

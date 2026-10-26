@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { LoadType } from "./exercises";
+import { BodyProfile } from "./user";
 
 // Each Set records when it was logged; values are per side for a one-sided Exercise
 const loggedAt = z.iso.datetime();
@@ -88,6 +89,8 @@ export const InProgressWorkout = z.object({
   id: z.uuid(),
   startedAt: z.iso.datetime(),
   assessment: AssessmentPart.optional(),
+  // An Assessment Workout's first suggested loads come from the profile it started with, not a later edit
+  bodyProfile: BodyProfile.optional(),
   workoutExercises: z.array(
     z
       .object({ id: z.string(), ...workoutExerciseFields, sets: z.array(Set), previousSets: PreviousSets.optional() })

@@ -33,7 +33,6 @@ export function CurrentExerciseBox({ workoutExercise, position, count }: Current
   const { workout, logSet, editSet, deleteSet, nextSetDraft, protocolState } = useLogbook();
   const { user } = useCurrentUser();
   const primaryEquipment = user?.equipmentProfiles.find((p) => p.isPrimary);
-  const { weightKg, gender } = user?.profile ?? {};
   const { showToast } = useToast();
   // The Set being corrected, or null while logging a new one
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
@@ -42,11 +41,10 @@ export function CurrentExerciseBox({ workoutExercise, position, count }: Current
   const editingSet = editingIndex === null ? undefined : sets[editingIndex];
   const nextNumber = sets.length + 1;
   // In an Assessment Workout every Exercise is a test, each Set rated: a weighted test works up in Sets of 5 at the
-  // suggested load (the first worked out from body weight and gender), and a bodyweight or timed test is one Set
+  // suggested load (the first worked out from the body weight and gender it started with), and a bodyweight or timed
+  // test is one Set
   const protocol =
-    workout?.assessment && primaryEquipment && weightKg !== undefined && gender
-      ? protocolState(workoutExercise, primaryEquipment, { weightKg, gender })
-      : undefined;
+    workout?.assessment && primaryEquipment ? protocolState(workout, workoutExercise, primaryEquipment) : undefined;
   const isTest = !!workout?.assessment;
   const nextDraft: SetValues | null =
     protocol?.status === "working-up" && protocol.suggestedKg !== null

@@ -2,6 +2,7 @@ import {
   InProgressWorkout,
   Workout,
   type AssessmentPart,
+  type BodyProfile,
   type EquipmentProfile,
   type Exercise,
   type InProgressWorkoutExercise,
@@ -203,10 +204,13 @@ export function createLogbook({
         part,
         equipmentProfile,
         injuries,
+        weightKg,
+        gender,
       }: {
         part: AssessmentPart;
         equipmentProfile: Pick<EquipmentProfile, "tags">;
-      } & Pick<UserProfile, "injuries" | "weightKg" | "gender">,
+      } & Pick<UserProfile, "injuries"> &
+        BodyProfile,
       now: Date,
     ) => {
       const tests = chooseTests(equipmentProfile, injuries);
@@ -222,6 +226,7 @@ export function createLogbook({
           id: newId(),
           startedAt: now.toISOString(),
           assessment: part,
+          bodyProfile: { weightKg, gender },
           workoutExercises: exercises.map((exercise, i) => newWorkoutExercise(exercise, fromServer[i], pending)),
         };
         await write(workout);
@@ -293,8 +298,13 @@ export function createLogbook({
       ) as SetValues;
     },
 
-    // For a test Exercise of an Assessment Workout: the suggested next load, or done. The logging screen only renders it
-    protocolState,
+    // For a test Exercise of an Assessment Workout: the suggested next load, or done. The logging screen only renders it.
+    // The first load follows the body weight and gender the Workout started with
+    protocolState: (
+      { bodyProfile }: Pick<InProgressWorkout, "bodyProfile">,
+      workoutExercise: Pick<InProgressWorkoutExercise, "slug" | "sets">,
+      equipmentProfile: Pick<EquipmentProfile, "tags" | "loads">,
+    ) => protocolState(workoutExercise, equipmentProfile, bodyProfile),
 
     // Turns the in-progress Workout into a Pending Workout; sync() uploads it. Workout
     // Exercises with no Sets are dropped; with no Sets at all there is nothing to save,
