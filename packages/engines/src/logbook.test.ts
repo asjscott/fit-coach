@@ -1,4 +1,4 @@
-import type { PreviousSets, Workout } from "@fit/shared";
+import type { EquipmentProfile, PreviousSets, Workout } from "@fit/shared";
 import { describe, expect, it } from "vitest";
 import { EXERCISES } from "./data/exercises";
 import { createLogbook, LogbookError, type DeviceStorage, type PreviousSetsSource } from "./logbook";
@@ -659,6 +659,55 @@ describe("Logbook: Previous Sets", () => {
         loadType: "external",
         sets: [{ kind: "external", kg: 20, reps: 10, loggedAt: "2026-10-24T09:05:00.000Z" }],
       },
+    ]);
+  });
+});
+
+describe("Logbook: Assessment Workouts", () => {
+  // Dumbbells only, a pair of each of these
+  const dumbbellsOnly: EquipmentProfile = {
+    id: "home",
+    name: "Home",
+    location: "home",
+    isPrimary: true,
+    tags: ["dumbbells"],
+    loads: { dumbbells: { kind: "fixed", weightsKg: [8, 10, 12, 14, 16, 20] } },
+  };
+  const user = { injuries: [], weightKg: 80, gender: "male" } as const;
+
+  it("adds the tests for A in order, goblet squat first for dumbbells only", async () => {
+    const { logbook } = setup();
+
+    const workout = await logbook.startAssessment({ part: "A", equipmentProfile: dumbbellsOnly, ...user }, at("09:00"));
+
+    expect(workout.assessment).toBe("A");
+    expect(workout.workoutExercises.map((we) => we.slug)).toEqual(["goblet-squat", "dumbbell-romanian-deadlift"]);
+    expect(await logbook.inProgress()).toEqual(workout);
+  });
+
+  it("refuses to add, remove or reorder its Exercises", async () => {
+    const { logbook } = setup();
+    const workout = await logbook.startAssessment({ part: "A", equipmentProfile: dumbbellsOnly, ...user }, at("09:00"));
+    const [squat] = workout.workoutExercises;
+
+    await expect(logbook.addWorkoutExercise(exercise("plank"))).rejects.toThrow(LogbookError);
+    await expect(logbook.removeWorkoutExercise(squat.id)).rejects.toThrow(LogbookError);
+    await expect(logbook.moveWorkoutExercise(squat.id, 1)).rejects.toThrow(LogbookError);
+    expect(await logbook.inProgress()).toEqual(workout);
+  });
+
+  it("refuses a test Set without an RPE", async () => {
+    const { logbook } = setup();
+    const workout = await logbook.startAssessment({ part: "A", equipmentProfile: dumbbellsOnly, ...user }, at("09:00"));
+    const [squat] = workout.workoutExercises;
+
+    await expect(logbook.logSet(squat.id, { kind: "external", kg: 10, reps: 5 }, at("09:05"))).rejects.toThrow(
+      "Rate how hard the Set felt",
+    );
+    await logbook.logSet(squat.id, { kind: "external", kg: 10, reps: 5, rpe: 7 }, at("09:05"));
+    await expect(logbook.editSet(squat.id, 0, { kind: "external", kg: 10, reps: 5 })).rejects.toThrow(LogbookError);
+    expect((await logbook.inProgress())?.workoutExercises[0].sets).toEqual([
+      { kind: "external", kg: 10, reps: 5, rpe: 7, loggedAt: "2026-10-24T09:05:00.000Z" },
     ]);
   });
 });
