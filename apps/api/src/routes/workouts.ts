@@ -3,6 +3,7 @@ import { ErrorResponse, PreviousSets, PreviousSetsQuery, Workout, WorkoutsQuery 
 import { z } from "zod";
 import { assessIfPaired } from "../assessments";
 import { requireAuth, userIdOf } from "../auth";
+import { findOnboardedUser } from "../users";
 import { createWorkout, deleteWorkout, findPreviousSets, findWorkouts, toWorkout } from "../workouts";
 
 // The signed-in user's finished Workouts. Checks shape only: an Exercise slug the
@@ -26,16 +27,23 @@ export const workoutRoutes: FastifyPluginAsyncZod = async (app) => {
 
   // Idempotent on the phone-generated id: 201 when stored, 200 with the stored Workout
   // when it was already uploaded, so a retried upload never makes a duplicate. A Workout that completes a pair of
-  // Assessment Workouts also works out the Assessment; a retry recomputes nothing for a pair already assessed
-  app.post("/workouts", { schema: { body: Workout, response: { 200: Workout, 201: Workout } } }, async (req, reply) => {
-    const clerkUserId = userIdOf(req)!;
-    const { workout, created } = await createWorkout(clerkUserId, req.body);
-    const stored = toWorkout(workout);
-    // A failure fails the upload, though the Workout is stored: the phone keeps it Pending, and its retry (the 200
-    // case) pairs it again, so the Assessment isn't lost
-    await assessIfPaired(clerkUserId, stored);
-    return reply.code(created ? 201 : 200).send(stored);
-  });
+  // Assessment Workouts also works out the Assessment; a retry recomputes nothing for a pair already assessed. 403
+  // before onboarding, which the app never offers logging before
+  app.post(
+    "/workouts",
+    { schema: { body: Workout, response: { 200: Workout, 201: Workout, 403: ErrorResponse } } },
+    async (req, reply) => {
+      const clerkUserId = userIdOf(req)!;
+      const user = await findOnboardedUser(clerkUserId);
+      if (!user) return reply.code(403).send({ error: "finish onboarding first" });
+      const { workout, created } = await createWorkout(clerkUserId, req.body);
+      const stored = toWorkout(workout);
+      // A failure fails the upload, though the Workout is stored: the phone keeps it Pending, and its retry (the 200
+      // case) pairs it again, so the Assessment isn't lost
+      await assessIfPaired(clerkUserId, stored, user);
+      return reply.code(created ? 201 : 200).send(stored);
+    },
+  );
 
   // 204 when deleted; 404 when the Workout isn't this user's or doesn't exist
   app.delete(

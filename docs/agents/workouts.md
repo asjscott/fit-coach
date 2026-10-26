@@ -72,9 +72,14 @@ Schemas: packages/shared/src/assessments.ts; Set.rpe and Workout.assessment in w
   so any last Set past 12 reps without a top Set is load-limited.
 - **Pairing**: a B pairs with the latest A that started before it, unless that A is already in an Assessment; an A that
   arrives late pairs with the first B it's the latest A for. A pair is assessed once, so a retried upload recomputes
-  nothing; a unique index on `bWorkoutId` keeps two uploads pairing at once to one Assessment.
+  nothing.
+- **Pairing runs in one transaction** (so MongoDB must be a replica set, as Atlas is and `dev:local` makes it): the
+  Assessment and its Working Levels are stored together or not at all. Unique indexes on `aWorkoutId` and
+  `bWorkoutId` make an upload racing another retry the transaction and find the pair taken.
 - **POST /workouts pairs on the 200 retry too, and a pairing failure fails the upload (500)** though the Workout is
   stored: the phone keeps it Pending, and the retry works the Assessment out.
+- **POST /workouts is refused (403) before onboarding**, so pairing always has the weight and gender `assess` needs.
+  The app never offers logging before then: `(app)/_layout.tsx` sends a user who isn't onboarded to onboarding.
 - **"Newest" is by the B's `startedAt` (`Assessment.bStartedAt`), not server time.** Every Assessment is stored, but
   only the newest replaces the Working Levels; `GET /assessments/latest` and Today's retake check use the same order.
 - **The Assessment is a snapshot**: deleting its Workouts from History leaves it and the Results link.
@@ -85,6 +90,6 @@ Schemas: packages/shared/src/assessments.ts; Set.rpe and Workout.assessment in w
 
 ## Running things
 
-- API without the real database or Clerk: `pnpm --filter @fit/api dev:local` (in-memory MongoDB; `X-Dev-User` header
+- API without the real database or Clerk: `pnpm --filter @fit/api dev:local` (in-memory MongoDB replica set; `X-Dev-User` header
   picks the user). `apps/api/.env` points at the real database.
 - Web storage in real browsers: `pnpm --filter @fit/mobile test:web`.
