@@ -4,7 +4,11 @@ import { LoadType } from "./exercises";
 // Each Set records when it was logged; values are per side for a one-sided Exercise
 const loggedAt = z.iso.datetime();
 // How hard the Set felt (GLOSSARY.md): only Assessment Workouts ask for it so far
-const rpe = z.number().int("RPE must be a whole number").min(6, "RPE goes from 6 to 10").max(10, "RPE goes from 6 to 10");
+const rpe = z
+  .number()
+  .int("RPE must be a whole number")
+  .min(6, "RPE goes from 6 to 10")
+  .max(10, "RPE goes from 6 to 10");
 const count = (name: string) =>
   z.number().int(`${name} must be a whole number`).positive(`${name} must be more than 0`);
 

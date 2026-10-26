@@ -1,9 +1,6 @@
-import type { AssessmentPart, EquipmentProfile, Exercise, InjuryTag, Pattern } from "@fit/shared";
+import type { AssessmentPart, EquipmentProfile, Exercise, InjuryTag, TestedPattern } from "@fit/shared";
 import { EXERCISES } from "./data/exercises";
 import { isAvailable, isSafeFor } from "./equipment";
-
-// Carry isn't tested: its Working Levels come from hinge
-export type TestedPattern = Exclude<Pattern, "carry">;
 
 // The Patterns each Assessment Workout tests, in the order its tests are done
 export const ASSESSMENT_PATTERNS: Record<AssessmentPart, TestedPattern[]> = {
@@ -20,6 +17,11 @@ const RANKED: Record<TestedPattern, string[]> = {
   pull: ["pull-up", "one-arm-dumbbell-row", "inverted-row"],
   core: ["plank"],
 };
+
+// The Pattern an Exercise is a test for, or undefined when it's on no Pattern's list
+export function testedPatternOf(slug: string): TestedPattern | undefined {
+  return (Object.keys(RANKED) as TestedPattern[]).find((pattern) => RANKED[pattern].includes(slug));
+}
 
 const bySlug = new Map(EXERCISES.map((exercise) => [exercise.slug, exercise]));
 const exerciseBySlug = (slug: string) => {
