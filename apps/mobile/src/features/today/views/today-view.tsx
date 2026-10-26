@@ -1,4 +1,4 @@
-import { lastWorkout, thisWeek, withPending } from "@fit/engines";
+import { assessmentOffer, lastWorkout, offerKey, thisWeek, withPending } from "@fit/engines";
 import { router } from "expo-router";
 import { useEffect } from "react";
 import { View } from "react-native";
@@ -18,7 +18,7 @@ import { useLogbook } from "@/features/workouts/logbook-provider";
 import { spacing } from "@/theme";
 import { LastWorkoutSection } from "../components/last-workout-section";
 import { ThisWeekSection } from "../components/this-week-section";
-import { assessmentOffer, todayState, todayStatus } from "../today-status";
+import { todayState, todayStatus } from "../today-status";
 import { AssessmentSection } from "../components/assessment-section";
 import { useDismissedOffer } from "../hooks/use-dismissed-offer";
 
@@ -51,16 +51,13 @@ export default function TodayView() {
   const last = lastWorkout(all);
   const state = todayState({ historyLoaded: workouts !== null, failed: !!error, workoutCount: all.length });
   const status = todayStatus({ state, workoutCount: week.workoutCount, target: week.target });
-  // The latest Assessment counts only once History has loaded too, so A isn't offered to someone who has done it.
-  // Until then (offline, or loading) the offer comes from the Pending Workouts alone
-  const historyKnown = state === "loaded" || state === "first-run";
   const offer =
     dismissed === undefined
       ? null
       : assessmentOffer({
           workouts: all,
-          latestAssessment:
-            historyKnown && latestAssessment !== undefined ? (latestAssessment?.assessment ?? null) : undefined,
+          historyLoaded: workouts !== null,
+          latestAssessment: latestAssessment && latestAssessment.assessment,
           now,
           dismissed,
         });
@@ -89,7 +86,7 @@ export default function TodayView() {
       </View>
       {offer ? (
         <View style={{ marginTop: spacing[5] }}>
-          <AssessmentSection offer={offer} onDismiss={() => dismiss(offer.key)} />
+          <AssessmentSection offer={offer} onDismiss={() => dismiss(offerKey(offer))} />
         </View>
       ) : null}
       <Divider spacing={6} />

@@ -1,11 +1,10 @@
-import { BandLevel, EQUIPMENT_LABELS, type EquipmentTag } from "@fit/shared";
+import { BAND_TAGS, BandLevel, EQUIPMENT_LABELS, type EquipmentTag } from "@fit/shared";
 import { useFormContext, useWatch } from "react-hook-form";
 import { Box } from "@/components/box";
 import { RHFChipSelect, RHFMultiSelect, RHFTextField, type Option } from "@/components/hook-form";
 import { HStack, Stack } from "@/components/stack";
 import {
   bandLevelLabels,
-  bandTags,
   barWeightsKg,
   dumbbellWeightsKg,
   kettlebellWeightsKg,
@@ -81,7 +80,7 @@ export function EquipmentLoadsField({ tags }: { tags: EquipmentTag[] }) {
         </Stack>
       )}
 
-      {bandTags.filter(has).map((tag) => (
+      {BAND_TAGS.filter(has).map((tag) => (
         <RHFChipSelect
           key={tag}
           name={`loads.${tag}.levels`}

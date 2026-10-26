@@ -25,10 +25,8 @@ export const workoutRoutes: FastifyPluginAsyncZod = async (app) => {
     async (req) => findPreviousSets(userIdOf(req)!, req.query.slug),
   );
 
-  // Idempotent on the phone-generated id: 201 when stored, 200 with the stored Workout
-  // when it was already uploaded, so a retried upload never makes a duplicate. A Workout that completes a pair of
-  // Assessment Workouts also works out the Assessment; a retry recomputes nothing for a pair already assessed. 403
-  // before onboarding, which the app never offers logging before
+  // Idempotent on the phone-generated id: 201 when stored, 200 with the stored Workout when it was already uploaded.
+  // Also works out any Assessment it completes. 403 before onboarding, which the app never offers logging before
   app.post(
     "/workouts",
     { schema: { body: Workout, response: { 200: Workout, 201: Workout, 403: ErrorResponse } } },

@@ -1,10 +1,9 @@
-import { BandLevel, type EquipmentProfile, type EquipmentTag } from "@fit/shared";
+import { BAND_TAGS, BandLevel, type EquipmentProfile, type EquipmentTag } from "@fit/shared";
 import { z } from "zod";
 
 // The equipment the weights stage asks about
-export const loadTags = ["dumbbells", "kettlebells", "barbell", "loop_bands", "mini_bands", "tube_bands"] as const;
+export const loadTags = ["dumbbells", "kettlebells", "barbell", ...BAND_TAGS] as const;
 export type LoadTag = (typeof loadTags)[number];
-export const bandTags = ["loop_bands", "mini_bands", "tube_bands"] as const satisfies LoadTag[];
 
 export const bandLevelLabels: Record<BandLevel, string> = {
   light: "Light",
@@ -91,7 +90,7 @@ export function toLoads(form: LoadsForm, tags: EquipmentTag[]): EquipmentProfile
   if (has("barbell") && barbell?.barKg) {
     loads.barbell = { barKg: Number(barbell.barKg), platesKg: has("plates") ? toNumbers(barbell.platesKg) : [] };
   }
-  for (const tag of bandTags) {
+  for (const tag of BAND_TAGS) {
     const levels = form[tag]?.levels;
     if (has(tag) && levels?.length) loads[tag] = { levels };
   }

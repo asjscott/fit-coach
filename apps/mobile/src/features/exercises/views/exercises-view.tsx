@@ -7,7 +7,7 @@ import { SectionLabel } from "@/components/section-label";
 import { HStack, Stack } from "@/components/stack";
 import { Switch } from "@/components/switch";
 import { Text } from "@/components/text";
-import { useCurrentUser } from "@/features/user/current-user-provider";
+import { usePrimaryEquipmentProfile } from "@/features/user/current-user-provider";
 import { spacing, useTheme } from "@/theme";
 import { ExerciseRow } from "../components/exercise-row";
 import { useExercises } from "../hooks/use-exercises";
@@ -15,13 +15,12 @@ import { librarySections } from "../library-sections";
 import { neededEquipment } from "../needed-equipment";
 
 export default function ExercisesView() {
-  const { user } = useCurrentUser();
   const { exercises, error, isLoading } = useExercises();
   const { colors } = useTheme();
   const [showAll, setShowAll] = useState(false);
 
   // No primary profile counts as no equipment
-  const tags = user?.equipmentProfiles.find((p) => p.isPrimary)?.tags ?? [];
+  const tags = usePrimaryEquipmentProfile()?.tags ?? [];
   const { sections, availableCount, total } = librarySections(exercises ?? [], { tags, showAll });
 
   if (isLoading) return <Loading message="Loading Exercises…" />;

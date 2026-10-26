@@ -7,7 +7,6 @@ import { findLatestAssessment } from "../assessments";
 export const assessmentRoutes: FastifyPluginAsyncZod = async (app) => {
   app.addHook("preHandler", requireAuth);
 
-  // The newest Assessment with its Working Levels, or null before the first
   app.get("/assessments/latest", { schema: { response: { 200: LatestAssessment } } }, async (req) =>
     findLatestAssessment(userIdOf(req)!),
   );

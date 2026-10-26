@@ -37,29 +37,33 @@ Schemas shared by app and API: packages/shared/src/workouts.ts
 - **Exercises come from the library built into the app** (`EXERCISES` in `@fit/engines`), not `/exercises`, so the picker
   works offline; an unknown slug is shown as-is (`exerciseName`).
 - **New native modules need a new development build** (`expo-sqlite`, `expo-network` so far). Add dependencies with
-  `npx expo install` and check the SDK 57 docs first (`apps/mobile/AGENTS.md`).
+  `npx expo install` and check the SDK 58 docs first (`apps/mobile/AGENTS.md`).
 
 ## Assessment (spec #29)
 
 Two Assessment Workouts (A: squat, hinge, core; B: push, pull) give the Assessment and the first Working Levels.
 
 ```text
-Today offer (apps/mobile/src/features/today/today-status.ts assessmentOffer, components/assessment-section.tsx):
-  start A / start B (+ Redo A) / "Results once synced" / Results link, each dismissable (hooks/use-dismissed-offer.ts)
+Today offer (packages/engines/src/assessment-offer.ts assessmentOffer, rendered by
+  apps/mobile/src/features/today/components/assessment-section.tsx): start A / start B (+ Redo A) /
+  "Results once synced" / Results link, each dismissable (hooks/use-dismissed-offer.ts, keyed by offerKey)
+Retake: Profile (features/user/views/profile-view.tsx) starts A
 Starting (features/assessment/hooks/use-start-assessment.ts → Logbook.startAssessment in packages/engines/src/logbook.ts)
   └─ chooseTests (packages/engines/src/assessment-tests.ts): ranked list per Pattern, first available and safe;
      ASSESSMENT_PATTERNS, testedPatternOf, referencePatternOf (carry follows hinge)
-Logging (features/workouts/components/current-exercise-box.tsx renders Logbook.protocolState)
+Logging (features/workouts/components/current-exercise-box.tsx renders Logbook.protocolState and Logbook.nextSetDraft)
   └─ protocolState (packages/engines/src/assessment-protocol.ts): first load, next load, at-heaviest, one-set, done,
-     load-limited
+     load-limited; isRatedTest says which test Sets take an RPE (weighted only)
 Server (apps/api/src/assessments.ts assessIfPaired, called by POST /workouts in routes/workouts.ts)
-  ├─ pairToAssess (packages/engines/src/assessment-pairing.ts): which A and B make the Assessment
+  ├─ pairToAssess (packages/engines/src/assessment-pairing.ts): which A and B make the Assessment; Today's offer shares
+  │  its latestAssessmentWorkout
   └─ assess (packages/engines/src/assess.ts): top Sets, maximums, Reference Strengths, estimates
        ├─ ratio table: packages/engines/src/strength-ratios.ts (one entry per library Exercise)
        ├─ Working Levels: packages/engines/src/working-levels.ts seedWorkingLevels
        └─ Epley both ways: packages/engines/src/e1rm.ts
 GET /assessments/latest (routes/assessments.ts) → features/assessment/hooks/use-latest-assessment.ts
-Results: features/assessment/views/assessment-results-view.tsx, working-level-sections.ts (route assessment-results)
+Results: features/assessment/views/assessment-results-view.tsx (route assessment-results), grouped by
+  packages/engines/src/working-level-sections.ts
 Schemas: packages/shared/src/assessments.ts; Set.rpe and Workout.assessment in workouts.ts
 ```
 
@@ -67,6 +71,8 @@ Schemas: packages/shared/src/assessments.ts; Set.rpe and Workout.assessment in w
 
 - **The In-progress Workout keeps the `bodyProfile` (weight, gender) it started with**, and `protocolState`'s first
   load reads it from there, not from the current profile.
+- **Only weighted tests are rated.** A bodyweight or timed test is one unrated Set to the most reps or seconds the user
+  can do, and that Set is its maximum; the Logbook refuses an unrated weighted test Set.
 - **Load-limited means different things in the two places.** The Logbook ends a test only when a Set past 12 reps
   short of RPE 9 was at the heaviest load the Equipment Profile has (or the loads aren't known); `assess` has no loads,
   so any last Set past 12 reps without a top Set is load-limited.

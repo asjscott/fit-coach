@@ -26,10 +26,8 @@ export async function ensureAssessmentIndexes() {
   await workingLevels.createIndex({ clerkUserId: 1, slug: 1 }, { unique: true });
 }
 
-// Called for every uploaded Workout, retries included: when it completes a new pair of Assessment Workouts
-// (`pairToAssess`), works out the Assessment with `assess` and stores it and its Working Levels. Anything else does
-// nothing. One transaction, so an upload racing this one waits, then finds the pair taken (the unique indexes make
-// it retry), and a failure stores nothing for the retry to trip over
+// For every uploaded Workout, retries included: stores the Assessment and Working Levels of a pair it completes. One
+// transaction, so a racing upload retries and finds the pair taken, and a failure stores nothing
 export async function assessIfPaired(clerkUserId: string, workout: Workout, user: OnboardedUser) {
   const { assessment: part } = workout;
   if (!part) return;
@@ -63,8 +61,6 @@ export async function assessIfPaired(clerkUserId: string, workout: Workout, user
       const paired = toWorkout(pairedDoc);
       const [a, b] = part === "B" ? [paired, workout] : [workout, paired];
 
-      // Working Levels for every Exercise available in any of the user's Equipment Profiles. Gender sets the typical
-      // balance between Patterns that an untested one is estimated from
       const result = assess(a, b, user.bodyProfile, user.equipmentProfiles);
       const id = randomUUID();
       const bStartedAt = new Date(result.assessment.bStartedAt);

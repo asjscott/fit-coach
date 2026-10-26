@@ -1,5 +1,5 @@
-import { ASSESSMENT_PATTERNS, repMaximum } from "@fit/engines";
-import type { AssessmentTest, TestedPattern } from "@fit/shared";
+import { ASSESSMENT_PATTERNS, pendingB, withPending, workingLevelSections } from "@fit/engines";
+import type { AssessmentTest, TestedPattern, WorkingLevel } from "@fit/shared";
 import { StyleSheet, View } from "react-native";
 import { LoadingButton } from "@/components/loading-button";
 import { Loading } from "@/components/loading";
@@ -8,21 +8,21 @@ import { SectionLabel } from "@/components/section-label";
 import { Text } from "@/components/text";
 import { spacing, useTheme } from "@/theme";
 import { patternLabels } from "@/features/exercises/labels";
-import { useCurrentUser } from "@/features/user/current-user-provider";
+import { usePrimaryEquipmentProfile } from "@/features/user/current-user-provider";
 import { describeSet } from "@/features/workouts/format";
 import { exerciseName } from "@/features/workouts/library";
 import { useLogbook } from "@/features/workouts/logbook-provider";
+import { SyncingNote } from "../components/syncing-note";
 import { useLatestAssessment } from "../hooks/use-latest-assessment";
-import { useStartAssessment } from "../hooks/use-start-assessment";
-import { workingLevelSections, type WorkingLevelRow } from "../working-level-sections";
+import { workingLevelLabel } from "../working-level-label";
 
 // In the order the tests were done: A's, then B's
 const PATTERN_ORDER = [...ASSESSMENT_PATTERNS.A, ...ASSESSMENT_PATTERNS.B];
 
 const ESTIMATED = "Estimated from your other results";
 
-// "16.8 kg" Estimated maximum. A bodyweight test shows its rep maximum: its kg, of body weight × a share, means
-// little to the user
+// "16.8 kg" Estimated maximum. A bodyweight test shows the reps done: its kg, of body weight × a share, means little
+// to the user
 function maximumLabel({ topSet, maximum, loadLimited }: AssessmentTest) {
   switch (topSet.kind) {
     case "external": {
@@ -32,7 +32,7 @@ function maximumLabel({ topSet, maximum, loadLimited }: AssessmentTest) {
         : { value: kg, caption: "Estimated maximum" };
     }
     case "bodyweight":
-      return { value: `${repMaximum(topSet)} reps`, caption: "Rep maximum" };
+      return { value: `${topSet.reps} reps`, caption: "Rep maximum" };
     case "timed":
       return { value: `${topSet.seconds} s`, caption: "Held" };
   }
@@ -41,15 +41,13 @@ function maximumLabel({ topSet, maximum, loadLimited }: AssessmentTest) {
 // "Results once synced" while a B is Pending, since the server works out the Assessment once it has both
 export default function AssessmentResultsView() {
   const { latest, error, refresh } = useLatestAssessment();
-  const { pending, workout } = useLogbook();
-  const { start, starting } = useStartAssessment();
-  const primary = useCurrentUser().user?.equipmentProfiles.find((profile) => profile.isPrimary);
+  const { pending } = useLogbook();
+  const primary = usePrimaryEquipmentProfile();
 
-  if (pending.some((pendingWorkout) => pendingWorkout.assessment === "B")) {
+  if (pendingB(withPending(pending, null))) {
     return (
       <Screen edges={["bottom"]}>
-        <Text weight="semiBold">Results once synced</Text>
-        <Text color="muted">Assessment B is saved on your phone and uploads when you have signal.</Text>
+        <SyncingNote />
       </Screen>
     );
   }
@@ -91,46 +89,33 @@ export default function AssessmentResultsView() {
             Starting Working Levels
           </Text>
           {sections.map((section) => (
-            <View key={section.title} style={styles.section}>
-              <SectionLabel style={section.estimated ? undefined : styles.sectionLabel}>{section.title}</SectionLabel>
+            <View key={section.pattern} style={styles.section}>
+              <SectionLabel style={section.estimated ? undefined : styles.sectionLabel}>
+                {patternLabels[section.pattern]}
+              </SectionLabel>
               {section.estimated ? (
                 <Text size="sm" color="muted" style={styles.sectionLabel}>
                   {ESTIMATED}
                 </Text>
               ) : null}
-              {section.rows.map((row) => (
-                <WorkingLevelRowView key={row.slug} row={row} />
+              {section.workingLevels.map((level) => (
+                <WorkingLevelRow key={level.slug} level={level} />
               ))}
             </View>
           ))}
         </>
       ) : null}
-      {workout ? null : (
-        <View style={styles.retake}>
-          <Text size="sm" color="muted">
-            Retake after a break or a big change. A new Assessment replaces these Working Levels.
-          </Text>
-          <LoadingButton
-            label="Retake: start Assessment A"
-            action="secondary"
-            variant="outline"
-            fullWidth
-            loading={starting === "A"}
-            onPress={() => start("A")}
-          />
-        </View>
-      )}
     </Screen>
   );
 }
 
 // "Goblet squat" and "12 kg × 8"
-function WorkingLevelRowView({ row }: { row: WorkingLevelRow }) {
+function WorkingLevelRow({ level }: { level: WorkingLevel }) {
   const { colors } = useTheme();
   return (
     <View style={[styles.levelRow, { borderTopColor: colors.line }]}>
-      <Text style={{ flex: 1 }}>{row.name}</Text>
-      <Text weight="semiBold">{row.label}</Text>
+      <Text style={{ flex: 1 }}>{exerciseName(level.slug)}</Text>
+      <Text weight="semiBold">{workingLevelLabel(level)}</Text>
     </View>
   );
 }
@@ -200,5 +185,4 @@ const styles = StyleSheet.create({
     borderTopWidth: StyleSheet.hairlineWidth,
   },
   retry: { marginTop: spacing[4] },
-  retake: { marginTop: spacing[6], gap: spacing[2] },
 });

@@ -1,6 +1,14 @@
-import type { BandLevel, EquipmentProfile, EquipmentTag, Exercise, TestedPattern, WorkingLevel } from "@fit/shared";
+import {
+  BAND_TAGS,
+  type BandLevel,
+  type BandTag,
+  type EquipmentTag,
+  type Exercise,
+  type TestedPattern,
+  type WorkingLevel,
+} from "@fit/shared";
 import { EXERCISES } from "./data/exercises";
-import { isAvailable, ownedOptions } from "./equipment";
+import { isAvailable, ownedOptions, type ProfileWithLoads } from "./equipment";
 import { epleyLoadKg, epleyReps } from "./e1rm";
 import { STRENGTH_RATIOS } from "./strength-ratios";
 
@@ -14,12 +22,15 @@ const MAX_REPS = 20;
 const CORE_REPS = 10;
 const BAND_REPS = 12;
 
-const BAND_TAGS = ["loop_bands", "mini_bands", "tube_bands"] as const satisfies EquipmentTag[];
-type BandTag = (typeof BAND_TAGS)[number];
 const isBandTag = (tag: EquipmentTag): tag is BandTag => (BAND_TAGS as readonly EquipmentTag[]).includes(tag);
 const BAND_LEVELS: BandLevel[] = ["light", "medium", "heavy", "extra_heavy"];
 
-type ProfileWithLoads = Pick<EquipmentProfile, "tags" | "loads">;
+// What the Working Levels are seeded from
+type Seed = {
+  referenceStrengths: Partial<Record<TestedPattern, number>>;
+  bodyWeightKg: number;
+  equipmentProfiles: ProfileWithLoads[];
+};
 
 // The ways of doing the Exercise any of the Equipment Profiles supports, each with its profile
 const optionsOwnedByAny = (exercise: Exercise, profiles: ProfileWithLoads[]) =>
@@ -46,9 +57,7 @@ function repTarget(maximumKg: number, loadKg: number) {
 
 function workingLevelOf(
   exercise: Exercise,
-  referenceStrengths: Partial<Record<TestedPattern, number>>,
-  bodyWeightKg: number,
-  profiles: ProfileWithLoads[],
+  { referenceStrengths, bodyWeightKg, equipmentProfiles: profiles }: Seed,
 ): WorkingLevel | null {
   const { slug } = exercise;
   const entry = STRENGTH_RATIOS[slug];
@@ -72,12 +81,8 @@ function workingLevelOf(
 
 // A starting Working Level for every Exercise available in any of the Equipment Profiles, from the Patterns'
 // Reference Strengths. An Exercise whose Pattern has no Reference Strength gets none
-export function seedWorkingLevels(
-  referenceStrengths: Partial<Record<TestedPattern, number>>,
-  bodyWeightKg: number,
-  equipmentProfiles: ProfileWithLoads[],
-): WorkingLevel[] {
-  return EXERCISES.filter((exercise) => equipmentProfiles.some((profile) => isAvailable(exercise, profile))).flatMap(
-    (exercise) => workingLevelOf(exercise, referenceStrengths, bodyWeightKg, equipmentProfiles) ?? [],
-  );
+export function seedWorkingLevels(seed: Seed): WorkingLevel[] {
+  return EXERCISES.filter((exercise) =>
+    seed.equipmentProfiles.some((profile) => isAvailable(exercise, profile)),
+  ).flatMap((exercise) => workingLevelOf(exercise, seed) ?? []);
 }

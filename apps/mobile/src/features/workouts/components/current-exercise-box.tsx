@@ -1,4 +1,4 @@
-import { TEST_REPS, type ProtocolState } from "@fit/engines";
+import { isRatedTest, TEST_REPS, type ProtocolState } from "@fit/engines";
 import type { InProgressWorkoutExercise, LoadType, SetValues } from "@fit/shared";
 import { useState, type ReactNode } from "react";
 import { StyleSheet, View } from "react-native";
@@ -8,7 +8,7 @@ import { SectionLabel } from "@/components/section-label";
 import { HStack, Stack } from "@/components/stack";
 import { Text } from "@/components/text";
 import { useToast } from "@/contexts/toast-context";
-import { useCurrentUser } from "@/features/user/current-user-provider";
+import { usePrimaryEquipmentProfile } from "@/features/user/current-user-provider";
 import { fonts, radii, spacing, useTheme } from "@/theme";
 import { errorMessage } from "@/utils/error-message";
 import { previousSetsLabel } from "../format";
@@ -31,8 +31,7 @@ export type CurrentExerciseBoxProps = {
 export function CurrentExerciseBox({ workoutExercise, position, count }: CurrentExerciseBoxProps) {
   const { colors } = useTheme();
   const { workout, logSet, editSet, deleteSet, nextSetDraft, protocolState } = useLogbook();
-  const { user } = useCurrentUser();
-  const primaryEquipment = user?.equipmentProfiles.find((p) => p.isPrimary);
+  const primaryEquipment = usePrimaryEquipmentProfile();
   const { showToast } = useToast();
   // The Set being corrected, or null while logging a new one
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
@@ -40,16 +39,11 @@ export function CurrentExerciseBox({ workoutExercise, position, count }: Current
   const unilateral = libraryExercise(slug)?.unilateral ?? false;
   const editingSet = editingIndex === null ? undefined : sets[editingIndex];
   const nextNumber = sets.length + 1;
-  // In an Assessment Workout every Exercise is a test, each Set rated: a weighted test works up in Sets of 5 at the
-  // suggested load (the first worked out from the body weight and gender it started with), and a bodyweight or timed
-  // test is one Set
+  // In an Assessment Workout every Exercise is a test, and the Logbook says what it asks for next
   const protocol =
     workout?.assessment && primaryEquipment ? protocolState(workout, workoutExercise, primaryEquipment) : undefined;
-  const isTest = !!workout?.assessment;
-  const nextDraft: SetValues | null =
-    (protocol?.status === "working-up" || protocol?.status === "at-heaviest") && protocol.suggestedKg !== null
-      ? { kind: "external", kg: protocol.suggestedKg, reps: TEST_REPS }
-      : nextSetDraft(workoutExercise);
+  const note = protocol && protocolNote(protocol, sets.length, loadType);
+  const asksRpe = !!workout && isRatedTest(workout, loadType);
 
   return (
     <View style={[styles.box, { backgroundColor: colors.surface, borderColor: colors.accent }]}>
@@ -72,13 +66,9 @@ export function CurrentExerciseBox({ workoutExercise, position, count }: Current
           Log one side; the values count for each side
         </Text>
       ) : null}
-      {protocol ? (
-        <Text
-          size="sm"
-          color={protocol.status === "done" || protocol.status === "load-limited" ? "accent" : "muted"}
-          style={styles.note}
-        >
-          {protocolLabel(protocol, sets, loadType)}
+      {note ? (
+        <Text size="sm" color={note.finished ? "accent" : "muted"} style={styles.note}>
+          {note.text}
         </Text>
       ) : null}
 
@@ -103,7 +93,7 @@ export function CurrentExerciseBox({ workoutExercise, position, count }: Current
           heading={`Editing set ${editingIndex + 1}`}
           loadType={loadType}
           initial={editingSet}
-          asksRpe={isTest}
+          asksRpe={asksRpe}
           submitLabel={`Save set ${editingIndex + 1}`}
           onSubmit={async (values) => {
             await editSet(id, editingIndex, values);
@@ -142,8 +132,8 @@ export function CurrentExerciseBox({ workoutExercise, position, count }: Current
           key={`new-${sets.length}`}
           heading={`Set ${nextNumber}`}
           loadType={loadType}
-          initial={nextDraft}
-          asksRpe={isTest}
+          initial={nextSetDraft(workoutExercise, protocol)}
+          asksRpe={asksRpe}
           submitLabel={`Log set ${nextNumber}`}
           onSubmit={(values) => logSet(id, values)}
         />
@@ -155,29 +145,43 @@ export function CurrentExerciseBox({ workoutExercise, position, count }: Current
   );
 }
 
-// What the test asks for next: "Sets of 5 …" before the first, then the suggested load, then done. At the heaviest
-// load it asks for as many reps as possible, since past 12 reps ends the test as load-limited. A bodyweight or timed
-// test is one Set to RPE 9
-function protocolLabel(protocol: ProtocolState, sets: InProgressWorkoutExercise["sets"], loadType: LoadType) {
-  const setCount = sets.length;
-  if (protocol.status === "done") return "Done: that Set was your top Set. On to the next test.";
-  if (protocol.status === "load-limited") {
-    return "Done: past 12 reps at your heaviest load. Your result is a lower bound, limited by your equipment.";
+// What the test asks for next, and whether it's finished: Sets of 5 working up to RPE 9, the heaviest load for as many
+// reps as possible (past 12 ends it as load-limited), or a bodyweight or timed test's one Set to the maximum
+function protocolNote(
+  protocol: ProtocolState,
+  setCount: number,
+  loadType: LoadType,
+): { text: string; finished: boolean } {
+  const workingUp = (text: string) => ({ text, finished: false });
+  switch (protocol.status) {
+    case "done":
+      return { text: "Done: that Set was your top Set. On to the next test.", finished: true };
+    case "load-limited":
+      return {
+        text: "Done: past 12 reps at your heaviest load. Your result is a lower bound, limited by your equipment.",
+        finished: true,
+      };
+    case "one-set":
+      return workingUp(
+        loadType === "timed"
+          ? "One Set: hold as long as you can with good form, then log the seconds."
+          : "One Set: as many reps as you can with good form.",
+      );
+    case "at-heaviest":
+      return workingUp(
+        `${protocol.suggestedKg} kg is your heaviest: as many reps as you can to RPE 9. Past 12 reps ends the test.`,
+      );
+    case "working-up": {
+      const kg = protocol.suggestedKg;
+      if (setCount === 0) {
+        const start = kg === null ? "Start light." : `Start at ${kg} kg.`;
+        return workingUp(`Sets of ${TEST_REPS}, adding weight each Set until one is RPE 9. ${start}`);
+      }
+      return workingUp(
+        kg === null ? `Add weight for the next Set of ${TEST_REPS}` : `Next: ${kg} kg × ${TEST_REPS}, then rate it`,
+      );
+    }
   }
-  if (protocol.status === "one-set") {
-    return loadType === "timed"
-      ? "One Set, stop at RPE 9: hold until your form is about to break, then log the seconds."
-      : "One Set, stop at RPE 9: as many reps as you can with one left in the tank.";
-  }
-  if (protocol.suggestedKg !== null && setCount === 0) {
-    return `Sets of ${TEST_REPS}, adding weight each Set until one is RPE 9. Start at ${protocol.suggestedKg} kg.`;
-  }
-  if (protocol.status === "at-heaviest") {
-    return `${protocol.suggestedKg} kg is your heaviest: as many reps as you can to RPE 9. Past 12 reps ends the test.`;
-  }
-  if (protocol.suggestedKg !== null) return `Next: ${protocol.suggestedKg} kg × ${TEST_REPS}, then rate it`;
-  if (setCount === 0) return `Sets of ${TEST_REPS}, adding weight each Set until one is RPE 9. Start light.`;
-  return `Add weight for the next Set of ${TEST_REPS}`;
 }
 
 const RPE_CHOICES = [6, 7, 8, 9, 10];

@@ -1,4 +1,4 @@
-import { ASSESSMENT_PATTERNS } from "@fit/engines";
+import { ASSESSMENT_PATTERNS, type AssessmentOffer } from "@fit/engines";
 import type { AssessmentPart } from "@fit/shared";
 import { router } from "expo-router";
 import { StyleSheet, View } from "react-native";
@@ -7,11 +7,11 @@ import { LoadingButton } from "@/components/loading-button";
 import { Pressable } from "@/components/pressable";
 import { SectionLabel } from "@/components/section-label";
 import { Text } from "@/components/text";
+import { SyncingNote } from "@/features/assessment/components/syncing-note";
 import { useStartAssessment } from "@/features/assessment/hooks/use-start-assessment";
 import { patternLabels } from "@/features/exercises/labels";
 import { useLogbook } from "@/features/workouts/logbook-provider";
 import { spacing } from "@/theme";
-import type { AssessmentOffer } from "../today-status";
 
 // "squat, hinge and core"
 function patternsInWords(part: AssessmentPart) {
@@ -63,21 +63,19 @@ export function AssessmentSection({ offer, onDismiss }: { offer: AssessmentOffer
           onPress={() => router.push("/assessment-results")}
         />
       ) : offer.kind === "syncing" ? (
-        <Text size="sm" color="muted">
-          Results once synced. Assessment B is saved on your phone and uploads when you have signal.
-        </Text>
+        <SyncingNote />
       ) : (
         <>
           <Text size="sm" color="muted">
             {WHAT_IT_TESTS[offer.part]}
           </Text>
-          {startButton(offer.part, `Start Assessment ${offer.part}`)}
+          {startButton(offer.part, `Start assessment ${offer.part}`)}
           {offer.part === "B" && offer.redoA ? (
             <>
               <Text size="sm" color="muted">
                 Your Assessment A was over 2 weeks ago. Redo it if your strength may have changed.
               </Text>
-              {startButton("A", "Redo Assessment A", "outline")}
+              {startButton("A", "Redo assessment A", "outline")}
             </>
           ) : null}
         </>

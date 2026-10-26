@@ -1,8 +1,8 @@
-import type { BodyProfile, EquipmentProfile, InProgressWorkoutExercise, Set } from "@fit/shared";
+import type { BodyProfile, InProgressWorkout, InProgressWorkoutExercise, LoadType, Set } from "@fit/shared";
 import { exerciseBySlug } from "./data/exercises";
 import { MAX_E1RM_REPS } from "./e1rm";
-import { availableLoadsKg } from "./equipment";
-import { exerciseMaximum, STRENGTH_RATIOS, TYPICAL_REFERENCE_PER_KG } from "./strength-ratios";
+import { availableLoadsKg, type ProfileWithLoads } from "./equipment";
+import { exerciseMaximum, STRENGTH_RATIOS, typicalReferenceStrength } from "./strength-ratios";
 
 // Where a test Exercise is in its protocol, for the logging screen to render. The suggested load is null when the
 // equipment's loads aren't known; at the heaviest, past 12 reps short of RPE 9 makes the test load-limited
@@ -22,6 +22,10 @@ const JUMP_BY_RPE: Record<number, number> = { 6: 0.2, 7: 0.1, 8: 0.05 };
 
 export const isTopSet = (set: Pick<Set, "rpe">) => (set.rpe ?? 0) >= TOP_SET_RPE;
 
+// Only a weighted test's Sets are rated: a bodyweight or timed test is one Set to the most reps or seconds the user can
+export const isRatedTest = ({ assessment }: Pick<InProgressWorkout, "assessment">, loadType: LoadType) =>
+  !!assessment && loadType === "external";
+
 // A weighted test with no Set at RPE 9 or higher whose last Set went past 12 reps: the load ran out before the effort
 // did. `assess` takes its maximum as a lower bound; the Logbook ends the test there only at the heaviest load
 export function isLoadLimited(sets: Set[]): boolean {
@@ -37,14 +41,13 @@ const FIRST_LOAD_SHARE = 0.5;
 function firstLoadKg(slug: string, loads: number[], bodyProfile: BodyProfile | undefined) {
   const entry = STRENGTH_RATIOS[slug];
   if (!bodyProfile || entry?.kind !== "weighted" || entry.pattern === "core" || !loads.length) return null;
-  const { weightKg, gender } = bodyProfile;
-  const likelyMaximum = exerciseMaximum(slug, weightKg * TYPICAL_REFERENCE_PER_KG[gender][entry.pattern]);
+  const likelyMaximum = exerciseMaximum(slug, typicalReferenceStrength(bodyProfile, entry.pattern));
   return loads.filter((kg) => kg <= likelyMaximum * FIRST_LOAD_SHARE).at(-1) ?? loads[0];
 }
 
 export function protocolState(
   { slug, sets }: Pick<InProgressWorkoutExercise, "slug" | "sets">,
-  equipmentProfile: Pick<EquipmentProfile, "tags" | "loads">,
+  equipmentProfile: ProfileWithLoads,
   bodyProfile: BodyProfile | undefined,
 ): ProtocolState {
   const exercise = exerciseBySlug(slug);

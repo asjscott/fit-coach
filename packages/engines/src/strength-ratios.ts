@@ -1,4 +1,4 @@
-import type { TestedPattern, UserProfile } from "@fit/shared";
+import type { BodyProfile, TestedPattern, UserProfile } from "@fit/shared";
 
 // An Exercise's maximum is its Pattern's Reference Strength × its ratio: an e1RM in kg (one dumbbell or kettlebell's
 // weight; for bodyweight, of body weight × share) or seconds. Core rep and band Exercises don't scale
@@ -131,7 +131,11 @@ export const KG_PATTERNS: KgPattern[] = ["squat", "hinge", "push", "pull"];
 
 // A deliberately low guess at a Pattern's Reference Strength, as a multiple of body weight: roughly a novice's. It
 // sets a test's first load, and the balance between Patterns when an untested one is estimated from the others
-export const TYPICAL_REFERENCE_PER_KG: Record<UserProfile["gender"], Record<KgPattern, number>> = {
+const TYPICAL_REFERENCE_PER_KG: Record<UserProfile["gender"], Record<KgPattern, number>> = {
   male: { squat: 1, hinge: 1.25, push: 0.75, pull: 1 },
   female: { squat: 0.7, hinge: 0.9, push: 0.45, pull: 0.7 },
 };
+
+// The typical Reference Strength for this body weight and gender
+export const typicalReferenceStrength = ({ weightKg, gender }: BodyProfile, pattern: KgPattern) =>
+  weightKg * TYPICAL_REFERENCE_PER_KG[gender][pattern];

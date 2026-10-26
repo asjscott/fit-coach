@@ -1,0 +1,77 @@
+import type { Assessment, Workout } from "@fit/shared";
+import { latestAssessmentWorkout } from "./assessment-pairing";
+
+// What Today offers about the Assessment: to start A, to start B (and redo A when it's stale), that the Results come
+// once B syncs, or a link to the Results. Each names the Workout or Assessment it's about
+export type AssessmentOffer =
+  | { kind: "start"; part: "A" }
+  | { kind: "start"; part: "B"; aWorkoutId: string; redoA: boolean }
+  | { kind: "syncing"; bWorkoutId: string }
+  | { kind: "results"; assessmentId: string };
+
+// What a dismissed offer is remembered by: the whole offer, so one going stale (Redo A) comes back
+export const offerKey = (offer: AssessmentOffer) => JSON.stringify(offer);
+
+// An A older than this with no B after it is stale: Today also offers to redo it
+const STALE_A_MS = 14 * 24 * 60 * 60 * 1000;
+
+type OfferWorkout = Pick<Workout, "id" | "startedAt" | "assessment"> & { isPending: boolean };
+
+export type AssessmentOfferInput = {
+  // History with the Pending Workouts
+  workouts: OfferWorkout[];
+  historyLoaded: boolean;
+  // The latest Assessment on the server, null when there is none, undefined until it arrives (or when it can't)
+  latestAssessment: Pick<Assessment, "id" | "bStartedAt"> | null | undefined;
+  now: Date;
+  // The key of the offer the user dismissed last, if any
+  dismissed: string | null;
+};
+
+// The newest A and B, and whether that A still awaits a B: as pairing has it, the newest B belongs to the latest A
+// before it, which may not be the newest A
+function newestAAndB(workouts: OfferWorkout[]) {
+  const a = latestAssessmentWorkout(workouts, "A");
+  const b = latestAssessmentWorkout(workouts, "B");
+  const aAwaitsB = !!a && (!b || latestAssessmentWorkout(workouts, "A", b.startedAt) !== a);
+  return { a, b, aAwaitsB };
+}
+
+// The newest B while it's still on the phone, so its Assessment can't be worked out yet
+export function pendingB(workouts: OfferWorkout[]): OfferWorkout | undefined {
+  const { b, aAwaitsB } = newestAAndB(workouts);
+  return b?.isPending && !aAwaitsB ? b : undefined;
+}
+
+// Today's Assessment offer, or null when there's none or the user dismissed it
+export function assessmentOffer({ dismissed, ...input }: AssessmentOfferInput): AssessmentOffer | null {
+  const offer = currentOffer(input);
+  return offer && offerKey(offer) !== dismissed ? offer : null;
+}
+
+function currentOffer({
+  workouts,
+  historyLoaded,
+  latestAssessment,
+  now,
+}: Omit<AssessmentOfferInput, "dismissed">): AssessmentOffer | null {
+  // The latest Assessment counts only with History, so A isn't offered to someone who has done it. Until then only the
+  // Pending Workouts on the phone count (ADR 0001)
+  const latest = historyLoaded ? latestAssessment : undefined;
+  const { a, aAwaitsB } = newestAAndB(workouts);
+  const syncing = pendingB(workouts);
+  if (syncing) return { kind: "syncing", bWorkoutId: syncing.id };
+  // The first A ever, or a retake started after the latest Assessment's B. Without the server, only a Pending A is sure
+  const aIsNew =
+    a && (latest === undefined ? a.isPending : !latest || Date.parse(a.startedAt) > Date.parse(latest.bStartedAt));
+  if (a && aAwaitsB && aIsNew) {
+    const redoA = now.getTime() - Date.parse(a.startedAt) > STALE_A_MS;
+    return { kind: "start", part: "B", aWorkoutId: a.id, redoA };
+  }
+  if (latest === undefined) return null;
+  // The Assessment is a snapshot, so it stands even once its Workouts are deleted from History
+  if (latest) return { kind: "results", assessmentId: latest.id };
+  if (!a) return { kind: "start", part: "A" };
+  // B is done but its Assessment hasn't been worked out yet
+  return null;
+}

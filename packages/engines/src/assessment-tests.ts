@@ -17,7 +17,7 @@ export const ASSESSMENT_PATTERNS: Record<AssessmentPart, TestedPattern[]> = {
 
 // Each Pattern's candidate tests, best first: two-sided weighted lifts, then the rest, ending with one that needs no
 // equipment. Band Exercises are never tests
-const RANKED: Record<TestedPattern, string[]> = {
+const CANDIDATE_TESTS: Record<TestedPattern, string[]> = {
   squat: ["back-squat", "goblet-squat", "bodyweight-squat"],
   hinge: ["deadlift", "barbell-romanian-deadlift", "dumbbell-romanian-deadlift", "single-leg-glute-bridge"],
   push: ["barbell-bench-press", "dumbbell-bench-press", "dumbbell-floor-press", "push-up"],
@@ -30,10 +30,11 @@ export const referencePatternOf = (pattern: Pattern): TestedPattern => (pattern 
 
 // The Pattern an Exercise is a test for, or undefined when it's on no Pattern's list
 export function testedPatternOf(slug: string): TestedPattern | undefined {
-  return (Object.keys(RANKED) as TestedPattern[]).find((pattern) => RANKED[pattern].includes(slug));
+  return (Object.keys(CANDIDATE_TESTS) as TestedPattern[]).find((pattern) => CANDIDATE_TESTS[pattern].includes(slug));
 }
 
-const libraryExercise = (slug: string) => {
+// Every candidate is in the library, so a missing one is a bug in the lists
+const requireExercise = (slug: string) => {
   const exercise = exerciseBySlug(slug);
   if (!exercise) throw new Error(`No Exercise "${slug}" in the library`);
   return exercise;
@@ -46,8 +47,8 @@ export function chooseTests(
   injuries: InjuryTag[],
 ): Record<TestedPattern, Exercise | null> {
   const choose = (pattern: TestedPattern) =>
-    RANKED[pattern]
-      .map(libraryExercise)
+    CANDIDATE_TESTS[pattern]
+      .map(requireExercise)
       .find((exercise) => isAvailable(exercise, equipmentProfile) && isSafeFor(exercise, injuries)) ?? null;
   return Object.fromEntries(TestedPattern.options.map((pattern) => [pattern, choose(pattern)])) as Record<
     TestedPattern,

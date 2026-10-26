@@ -6,6 +6,9 @@ const IMPLIES: Partial<Record<EquipmentTag, EquipmentTag[]>> = {
   adjustable_bench: ["flat_bench"],
 };
 
+// An Equipment Profile as far as the loads it offers go
+export type ProfileWithLoads = Pick<EquipmentProfile, "tags" | "loads">;
+
 export function expandTags(tags: EquipmentTag[]): Set<EquipmentTag> {
   const owned = new Set(tags);
   for (const tag of tags) IMPLIES[tag]?.forEach((extra) => owned.add(extra));
@@ -49,10 +52,7 @@ function dumbbellLoadsKg(dumbbells: NonNullable<EquipmentProfile["loads"]["dumbb
 // The loads the Equipment Profile offers for an Exercise, lightest first: the dumbbells, kettlebells, or bar plus
 // plate pairs it owns, from every way of doing the Exercise the profile supports. For a dumbbell or kettlebell
 // Exercise a load is one implement's weight. Empty when the profile doesn't say what it has
-export function availableLoadsKg(
-  exercise: Pick<Exercise, "equipmentOptions">,
-  profile: Pick<EquipmentProfile, "tags" | "loads">,
-): number[] {
+export function availableLoadsKg(exercise: Pick<Exercise, "equipmentOptions">, profile: ProfileWithLoads): number[] {
   const { dumbbells, kettlebells, barbell } = profile.loads;
   const loads = ownedOptions(exercise, profile)
     .flat()

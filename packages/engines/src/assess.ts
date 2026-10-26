@@ -4,7 +4,6 @@ import {
   type AssessmentPattern,
   type AssessmentTest,
   type BodyProfile,
-  type EquipmentProfile,
   type Set,
   type WorkingLevel,
   type Workout,
@@ -12,17 +11,12 @@ import {
 import { isLoadLimited, isTopSet, TOP_SET_RPE } from "./assessment-protocol";
 import { ASSESSMENT_PATTERNS, testedPatternOf } from "./assessment-tests";
 import { e1rm, epley, MAX_E1RM_REPS } from "./e1rm";
-import {
-  KG_PATTERNS,
-  referenceStrength,
-  STRENGTH_RATIOS,
-  TYPICAL_REFERENCE_PER_KG,
-  type KgPattern,
-} from "./strength-ratios";
+import type { ProfileWithLoads } from "./equipment";
+import { KG_PATTERNS, referenceStrength, STRENGTH_RATIOS, typicalReferenceStrength } from "./strength-ratios";
 import { seedWorkingLevels } from "./working-levels";
 
 // A weighted test's top Set is the first rated RPE 9 or higher, or when it's load-limited, its last Set. A bodyweight
-// or timed test is a single Set, so its top Set is that Set. None means the test is untested
+// or timed test is its one Set, to the most the user could do. None means the test is untested
 function topSetOf(sets: Set[]): { topSet: Set; loadLimited: boolean } | null {
   const [first] = sets;
   if (!first) return null;
@@ -32,20 +26,19 @@ function topSetOf(sets: Set[]): { topSet: Set; loadLimited: boolean } | null {
   return topSet ? { topSet, loadLimited: false } : null;
 }
 
-// The reps the Set would have reached to failure: reps in reserve count. An unrated Set counts as RPE 9. For a
-// bodyweight test it's the rep maximum the Results show
-export const repMaximum = ({ reps, rpe = TOP_SET_RPE }: { reps: number; rpe?: number }) => reps + (10 - rpe);
+// The reps a weighted Set would have reached to failure: reps in reserve count, and an unrated Set counts as RPE 9
+const repsToFailure = ({ reps, rpe = TOP_SET_RPE }: { reps: number; rpe?: number }) => reps + (10 - rpe);
 
-// Weighted stops at 12 reps, past which Epley isn't trusted. Bodyweight doesn't, because its Working Level inverts
-// the same formula and must give the test's own reps back
+// Weighted stops at 12 reps, past which Epley isn't trusted. Bodyweight takes the reps done to failure uncapped: its
+// Working Level inverts the same formula and must give the test's own reps back
 function maximumOf(slug: string, set: Set, bodyWeightKg: number) {
   switch (set.kind) {
     case "external":
-      return e1rm(set.kg, Math.min(repMaximum(set), MAX_E1RM_REPS));
+      return e1rm(set.kg, Math.min(repsToFailure(set), MAX_E1RM_REPS));
     case "bodyweight": {
       const entry = STRENGTH_RATIOS[slug];
       if (entry?.kind !== "bodyweight") throw new Error(`"${slug}" isn't a bodyweight Exercise`);
-      return epley(bodyWeightKg * entry.share, repMaximum(set));
+      return epley(bodyWeightKg * entry.share, set.reps);
     }
     case "timed":
       return set.seconds;
@@ -64,16 +57,15 @@ const ESTIMATED_PLANK_SECONDS = 30;
 function estimateReferenceStrength(
   pattern: TestedPattern,
   tests: Partial<Record<TestedPattern, AssessmentTest>>,
-  { weightKg, gender }: BodyProfile,
+  bodyProfile: BodyProfile,
 ) {
   if (pattern === "core") return ESTIMATED_PLANK_SECONDS;
-  const typical = (kgPattern: KgPattern) => weightKg * TYPICAL_REFERENCE_PER_KG[gender][kgPattern];
   const shares = KG_PATTERNS.flatMap((tested) => {
     const test = tests[tested];
-    return test ? [test.referenceStrength / typical(tested)] : [];
+    return test ? [test.referenceStrength / typicalReferenceStrength(bodyProfile, tested)] : [];
   });
   const share = shares.length ? shares.reduce((sum, s) => sum + s, 0) / shares.length : 1;
-  return typical(pattern) * share * ESTIMATE_SHARE;
+  return typicalReferenceStrength(bodyProfile, pattern) * share * ESTIMATE_SHARE;
 }
 
 // Turns a pair of Assessment Workouts into the Assessment and the Working Levels it sets. Each Workout is read only
@@ -82,7 +74,7 @@ export function assess(
   a: Workout,
   b: Workout,
   profile: BodyProfile,
-  equipmentProfiles: Pick<EquipmentProfile, "tags" | "loads">[],
+  equipmentProfiles: ProfileWithLoads[],
 ): { assessment: Omit<Assessment, "id" | "createdAt">; workingLevels: WorkingLevel[] } {
   const tests: Partial<Record<TestedPattern, AssessmentTest>> = {};
   for (const [workout, part] of [
@@ -122,6 +114,6 @@ export function assess(
       bodyWeightKg: profile.weightKg,
       patterns,
     },
-    workingLevels: seedWorkingLevels(referenceStrengths, profile.weightKg, equipmentProfiles),
+    workingLevels: seedWorkingLevels({ referenceStrengths, bodyWeightKg: profile.weightKg, equipmentProfiles }),
   };
 }

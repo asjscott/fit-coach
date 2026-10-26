@@ -1,12 +1,5 @@
 import { createLogbook, type FinishResult, type Logbook, type WorkoutTimes } from "@fit/engines";
-import {
-  PreviousSets,
-  type Exercise,
-  type InProgressWorkout,
-  type InProgressWorkoutExercise,
-  type SetValues,
-  type Workout,
-} from "@fit/shared";
+import { PreviousSets, type Exercise, type InProgressWorkout, type SetValues, type Workout } from "@fit/shared";
 import * as Crypto from "expo-crypto";
 import { createContext, use, useCallback, useEffect, useState, type ReactNode } from "react";
 import { useApi } from "@/api";
@@ -29,8 +22,8 @@ type LogbookContextValue = {
   logSet: (workoutExerciseId: string, values: SetValues) => Promise<void>;
   editSet: (workoutExerciseId: string, setIndex: number, values: SetValues) => Promise<void>;
   deleteSet: (workoutExerciseId: string, setIndex: number) => Promise<void>;
-  // The values a new Set starts with: the last Set's, or null for the first
-  nextSetDraft: (workoutExercise: InProgressWorkoutExercise) => SetValues | null;
+  // The values a new Set starts with: a test's suggested load, else the last Set's, or null for the first
+  nextSetDraft: Logbook["nextSetDraft"];
   // Ends the Workout with these times, resolving as soon as it is a Pending Workout, then
   // tries to upload it (see FinishOutcome). Resolves to "nothing-to-save" with no Sets,
   // leaving the Workout in progress to be discarded. Rejects with a LogbookError for invalid times

@@ -1,11 +1,12 @@
 import type { AssessmentPattern, EquipmentProfile, Set, WorkingLevel, Workout } from "@fit/shared";
 import { describe, expect, it } from "vitest";
-import { assess, repMaximum } from "./assess";
+import { assess } from "./assess";
 
 const loggedAt = "2026-10-24T09:00:00.000Z";
 const rated = (kg: number, rpe: number, reps = 5): Set => ({ kind: "external", kg, reps, rpe, loggedAt });
-const ratedReps = (reps: number, rpe: number): Set => ({ kind: "bodyweight", reps, rpe, loggedAt });
-const held = (seconds: number, rpe = 9): Set => ({ kind: "timed", seconds, rpe, loggedAt });
+// A bodyweight or timed test is one Set to the most the user can do, unrated
+const maxReps = (reps: number): Set => ({ kind: "bodyweight", reps, loggedAt });
+const held = (seconds: number): Set => ({ kind: "timed", seconds, loggedAt });
 
 const assessmentWorkout = (
   id: string,
@@ -308,49 +309,36 @@ describe("assess", () => {
 
   describe("with no equipment", () => {
     const bodyweightOnly = equipmentProfile("home", []);
-    const pushUps = (reps: number, rpe = 9) =>
+    const pushUps = (reps: number) =>
       assessmentWorkout(B_ID, "B", "2026-10-22T09:00:00.000Z", [
-        { slug: "push-up", sets: [ratedReps(reps, rpe)] },
-        { slug: "inverted-row", sets: [ratedReps(12, 9)] },
+        { slug: "push-up", sets: [maxReps(reps)] },
+        { slug: "inverted-row", sets: [maxReps(12)] },
       ]);
 
     it("converts a push-up test to kg through body weight x its share, then Epley", () => {
       const { push } = assess(a, pushUps(10), profile, [bodyweightOnly]).assessment.patterns;
 
-      // A push-up moves 80 x 0.64 = 51.2 kg. 10 reps at RPE 9 is a rep maximum of 11: 51.2 x (1 + 11/30) = 69.97 kg,
-      // and a push-up is 1.3 of a bench press, so push's Reference Strength is 53.83 kg
-      expect(push).toMatchObject({ slug: "push-up", topSet: { reps: 10, rpe: 9 }, estimated: false });
-      expect(tested(push)?.maximum).toBeCloseTo(69.97, 2);
-      expect(push?.referenceStrength).toBeCloseTo(53.83, 2);
+      // A push-up moves 80 x 0.64 = 51.2 kg. 10 reps to failure: 51.2 x (1 + 10/30) = 68.27 kg, and a push-up is 1.3
+      // of a bench press, so push's Reference Strength is 52.51 kg
+      expect(push).toMatchObject({ slug: "push-up", topSet: { reps: 10 }, estimated: false });
+      expect(tested(push)?.maximum).toBeCloseTo(68.27, 2);
+      expect(push?.referenceStrength).toBeCloseTo(52.51, 2);
     });
 
-    it("gives the tested bodyweight Exercise back its rep maximum, less 2 in reserve", () => {
-      // The round trip: test -> Reference Strength -> the same Exercise's maximum. 10 reps at RPE 9 is a rep maximum
-      // of 11, and 2 in reserve leaves 9. Epley runs both ways past 12 reps too, so 20 at RPE 9 leaves 19
+    it("gives the tested bodyweight Exercise back its reps to failure, less 2 in reserve", () => {
+      // The round trip: test -> Reference Strength -> the same Exercise's maximum. 10 reps to failure, 2 in reserve,
+      // leaves 8. Epley runs both ways past 12 reps too, so 20 leaves 18
       const pushUpLevel = (reps: number) =>
         levelOf(assess(a, pushUps(reps), profile, [bodyweightOnly]).workingLevels, "push-up");
 
-      expect(pushUpLevel(10)).toEqual({ slug: "push-up", unit: "reps", reps: 9 });
-      expect(pushUpLevel(20)).toEqual({ slug: "push-up", unit: "reps", reps: 19 });
-    });
-
-    it("shows a bodyweight test's rep maximum: its reps plus those in reserve", () => {
-      expect(repMaximum({ reps: 10, rpe: 9 })).toBe(11);
-      expect(repMaximum({ reps: 10, rpe: 7 })).toBe(13);
-      expect(repMaximum({ reps: 10, rpe: 10 })).toBe(10);
-    });
-
-    it("counts reps in reserve when the one Set was rated easier than RPE 9", () => {
-      // 51.2 x (1 + 13/30) at RPE 7
-      expect(
-        tested(assess(a, pushUps(10, 7), profile, [bodyweightOnly]).assessment.patterns.push)?.maximum,
-      ).toBeCloseTo(73.39, 2);
+      expect(pushUpLevel(10)).toEqual({ slug: "push-up", unit: "reps", reps: 8 });
+      expect(pushUpLevel(20)).toEqual({ slug: "push-up", unit: "reps", reps: 18 });
     });
 
     it("tests every Pattern and gives every Exercise available without equipment a Working Level", () => {
       const bodyweightA = assessmentWorkout(A_ID, "A", "2026-10-20T09:00:00.000Z", [
-        { slug: "bodyweight-squat", sets: [ratedReps(25, 9)] },
-        { slug: "single-leg-glute-bridge", sets: [ratedReps(15, 9)] },
+        { slug: "bodyweight-squat", sets: [maxReps(25)] },
+        { slug: "single-leg-glute-bridge", sets: [maxReps(15)] },
         { slug: "plank", sets: [held(60)] },
       ]);
       const { assessment, workingLevels } = assess(bodyweightA, pushUps(10), profile, [bodyweightOnly]);

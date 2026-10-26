@@ -11,8 +11,9 @@ import {
   type UserProfile,
 } from "@fit/shared";
 import type { z } from "zod";
-import { protocolState } from "./assessment-protocol";
+import { isRatedTest, protocolState, TEST_REPS, type ProtocolState } from "./assessment-protocol";
 import { ASSESSMENT_PATTERNS, chooseTests } from "./assessment-tests";
+import type { ProfileWithLoads } from "./equipment";
 import { previousSets } from "./training-summaries";
 
 // Strings by key: SQLite on the phone, localStorage on web, a Map in tests
@@ -121,9 +122,11 @@ export function createLogbook({
     if (workout.assessment) throw new LogbookError("An Assessment Workout's Exercises can't be changed");
   }
 
-  // Every Set of an Assessment Workout is a test Set, which the Assessment reads by its RPE
+  // A weighted test's Sets are read by their RPE
   function refuseUnratedTestSet(workout: InProgressWorkout, values: SetValues) {
-    if (workout.assessment && values.rpe === undefined) throw new LogbookError("Rate how hard the Set felt");
+    if (isRatedTest(workout, values.kind) && values.rpe === undefined) {
+      throw new LogbookError("Rate how hard the Set felt");
+    }
   }
 
   function findWorkoutExercise(workout: InProgressWorkout, workoutExerciseId: string) {
@@ -287,9 +290,12 @@ export function createLogbook({
         await write(workout);
       }),
 
-    // The values to pre-fill the next Set with: the last Set's, or null for the first Set. Not its RPE: each Set is
-    // rated on its own
-    nextSetDraft: (workoutExercise: InProgressWorkoutExercise): SetValues | null => {
+    // The values to pre-fill the next Set with: a test's suggested load, else the last Set's (not its RPE: each Set is
+    // rated on its own), or null for the first Set
+    nextSetDraft: (workoutExercise: InProgressWorkoutExercise, protocol?: ProtocolState): SetValues | null => {
+      if (protocol && "suggestedKg" in protocol && protocol.suggestedKg !== null) {
+        return { kind: "external", kg: protocol.suggestedKg, reps: TEST_REPS };
+      }
       const last = workoutExercise.sets.at(-1);
       if (!last) return null;
       return Object.fromEntries(
@@ -297,12 +303,12 @@ export function createLogbook({
       ) as SetValues;
     },
 
-    // For a test Exercise of an Assessment Workout: the suggested next load, or done. The logging screen only renders it.
-    // The first load follows the body weight and gender the Workout started with
+    // For a test Exercise of an Assessment Workout: the suggested next load, or done. The logging screen only renders
+    // it. The first load follows the body weight and gender the Workout started with
     protocolState: (
       { bodyProfile }: Pick<InProgressWorkout, "bodyProfile">,
       workoutExercise: Pick<InProgressWorkoutExercise, "slug" | "sets">,
-      equipmentProfile: Pick<EquipmentProfile, "tags" | "loads">,
+      equipmentProfile: ProfileWithLoads,
     ) => protocolState(workoutExercise, equipmentProfile, bodyProfile),
 
     // Turns the in-progress Workout into a Pending Workout; sync() uploads it. Workout
