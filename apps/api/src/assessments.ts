@@ -44,10 +44,12 @@ export async function assessIfPaired(clerkUserId: string, workout: Workout) {
   if (!pairedDoc) return;
   const paired = toWorkout(pairedDoc);
   const [a, b] = workout.assessment === "B" ? [paired, workout] : [workout, paired];
-  const weightKg = (await findUser(clerkUserId))?.profile.weightKg;
-  if (weightKg === undefined) throw new Error("Can't assess without the user's weight");
+  const user = await findUser(clerkUserId);
+  const weightKg = user?.profile.weightKg;
+  if (!user || weightKg === undefined) throw new Error("Can't assess without the user's weight");
 
-  const result = assess(a, b, { weightKg });
+  // Working Levels for every Exercise available in any of the user's Equipment Profiles
+  const result = assess(a, b, { weightKg }, user.equipmentProfiles);
   const id = randomUUID();
   await assessments.insertOne({ ...result.assessment, id, clerkUserId, createdAt: new Date() });
   await workingLevels.deleteMany({ clerkUserId });

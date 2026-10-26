@@ -1,10 +1,18 @@
-import type { Assessment, AssessmentTest, Set, UserProfile, WorkingLevel, Workout } from "@fit/shared";
+import type {
+  Assessment,
+  AssessmentTest,
+  EquipmentProfile,
+  Set,
+  TestedPattern,
+  UserProfile,
+  WorkingLevel,
+  Workout,
+} from "@fit/shared";
 import { TOP_SET_RPE } from "./assessment-protocol";
 import { ASSESSMENT_PATTERNS, testedPatternOf } from "./assessment-tests";
 import { e1rm, MAX_E1RM_REPS } from "./e1rm";
-
-// A Working Level in kg is for 8 reps with 2 in reserve, so it's the load whose e1rm at 10 reps is the maximum
-const WORKING_LEVEL_E1RM_REPS = 10;
+import { seedWorkingLevels } from "./working-levels";
+import { referenceStrength } from "./strength-ratios";
 
 type RatedSet = Extract<Set, { kind: "external" }> & { rpe: number };
 
@@ -17,12 +25,13 @@ const maximumOf = ({ kg, reps, rpe }: RatedSet) => e1rm(kg, Math.min(reps + (10 
 
 // Turns a pair of Assessment Workouts into the Assessment and the Working Levels it sets. Each Workout is read only
 // for the Patterns it tests.
-// Still to come: Reference Strengths and Working Levels for every available Exercise from the Equipment Profiles
-// (#36), bodyweight and timed tests (#37), load-limited and untested Patterns (#38)
+// The Working Levels cover every Exercise available in any of the user's Equipment Profiles.
+// Still to come: bodyweight and timed tests (#37), load-limited and untested Patterns (#38)
 export function assess(
   a: Workout,
   b: Workout,
   profile: Pick<UserProfile, "weightKg">,
+  equipmentProfiles: Pick<EquipmentProfile, "tags" | "loads">[],
 ): { assessment: Omit<Assessment, "id" | "createdAt">; workingLevels: WorkingLevel[] } {
   const patterns: Assessment["patterns"] = {};
   for (const [workout, part] of [
@@ -33,16 +42,21 @@ export function assess(
       const pattern = testedPatternOf(slug);
       const topSet = topSetOf(sets);
       if (!pattern || !ASSESSMENT_PATTERNS[part].includes(pattern) || !topSet) continue;
-      patterns[pattern] = { slug, topSet, maximumKg: maximumOf(topSet), estimated: false } satisfies AssessmentTest;
+      const maximumKg = maximumOf(topSet);
+      patterns[pattern] = {
+        slug,
+        topSet,
+        maximumKg,
+        referenceStrength: referenceStrength(slug, maximumKg),
+        estimated: false,
+      } satisfies AssessmentTest;
     }
   }
-  const workingLevels = Object.values(patterns).map(({ slug, maximumKg }): WorkingLevel => ({
-    slug,
-    unit: "kg",
-    kg: maximumKg / (1 + WORKING_LEVEL_E1RM_REPS / 30),
-  }));
+  const referenceStrengths: Partial<Record<TestedPattern, number>> = Object.fromEntries(
+    Object.entries(patterns).map(([pattern, test]) => [pattern, test.referenceStrength]),
+  );
   return {
     assessment: { aWorkoutId: a.id, bWorkoutId: b.id, bodyWeightKg: profile.weightKg, patterns },
-    workingLevels,
+    workingLevels: seedWorkingLevels(referenceStrengths, profile.weightKg, equipmentProfiles),
   };
 }
