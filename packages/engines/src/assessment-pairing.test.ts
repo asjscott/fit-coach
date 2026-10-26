@@ -22,6 +22,25 @@ describe("pairToAssess", () => {
     expect(pairToAssess(a, { workouts: [b, a], assessments: [] })).toEqual({ aWorkoutId: "a", bWorkoutId: "b" });
   });
 
+  it("pairs a B with the latest A before it even when a B with no Assessment sits between them", () => {
+    // b1's Assessment was never worked out
+    const a = workout("a", "01", "A");
+    const b1 = workout("b1", "03", "B");
+    const b2 = workout("b2", "05", "B");
+    expect(pairToAssess(b2, { workouts: [a, b1, b2], assessments: [] })).toEqual({ aWorkoutId: "a", bWorkoutId: "b2" });
+  });
+
+  it("pairs an A that arrives late with the first B after it that has no Assessment yet", () => {
+    // b1 was paired with a0 before a reached the server
+    const a0 = workout("a0", "01", "A");
+    const a = workout("a", "10", "A");
+    const b1 = workout("b1", "12", "B");
+    const b2 = workout("b2", "14", "B");
+    expect(
+      pairToAssess(a, { workouts: [a0, b1, b2, a], assessments: [{ aWorkoutId: "a0", bWorkoutId: "b1" }] }),
+    ).toEqual({ aWorkoutId: "a", bWorkoutId: "b2" });
+  });
+
   it("doesn't pair an A that arrives late when a later A sits between it and the B", () => {
     const a1 = workout("a1", "01", "A");
     const a2 = workout("a2", "10", "A");
