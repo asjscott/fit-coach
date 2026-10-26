@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { todayState, todayStatus } from "./today-status";
+import { assessmentOffer, todayState, todayStatus } from "./today-status";
 
 describe("todayStatus", () => {
   it("numbers the next Workout against days per week", () => {
@@ -28,6 +28,43 @@ describe("todayStatus", () => {
 
   it("says nothing while History loads", () => {
     expect(todayStatus({ state: "loading", workoutCount: 0, target: 4 })).toBeNull();
+  });
+});
+
+describe("assessmentOffer", () => {
+  const workout = (id: string, startedAt: string, assessment?: "A" | "B") => ({
+    id,
+    startedAt: `2026-10-${startedAt}T09:00:00.000Z`,
+    ...(assessment && { assessment }),
+  });
+
+  it("offers A to a user who hasn't done one", () => {
+    expect(assessmentOffer({ workouts: [workout("w1", "20")], latestAssessment: null })).toEqual({
+      kind: "start",
+      part: "A",
+    });
+  });
+
+  it("offers A to a user with no Workouts at all", () => {
+    expect(assessmentOffer({ workouts: [], latestAssessment: null })).toEqual({ kind: "start", part: "A" });
+  });
+
+  it("offers B once A is done, until a B follows it", () => {
+    const workouts = [workout("w2", "21"), workout("a1", "20", "A")];
+    expect(assessmentOffer({ workouts, latestAssessment: null })).toEqual({ kind: "start", part: "B" });
+  });
+
+  it("doesn't count a B from before the latest A", () => {
+    const workouts = [workout("a2", "22", "A"), workout("b1", "21", "B"), workout("a1", "20", "A")];
+    expect(assessmentOffer({ workouts, latestAssessment: { aWorkoutId: "a1" } })).toEqual({
+      kind: "start",
+      part: "B",
+    });
+  });
+
+  it("links to the Results once the Assessment is on the server", () => {
+    const workouts = [workout("b1", "22", "B"), workout("a1", "20", "A")];
+    expect(assessmentOffer({ workouts, latestAssessment: { aWorkoutId: "a1" } })).toEqual({ kind: "results" });
   });
 });
 
