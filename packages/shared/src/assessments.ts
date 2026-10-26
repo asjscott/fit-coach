@@ -13,15 +13,28 @@ export type TestedPattern = z.infer<typeof TestedPattern>;
 // in reserve, and the Reference Strength that follows (GLOSSARY.md). A weighted test's top Set is the first rated
 // RPE 9 or higher; a bodyweight or timed test's is its one Set. The maximum is an e1RM in kg (for a bodyweight test,
 // of body weight × the Exercise's share), or for a timed test the seconds held.
-// Still to come: loadLimited (#38), and an `estimated: true` variant for untested Patterns
+// Load-limited: a weighted test that went past 12 reps at its last Set without reaching RPE 9. That Set is the top
+// Set, and the maximum is only a lower bound (Epley at 12 reps).
 export const AssessmentTest = z.object({
   slug,
   topSet: Set,
   maximum: z.number().positive(),
+  loadLimited: z.boolean(),
   referenceStrength: z.number().positive(),
   estimated: z.literal(false),
 });
 export type AssessmentTest = z.infer<typeof AssessmentTest>;
+
+// An untested Pattern (no test was safe, or the test stopped short of RPE 9 at 12 reps or fewer): its Reference
+// Strength is estimated from the other Patterns' results
+export const AssessmentEstimate = z.object({
+  referenceStrength: z.number().positive(),
+  estimated: z.literal(true),
+});
+export type AssessmentEstimate = z.infer<typeof AssessmentEstimate>;
+
+export const AssessmentPattern = z.discriminatedUnion("estimated", [AssessmentTest, AssessmentEstimate]);
+export type AssessmentPattern = z.infer<typeof AssessmentPattern>;
 
 // The results of one pair of Assessment Workouts (GLOSSARY.md), a snapshot: deleting either Workout leaves it be
 export const Assessment = z.object({
@@ -31,7 +44,8 @@ export const Assessment = z.object({
   createdAt: z.iso.datetime(),
   // The profile's weight when the Assessment was worked out
   bodyWeightKg: z.number().positive(),
-  patterns: z.partialRecord(Pattern, AssessmentTest),
+  // Every tested Pattern (carry isn't one), each a test or an estimate
+  patterns: z.partialRecord(Pattern, AssessmentPattern),
 });
 export type Assessment = z.infer<typeof Assessment>;
 

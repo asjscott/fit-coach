@@ -1,4 +1,4 @@
-import type { TestedPattern } from "@fit/shared";
+import type { TestedPattern, UserProfile } from "@fit/shared";
 
 // How an Exercise's strength follows from its Pattern's Reference Strength (GLOSSARY.md). An Exercise's maximum is
 // the Reference Strength × its ratio, and a test's maximum ÷ its ratio gives the Reference Strength back.
@@ -129,3 +129,14 @@ export const referenceStrength = (slug: string, maximum: number) => maximum / sc
 // An Exercise's maximum, from its Pattern's Reference Strength
 export const exerciseMaximum = (slug: string, referenceStrength: number) =>
   referenceStrength * scalableRatio(slug).ratio;
+
+// The Patterns whose Reference Strength is an e1RM in kg; core's is plank seconds
+export type KgPattern = Exclude<TestedPattern, "core">;
+export const KG_PATTERNS: KgPattern[] = ["squat", "hinge", "push", "pull"];
+
+// A deliberately low guess at a Pattern's Reference Strength, as a multiple of body weight: roughly a novice's. It
+// sets a test's first load, and the balance between Patterns when an untested one is estimated from the others
+export const TYPICAL_REFERENCE_PER_KG: Record<UserProfile["gender"], Record<KgPattern, number>> = {
+  male: { squat: 1, hinge: 1.25, push: 0.75, pull: 1 },
+  female: { squat: 0.7, hinge: 0.9, push: 0.45, pull: 0.7 },
+};

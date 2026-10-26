@@ -1,8 +1,8 @@
-import type { EquipmentProfile, InProgressWorkoutExercise, Set, TestedPattern, UserProfile } from "@fit/shared";
+import type { EquipmentProfile, InProgressWorkoutExercise, Set, UserProfile } from "@fit/shared";
 import { EXERCISES } from "./data/exercises";
 import { MAX_E1RM_REPS } from "./e1rm";
 import { availableLoadsKg } from "./equipment";
-import { exerciseMaximum, STRENGTH_RATIOS } from "./strength-ratios";
+import { exerciseMaximum, STRENGTH_RATIOS, TYPICAL_REFERENCE_PER_KG } from "./strength-ratios";
 
 // Where a test Exercise is in its protocol, for the logging screen to render. Working up: Sets of 5, each at the
 // suggested load (null when the equipment's loads aren't known). One Set: a bodyweight or timed test is a single Set
@@ -32,19 +32,14 @@ export function isLoadLimited(sets: Set[]): boolean {
 
 const bySlug = new Map(EXERCISES.map((exercise) => [exercise.slug, exercise]));
 
-// A deliberately low guess at a Pattern's Reference Strength, as a multiple of body weight: roughly a novice's
-const LIKELY_REFERENCE_PER_KG: Record<UserProfile["gender"], Record<TestedPattern, number>> = {
-  male: { squat: 1, hinge: 1.25, push: 0.75, pull: 1, core: 0 },
-  female: { squat: 0.7, hinge: 0.9, push: 0.45, pull: 0.7, core: 0 },
-};
 // The first Set is at this share of the likely maximum, so it's easy even for a weaker user
 const FIRST_LOAD_SHARE = 0.5;
 
 // The first load: half the likely maximum, down to a load the equipment has (the lightest when all are heavier)
 function firstLoadKg(slug: string, loads: number[], { weightKg, gender }: Pick<UserProfile, "weightKg" | "gender">) {
   const entry = STRENGTH_RATIOS[slug];
-  if (entry?.kind !== "weighted" || !loads.length) return null;
-  const likelyMaximum = exerciseMaximum(slug, weightKg * LIKELY_REFERENCE_PER_KG[gender][entry.pattern]);
+  if (entry?.kind !== "weighted" || entry.pattern === "core" || !loads.length) return null;
+  const likelyMaximum = exerciseMaximum(slug, weightKg * TYPICAL_REFERENCE_PER_KG[gender][entry.pattern]);
   return loads.filter((kg) => kg <= likelyMaximum * FIRST_LOAD_SHARE).at(-1) ?? loads[0];
 }
 

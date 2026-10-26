@@ -46,10 +46,14 @@ export async function assessIfPaired(clerkUserId: string, workout: Workout) {
   const [a, b] = part === "B" ? [paired, workout] : [workout, paired];
   const user = await findUser(clerkUserId);
   const weightKg = user?.profile.weightKg;
-  if (!user || weightKg === undefined) throw new Error("Can't assess without the user's weight");
+  const gender = user?.profile.gender;
+  if (!user || weightKg === undefined || gender === undefined) {
+    throw new Error("Can't assess without the user's weight and gender");
+  }
 
-  // Working Levels for every Exercise available in any of the user's Equipment Profiles
-  const result = assess(a, b, { weightKg }, user.equipmentProfiles);
+  // Working Levels for every Exercise available in any of the user's Equipment Profiles. Gender sets the typical
+  // balance between Patterns that an untested one is estimated from
+  const result = assess(a, b, { weightKg, gender }, user.equipmentProfiles);
   const id = randomUUID();
   await assessments.insertOne({ ...result.assessment, id, clerkUserId, createdAt: new Date() });
   // A retake replaces every Working Level, even one for an Exercise the new Assessment leaves out

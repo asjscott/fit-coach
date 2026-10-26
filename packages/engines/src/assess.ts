@@ -1,23 +1,36 @@
-import type {
-  Assessment,
-  AssessmentTest,
-  EquipmentProfile,
-  Set,
+import {
   TestedPattern,
-  UserProfile,
-  WorkingLevel,
-  Workout,
+  type Assessment,
+  type AssessmentPattern,
+  type AssessmentTest,
+  type EquipmentProfile,
+  type Set,
+  type UserProfile,
+  type WorkingLevel,
+  type Workout,
 } from "@fit/shared";
-import { TOP_SET_RPE } from "./assessment-protocol";
+import { isLoadLimited, TOP_SET_RPE } from "./assessment-protocol";
 import { ASSESSMENT_PATTERNS, testedPatternOf } from "./assessment-tests";
 import { e1rm, MAX_E1RM_REPS } from "./e1rm";
-import { referenceStrength, STRENGTH_RATIOS } from "./strength-ratios";
+import {
+  KG_PATTERNS,
+  referenceStrength,
+  STRENGTH_RATIOS,
+  TYPICAL_REFERENCE_PER_KG,
+  type KgPattern,
+} from "./strength-ratios";
 import { seedWorkingLevels } from "./working-levels";
 
-// A weighted test's top Set is the first rated RPE 9 or higher. A bodyweight or timed test is a single Set, so its
-// top Set is that Set. None means the test has no top Set
-const topSetOf = (sets: Set[]) =>
-  sets[0]?.kind === "external" ? sets.find((set) => (set.rpe ?? 0) >= TOP_SET_RPE) : sets[0];
+// A weighted test's top Set is the first rated RPE 9 or higher, or when it's load-limited, its last Set. A bodyweight
+// or timed test is a single Set, so its top Set is that Set. None means the test is untested
+function topSetOf(sets: Set[]): { topSet: Set; loadLimited: boolean } | null {
+  const [first] = sets;
+  if (!first) return null;
+  if (first.kind !== "external") return { topSet: first, loadLimited: false };
+  if (isLoadLimited(sets)) return { topSet: sets[sets.length - 1], loadLimited: true };
+  const topSet = sets.find((set) => (set.rpe ?? 0) >= TOP_SET_RPE);
+  return topSet ? { topSet, loadLimited: false } : null;
+}
 
 // The reps the Set would have reached to failure: reps in reserve count. An unrated Set counts as RPE 9
 const repsToFailure = (reps: number, rpe = TOP_SET_RPE) => reps + (10 - rpe);
@@ -43,35 +56,66 @@ function maximumOf(slug: string, set: Set, bodyWeightKg: number) {
 
 // Turns a pair of Assessment Workouts into the Assessment and the Working Levels it sets. Each Workout is read only
 // for the Patterns it tests.
+// A Pattern that wasn't measured is estimated a fifth lighter than the others suggest: it's the softer number, and it's
+// often untested because of an injury
+const ESTIMATE_SHARE = 0.8;
+// Core's estimate when the plank wasn't tested: plank seconds don't follow from strength in kg
+const ESTIMATED_PLANK_SECONDS = 30;
+
+// An untested Pattern's Reference Strength. Each tested kg Pattern says how strong the user is next to the typical
+// Reference Strength for their weight and gender; the untested Pattern gets its typical value at the average of those
+// shares (the typical value itself when none was tested), less ESTIMATE_SHARE. A load-limited test counts at its floor
+function estimateReferenceStrength(
+  pattern: TestedPattern,
+  tests: Partial<Record<TestedPattern, AssessmentTest>>,
+  { weightKg, gender }: Pick<UserProfile, "weightKg" | "gender">,
+) {
+  if (pattern === "core") return ESTIMATED_PLANK_SECONDS;
+  const typical = (kgPattern: KgPattern) => weightKg * TYPICAL_REFERENCE_PER_KG[gender][kgPattern];
+  const shares = KG_PATTERNS.flatMap((tested) => {
+    const test = tests[tested];
+    return test ? [test.referenceStrength / typical(tested)] : [];
+  });
+  const share = shares.length ? shares.reduce((sum, s) => sum + s, 0) / shares.length : 1;
+  return typical(pattern) * share * ESTIMATE_SHARE;
+}
+
 // The Working Levels cover every Exercise available in any of the user's Equipment Profiles.
-// Still to come: load-limited and untested Patterns (#38)
 export function assess(
   a: Workout,
   b: Workout,
-  profile: Pick<UserProfile, "weightKg">,
+  profile: Pick<UserProfile, "weightKg" | "gender">,
   equipmentProfiles: Pick<EquipmentProfile, "tags" | "loads">[],
 ): { assessment: Omit<Assessment, "id" | "createdAt">; workingLevels: WorkingLevel[] } {
-  const patterns: Assessment["patterns"] = {};
+  const tests: Partial<Record<TestedPattern, AssessmentTest>> = {};
   for (const [workout, part] of [
     [a, "A"],
     [b, "B"],
   ] as const) {
     for (const { slug, sets } of workout.workoutExercises) {
       const pattern = testedPatternOf(slug);
-      const topSet = topSetOf(sets);
-      if (!pattern || !ASSESSMENT_PATTERNS[part].includes(pattern) || !topSet) continue;
+      const top = topSetOf(sets);
+      if (!pattern || !ASSESSMENT_PATTERNS[part].includes(pattern) || !top) continue;
+      const { topSet, loadLimited } = top;
       const maximum = maximumOf(slug, topSet, profile.weightKg);
-      patterns[pattern] = {
+      tests[pattern] = {
         slug,
         topSet,
         maximum,
+        loadLimited,
         referenceStrength: referenceStrength(slug, maximum),
         estimated: false,
-      } satisfies AssessmentTest;
+      };
     }
   }
+  const patterns: Assessment["patterns"] = Object.fromEntries(
+    TestedPattern.options.map((pattern): [TestedPattern, AssessmentPattern] => [
+      pattern,
+      tests[pattern] ?? { referenceStrength: estimateReferenceStrength(pattern, tests, profile), estimated: true },
+    ]),
+  );
   const referenceStrengths: Partial<Record<TestedPattern, number>> = Object.fromEntries(
-    Object.entries(patterns).map(([pattern, test]) => [pattern, test.referenceStrength]),
+    Object.entries(patterns).map(([pattern, result]) => [pattern, result.referenceStrength]),
   );
   return {
     assessment: { aWorkoutId: a.id, bWorkoutId: b.id, bodyWeightKg: profile.weightKg, patterns },

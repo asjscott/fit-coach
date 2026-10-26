@@ -61,7 +61,6 @@ function workingLevelOf(
     return { slug, unit: "band", level: lightestBand(exercise, profiles), reps: BAND_REPS };
   }
   if (entry.kind === "core-reps") return { slug, unit: "reps", reps: CORE_REPS };
-  // Still to come: a Pattern with no test estimated from the others (#38)
   const reference = referenceStrengths[entry.pattern];
   if (reference === undefined) return null;
   const maximum = reference * entry.ratio;
