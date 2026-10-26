@@ -20,6 +20,7 @@ import { LastWorkoutSection } from "../components/last-workout-section";
 import { ThisWeekSection } from "../components/this-week-section";
 import { assessmentOffer, todayState, todayStatus } from "../today-status";
 import { AssessmentSection } from "../components/assessment-section";
+import { useDismissedOffer } from "../hooks/use-dismissed-offer";
 
 // The training hub: Start or Resume, this week against the user's days per week, and the last Workout
 export default function TodayView() {
@@ -30,6 +31,7 @@ export default function TodayView() {
   const { workouts, error } = useHistory();
   const daysPerWeek = useCurrentUser().user?.profile.daysPerWeek;
   const { latest: latestAssessment } = useLatestAssessment();
+  const { dismissed, dismiss } = useDismissedOffer();
   useRefreshHistory();
 
   // A forgotten Workout must be finished or discarded before the user carries on
@@ -49,11 +51,19 @@ export default function TodayView() {
   const last = lastWorkout(all);
   const state = todayState({ historyLoaded: workouts !== null, failed: !!error, workoutCount: all.length });
   const status = todayStatus({ state, workoutCount: week.workoutCount, target: week.target });
-  // Only once History and the latest Assessment are both known, so A isn't offered to someone who has done it
+  // The latest Assessment counts only once History has loaded too, so A isn't offered to someone who has done it.
+  // Until then (offline, or loading) the offer comes from the Pending Workouts alone
+  const historyKnown = state === "loaded" || state === "first-run";
   const offer =
-    (state === "loaded" || state === "first-run") && latestAssessment !== undefined
-      ? assessmentOffer({ workouts: all, latestAssessment: latestAssessment?.assessment ?? null })
-      : null;
+    dismissed === undefined
+      ? null
+      : assessmentOffer({
+          workouts: all,
+          latestAssessment:
+            historyKnown && latestAssessment !== undefined ? (latestAssessment?.assessment ?? null) : undefined,
+          now,
+          dismissed,
+        });
 
   return (
     <Screen scroll edges={["top"]}>
@@ -79,7 +89,7 @@ export default function TodayView() {
       </View>
       {offer ? (
         <View style={{ marginTop: spacing[5] }}>
-          <AssessmentSection offer={offer} />
+          <AssessmentSection offer={offer} onDismiss={() => dismiss(offer.key)} />
         </View>
       ) : null}
       <Divider spacing={6} />

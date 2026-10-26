@@ -9,18 +9,31 @@ import { Text } from "@/components/text";
 import { spacing, useTheme } from "@/theme";
 import { describeSet } from "@/features/workouts/format";
 import { exerciseName } from "@/features/workouts/library";
+import { useLogbook } from "@/features/workouts/logbook-provider";
 import { useLatestAssessment } from "../hooks/use-latest-assessment";
+import { useStartAssessment } from "../hooks/use-start-assessment";
 
 // In the order the tests were done: A's, then B's
 const PATTERN_ORDER = [...ASSESSMENT_PATTERNS.A, ...ASSESSMENT_PATTERNS.B];
 
 const maximumLabel = (kg: number) => `${kg.toLocaleString(undefined, { maximumFractionDigits: 1 })} kg`;
 
-// The latest Assessment: each test's Exercise, top Set and estimated maximum.
-// Still to come: starting Working Levels by Pattern (#36), load-limited and estimated Patterns (#38), and
-// "Results once synced" while B is Pending (#39)
+// The latest Assessment: each test's Exercise, top Set and estimated maximum, and Retake. "Results once synced" while
+// a B is Pending, since the server works out the Assessment once it has both.
+// Still to come: starting Working Levels by Pattern (#36), load-limited and estimated Patterns (#38)
 export default function AssessmentResultsView() {
   const { latest, error, refresh } = useLatestAssessment();
+  const { pending, workout } = useLogbook();
+  const { start, starting } = useStartAssessment();
+
+  if (pending.some((pendingWorkout) => pendingWorkout.assessment === "B")) {
+    return (
+      <Screen edges={["bottom"]}>
+        <Text weight="semiBold">Results once synced</Text>
+        <Text color="muted">Assessment B is saved on your phone and uploads when you have signal.</Text>
+      </Screen>
+    );
+  }
 
   if (latest === undefined && !error) return <Loading message="Loading results..." />;
   if (latest === undefined) {
@@ -47,6 +60,21 @@ export default function AssessmentResultsView() {
       {tests.map((test) => (
         <TestRow key={test.slug} test={test} />
       ))}
+      {workout ? null : (
+        <View style={styles.retake}>
+          <Text size="sm" color="muted">
+            Retake after a break or a big change. A new Assessment replaces these Working Levels.
+          </Text>
+          <LoadingButton
+            label="Retake: start Assessment A"
+            action="secondary"
+            variant="outline"
+            fullWidth
+            loading={starting === "A"}
+            onPress={() => start("A")}
+          />
+        </View>
+      )}
     </Screen>
   );
 }
@@ -85,4 +113,5 @@ const styles = StyleSheet.create({
   },
   maximum: { alignItems: "flex-end" },
   retry: { marginTop: spacing[4] },
+  retake: { marginTop: spacing[6], gap: spacing[2] },
 });

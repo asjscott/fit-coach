@@ -19,18 +19,40 @@ export function todayState({
   return failed ? "offline" : "loading";
 }
 
-// What Today offers about the Assessment: to start A or B, or a link to the Results
-export type AssessmentOffer = { kind: "start"; part: AssessmentPart } | { kind: "results" } | null;
+// What Today offers about the Assessment: to start A, to start B (and redo A when it's stale), that the Results come
+// once B syncs, or a link to the Results. `key` names this offer, so dismissing it hides it until another comes along
+export type AssessmentOffer = (
+  | { kind: "start"; part: "A" }
+  | { kind: "start"; part: "B"; redoA: boolean }
+  | { kind: "syncing" }
+  | { kind: "results" }
+) & { key: string };
 
-// From History with the Pending Workouts, and the latest Assessment on the server (null when there is none).
-// Still to come (#39): Redo A when A is stale, "Results once synced" while B is Pending, dismissing, and offline
-export function assessmentOffer({
+// An A older than this with no B after it is stale: Today also offers to redo it
+const STALE_A_MS = 14 * 24 * 60 * 60 * 1000;
+
+type AssessmentOfferInput = {
+  // History with the Pending Workouts
+  workouts: (Pick<Workout, "id" | "startedAt" | "assessment"> & { isPending: boolean })[];
+  // The latest Assessment on the server, null when there is none. undefined when it can't be known (offline, or
+  // History or the Assessment still loading): then only the Pending Workouts on the phone count (ADR 0001)
+  latestAssessment: Pick<Assessment, "id" | "createdAt"> | null | undefined;
+  now: Date;
+  // The key of the offer the user dismissed last, if any
+  dismissed: string | null;
+};
+
+// Today's Assessment offer, or null when there's none or the user dismissed it
+export function assessmentOffer({ dismissed, ...input }: AssessmentOfferInput): AssessmentOffer | null {
+  const offer = currentOffer(input);
+  return offer && offer.key !== dismissed ? offer : null;
+}
+
+function currentOffer({
   workouts,
   latestAssessment,
-}: {
-  workouts: Pick<Workout, "id" | "startedAt" | "assessment">[];
-  latestAssessment: Pick<Assessment, "aWorkoutId"> | null;
-}): AssessmentOffer {
+  now,
+}: Omit<AssessmentOfferInput, "dismissed">): AssessmentOffer | null {
   const newest = (part: AssessmentPart) =>
     workouts
       .filter((workout) => workout.assessment === part)
@@ -40,9 +62,20 @@ export function assessmentOffer({
       );
   const a = newest("A");
   const b = newest("B");
-  if (latestAssessment && (!a || latestAssessment.aWorkoutId === a.id)) return { kind: "results" };
-  if (!a) return { kind: "start", part: "A" };
-  if (!b || b.startedAt < a.startedAt) return { kind: "start", part: "B" };
+  // B is on the phone, so its Assessment can't be worked out yet
+  if (b?.isPending && (!a || b.startedAt > a.startedAt)) return { kind: "syncing", key: `syncing:${b.id}` };
+  // An A waiting for its B: the first ever, or a retake started after the latest Assessment was worked out
+  const awaitingB =
+    a && (!b || b.startedAt < a.startedAt) && (!latestAssessment || a.startedAt > latestAssessment.createdAt);
+  if (awaitingB && (latestAssessment !== undefined || a.isPending)) {
+    // Going stale is news, so a dismissed B offer comes back with Redo A
+    const redoA = now.getTime() - new Date(a.startedAt).getTime() > STALE_A_MS;
+    return { kind: "start", part: "B", redoA, key: `start-B:${a.id}${redoA ? ":redo-A" : ""}` };
+  }
+  if (latestAssessment === undefined) return null;
+  // The Assessment is a snapshot, so it stands even once its Workouts are deleted from History
+  if (latestAssessment) return { kind: "results", key: `results:${latestAssessment.id}` };
+  if (!a) return { kind: "start", part: "A", key: "start-A" };
   // B is done but its Assessment hasn't been worked out yet
   return null;
 }
