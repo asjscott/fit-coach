@@ -4,6 +4,7 @@ import { Box } from "@/components/box";
 import { RHFChipSelect, RHFMultiSelect, RHFTextField, type Option } from "@/components/hook-form";
 import { HStack, Stack } from "@/components/stack";
 import {
+  bandLevelLabels,
   bandTags,
   barWeightsKg,
   dumbbellWeightsKg,
@@ -18,12 +19,6 @@ const dumbbellKindOptions: Option[] = [
   { value: "fixed", label: "Fixed set" },
 ];
 
-const bandLevelLabels: Record<BandLevel, string> = {
-  light: "Light",
-  medium: "Medium",
-  heavy: "Heavy",
-  extra_heavy: "Extra heavy",
-};
 const bandLevelOptions: Option[] = BandLevel.options.map((value) => ({ value, label: bandLevelLabels[value] }));
 
 // The weights for each selected piece of equipment, stored under loads.<tag>; every answer is optional

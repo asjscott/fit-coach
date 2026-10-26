@@ -65,3 +65,10 @@ export function availableLoadsKg(
 export function isSafeFor(exercise: Pick<Exercise, "avoidWith">, injuries: InjuryTag[]): boolean {
   return !exercise.avoidWith.some((tag) => injuries.includes(tag));
 }
+
+// A load as the user would lift it: the nearest of the loads (the lighter on a tie), or to the nearest 0.5 kg when
+// the loads aren't known
+export function roundToLoadKg(kg: number, loadsKg: number[]): number {
+  if (!loadsKg.length) return Math.round(kg * 2) / 2;
+  return loadsKg.reduce((best, load) => (Math.abs(load - kg) < Math.abs(best - kg) ? load : best));
+}

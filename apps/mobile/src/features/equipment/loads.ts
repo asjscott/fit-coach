@@ -6,6 +6,13 @@ export const loadTags = ["dumbbells", "kettlebells", "barbell", "loop_bands", "m
 export type LoadTag = (typeof loadTags)[number];
 export const bandTags = ["loop_bands", "mini_bands", "tube_bands"] as const satisfies LoadTag[];
 
+export const bandLevelLabels: Record<BandLevel, string> = {
+  light: "Light",
+  medium: "Medium",
+  heavy: "Heavy",
+  extra_heavy: "Extra heavy",
+};
+
 export const hasLoadTags = (tags: EquipmentTag[]) => loadTags.some((tag) => tags.includes(tag));
 
 // Common sizes offered in the dropdowns

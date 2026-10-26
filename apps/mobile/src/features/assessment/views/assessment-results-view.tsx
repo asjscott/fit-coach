@@ -7,20 +7,23 @@ import { Screen } from "@/components/screen";
 import { SectionLabel } from "@/components/section-label";
 import { Text } from "@/components/text";
 import { spacing, useTheme } from "@/theme";
+import { useCurrentUser } from "@/features/user/current-user-provider";
 import { describeSet } from "@/features/workouts/format";
 import { exerciseName } from "@/features/workouts/library";
 import { useLatestAssessment } from "../hooks/use-latest-assessment";
+import { workingLevelSections, type WorkingLevelRow } from "../working-level-sections";
 
 // In the order the tests were done: A's, then B's
 const PATTERN_ORDER = [...ASSESSMENT_PATTERNS.A, ...ASSESSMENT_PATTERNS.B];
 
 const maximumLabel = (kg: number) => `${kg.toLocaleString(undefined, { maximumFractionDigits: 1 })} kg`;
 
-// The latest Assessment: each test's Exercise, top Set and estimated maximum.
-// Still to come: starting Working Levels by Pattern (#36), load-limited and estimated Patterns (#38), and
-// "Results once synced" while B is Pending (#39)
+// The latest Assessment: each test's Exercise, top Set and estimated maximum, then the starting Working Levels by
+// Pattern for what the primary Equipment Profile supports, rounded to its loads.
+// Still to come: load-limited and estimated Patterns (#38), and "Results once synced" while B is Pending (#39)
 export default function AssessmentResultsView() {
   const { latest, error, refresh } = useLatestAssessment();
+  const primary = useCurrentUser().user?.equipmentProfiles.find((profile) => profile.isPrimary);
 
   if (latest === undefined && !error) return <Loading message="Loading results..." />;
   if (latest === undefined) {
@@ -41,13 +44,40 @@ export default function AssessmentResultsView() {
 
   const { patterns } = latest.assessment;
   const tests = PATTERN_ORDER.flatMap((pattern) => patterns[pattern] ?? []);
+  const sections = primary ? workingLevelSections(latest.workingLevels, primary) : [];
   return (
     <Screen scroll edges={["bottom"]}>
       <SectionLabel style={styles.sectionLabel}>Tests</SectionLabel>
       {tests.map((test) => (
         <TestRow key={test.slug} test={test} />
       ))}
+      {sections.length > 0 ? (
+        <>
+          <Text weight="semiBold" style={styles.heading}>
+            Starting Working Levels
+          </Text>
+          {sections.map((section) => (
+            <View key={section.title} style={styles.section}>
+              <SectionLabel style={styles.sectionLabel}>{section.title}</SectionLabel>
+              {section.rows.map((row) => (
+                <WorkingLevelRowView key={row.slug} row={row} />
+              ))}
+            </View>
+          ))}
+        </>
+      ) : null}
     </Screen>
+  );
+}
+
+// "Goblet squat" and "12 kg × 8"
+function WorkingLevelRowView({ row }: { row: WorkingLevelRow }) {
+  const { colors } = useTheme();
+  return (
+    <View style={[styles.levelRow, { borderTopColor: colors.line }]}>
+      <Text style={{ flex: 1 }}>{row.name}</Text>
+      <Text weight="semiBold">{row.label}</Text>
+    </View>
   );
 }
 
@@ -84,5 +114,15 @@ const styles = StyleSheet.create({
     borderTopWidth: StyleSheet.hairlineWidth,
   },
   maximum: { alignItems: "flex-end" },
+  heading: { marginTop: spacing[6] },
+  section: { marginTop: spacing[4] },
+  levelRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing[3],
+    minHeight: 48,
+    paddingVertical: spacing[2],
+    borderTopWidth: StyleSheet.hairlineWidth,
+  },
   retry: { marginTop: spacing[4] },
 });
