@@ -1,3 +1,4 @@
+export * from "./assessment-protocol";
 export * from "./assessment-tests";
 export * from "./data/exercises";
 export * from "./e1rm";

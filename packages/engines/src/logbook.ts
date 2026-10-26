@@ -10,6 +10,7 @@ import {
   type UserProfile,
 } from "@fit/shared";
 import type { z } from "zod";
+import { protocolState } from "./assessment-protocol";
 import { ASSESSMENT_PATTERNS, chooseTests } from "./assessment-tests";
 import { previousSets } from "./training-summaries";
 
@@ -137,7 +138,7 @@ export function createLogbook({
   }
 
   async function finishAs(
-    { id, workoutExercises }: InProgressWorkout,
+    { id, assessment, workoutExercises }: InProgressWorkout,
     { startedAt, endedAt, now }: WorkoutTimes & { now: Date },
   ): Promise<FinishResult> {
     const withSets = workoutExercises.filter(({ sets }) => sets.length > 0);
@@ -147,6 +148,7 @@ export function createLogbook({
       id,
       startedAt: startedAt.toISOString(),
       endedAt: endedAt.toISOString(),
+      ...(assessment && { assessment }),
       workoutExercises: withSets.map(({ slug, loadType, sets }) => ({ slug, loadType, sets })),
     });
     await writePending([...(await readPending()), workout]);
@@ -281,12 +283,18 @@ export function createLogbook({
         await write(workout);
       }),
 
-    // The values to pre-fill the next Set with: the last Set's, or null for the first Set
+    // The values to pre-fill the next Set with: the last Set's, or null for the first Set. Not its RPE: each Set is
+    // rated on its own
     nextSetDraft: (workoutExercise: InProgressWorkoutExercise): SetValues | null => {
       const last = workoutExercise.sets.at(-1);
       if (!last) return null;
-      return Object.fromEntries(Object.entries(last).filter(([key]) => key !== "loggedAt")) as SetValues;
+      return Object.fromEntries(
+        Object.entries(last).filter(([key]) => key !== "loggedAt" && key !== "rpe"),
+      ) as SetValues;
     },
+
+    // For a test Exercise of an Assessment Workout: the suggested next load, or done. The logging screen only renders it
+    protocolState,
 
     // Turns the in-progress Workout into a Pending Workout; sync() uploads it. Workout
     // Exercises with no Sets are dropped; with no Sets at all there is nothing to save,
