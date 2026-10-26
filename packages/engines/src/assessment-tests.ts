@@ -1,4 +1,4 @@
-import type { AssessmentPart, EquipmentProfile, Exercise, InjuryTag, TestedPattern } from "@fit/shared";
+import type { AssessmentPart, EquipmentProfile, Exercise, InjuryTag, Pattern, TestedPattern } from "@fit/shared";
 import { EXERCISES } from "./data/exercises";
 import { isAvailable, isSafeFor } from "./equipment";
 
@@ -17,6 +17,9 @@ const RANKED: Record<TestedPattern, string[]> = {
   pull: ["pull-up", "one-arm-dumbbell-row", "inverted-row"],
   core: ["plank"],
 };
+
+// The tested Pattern whose Reference Strength a Pattern's Working Levels follow from: carry has no test, so hinge
+export const referencePatternOf = (pattern: Pattern): TestedPattern => (pattern === "carry" ? "hinge" : pattern);
 
 // The Pattern an Exercise is a test for, or undefined when it's on no Pattern's list
 export function testedPatternOf(slug: string): TestedPattern | undefined {

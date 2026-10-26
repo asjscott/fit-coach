@@ -1,4 +1,4 @@
-import { ASSESSMENT_PATTERNS } from "@fit/engines";
+import { ASSESSMENT_PATTERNS, repMaximum } from "@fit/engines";
 import type { AssessmentTest, TestedPattern } from "@fit/shared";
 import { StyleSheet, View } from "react-native";
 import { LoadingButton } from "@/components/loading-button";
@@ -33,7 +33,7 @@ function maximumOf({ topSet, maximum, loadLimited }: AssessmentTest) {
         : { value: kg, caption: "Estimated max" };
     }
     case "bodyweight":
-      return { value: `${topSet.reps + (10 - (topSet.rpe ?? 9))} reps`, caption: "Rep max" };
+      return { value: `${repMaximum(topSet)} reps`, caption: "Rep max" };
     case "timed":
       return { value: `${topSet.seconds} s`, caption: "Held" };
   }

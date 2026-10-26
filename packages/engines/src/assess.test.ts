@@ -1,6 +1,6 @@
 import type { AssessmentPattern, EquipmentProfile, Set, WorkingLevel, Workout } from "@fit/shared";
 import { describe, expect, it } from "vitest";
-import { assess } from "./assess";
+import { assess, repMaximum } from "./assess";
 import { EXERCISES } from "./data/exercises";
 import { isAvailable } from "./equipment";
 
@@ -318,6 +318,12 @@ describe("assess", () => {
 
       expect(pushUpLevel(10)).toEqual({ slug: "push-up", unit: "reps", reps: 9 });
       expect(pushUpLevel(20)).toEqual({ slug: "push-up", unit: "reps", reps: 19 });
+    });
+
+    it("shows a bodyweight test's rep maximum: its reps plus those in reserve", () => {
+      expect(repMaximum({ reps: 10, rpe: 9 })).toBe(11);
+      expect(repMaximum({ reps: 10, rpe: 7 })).toBe(13);
+      expect(repMaximum({ reps: 10, rpe: 10 })).toBe(10);
     });
 
     it("counts reps in reserve when the one Set was rated easier than RPE 9", () => {

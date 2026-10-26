@@ -1,4 +1,4 @@
-import { availableLoadsKg, isAvailable, roundToLoadKg } from "@fit/engines";
+import { availableLoadsKg, isAvailable, referencePatternOf, roundToLoadKg } from "@fit/engines";
 import { Pattern, type Assessment, type EquipmentProfile, type WorkingLevel } from "@fit/shared";
 import { bandLevelLabels } from "@/features/equipment/loads";
 import { patternLabels } from "@/features/exercises/labels";
@@ -25,7 +25,7 @@ function workingLevelLabel(level: WorkingLevel, loadsKg: number[]): string {
 }
 
 // The starting Working Levels for what the primary Equipment Profile supports, one section per Pattern in Pattern
-// order, each Exercise under its first Pattern. A section is estimated when its Pattern was (carry follows hinge)
+// order, each Exercise under its first Pattern. A section is estimated when the Pattern it follows from was
 export function workingLevelSections(
   workingLevels: WorkingLevel[],
   primary: Pick<EquipmentProfile, "tags" | "loads">,
@@ -44,7 +44,7 @@ export function workingLevelSections(
   return Pattern.options
     .map((pattern) => ({
       title: patternLabels[pattern],
-      estimated: patterns[pattern === "carry" ? "hinge" : pattern]?.estimated ?? false,
+      estimated: patterns[referencePatternOf(pattern)]?.estimated ?? false,
       rows: rows.filter((r) => r.pattern === pattern).map((r) => r.row),
     }))
     .filter((section) => section.rows.length > 0);

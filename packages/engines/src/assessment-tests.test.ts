@@ -1,6 +1,6 @@
-import { PRESETS, type EquipmentTag } from "@fit/shared";
+import { PRESETS, type EquipmentTag, type Pattern } from "@fit/shared";
 import { describe, expect, it } from "vitest";
-import { chooseTests } from "./assessment-tests";
+import { chooseTests, referencePatternOf } from "./assessment-tests";
 import { EXERCISES } from "./data/exercises";
 
 const preset = (name: string) => {
@@ -93,6 +93,19 @@ describe("chooseTests", () => {
     );
     expect(chosen.length).toBeGreaterThan(0);
     expect(refused.map((exercise) => exercise.slug)).toEqual([]);
+  });
+});
+
+describe("referencePatternOf", () => {
+  it("scales carry from hinge, which has a test, and every tested Pattern from itself", () => {
+    expect(referencePatternOf("carry")).toBe("hinge");
+    expect(["squat", "hinge", "push", "pull", "core"].map((p) => referencePatternOf(p as Pattern))).toEqual([
+      "squat",
+      "hinge",
+      "push",
+      "pull",
+      "core",
+    ]);
   });
 });
 

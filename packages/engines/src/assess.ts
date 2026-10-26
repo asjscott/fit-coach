@@ -32,8 +32,9 @@ function topSetOf(sets: Set[]): { topSet: Set; loadLimited: boolean } | null {
   return topSet ? { topSet, loadLimited: false } : null;
 }
 
-// The reps the Set would have reached to failure: reps in reserve count. An unrated Set counts as RPE 9
-const repsToFailure = (reps: number, rpe = TOP_SET_RPE) => reps + (10 - rpe);
+// The reps the Set would have reached to failure: reps in reserve count. An unrated Set counts as RPE 9. For a
+// bodyweight test it's the rep maximum the Results show
+export const repMaximum = ({ reps, rpe = TOP_SET_RPE }: { reps: number; rpe?: number }) => reps + (10 - rpe);
 
 // The test's maximum: an e1RM in kg, or for a timed test the seconds held.
 // - weighted: past 12 reps Epley isn't trusted, so the estimate stops there as a floor.
@@ -43,11 +44,11 @@ const repsToFailure = (reps: number, rpe = TOP_SET_RPE) => reps + (10 - rpe);
 function maximumOf(slug: string, set: Set, bodyWeightKg: number) {
   switch (set.kind) {
     case "external":
-      return e1rm(set.kg, Math.min(repsToFailure(set.reps, set.rpe), MAX_E1RM_REPS));
+      return e1rm(set.kg, Math.min(repMaximum(set), MAX_E1RM_REPS));
     case "bodyweight": {
       const entry = STRENGTH_RATIOS[slug];
       if (entry?.kind !== "bodyweight") throw new Error(`"${slug}" isn't a bodyweight Exercise`);
-      return bodyWeightKg * entry.share * (1 + repsToFailure(set.reps, set.rpe) / 30);
+      return bodyWeightKg * entry.share * (1 + repMaximum(set) / 30);
     }
     case "timed":
       return set.seconds;
