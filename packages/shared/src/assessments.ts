@@ -41,6 +41,8 @@ export const Assessment = z.object({
   id: z.uuid(),
   aWorkoutId: z.uuid(),
   bWorkoutId: z.uuid(),
+  // When B started: the newest Assessment is the one whose B started last, whenever the server worked it out
+  bStartedAt: z.iso.datetime(),
   createdAt: z.iso.datetime(),
   // The profile's weight when the Assessment was worked out
   bodyWeightKg: z.number().positive(),

@@ -62,10 +62,11 @@ const tested = (result: AssessmentPattern | undefined) => (result?.estimated ===
 const levelOf = (workingLevels: WorkingLevel[], slug: string) => workingLevels.find((level) => level.slug === slug);
 
 describe("assess", () => {
-  it("records the pair and the body weight used", () => {
+  it("records the pair, when its B started and the body weight used", () => {
     expect(assess(a, b, profile, [home]).assessment).toMatchObject({
       aWorkoutId: A_ID,
       bWorkoutId: B_ID,
+      bStartedAt: "2026-10-22T09:00:00.000Z",
       bodyWeightKg: 80,
     });
   });

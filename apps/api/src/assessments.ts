@@ -6,16 +6,20 @@ import { findUser } from "./users";
 import { toWorkout, workouts } from "./workouts";
 
 // One document per Assessment, a snapshot: deleting either Assessment Workout leaves it be
-type AssessmentDoc = Omit<Assessment, "createdAt"> & { clerkUserId: string; createdAt: Date };
+type AssessmentDoc = Omit<Assessment, "createdAt" | "bStartedAt"> & {
+  clerkUserId: string;
+  createdAt: Date;
+  bStartedAt: Date;
+};
 
-// One document per user and slug; the newest Assessment overwrites all of them
+// One document per user and slug; the newest Assessment (by when its B started) overwrites all of them
 type WorkingLevelDoc = WorkingLevel & { clerkUserId: string; assessmentId: string };
 
 export const assessments = db.collection<AssessmentDoc>("assessments");
 export const workingLevels = db.collection<WorkingLevelDoc>("workingLevels");
 
 export async function ensureAssessmentIndexes() {
-  await assessments.createIndex({ clerkUserId: 1, createdAt: -1 });
+  await assessments.createIndex({ clerkUserId: 1, bStartedAt: -1 });
   await workingLevels.createIndex({ clerkUserId: 1, slug: 1 }, { unique: true });
 }
 
@@ -55,7 +59,11 @@ export async function assessIfPaired(clerkUserId: string, workout: Workout) {
   // balance between Patterns that an untested one is estimated from
   const result = assess(a, b, { weightKg, gender }, user.equipmentProfiles);
   const id = randomUUID();
-  await assessments.insertOne({ ...result.assessment, id, clerkUserId, createdAt: new Date() });
+  const bStartedAt = new Date(result.assessment.bStartedAt);
+  await assessments.insertOne({ ...result.assessment, id, clerkUserId, createdAt: new Date(), bStartedAt });
+  // A pair completed late by an old A is kept, but mustn't overwrite the Working Levels of a newer Assessment
+  const newest = await assessments.findOne({ clerkUserId }, { sort: { bStartedAt: -1 }, projection: { id: 1 } });
+  if (newest?.id !== id) return;
   // A retake replaces every Working Level, even one for an Exercise the new Assessment leaves out
   await workingLevels.deleteMany({ clerkUserId });
   if (result.workingLevels.length) {
@@ -63,13 +71,17 @@ export async function assessIfPaired(clerkUserId: string, workout: Workout) {
   }
 }
 
-// The newest Assessment with its Working Levels, or null before the first
+// The newest Assessment (its B started last) with its Working Levels, or null before the first
 export async function findLatestAssessment(clerkUserId: string): Promise<LatestAssessment> {
-  const doc = await assessments.findOne({ clerkUserId }, { sort: { createdAt: -1 } });
+  const doc = await assessments.findOne({ clerkUserId }, { sort: { bStartedAt: -1 } });
   if (!doc) return null;
   const levels = await workingLevels.find({ clerkUserId }).toArray();
   return LatestAssessment.parse({
-    assessment: Assessment.parse({ ...doc, createdAt: doc.createdAt.toISOString() }),
+    assessment: Assessment.parse({
+      ...doc,
+      createdAt: doc.createdAt.toISOString(),
+      bStartedAt: doc.bStartedAt.toISOString(),
+    }),
     workingLevels: levels.map((level) => WorkingLevel.parse(level)),
   });
 }

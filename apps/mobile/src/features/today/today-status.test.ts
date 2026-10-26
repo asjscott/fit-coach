@@ -38,7 +38,8 @@ describe("assessmentOffer", () => {
     isPending,
     ...(assessment && { assessment }),
   });
-  const assessment = (id: string, day: string) => ({ id, createdAt: `2026-10-${day}T10:00:00.000Z` });
+  // The latest Assessment, from a B started on this day
+  const assessment = (id: string, day: string) => ({ id, bStartedAt: `2026-10-${day}T08:00:00.000Z` });
   type Input = Parameters<typeof assessmentOffer>[0];
   // Today's offer on 23 October, with nothing dismissed unless a test says so
   const offer = (workouts: Input["workouts"], latestAssessment: Input["latestAssessment"], more?: Partial<Input>) =>
@@ -90,6 +91,13 @@ describe("assessmentOffer", () => {
   it("offers B for a retake: an A newer than the latest Assessment", () => {
     const workouts = [workout("a2", "22", "A"), workout("b1", "12", "B"), workout("a1", "10", "A")];
     expect(offer(workouts, assessment("x1", "12"))).toMatchObject({ kind: "start", part: "B", redoA: false });
+  });
+
+  it("offers B for a retake started after the latest Assessment's B, though that Assessment was worked out later", () => {
+    // a1 and b1 synced on the 22nd, after a2 was started offline
+    const workouts = [workout("a2", "15", "A"), workout("b1", "12", "B"), workout("a1", "10", "A")];
+    const latest = { ...assessment("x1", "12"), createdAt: "2026-10-22T10:00:00.000Z" };
+    expect(offer(workouts, latest)).toMatchObject({ kind: "start", part: "B", redoA: false });
   });
 
   it("offline, offers only what the Pending Workouts show", () => {

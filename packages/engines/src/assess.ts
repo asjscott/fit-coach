@@ -118,7 +118,13 @@ export function assess(
     Object.entries(patterns).map(([pattern, result]) => [pattern, result.referenceStrength]),
   );
   return {
-    assessment: { aWorkoutId: a.id, bWorkoutId: b.id, bodyWeightKg: profile.weightKg, patterns },
+    assessment: {
+      aWorkoutId: a.id,
+      bWorkoutId: b.id,
+      bStartedAt: b.startedAt,
+      bodyWeightKg: profile.weightKg,
+      patterns,
+    },
     workingLevels: seedWorkingLevels(referenceStrengths, profile.weightKg, equipmentProfiles),
   };
 }

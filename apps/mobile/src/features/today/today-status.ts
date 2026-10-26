@@ -36,7 +36,7 @@ type AssessmentOfferInput = {
   workouts: (Pick<Workout, "id" | "startedAt" | "assessment"> & { isPending: boolean })[];
   // The latest Assessment on the server, null when there is none. undefined when it can't be known (offline, or
   // History or the Assessment still loading): then only the Pending Workouts on the phone count (ADR 0001)
-  latestAssessment: Pick<Assessment, "id" | "createdAt"> | null | undefined;
+  latestAssessment: Pick<Assessment, "id" | "bStartedAt"> | null | undefined;
   now: Date;
   // The key of the offer the user dismissed last, if any
   dismissed: string | null;
@@ -64,9 +64,9 @@ function currentOffer({
   const b = newest("B");
   // B is on the phone, so its Assessment can't be worked out yet
   if (b?.isPending && (!a || b.startedAt > a.startedAt)) return { kind: "syncing", key: `syncing:${b.id}` };
-  // An A waiting for its B: the first ever, or a retake started after the latest Assessment was worked out
+  // An A waiting for its B: the first ever, or a retake started after the latest Assessment's B
   const awaitingB =
-    a && (!b || b.startedAt < a.startedAt) && (!latestAssessment || a.startedAt > latestAssessment.createdAt);
+    a && (!b || b.startedAt < a.startedAt) && (!latestAssessment || a.startedAt > latestAssessment.bStartedAt);
   if (awaitingB && (latestAssessment !== undefined || a.isPending)) {
     // Going stale is news, so a dismissed B offer comes back with Redo A
     const redoA = now.getTime() - new Date(a.startedAt).getTime() > STALE_A_MS;
