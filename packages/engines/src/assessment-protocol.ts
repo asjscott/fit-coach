@@ -1,14 +1,18 @@
-import type { EquipmentProfile, InProgressWorkoutExercise, TestedPattern, UserProfile } from "@fit/shared";
+import type { EquipmentProfile, InProgressWorkoutExercise, Set, TestedPattern, UserProfile } from "@fit/shared";
 import { EXERCISES } from "./data/exercises";
+import { MAX_E1RM_REPS } from "./e1rm";
 import { availableLoadsKg } from "./equipment";
 import { exerciseMaximum, STRENGTH_RATIOS } from "./strength-ratios";
 
 // Where a test Exercise is in its protocol, for the logging screen to render. Working up: Sets of 5, each at the
 // suggested load (null when the equipment's loads aren't known). One Set: a bodyweight or timed test is a single Set
 // taken to RPE 9, so there is no load to suggest. Done: a weighted Set reached RPE 9, or the one Set is logged.
-// Still to come: load-limited (#38)
+// Load-limited: a weighted test ended past 12 reps without reaching RPE 9, so the equipment ran out of load.
 export type ProtocolState =
-  { status: "working-up"; suggestedKg: number | null } | { status: "one-set" } | { status: "done" };
+  | { status: "working-up"; suggestedKg: number | null }
+  | { status: "one-set" }
+  | { status: "done" }
+  | { status: "load-limited" };
 
 // Every Set of a weighted test is 5 reps
 export const TEST_REPS = 5;
@@ -18,6 +22,13 @@ export const TOP_SET_RPE = 9;
 
 // How far to aim above the last load, by its RPE: an easy Set jumps further
 const JUMP_BY_RPE: Record<number, number> = { 6: 0.2, 7: 0.1, 8: 0.05 };
+
+// A weighted test with no Set at RPE 9 or higher whose last Set went past 12 reps: the load ran out before the effort
+// did. The Logbook ends the test there, and `assess` takes its maximum as a lower bound
+export function isLoadLimited(sets: Set[]): boolean {
+  const last = sets.at(-1);
+  return last?.kind === "external" && last.reps > MAX_E1RM_REPS && !sets.some((set) => (set.rpe ?? 0) >= TOP_SET_RPE);
+}
 
 const bySlug = new Map(EXERCISES.map((exercise) => [exercise.slug, exercise]));
 
@@ -45,6 +56,7 @@ export function protocolState(
   const exercise = bySlug.get(slug);
   if (exercise && exercise.loadType !== "external") return sets.length ? { status: "done" } : { status: "one-set" };
   if (sets.some((set) => (set.rpe ?? 0) >= TOP_SET_RPE)) return { status: "done" };
+  if (isLoadLimited(sets)) return { status: "load-limited" };
   const last = sets.at(-1);
   if (!exercise) return { status: "working-up", suggestedKg: null };
   const loads = availableLoadsKg(exercise, equipmentProfile);

@@ -738,6 +738,41 @@ describe("Logbook: Assessment Workouts", () => {
     expect(await logAndSuggest(16, 9)).toEqual({ status: "done" });
   });
 
+  it("ends the test as load-limited when the heaviest dumbbell passes 12 reps short of RPE 9", async () => {
+    const { logbook } = setup();
+    const { workoutExercises } = await logbook.startAssessment(
+      { part: "A", equipmentProfile: dumbbellsOnly, ...user },
+      at("09:00"),
+    );
+    const squatId = workoutExercises[0].id;
+    const log = async (kg: number, reps: number, rpe: number) =>
+      logbook.protocolState(
+        await logbook.logSet(squatId, { kind: "external", kg, reps, rpe }, at("09:05")),
+        dumbbellsOnly,
+        user,
+      );
+
+    // At the heaviest dumbbell it suggests the same again
+    expect(await log(16, 5, 6)).toEqual({ status: "working-up", suggestedKg: 20 });
+    expect(await log(20, 5, 6)).toEqual({ status: "working-up", suggestedKg: 20 });
+    expect(await log(20, 13, 8)).toEqual({ status: "load-limited" });
+  });
+
+  it("keeps working up when a Set stops at 12 reps or fewer short of RPE 9", async () => {
+    const { logbook } = setup();
+    const { workoutExercises } = await logbook.startAssessment(
+      { part: "A", equipmentProfile: dumbbellsOnly, ...user },
+      at("09:00"),
+    );
+    const squat = await logbook.logSet(
+      workoutExercises[0].id,
+      { kind: "external", kg: 20, reps: 12, rpe: 8 },
+      at("09:05"),
+    );
+
+    expect(logbook.protocolState(squat, dumbbellsOnly, user)).toEqual({ status: "working-up", suggestedKg: 20 });
+  });
+
   it("suggests a conservative first load the dumbbells actually have", async () => {
     const { logbook } = setup();
     const { workoutExercises } = await logbook.startAssessment(
