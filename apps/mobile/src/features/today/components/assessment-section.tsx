@@ -1,3 +1,4 @@
+import { ASSESSMENT_PATTERNS } from "@fit/engines";
 import type { AssessmentPart } from "@fit/shared";
 import { router } from "expo-router";
 import { StyleSheet, View } from "react-native";
@@ -7,13 +8,20 @@ import { Pressable } from "@/components/pressable";
 import { SectionLabel } from "@/components/section-label";
 import { Text } from "@/components/text";
 import { useStartAssessment } from "@/features/assessment/hooks/use-start-assessment";
+import { patternLabels } from "@/features/exercises/labels";
 import { useLogbook } from "@/features/workouts/logbook-provider";
 import { spacing } from "@/theme";
 import type { AssessmentOffer } from "../today-status";
 
+// "squat, hinge and core"
+function patternsInWords(part: AssessmentPart) {
+  const words = ASSESSMENT_PATTERNS[part].map((pattern) => patternLabels[pattern].toLowerCase());
+  return words.length > 1 ? `${words.slice(0, -1).join(", ")} and ${words.at(-1)}` : words[0];
+}
+
 const WHAT_IT_TESTS: Record<AssessmentPart, string> = {
-  A: "Tests your squat and hinge, so the Coach knows your starting strength.",
-  B: "Tests your push and pull, and finishes your Assessment.",
+  A: `Tests your ${patternsInWords("A")}, so the Coach knows your starting strength.`,
+  B: `Tests your ${patternsInWords("B")}, and finishes your Assessment.`,
 };
 
 // Today's Assessment offer: start A or B (and redo a stale A), "Results once synced", or open the Results. Every
