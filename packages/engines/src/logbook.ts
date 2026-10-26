@@ -204,13 +204,12 @@ export function createLogbook({
         part,
         equipmentProfile,
         injuries,
-        weightKg,
-        gender,
+        bodyProfile,
       }: {
         part: AssessmentPart;
         equipmentProfile: Pick<EquipmentProfile, "tags">;
-      } & Pick<UserProfile, "injuries"> &
-        BodyProfile,
+        bodyProfile: BodyProfile;
+      } & Pick<UserProfile, "injuries">,
       now: Date,
     ) => {
       const tests = chooseTests(equipmentProfile, injuries);
@@ -226,7 +225,7 @@ export function createLogbook({
           id: newId(),
           startedAt: now.toISOString(),
           assessment: part,
-          bodyProfile: { weightKg, gender },
+          bodyProfile,
           workoutExercises: exercises.map((exercise, i) => newWorkoutExercise(exercise, fromServer[i], pending)),
         };
         await write(workout);

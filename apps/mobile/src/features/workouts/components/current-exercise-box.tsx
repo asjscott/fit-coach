@@ -47,7 +47,7 @@ export function CurrentExerciseBox({ workoutExercise, position, count }: Current
     workout?.assessment && primaryEquipment ? protocolState(workout, workoutExercise, primaryEquipment) : undefined;
   const isTest = !!workout?.assessment;
   const nextDraft: SetValues | null =
-    protocol?.status === "working-up" && protocol.suggestedKg !== null
+    (protocol?.status === "working-up" || protocol?.status === "at-heaviest") && protocol.suggestedKg !== null
       ? { kind: "external", kg: protocol.suggestedKg, reps: TEST_REPS }
       : nextSetDraft(workoutExercise);
 
@@ -172,8 +172,7 @@ function protocolLabel(protocol: ProtocolState, sets: InProgressWorkoutExercise[
   if (protocol.suggestedKg !== null && setCount === 0) {
     return `Sets of ${TEST_REPS}, adding weight each Set until one is RPE 9. Start at ${protocol.suggestedKg} kg.`;
   }
-  const last = sets.at(-1);
-  if (protocol.suggestedKg !== null && last?.kind === "external" && last.kg === protocol.suggestedKg) {
+  if (protocol.status === "at-heaviest") {
     return `${protocol.suggestedKg} kg is your heaviest: as many reps as you can to RPE 9. Past 12 reps ends the test.`;
   }
   if (protocol.suggestedKg !== null) return `Next: ${protocol.suggestedKg} kg × ${TEST_REPS}, then rate it`;

@@ -36,11 +36,8 @@ function topSetOf(sets: Set[]): { topSet: Set; loadLimited: boolean } | null {
 // bodyweight test it's the rep maximum the Results show
 export const repMaximum = ({ reps, rpe = TOP_SET_RPE }: { reps: number; rpe?: number }) => reps + (10 - rpe);
 
-// The test's maximum: an e1RM in kg, or for a timed test the seconds held.
-// - weighted: past 12 reps Epley isn't trusted, so the estimate stops there as a floor.
-// - bodyweight: the load is body weight × the Exercise's share. Epley runs uncapped here, because a bodyweight
-//   Working Level inverts the same formula: the tested Exercise's rep target comes back as its rep maximum less the
-//   reps in reserve, however many reps the test reached.
+// Weighted stops at 12 reps, past which Epley isn't trusted. Bodyweight doesn't, because its Working Level inverts
+// the same formula and must give the test's own reps back
 function maximumOf(slug: string, set: Set, bodyWeightKg: number) {
   switch (set.kind) {
     case "external":

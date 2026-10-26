@@ -9,12 +9,8 @@ const slug = z.string().regex(/^[a-z0-9-]+$/);
 export const TestedPattern = Pattern.exclude(["carry"]);
 export type TestedPattern = z.infer<typeof TestedPattern>;
 
-// One Pattern's test as the Assessment read it: the Exercise, its top Set, the maximum estimated from it counting reps
-// in reserve, and the Reference Strength that follows (GLOSSARY.md). A weighted test's top Set is the first rated
-// RPE 9 or higher; a bodyweight or timed test's is its one Set. The maximum is an e1RM in kg (for a bodyweight test,
-// of body weight × the Exercise's share), or for a timed test the seconds held.
-// Load-limited: a weighted test that went past 12 reps at its last Set without reaching RPE 9. That Set is the top
-// Set, and the maximum is only a lower bound (Epley at 12 reps).
+// One Pattern's test as `assess` read it. The maximum is an e1RM in kg, or the seconds held; when load-limited it's
+// only a lower bound
 export const AssessmentTest = z.object({
   slug,
   topSet: Set,

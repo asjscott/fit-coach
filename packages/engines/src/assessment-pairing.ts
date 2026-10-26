@@ -5,12 +5,8 @@ export type AssessmentWorkoutRef = Pick<Workout, "id" | "startedAt"> & { assessm
 
 export type AssessmentPair = Pick<Assessment, "aWorkoutId" | "bWorkoutId">;
 
-// The pair of Assessment Workouts to work out an Assessment from, now that `workout` has reached the server, or null.
-// `workouts` are the user's Assessment Workouts on the server, `workout` among them, and `assessments` the pairs
-// already assessed.
-// A B pairs with the latest A that started before it, unless that A already made an Assessment: so deleting an A
-// before its B arrives leaves that B unpaired when the A before it was used. An A that arrives after its B (they
-// synced out of order) pairs with the first B it's the latest A for that has no Assessment yet
+// The pair `workout` completes now it's on the server, or null. A B pairs with the latest A that started before it, so
+// an A that synced after its B completes the pair too; a Workout already in an Assessment never pairs again
 export function pairToAssess(
   workout: AssessmentWorkoutRef,
   { workouts, assessments }: { workouts: AssessmentWorkoutRef[]; assessments: AssessmentPair[] },

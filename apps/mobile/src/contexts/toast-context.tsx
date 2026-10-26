@@ -3,7 +3,6 @@ import { Toast, type ToastAction } from "@/components/toast";
 
 type ToastType = "success" | "error" | "warning" | "info";
 
-// action: a button on the toast, e.g. "See results"
 type ToastOptions = { type?: ToastType; duration?: number; error?: unknown; action?: ToastAction };
 
 type ToastContextValue = { showToast: (message: string, options?: ToastOptions) => void };

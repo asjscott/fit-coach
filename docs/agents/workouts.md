@@ -50,7 +50,8 @@ Starting (features/assessment/hooks/use-start-assessment.ts → Logbook.startAss
   └─ chooseTests (packages/engines/src/assessment-tests.ts): ranked list per Pattern, first available and safe;
      ASSESSMENT_PATTERNS, testedPatternOf, referencePatternOf (carry follows hinge)
 Logging (features/workouts/components/current-exercise-box.tsx renders Logbook.protocolState)
-  └─ protocolState (packages/engines/src/assessment-protocol.ts): first load, next load, one-set, done, load-limited
+  └─ protocolState (packages/engines/src/assessment-protocol.ts): first load, next load, at-heaviest, one-set, done,
+     load-limited
 Server (apps/api/src/assessments.ts assessIfPaired, called by POST /workouts in routes/workouts.ts)
   ├─ pairToAssess (packages/engines/src/assessment-pairing.ts): which A and B make the Assessment
   └─ assess (packages/engines/src/assess.ts): top Sets, maximums, Reference Strengths, estimates
@@ -71,7 +72,7 @@ Schemas: packages/shared/src/assessments.ts; Set.rpe and Workout.assessment in w
   so any last Set past 12 reps without a top Set is load-limited.
 - **Pairing**: a B pairs with the latest A that started before it, unless that A is already in an Assessment; an A that
   arrives late pairs with the first B it's the latest A for. A pair is assessed once, so a retried upload recomputes
-  nothing.
+  nothing; a unique index on `bWorkoutId` keeps two uploads pairing at once to one Assessment.
 - **POST /workouts pairs on the 200 retry too, and a pairing failure fails the upload (500)** though the Workout is
   stored: the phone keeps it Pending, and the retry works the Assessment out.
 - **"Newest" is by the B's `startedAt` (`Assessment.bStartedAt`), not server time.** Every Assessment is stored, but

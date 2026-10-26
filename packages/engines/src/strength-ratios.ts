@@ -1,12 +1,7 @@
 import type { TestedPattern, UserProfile } from "@fit/shared";
 
-// How an Exercise's strength follows from its Pattern's Reference Strength (GLOSSARY.md). An Exercise's maximum is
-// the Reference Strength × its ratio, and a test's maximum ÷ its ratio gives the Reference Strength back.
-// - weighted: the maximum is an e1RM in kg. For a dumbbell or kettlebell Exercise it's one implement's weight.
-// - bodyweight: the maximum is an e1RM in kg of the load moved, body weight × share.
-// - timed: the maximum is seconds; core's Reference Strength is plank seconds.
-// - core-reps: a core rep Exercise, always 10 reps. band: the lightest band and 12 reps. Neither scales.
-// Carry has no test of its own, so carry Exercises scale from hinge.
+// An Exercise's maximum is its Pattern's Reference Strength × its ratio: an e1RM in kg (one dumbbell or kettlebell's
+// weight; for bodyweight, of body weight × share) or seconds. Core rep and band Exercises don't scale
 export type StrengthRatio =
   | { kind: "weighted"; pattern: TestedPattern; ratio: number }
   | { kind: "bodyweight"; pattern: TestedPattern; ratio: number; share: number }

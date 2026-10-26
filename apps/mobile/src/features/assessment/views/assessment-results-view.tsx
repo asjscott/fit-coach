@@ -21,10 +21,9 @@ const PATTERN_ORDER = [...ASSESSMENT_PATTERNS.A, ...ASSESSMENT_PATTERNS.B];
 
 const ESTIMATED = "Estimated from your other results";
 
-// The test's maximum and what it is: "16.8 kg" Estimated maximum; for a bodyweight test the reps it was worth,
-// "11 reps" Rep maximum (its kg is of body weight × a share, which means little to the user); for a timed test "90 s"
-// Held. A load-limited test's maximum is a floor: "at least 28 kg" Limited by your equipment
-function maximumOf({ topSet, maximum, loadLimited }: AssessmentTest) {
+// "16.8 kg" Estimated maximum. A bodyweight test shows its rep maximum: its kg, of body weight × a share, means
+// little to the user
+function maximumLabel({ topSet, maximum, loadLimited }: AssessmentTest) {
   switch (topSet.kind) {
     case "external": {
       const kg = `${maximum.toLocaleString(undefined, { maximumFractionDigits: 1 })} kg`;
@@ -39,10 +38,7 @@ function maximumOf({ topSet, maximum, loadLimited }: AssessmentTest) {
   }
 }
 
-// The latest Assessment: each test's Exercise, top Set and estimated maximum, the starting Working Levels by Pattern
-// for what the primary Equipment Profile supports (rounded to its loads), and Retake. "Results once synced" while a
-// B is Pending, since the server works out the Assessment once it has both. An untested Pattern, and the Working
-// Levels that follow from it, are labelled "Estimated from your other results".
+// "Results once synced" while a B is Pending, since the server works out the Assessment once it has both
 export default function AssessmentResultsView() {
   const { latest, error, refresh } = useLatestAssessment();
   const { pending, workout } = useLogbook();
@@ -163,7 +159,7 @@ function EstimatedRow({ pattern }: { pattern: TestedPattern }) {
 function TestRow({ test }: { test: AssessmentTest }) {
   const { colors } = useTheme();
   const rpe = test.topSet.rpe === undefined ? "" : ` at RPE ${test.topSet.rpe}`;
-  const maximum = maximumOf(test);
+  const maximum = maximumLabel(test);
   return (
     <View style={[styles.row, { borderTopColor: colors.line }]}>
       <View style={{ flex: 1 }}>

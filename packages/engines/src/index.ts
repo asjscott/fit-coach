@@ -8,3 +8,4 @@ export * from "./logbook";
 export * from "./picker";
 export * from "./training-summaries";
 export * from "./assessment-pairing";
+export { WORKING_LEVEL_REPS } from "./working-levels";

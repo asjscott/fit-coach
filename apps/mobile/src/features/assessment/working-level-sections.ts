@@ -1,24 +1,23 @@
-import { availableLoadsKg, isAvailable, referencePatternOf, roundToLoadKg } from "@fit/engines";
+import { availableLoadsKg, isAvailable, referencePatternOf, roundToLoadKg, WORKING_LEVEL_REPS } from "@fit/engines";
 import { Pattern, type Assessment, type EquipmentProfile, type WorkingLevel } from "@fit/shared";
 import { bandLevelLabels } from "@/features/equipment/loads";
 import { patternLabels } from "@/features/exercises/labels";
+import { describeSet } from "@/features/workouts/format";
 import { exerciseName, libraryExercise } from "@/features/workouts/library";
 
 export type WorkingLevelRow = { slug: string; name: string; label: string };
 // Estimated: the Pattern these Working Levels follow from wasn't tested
 export type WorkingLevelSection = { title: string; estimated: boolean; rows: WorkingLevelRow[] };
 
-const kgLabel = (kg: number) => `${kg.toLocaleString(undefined, { maximumFractionDigits: 2 })} kg`;
-
 // "12.5 kg × 8", "14 reps", "45 s" or "Medium band × 12", with kg rounded to a load the profile has
 function workingLevelLabel(level: WorkingLevel, loadsKg: number[]): string {
   switch (level.unit) {
     case "kg":
-      return `${kgLabel(roundToLoadKg(level.kg, loadsKg))} × 8`;
+      return describeSet({ kind: "external", kg: roundToLoadKg(level.kg, loadsKg), reps: WORKING_LEVEL_REPS });
     case "reps":
-      return `${level.reps} reps`;
+      return describeSet({ kind: "bodyweight", reps: level.reps });
     case "seconds":
-      return `${Math.round(level.seconds)} s`;
+      return describeSet({ kind: "timed", seconds: Math.round(level.seconds) });
     case "band":
       return `${bandLevelLabels[level.level]} band × ${level.reps}`;
   }

@@ -673,10 +673,10 @@ describe("Logbook: Assessment Workouts", () => {
     tags: ["dumbbells"],
     loads: { dumbbells: { kind: "fixed", weightsKg: [8, 10, 12, 14, 16, 20] } },
   };
-  const user = { injuries: [], weightKg: 80, gender: "male" } satisfies Pick<
+  const user = { injuries: [], bodyProfile: { weightKg: 80, gender: "male" } } satisfies Pick<
     UserProfile,
-    "injuries" | "weightKg" | "gender"
-  >;
+    "injuries"
+  > & { bodyProfile: BodyProfile };
 
   it("adds the tests for A in order, goblet squat first for dumbbells only and the plank last", async () => {
     const { logbook } = setup();
@@ -690,6 +690,25 @@ describe("Logbook: Assessment Workouts", () => {
       "plank",
     ]);
     expect(await logbook.inProgress()).toEqual(workout);
+  });
+
+  it("skips tests flagged against the user's injuries, leaving out a Pattern with none safe", async () => {
+    const { logbook } = setup();
+    const bodyweightOnly: EquipmentProfile = { ...dumbbellsOnly, tags: [], loads: {} };
+
+    // The dumbbell Romanian deadlift is flagged for a lower back injury; every push, push-up included, for a wrist one
+    const a = await logbook.startAssessment(
+      { part: "A", equipmentProfile: dumbbellsOnly, ...user, injuries: ["lower_back"] },
+      at("09:00"),
+    );
+    await logbook.discard();
+    const b = await logbook.startAssessment(
+      { part: "B", equipmentProfile: bodyweightOnly, ...user, injuries: ["wrist"] },
+      at("10:00"),
+    );
+
+    expect(a.workoutExercises.map((we) => we.slug)).toEqual(["goblet-squat", "single-leg-glute-bridge", "plank"]);
+    expect(b.workoutExercises.map((we) => we.slug)).toEqual(["inverted-row"]);
   });
 
   it("refuses to add, remove or reorder its Exercises", async () => {
@@ -746,9 +765,9 @@ describe("Logbook: Assessment Workouts", () => {
         dumbbellsOnly,
       );
 
-    // At the heaviest dumbbell it suggests the same again
+    // At the heaviest dumbbell it says so, and suggests the same again
     expect(await log(16, 5, 6)).toEqual({ status: "working-up", suggestedKg: 20 });
-    expect(await log(20, 5, 6)).toEqual({ status: "working-up", suggestedKg: 20 });
+    expect(await log(20, 5, 6)).toEqual({ status: "at-heaviest", suggestedKg: 20 });
     expect(await log(20, 13, 8)).toEqual({ status: "load-limited" });
   });
 
@@ -773,7 +792,7 @@ describe("Logbook: Assessment Workouts", () => {
       at("09:05"),
     );
 
-    expect(logbook.protocolState(workout, squat, dumbbellsOnly)).toEqual({ status: "working-up", suggestedKg: 20 });
+    expect(logbook.protocolState(workout, squat, dumbbellsOnly)).toEqual({ status: "at-heaviest", suggestedKg: 20 });
   });
 
   it("suggests a conservative first load the dumbbells actually have", async () => {
@@ -795,14 +814,14 @@ describe("Logbook: Assessment Workouts", () => {
     const firstLoad = async (profile: BodyProfile) => {
       const { logbook } = setup();
       const workout = await logbook.startAssessment(
-        { part: "A", equipmentProfile: dumbbellsOnly, injuries: [], ...profile },
+        { part: "A", equipmentProfile: dumbbellsOnly, injuries: [], bodyProfile: profile },
         at("09:00"),
       );
       const state = logbook.protocolState(workout, workout.workoutExercises[0], dumbbellsOnly);
       return state.status === "working-up" ? state.suggestedKg : null;
     };
 
-    expect(await firstLoad({ weightKg: 55, gender: "female" })).toBeLessThan((await firstLoad(user)) ?? 0);
+    expect(await firstLoad({ weightKg: 55, gender: "female" })).toBeLessThan((await firstLoad(user.bodyProfile)) ?? 0);
   });
 
   it("keeps suggesting from the body weight and gender it started with", async () => {
@@ -827,7 +846,7 @@ describe("Logbook: Assessment Workouts", () => {
     };
     const { logbook } = setup();
     const workout = await logbook.startAssessment(
-      { part: "B", equipmentProfile: homeGym, injuries: [], weightKg: 45, gender: "female" },
+      { part: "B", equipmentProfile: homeGym, injuries: [], bodyProfile: { weightKg: 45, gender: "female" } },
       at("09:00"),
     );
 

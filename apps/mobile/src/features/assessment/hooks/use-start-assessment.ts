@@ -22,7 +22,7 @@ export function useStartAssessment() {
     }
     setStarting(part);
     try {
-      await startAssessment({ part, equipmentProfile, injuries, weightKg, gender });
+      await startAssessment({ part, equipmentProfile, injuries, bodyProfile: { weightKg, gender } });
       router.push("/workout");
     } catch (err) {
       showToast(`Couldn't start Assessment ${part}`, { error: err });

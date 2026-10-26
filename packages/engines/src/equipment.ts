@@ -12,13 +12,19 @@ export function expandTags(tags: EquipmentTag[]): Set<EquipmentTag> {
   return owned;
 }
 
-export function isAvailable(
+// The ways of doing the Exercise the profile has everything for
+export function ownedOptions(
   exercise: Pick<Exercise, "equipmentOptions">,
   profile: Pick<EquipmentProfile, "tags">,
-): boolean {
+): EquipmentTag[][] {
   const owned = expandTags(profile.tags);
-  return exercise.equipmentOptions.some((option) => option.every((tag) => owned.has(tag)));
+  return exercise.equipmentOptions.filter((option) => option.every((tag) => owned.has(tag)));
 }
+
+export const isAvailable = (
+  exercise: Pick<Exercise, "equipmentOptions">,
+  profile: Pick<EquipmentProfile, "tags">,
+): boolean => ownedOptions(exercise, profile).length > 0;
 
 // The heaviest barbell load worth listing; plates are assumed plentiful, so only the sizes owned limit the loads
 const MAX_BARBELL_KG = 300;
@@ -48,10 +54,8 @@ export function availableLoadsKg(
   exercise: Pick<Exercise, "equipmentOptions">,
   profile: Pick<EquipmentProfile, "tags" | "loads">,
 ): number[] {
-  const owned = expandTags(profile.tags);
   const { dumbbells, kettlebells, barbell } = profile.loads;
-  const loads = exercise.equipmentOptions
-    .filter((option) => option.every((tag) => owned.has(tag)))
+  const loads = ownedOptions(exercise, profile)
     .flat()
     .flatMap((tag) => {
       if (tag === "dumbbells" && dumbbells) return dumbbellLoadsKg(dumbbells);

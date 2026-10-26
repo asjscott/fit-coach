@@ -1,8 +1,6 @@
 import type { AssessmentPattern, EquipmentProfile, Set, WorkingLevel, Workout } from "@fit/shared";
 import { describe, expect, it } from "vitest";
 import { assess, repMaximum } from "./assess";
-import { EXERCISES } from "./data/exercises";
-import { isAvailable } from "./equipment";
 
 const loggedAt = "2026-10-24T09:00:00.000Z";
 const rated = (kg: number, rpe: number, reps = 5): Set => ({ kind: "external", kg, reps, rpe, loggedAt });
@@ -221,7 +219,23 @@ describe("assess", () => {
   it("gives every Exercise available in any of the Equipment Profiles a Working Level in its unit", () => {
     const { workingLevels } = assess(a, b, profile, [home, gym]);
 
-    const available = EXERCISES.filter((e) => isAvailable(e, home) || isAvailable(e, gym)).map((e) => e.slug);
+    // Left out: what needs kettlebells, a mini band, a dip station, an ab wheel, a landmine, or dumbbells with a
+    // bench or box, since neither profile has both
+    const available = [
+      ...["bodyweight-squat", "goblet-squat", "back-squat", "bulgarian-split-squat", "single-leg-glute-bridge"],
+      ...["dumbbell-romanian-deadlift", "barbell-romanian-deadlift", "incline-push-up", "push-up"],
+      ...["barbell-bench-press", "dumbbell-overhead-press", "inverted-row", "pull-up", "one-arm-dumbbell-row"],
+      ...["band-pull-apart", "plank", "dead-bug", "farmers-carry"],
+      ...["decline-push-up", "archer-push-up", "pike-push-up", "pull-up-negative", "chin-up", "glute-bridge"],
+      ...["single-leg-romanian-deadlift", "split-squat", "reverse-lunge", "shrimp-squat", "pistol-squat", "step-up"],
+      ...["ring-row", "ring-push-up", "ring-dip", "ring-fallout", "suspension-hamstring-curl"],
+      ...["band-row", "band-lat-pulldown", "band-chest-press", "band-overhead-press", "band-good-morning"],
+      ...["band-face-pull", "dumbbell-single-leg-romanian-deadlift", "dumbbell-bulgarian-split-squat"],
+      ...["dumbbell-reverse-lunge", "cossack-squat", "dumbbell-floor-press", "single-arm-overhead-press"],
+      ...["dumbbell-lateral-raise", "renegade-row", "side-plank", "hollow-hold", "bird-dog", "hanging-knee-raise"],
+      ...["hanging-leg-raise", "pallof-press", "prone-ytw", "suitcase-carry", "front-rack-carry", "overhead-carry"],
+      ...["lat-pulldown", "seated-cable-row", "deadlift", "barbell-overhead-press"],
+    ];
     expect(workingLevels.map((level) => level.slug).sort()).toEqual(available.sort());
     expect(levelOf(workingLevels, "back-squat")?.unit).toBe("kg");
     expect(levelOf(workingLevels, "lat-pulldown")?.unit).toBe("kg");
@@ -342,7 +356,12 @@ describe("assess", () => {
       const { assessment, workingLevels } = assess(bodyweightA, pushUps(10), profile, [bodyweightOnly]);
 
       expect(Object.keys(assessment.patterns).sort()).toEqual(["core", "hinge", "pull", "push", "squat"]);
-      const available = EXERCISES.filter((e) => isAvailable(e, bodyweightOnly)).map((e) => e.slug);
+      const available = [
+        ...["bodyweight-squat", "bulgarian-split-squat", "single-leg-glute-bridge", "incline-push-up", "push-up"],
+        ...["inverted-row", "plank", "dead-bug", "decline-push-up", "archer-push-up", "pike-push-up", "glute-bridge"],
+        ...["single-leg-romanian-deadlift", "split-squat", "reverse-lunge", "shrimp-squat", "pistol-squat"],
+        ...["cossack-squat", "side-plank", "hollow-hold", "bird-dog", "prone-ytw"],
+      ];
       expect(workingLevels.map((level) => level.slug).sort()).toEqual(available.sort());
     });
   });

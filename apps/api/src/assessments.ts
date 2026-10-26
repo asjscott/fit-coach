@@ -20,6 +20,8 @@ export const workingLevels = db.collection<WorkingLevelDoc>("workingLevels");
 
 export async function ensureAssessmentIndexes() {
   await assessments.createIndex({ clerkUserId: 1, bStartedAt: -1 });
+  // One Assessment per B, however many uploads pair it at once
+  await assessments.createIndex({ clerkUserId: 1, bWorkoutId: 1 }, { unique: true });
   await workingLevels.createIndex({ clerkUserId: 1, slug: 1 }, { unique: true });
 }
 
@@ -61,7 +63,13 @@ export async function assessIfPaired(clerkUserId: string, workout: Workout) {
   const result = assess(a, b, { weightKg, gender }, user.equipmentProfiles);
   const id = randomUUID();
   const bStartedAt = new Date(result.assessment.bStartedAt);
-  await assessments.insertOne({ ...result.assessment, id, clerkUserId, createdAt: new Date(), bStartedAt });
+  const inserted = await assessments.findOneAndUpdate(
+    { clerkUserId, bWorkoutId: b.id },
+    { $setOnInsert: { ...result.assessment, id, clerkUserId, createdAt: new Date(), bStartedAt } },
+    { upsert: true, includeResultMetadata: true },
+  );
+  // Another upload paired it first and stores the Working Levels
+  if (inserted.lastErrorObject?.updatedExisting) return;
   // A pair completed late by an old A is kept, but mustn't overwrite the Working Levels of a newer Assessment
   const newest = await assessments.findOne({ clerkUserId }, { sort: { bStartedAt: -1 }, projection: { id: 1 } });
   if (newest?.id !== id) return;
