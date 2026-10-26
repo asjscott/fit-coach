@@ -9,10 +9,14 @@ const workout: InProgressWorkout = {
 };
 
 describe("showsResumePill", () => {
-  it("shows on every tab while a Workout is in progress", () => {
-    for (const tab of ["/", "/history", "/exercises/goblet-squat", "/profile"]) {
+  it("shows on the other tabs while a Workout is in progress", () => {
+    for (const tab of ["/history", "/exercises/goblet-squat", "/profile"]) {
       expect(showsResumePill(workout, tab)).toBe(true);
     }
+  });
+
+  it("hides on Today, whose main button already resumes the Workout", () => {
+    expect(showsResumePill(workout, "/")).toBe(false);
   });
 
   it("hides without a Workout in progress", () => {
