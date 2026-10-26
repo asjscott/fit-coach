@@ -34,7 +34,7 @@ export function UserOnboardingForm() {
   return (
     <>
       <LoadingDialog isLoading={isSaving} title="Saving...">
-        <Text color="textMuted" centered>
+        <Text color="muted" centered>
           Updating your profile...
         </Text>
       </LoadingDialog>

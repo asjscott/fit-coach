@@ -98,7 +98,7 @@ export function RadioIcon() {
   const { isChecked, size } = useRadioContext();
   if (!isChecked) return null;
   const dot = checkboxSizes[size].box / 2;
-  return <View style={{ width: dot, height: dot, borderRadius: dot, backgroundColor: colors.orange }} />;
+  return <View style={{ width: dot, height: dot, borderRadius: dot, backgroundColor: colors.accent }} />;
 }
 
 export function RadioLabel(props: TextProps) {

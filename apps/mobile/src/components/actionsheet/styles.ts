@@ -14,7 +14,7 @@ export const createActionsheetStyles = (colors: Colors) =>
       maxHeight: "85%",
     },
     dragIndicatorWrapper: { alignItems: "center", paddingVertical: spacing[2] },
-    dragIndicator: { width: 40, height: 4, borderRadius: radii.pill, backgroundColor: colors.border },
+    dragIndicator: { width: 40, height: 4, borderRadius: radii.pill, backgroundColor: colors.line },
     item: {
       flexDirection: "row",
       alignItems: "center",
@@ -23,6 +23,6 @@ export const createActionsheetStyles = (colors: Colors) =>
       paddingHorizontal: spacing[2],
       borderRadius: radii.sm,
     },
-    itemPressed: { backgroundColor: colors.surfaceRaised },
+    itemPressed: { backgroundColor: colors.raised },
     itemDisabled: { opacity: 0.4 },
   });

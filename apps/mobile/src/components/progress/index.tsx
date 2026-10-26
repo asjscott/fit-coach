@@ -1,7 +1,6 @@
-import { LinearGradient } from "expo-linear-gradient";
 import { createContext, use, type ReactNode } from "react";
 import { StyleSheet, View, type StyleProp, type ViewStyle } from "react-native";
-import { accentGradient, radii, useTheme } from "@/theme";
+import { radii, useTheme } from "@/theme";
 
 const heights = { xs: 2, sm: 4, md: 6, lg: 8, xl: 12, "2xl": 16 } as const;
 
@@ -24,7 +23,7 @@ export function Progress({ value, size = "md", style, children }: ProgressProps)
         accessibilityRole="progressbar"
         accessibilityValue={{ min: 0, max: 100, now: clamped }}
         style={[
-          { height: heights[size], borderRadius: radii.pill, backgroundColor: colors.border, overflow: "hidden" },
+          { height: heights[size], borderRadius: radii.pill, backgroundColor: colors.line, overflow: "hidden" },
           style,
         ]}
       >
@@ -38,12 +37,5 @@ export function ProgressFilledTrack() {
   const { colors } = useTheme();
   const context = use(ProgressContext);
   if (!context) throw new Error("ProgressFilledTrack must be used inside <Progress>");
-  return (
-    <LinearGradient
-      colors={accentGradient(colors)}
-      start={{ x: 0, y: 0 }}
-      end={{ x: 1, y: 0 }}
-      style={[StyleSheet.absoluteFill, { width: `${context.value}%` }]}
-    />
-  );
+  return <View style={[StyleSheet.absoluteFill, { width: `${context.value}%`, backgroundColor: colors.accent }]} />;
 }

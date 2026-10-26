@@ -13,7 +13,7 @@ export function Loading({ message, size = "lg" }: LoadingProps) {
     <Stack flex centered spacing={4}>
       <Spinner size={size} />
       {!!message && (
-        <Text size="xs" weight="semiBold" color="textMuted" centered>
+        <Text size="xs" weight="semiBold" color="muted" centered>
           {message}
         </Text>
       )}

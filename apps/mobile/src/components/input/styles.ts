@@ -17,7 +17,7 @@ export const createInputStyles = (colors: Colors) =>
       flexDirection: "row",
       alignItems: "center",
       overflow: "hidden",
-      borderColor: colors.border,
+      borderColor: colors.inputBorder,
     },
     outline: { borderWidth: 1, borderRadius: radii.md, backgroundColor: colors.surface },
     rounded: {
@@ -27,7 +27,7 @@ export const createInputStyles = (colors: Colors) =>
       paddingHorizontal: spacing[1],
     },
     underlined: { borderBottomWidth: 1, borderRadius: 0 },
-    focused: { borderColor: colors.orange },
+    focused: { borderColor: colors.accent },
     invalid: { borderColor: colors.danger },
     disabled: { opacity: 0.4 },
     field: {

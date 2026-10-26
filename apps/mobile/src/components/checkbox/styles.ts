@@ -14,15 +14,15 @@ export const createCheckboxStyles = (colors: Colors) =>
     root: { flexDirection: "row", alignItems: "center", gap: spacing[2] },
     indicator: {
       borderWidth: 2,
-      borderColor: colors.textSubtle,
+      borderColor: colors.inputBorder,
       borderRadius: radii.xs,
       alignItems: "center",
       justifyContent: "center",
     },
     // Radio shares these styles but renders a circle
     round: { borderRadius: radii.pill },
-    checked: { borderColor: colors.orange, backgroundColor: colors.orange },
-    radioChecked: { borderColor: colors.orange },
+    checked: { borderColor: colors.accent, backgroundColor: colors.accent },
+    radioChecked: { borderColor: colors.accent },
     invalid: { borderColor: colors.danger },
     disabled: { opacity: 0.4 },
   });

@@ -4,13 +4,11 @@ import { router } from "expo-router";
 import { useState } from "react";
 import { FlatList } from "react-native";
 import { Badge, BadgeIcon, BadgeText } from "@/components/badge";
-import { Card } from "@/components/card";
 import { Input, InputField, InputIcon, InputSlot } from "@/components/input";
-import { Pressable } from "@/components/pressable";
 import { Screen } from "@/components/screen";
-import { HStack } from "@/components/stack";
 import { Text } from "@/components/text";
 import { useToast } from "@/contexts/toast-context";
+import { ExerciseRow } from "@/features/exercises/components/exercise-row";
 import { neededEquipment } from "@/features/exercises/needed-equipment";
 import { useCurrentUser } from "@/features/user/current-user-provider";
 import { spacing } from "@/theme";
@@ -47,9 +45,9 @@ export default function ExercisePickerView() {
         data={rows}
         keyExtractor={(row) => row.exercise.slug}
         keyboardShouldPersistTaps="handled"
-        contentContainerStyle={{ padding: spacing[6], gap: spacing[2] }}
+        contentContainerStyle={{ paddingHorizontal: spacing[6], paddingVertical: spacing[4] }}
         ListHeaderComponent={
-          <Input style={{ marginBottom: spacing[2] }}>
+          <Input style={{ marginBottom: spacing[4] }}>
             <InputSlot>
               <InputIcon name="search" />
             </InputSlot>
@@ -63,33 +61,25 @@ export default function ExercisePickerView() {
           </Input>
         }
         renderItem={({ item: { exercise, available, flagged } }) => (
-          <Pressable
+          <ExerciseRow
             accessibilityRole="button"
             accessibilityHint={flagged ? "Flagged for your injuries" : undefined}
+            name={exercise.name}
+            unavailable={!available}
+            detail={available ? undefined : `Needs: ${neededEquipment(exercise, tags)}`}
+            marker={
+              flagged ? (
+                <Badge action="warning">
+                  <BadgeIcon name="triangleAlert" />
+                  <BadgeText>Injury</BadgeText>
+                </Badge>
+              ) : null
+            }
             onPress={() => handlePick(exercise)}
-          >
-            <Card size="sm">
-              <HStack justify="between" align="center" spacing={2}>
-                <Text weight="semiBold" style={{ flexShrink: 1 }}>
-                  {exercise.name}
-                </Text>
-                {flagged && (
-                  <Badge action="warning">
-                    <BadgeIcon name="triangleAlert" />
-                    <BadgeText>Injury</BadgeText>
-                  </Badge>
-                )}
-              </HStack>
-              {!available && (
-                <Text size="sm" color="textMuted">
-                  Needs: {neededEquipment(exercise, tags)}
-                </Text>
-              )}
-            </Card>
-          </Pressable>
+          />
         )}
         ListEmptyComponent={
-          <Text color="textMuted" centered style={{ marginTop: spacing[6] }}>
+          <Text color="muted" centered style={{ marginTop: spacing[6] }}>
             No Exercises match “{query.trim()}”.
           </Text>
         }

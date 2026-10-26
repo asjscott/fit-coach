@@ -26,7 +26,7 @@ export function UserLoadingScreen() {
     <Screen>
       <Stack flex centered spacing={2}>
         <Text weight="semiBold">Couldn't load your account</Text>
-        <Text size="sm" color="textMuted" centered>
+        <Text size="sm" color="muted" centered>
           {error}
         </Text>
       </Stack>

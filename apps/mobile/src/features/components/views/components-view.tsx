@@ -60,10 +60,12 @@ import {
 import { Progress, ProgressFilledTrack } from "@/components/progress";
 import { Radio, RadioGroup, RadioIcon, RadioIndicator, RadioLabel } from "@/components/radio";
 import { Screen } from "@/components/screen";
+import { SectionLabel } from "@/components/section-label";
 import { Skeleton, SkeletonText } from "@/components/skeleton";
 import { Slider, SliderFilledTrack, SliderThumb, SliderTrack } from "@/components/slider";
 import { Spinner } from "@/components/spinner";
 import { HStack, Stack } from "@/components/stack";
+import { Stat } from "@/components/stat";
 import { Switch } from "@/components/switch";
 import { Text } from "@/components/text";
 import { Textarea, TextareaInput } from "@/components/textarea";
@@ -141,17 +143,17 @@ export default function ComponentsView() {
             <Heading size="md">Heading md</Heading>
             <Text size="lg">Text lg</Text>
             <Text>Text md (default)</Text>
-            <Text size="sm" color="textMuted">
+            <Text size="sm" color="muted">
               Text sm muted
             </Text>
-            <Text size="xs" color="textSubtle">
+            <Text size="xs" color="subtle">
               Text xs subtle
             </Text>
             <Text bold>Bold</Text>
             <Text italic underline>
               Italic underline
             </Text>
-            <Text size="4xl" weight="extraBold" tabular>
+            <Text size="4xl" weight="extraBold">
               142.5 kg
             </Text>
           </Section>
@@ -160,8 +162,8 @@ export default function ComponentsView() {
             <Grid columns={4} gap={2}>
               {(Object.keys(colors) as ColorToken[]).map((name) => (
                 <GridItem key={name}>
-                  <Box rounded="sm" bg={name} style={{ height: 40, borderWidth: 1, borderColor: colors.border }} />
-                  <Text size="2xs" color="textSubtle" isTruncated>
+                  <Box rounded="sm" bg={name} style={{ height: 40, borderWidth: 1, borderColor: colors.line }} />
+                  <Text size="2xs" color="subtle" isTruncated>
                     {name}
                   </Text>
                 </GridItem>
@@ -200,19 +202,36 @@ export default function ComponentsView() {
             <LoadingButton label="Loading button" icon="check" loading={saving} onPress={fakeSave} />
           </Section>
 
+          <Section title="Stats">
+            <SectionLabel right="Mon 20 – Sun 26">This week</SectionLabel>
+            <HStack spacing={4}>
+              <Stat value="6,420" unit="kg" label="Volume" />
+              <Stat value="38" label="Sets" />
+              <Stat value="2:14" unit="h" label="Time" />
+            </HStack>
+            <HStack spacing={4}>
+              <Stat size="4xl" value="48:12" label="Elapsed" />
+              <Stat size="4xl" value="142.5" unit="kg" label="Top set" />
+            </HStack>
+          </Section>
+
           <Section title="Cards">
             <Card>
-              <Heading size="sm">Elevated (default)</Heading>
-              <Text color="textMuted">Surface container for grouped content.</Text>
+              <SectionLabel>Section (default)</SectionLabel>
+              <Text color="muted">A hairline above, no box. Sections of a screen are separated this way.</Text>
             </Card>
-            <Card variant="outlined">
-              <Heading size="sm">Outlined</Heading>
+            <Card>
+              <SectionLabel>Another section</SectionLabel>
+              <Text color="muted">Volume 1,240 kg · 12 Sets · 48 min</Text>
             </Card>
             <Card variant="filled">
               <Heading size="sm">Filled</Heading>
             </Card>
+            <Card selected={false}>
+              <Heading size="sm">Choice</Heading>
+            </Card>
             <Card selected>
-              <Heading size="sm">Selected</Heading>
+              <Heading size="sm">Chosen</Heading>
             </Card>
           </Section>
 
@@ -356,7 +375,7 @@ export default function ComponentsView() {
             <Divider />
             <HStack justify="between">
               <Text>Intensity</Text>
-              <Text weight="semiBold" color="orange" tabular>
+              <Text weight="semiBold" color="accent">
                 {slider}%
               </Text>
             </HStack>
@@ -369,7 +388,7 @@ export default function ComponentsView() {
           </Section>
 
           <Section title="Hook form">
-            <Text size="sm" color="textMuted">
+            <Text size="sm" color="muted">
               Validated with the shared UserProfile schema. Submit empty to see errors.
             </Text>
             <FormProvider form={form}>
@@ -398,7 +417,7 @@ export default function ComponentsView() {
             <HStack spacing={4} wrap="wrap">
               {(["dumbbell", "flame", "target", "weight", "height", "calendar", "clock", "user"] as const).map(
                 (name) => (
-                  <Icon key={name} name={name} color="orange" />
+                  <Icon key={name} name={name} color="accent" />
                 ),
               )}
             </HStack>
@@ -414,7 +433,7 @@ export default function ComponentsView() {
             <ModalCloseButton />
           </ModalHeader>
           <ModalBody>
-            <Text color="textMuted">Your sets so far will be saved.</Text>
+            <Text color="muted">Your sets so far will be saved.</Text>
           </ModalBody>
           <ModalFooter>
             <Button action="default" size="sm" onPress={() => setModalOpen(false)}>

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { Workout, WorkoutsQuery } from "./workouts";
+import { InProgressWorkout, Workout, WorkoutsQuery } from "./workouts";
 
 const loggedAt = "2026-10-24T09:10:00.000Z";
 
@@ -49,9 +49,41 @@ describe("Workout", () => {
     expect(Workout.safeParse(workout([gobletSquat], backwards)).success).toBe(false);
   });
 
+  it("rejects a Workout Exercise carrying Previous Sets", () => {
+    expect(Workout.safeParse(workout([{ ...gobletSquat, previousSets }])).success).toBe(false);
+  });
+
+  it("drops other fields it doesn't know from a Workout Exercise, as before", () => {
+    const parsed = Workout.parse(workout([{ ...gobletSquat, note: "from a later version" }]));
+    expect(parsed.workoutExercises[0]).toEqual(gobletSquat);
+  });
+
   it("rejects a weight that isn't in 0.25 kg steps", () => {
     const awkward = { ...gobletSquat, sets: [{ kind: "external", kg: 22.3, reps: 10, loggedAt }] };
     expect(Workout.safeParse(workout([awkward])).success).toBe(false);
+  });
+});
+
+const previousSets = {
+  startedAt: "2026-10-20T09:00:00.000Z",
+  endedAt: "2026-10-20T09:45:00.000Z",
+  sets: [{ kind: "external", kg: 20, reps: 10, loggedAt: "2026-10-20T09:10:00.000Z" }],
+};
+
+describe("InProgressWorkout", () => {
+  const inProgress = (workoutExercise: object) => ({
+    id: "3b241101-e2bb-4255-8caf-4136c566a962",
+    startedAt: "2026-10-24T09:00:00.000Z",
+    workoutExercises: [{ id: "phone-id", ...workoutExercise }],
+  });
+
+  it("keeps Previous Sets saved with a Workout Exercise", () => {
+    const parsed = InProgressWorkout.parse(inProgress({ ...gobletSquat, sets: [], previousSets }));
+    expect(parsed.workoutExercises[0].previousSets).toEqual(previousSets);
+  });
+
+  it("accepts a Workout Exercise without Previous Sets", () => {
+    expect(InProgressWorkout.safeParse(inProgress({ ...gobletSquat, sets: [] })).success).toBe(true);
   });
 });
 

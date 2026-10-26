@@ -7,6 +7,7 @@ import { Heading } from "@/components/heading";
 import { KeyboardAwareScrollView } from "@/components/keyboard-aware-scroll-view";
 import { Loading } from "@/components/loading";
 import { Progress, ProgressFilledTrack } from "@/components/progress";
+import { SectionLabel } from "@/components/section-label";
 import { Stack } from "@/components/stack";
 import { Text } from "@/components/text";
 import { spacing } from "@/theme";
@@ -39,12 +40,10 @@ export function FormStage<T extends FieldValues = FieldValues>({ title, message,
         <Progress value={(stage / stageCount) * 100} size="sm">
           <ProgressFilledTrack />
         </Progress>
-        <Text size="xs" weight="medium" color="textSubtle">
-          STEP {stage} OF {stageCount}
-        </Text>
+        <SectionLabel>{`Step ${stage} of ${stageCount}`}</SectionLabel>
         <Stack spacing={1}>
           <Heading size="2xl">{title}</Heading>
-          <Text color="textMuted">{message}</Text>
+          <Text color="muted">{message}</Text>
         </Stack>
       </Stack>
       <Stack spacing={5}>{children}</Stack>
@@ -71,7 +70,7 @@ export function CompleteStage({
       <Heading size="2xl" centered>
         {title}
       </Heading>
-      <Text color="textMuted" centered>
+      <Text color="muted" centered>
         {message}
       </Text>
       <Stack style={{ height: 80 }}>

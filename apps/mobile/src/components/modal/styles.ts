@@ -19,7 +19,7 @@ export const createModalStyles = (colors: Colors) =>
       backgroundColor: colors.surface,
       borderRadius: radii.lg,
       borderWidth: 1,
-      borderColor: colors.border,
+      borderColor: colors.line,
       padding: spacing[6],
       gap: spacing[4],
       maxHeight: "85%",
