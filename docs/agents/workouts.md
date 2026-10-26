@@ -39,6 +39,49 @@ Schemas shared by app and API: packages/shared/src/workouts.ts
 - **New native modules need a new development build** (`expo-sqlite`, `expo-network` so far). Add dependencies with
   `npx expo install` and check the SDK 57 docs first (`apps/mobile/AGENTS.md`).
 
+## Assessment (spec #29)
+
+Two Assessment Workouts (A: squat, hinge, core; B: push, pull) give the Assessment and the first Working Levels.
+
+```text
+Today offer (apps/mobile/src/features/today/today-status.ts assessmentOffer, components/assessment-section.tsx):
+  start A / start B (+ Redo A) / "Results once synced" / Results link, each dismissable (hooks/use-dismissed-offer.ts)
+Starting (features/assessment/hooks/use-start-assessment.ts → Logbook.startAssessment in packages/engines/src/logbook.ts)
+  └─ chooseTests (packages/engines/src/assessment-tests.ts): ranked list per Pattern, first available and safe;
+     ASSESSMENT_PATTERNS, testedPatternOf, referencePatternOf (carry follows hinge)
+Logging (features/workouts/components/current-exercise-box.tsx renders Logbook.protocolState)
+  └─ protocolState (packages/engines/src/assessment-protocol.ts): first load, next load, one-set, done, load-limited
+Server (apps/api/src/assessments.ts assessIfPaired, called by POST /workouts in routes/workouts.ts)
+  ├─ pairToAssess (packages/engines/src/assessment-pairing.ts): which A and B make the Assessment
+  └─ assess (packages/engines/src/assess.ts): top Sets, maximums, Reference Strengths, estimates
+       ├─ ratio table: packages/engines/src/strength-ratios.ts (one entry per library Exercise)
+       ├─ Working Levels: packages/engines/src/working-levels.ts seedWorkingLevels
+       └─ Epley both ways: packages/engines/src/e1rm.ts
+GET /assessments/latest (routes/assessments.ts) → features/assessment/hooks/use-latest-assessment.ts
+Results: features/assessment/views/assessment-results-view.tsx, working-level-sections.ts (route assessment-results)
+Schemas: packages/shared/src/assessments.ts; Set.rpe and Workout.assessment in workouts.ts
+```
+
+### Gotchas
+
+- **The In-progress Workout keeps the `bodyProfile` (weight, gender) it started with**, and `protocolState`'s first
+  load reads it from there, not from the current profile.
+- **Load-limited means different things in the two places.** The Logbook ends a test only when a Set past 12 reps
+  short of RPE 9 was at the heaviest load the Equipment Profile has (or the loads aren't known); `assess` has no loads,
+  so any last Set past 12 reps without a top Set is load-limited.
+- **Pairing**: a B pairs with the latest A that started before it, unless that A is already in an Assessment; an A that
+  arrives late pairs with the first B it's the latest A for. A pair is assessed once, so a retried upload recomputes
+  nothing.
+- **POST /workouts pairs on the 200 retry too, and a pairing failure fails the upload (500)** though the Workout is
+  stored: the phone keeps it Pending, and the retry works the Assessment out.
+- **"Newest" is by the B's `startedAt` (`Assessment.bStartedAt`), not server time.** Every Assessment is stored, but
+  only the newest replaces the Working Levels; `GET /assessments/latest` and Today's retake check use the same order.
+- **The Assessment is a snapshot**: deleting its Workouts from History leaves it and the Results link.
+- **Bodyweight maximums use Epley uncapped** (`epley`), because the Working Level inverts it (`epleyReps`) and the
+  round trip must give the tested Exercise back its reps; `e1rm` refuses more than 12 reps.
+- **Stored Assessments without a field the schema later required** (`referenceStrength`, `maximum`, `bStartedAt`)
+  fail to parse in `findLatestAssessment`: dev data only, so drop the collection.
+
 ## Running things
 
 - API without the real database or Clerk: `pnpm --filter @fit/api dev:local` (in-memory MongoDB; `X-Dev-User` header
