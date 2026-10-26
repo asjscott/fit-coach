@@ -5,7 +5,7 @@ allowBuilds:
   builds: true
   esbuild: true
 overrides:
-  "@react-native/metro-config": "0.86.3"
+  "@react-native/metro-config": "0.88.0"
 nodeLinker: hoisted
 permissions:
   "@clerk/shared":

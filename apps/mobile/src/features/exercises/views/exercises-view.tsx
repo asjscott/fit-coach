@@ -64,7 +64,7 @@ export default function ExercisesView() {
           />
         )}
         ListEmptyComponent={
-          error ? null : (
+          error ? undefined : (
             <Text color="muted" centered style={{ marginTop: spacing[6] }}>
               Nothing matches your equipment yet. Turn on Show all to see everything.
             </Text>

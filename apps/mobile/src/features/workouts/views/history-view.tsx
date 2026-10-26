@@ -56,13 +56,13 @@ export default function HistoryView() {
             </>
           ) : error ? (
             <Text color="danger">{error}</Text>
-          ) : null
+          ) : undefined
         }
         renderSectionHeader={({ section }) => <WeekHeader week={section} daysPerWeek={daysPerWeek} now={now} />}
         renderItem={({ item }) => <WorkoutRow workout={item} now={now} />}
-        ListFooterComponent={isLoadingMore || isLoading ? <Spinner /> : null}
+        ListFooterComponent={isLoadingMore || isLoading ? <Spinner /> : undefined}
         ListEmptyComponent={
-          error || isLoading ? null : (
+          error || isLoading ? undefined : (
             <Text color="muted" style={{ marginTop: spacing[2] }}>
               No Workouts yet. Finished Workouts show up here.
             </Text>
