@@ -23,8 +23,9 @@ export async function ensureAssessmentIndexes() {
   await workingLevels.createIndex({ clerkUserId: 1, slug: 1 }, { unique: true });
 }
 
-// Called for a newly stored Workout: when it completes a new pair of Assessment Workouts (`pairToAssess`), works out
-// the Assessment with `assess` and stores it and its Working Levels. Anything else does nothing
+// Called for every uploaded Workout, retries included: when it completes a new pair of Assessment Workouts
+// (`pairToAssess`), works out the Assessment with `assess` and stores it and its Working Levels. Anything else does
+// nothing
 export async function assessIfPaired(clerkUserId: string, workout: Workout) {
   const { assessment: part } = workout;
   if (!part) return;

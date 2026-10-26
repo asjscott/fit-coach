@@ -25,14 +25,15 @@ export const workoutRoutes: FastifyPluginAsyncZod = async (app) => {
   );
 
   // Idempotent on the phone-generated id: 201 when stored, 200 with the stored Workout
-  // when it was already uploaded, so a retried upload never makes a duplicate. A new Workout that completes a pair of
-  // Assessment Workouts also works out the Assessment; a retry recomputes nothing
+  // when it was already uploaded, so a retried upload never makes a duplicate. A Workout that completes a pair of
+  // Assessment Workouts also works out the Assessment; a retry recomputes nothing for a pair already assessed
   app.post("/workouts", { schema: { body: Workout, response: { 200: Workout, 201: Workout } } }, async (req, reply) => {
     const clerkUserId = userIdOf(req)!;
     const { workout, created } = await createWorkout(clerkUserId, req.body);
     const stored = toWorkout(workout);
-    // The Workout is stored either way, so a failure here mustn't fail the upload
-    if (created) await assessIfPaired(clerkUserId, stored).catch((err) => req.log.error(err, "Assessment failed"));
+    // A failure fails the upload, though the Workout is stored: the phone keeps it Pending, and its retry (the 200
+    // case) pairs it again, so the Assessment isn't lost
+    await assessIfPaired(clerkUserId, stored);
     return reply.code(created ? 201 : 200).send(stored);
   });
 
