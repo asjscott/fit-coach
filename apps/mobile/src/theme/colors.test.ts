@@ -31,6 +31,9 @@ const pairings: [ColorToken, ColorToken, number][] = [
   ["warning", "warningSoft", TEXT],
   // Solid positive buttons
   ["onAccent", "success", TEXT],
+  // Switch knob against its off and on tracks
+  ["knob", "inputBorder", UI],
+  ["knob", "accent", UI],
   // Input, checkbox and radio outlines, and the focused or checked state
   ["inputBorder", "bg", UI],
   ["inputBorder", "surface", UI],

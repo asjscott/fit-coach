@@ -19,8 +19,8 @@ export function Switch({ size = "md", disabled, style, ...props }: SwitchProps) 
       disabled={isDisabled}
       trackColor={{ false: colors.inputBorder, true: colors.accent }}
       // Android and web tint the thumb; iOS keeps its native white thumb
-      thumbColor={Platform.OS === "ios" ? undefined : colors.onAccent}
-      {...webThumb(colors.onAccent)}
+      thumbColor={Platform.OS === "ios" ? undefined : colors.knob}
+      {...webThumb(colors.knob)}
       ios_backgroundColor={colors.inputBorder}
       style={[{ transform: [{ scale: scale[size] }] }, isDisabled && { opacity: 0.4 }, style]}
       {...props}

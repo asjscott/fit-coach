@@ -10,6 +10,8 @@ const dark = {
   line: "#2A2C31",
   // Outlines the user must see: inputs, checkboxes, radios
   inputBorder: "#6E727B",
+  // Switch knob, white on both tracks as on iOS
+  knob: "#FFFFFF",
   backdrop: "rgba(0, 0, 0, 0.6)",
   // Drop shadows under floating pieces, such as toasts and slider thumbs
   shadow: "#000000",
@@ -37,6 +39,7 @@ const light: typeof dark = {
   raised: "#EDEEF0",
   line: "#E2E3E6",
   inputBorder: "#8A8D95",
+  knob: "#FFFFFF",
   backdrop: "rgba(0, 0, 0, 0.4)",
   shadow: "#000000",
 
