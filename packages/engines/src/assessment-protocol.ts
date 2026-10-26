@@ -4,9 +4,13 @@ import { availableLoadsKg } from "./equipment";
 import { exerciseMaximum, STRENGTH_RATIOS } from "./strength-ratios";
 
 // Where a test Exercise is in its protocol, for the logging screen to render. Working up: Sets of 5, each at the
-// suggested load (null when the equipment's loads aren't known). Done: a Set reached RPE 9.
-// Still to come: one Set to RPE 9 for bodyweight and timed tests (#37), load-limited (#38)
-export type ProtocolState = { status: "working-up"; suggestedKg: number | null } | { status: "done" };
+// suggested load (null when the equipment's loads aren't known). One Set: a bodyweight or timed test is a single Set
+// taken to RPE 9, so there is no load to suggest. Done: a weighted Set reached RPE 9, or the one Set is logged.
+// Still to come: load-limited (#38)
+export type ProtocolState =
+  | { status: "working-up"; suggestedKg: number | null }
+  | { status: "one-set" }
+  | { status: "done" };
 
 // Every Set of a weighted test is 5 reps
 export const TEST_REPS = 5;
@@ -40,9 +44,10 @@ export function protocolState(
   equipmentProfile: Pick<EquipmentProfile, "tags" | "loads">,
   profile: Pick<UserProfile, "weightKg" | "gender">,
 ): ProtocolState {
+  const exercise = bySlug.get(slug);
+  if (exercise && exercise.loadType !== "external") return sets.length ? { status: "done" } : { status: "one-set" };
   if (sets.some((set) => (set.rpe ?? 0) >= TOP_SET_RPE)) return { status: "done" };
   const last = sets.at(-1);
-  const exercise = bySlug.get(slug);
   if (!exercise) return { status: "working-up", suggestedKg: null };
   const loads = availableLoadsKg(exercise, equipmentProfile);
   if (!last) return { status: "working-up", suggestedKg: firstLoadKg(slug, loads, profile) };
