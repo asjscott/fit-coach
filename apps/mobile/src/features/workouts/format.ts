@@ -63,7 +63,7 @@ export function weekLabel(start: Date, now = new Date()) {
   return weekDatesLabel(start, now);
 }
 
-// A week's dates, Monday to Sunday, in the locale's order: "12–18 Oct" or "Oct 12 – 18", with the year when it
+// A week's dates, Monday to Sunday, in the locale's order: "12 – 18 Oct" or "Oct 12 – 18", with the year when it
 // isn't this one. Engines without formatRange (some Hermes builds) get "12 Oct – 18 Oct"
 export function weekDatesLabel(start: Date, now = new Date(), locale?: string) {
   const end = new Date(start.getFullYear(), start.getMonth(), start.getDate() + 6);
@@ -73,9 +73,12 @@ export function weekDatesLabel(start: Date, now = new Date(), locale?: string) {
     month: "short",
     year: sameYear ? undefined : "numeric",
   });
-  return typeof format.formatRange === "function"
-    ? format.formatRange(start, end)
-    : `${format.format(start)} – ${format.format(end)}`;
+  const label =
+    typeof format.formatRange === "function"
+      ? format.formatRange(start, end)
+      : `${format.format(start)} – ${format.format(end)}`;
+  // Intl data versions space the dash differently ("12–18 Oct", "12 – 18 Oct"), so set it one way
+  return label.replace(/\s*–\s*/, "\u2009–\u2009");
 }
 
 // A Volume in whole kg with thousands separators, e.g. "6,420"; the unit is drawn separately

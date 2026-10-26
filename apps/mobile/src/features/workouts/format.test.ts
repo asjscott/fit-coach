@@ -109,12 +109,12 @@ describe("timeStat", () => {
 });
 
 describe("weekDatesLabel", () => {
-  // Intl sets a range's dash between thin spaces
+  // The range's dash always sits between thin spaces, whatever spacing the engine's Intl data uses
   const range = "\u2009–\u2009";
   const now = new Date(2026, 10, 3);
 
   it("gives a week inside one month as its days and month", () => {
-    expect(weekDatesLabel(new Date(2026, 9, 12), now, "en-GB")).toBe("12–18 Oct");
+    expect(weekDatesLabel(new Date(2026, 9, 12), now, "en-GB")).toBe(`12${range}18 Oct`);
   });
 
   it("names both months when the week crosses into the next", () => {
