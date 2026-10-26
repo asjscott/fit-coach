@@ -35,9 +35,7 @@ export function Skeleton({ variant = "rounded", isLoaded = false, speed = 2, sty
   const opacity = usePulse(speed);
   if (isLoaded) return <>{children}</>;
   return (
-    <Animated.View
-      style={[{ backgroundColor: colors.surfaceRaised, borderRadius: variantRadius[variant], opacity }, style]}
-    />
+    <Animated.View style={[{ backgroundColor: colors.raised, borderRadius: variantRadius[variant], opacity }, style]} />
   );
 }
 

@@ -1,5 +1,13 @@
-import { InProgressWorkout, Workout, type Exercise, type InProgressWorkoutExercise, type SetValues } from "@fit/shared";
+import {
+  InProgressWorkout,
+  Workout,
+  type Exercise,
+  type InProgressWorkoutExercise,
+  type PreviousSets,
+  type SetValues,
+} from "@fit/shared";
 import type { z } from "zod";
+import { previousSets } from "./training-summaries";
 
 // Strings by key: SQLite on the phone, localStorage on web, a Map in tests
 export type DeviceStorage = {
@@ -11,6 +19,12 @@ export type DeviceStorage = {
 // Resolves once the server has the Workout; rejects on any failure
 export type WorkoutUploader = {
   upload(workout: Workout): Promise<void>;
+};
+
+// The server's Previous Sets for an Exercise: null when no Workout on the server has it; rejects
+// on any failure, such as no signal
+export type PreviousSetsSource = {
+  forExercise(slug: string): Promise<PreviousSets | null>;
 };
 
 // When a Workout started and ended, as the user confirms them on finishing
@@ -45,10 +59,12 @@ const PENDING_KEY = "logbook:pending";
 export function createLogbook({
   storage,
   uploader,
+  previousSets: previousSetsSource,
   newId,
 }: {
   storage: DeviceStorage;
   uploader: WorkoutUploader;
+  previousSets: PreviousSetsSource;
   newId: () => string;
 }) {
   // Calls run one at a time, so two quick taps can't both read the same Workout
@@ -137,20 +153,29 @@ export function createLogbook({
         return now.getTime() - since.getTime() > STALE_AFTER_MS;
       }),
 
-    // Snapshots the Exercise's Load Type so Sets can be checked without the library
-    addWorkoutExercise: (exercise: Pick<Exercise, "slug" | "loadType">) =>
-      serially(async () => {
+    // Snapshots the Exercise's Load Type so Sets can be checked without the library, and its
+    // Previous Sets (ADR 0002): the server's or a Pending Workout's, whichever Workout is newer.
+    // With no signal only Pending Workouts count; with neither, there are no Previous Sets.
+    // The server is asked outside the queue, so other changes never wait on the network
+    addWorkoutExercise: async ({ slug, loadType }: Pick<Exercise, "slug" | "loadType">) => {
+      const fromServer = await previousSetsSource.forExercise(slug).catch(() => null);
+      return serially(async () => {
         const workout = await readOrThrow();
+        const pending = await readPending();
+        const asWorkout = fromServer && { ...fromServer, workoutExercises: [{ slug, sets: fromServer.sets }] };
+        const latest = previousSets(asWorkout ? [...pending, asWorkout] : pending, slug);
         const workoutExercise: InProgressWorkoutExercise = {
           id: newId(),
-          slug: exercise.slug,
-          loadType: exercise.loadType,
+          slug,
+          loadType,
           sets: [],
+          ...(latest && { previousSets: latest }),
         };
         workout.workoutExercises.push(workoutExercise);
         await write(workout);
         return workoutExercise;
-      }),
+      });
+    },
 
     removeWorkoutExercise: (workoutExerciseId: string) =>
       serially(async () => {

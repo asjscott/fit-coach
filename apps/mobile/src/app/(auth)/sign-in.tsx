@@ -34,7 +34,7 @@ export default function SignInScreen() {
     <Screen>
       <Stack flex justify="center" spacing={2}>
         <Heading size="3xl">Fit Coach</Heading>
-        <Text color="textMuted">Training that adapts to you.</Text>
+        <Text color="muted">Training that adapts to you.</Text>
       </Stack>
       <ButtonGroup space={3}>
         <LoadingButton label="Create account" onPress={() => start("sign-up")} />

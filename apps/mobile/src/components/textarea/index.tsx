@@ -3,6 +3,7 @@ import { StyleSheet, TextInput, View, type StyleProp, type TextInputProps, type 
 import { fonts, fontSizes, radii, spacing, useTheme, useThemedStyles, type Colors, type FontSize } from "@/theme";
 import { useFormControlContext } from "../form-control";
 import { KeyboardDoneBar } from "../input-accessory-view";
+import { TABULAR } from "../text";
 
 type TextareaSize = "sm" | "md" | "lg" | "xl";
 
@@ -57,8 +58,8 @@ export function TextareaInput({ style, onFocus, onBlur, ...props }: TextInputPro
         multiline
         textAlignVertical="top"
         editable={context.editable}
-        placeholderTextColor={colors.textSubtle}
-        selectionColor={colors.orange}
+        placeholderTextColor={colors.subtle}
+        selectionColor={colors.accent}
         keyboardAppearance={scheme}
         inputAccessoryViewID={accessoryId}
         onFocus={(e) => {
@@ -82,12 +83,12 @@ const createStyles = (colors: Colors) =>
     root: {
       height: 100,
       borderWidth: 1,
-      borderColor: colors.border,
+      borderColor: colors.inputBorder,
       borderRadius: radii.md,
       backgroundColor: colors.surface,
     },
-    focused: { borderColor: colors.orange },
+    focused: { borderColor: colors.accent },
     invalid: { borderColor: colors.danger },
     disabled: { opacity: 0.4 },
-    input: { flex: 1, color: colors.text, padding: spacing[3] },
+    input: { flex: 1, color: colors.text, padding: spacing[3], fontVariant: TABULAR },
   });

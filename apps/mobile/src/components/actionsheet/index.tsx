@@ -117,7 +117,7 @@ export function ActionsheetItemText(props: TextProps) {
 }
 
 export function ActionsheetIcon({ name, as, size = 20 }: { name?: IconName; as?: IconComponent; size?: number }) {
-  return <Icon name={name} as={as} size={size} color="textMuted" />;
+  return <Icon name={name} as={as} size={size} color="muted" />;
 }
 
 export function ActionsheetScrollView(props: ScrollViewProps) {
@@ -129,5 +129,5 @@ export function ActionsheetFlatList<T>(props: FlatListProps<T>) {
 }
 
 export function ActionsheetSectionHeaderText(props: TextProps) {
-  return <Text size="xs" weight="semiBold" color="textSubtle" style={{ paddingVertical: spacing[2] }} {...props} />;
+  return <Text size="xs" weight="semiBold" color="subtle" style={{ paddingVertical: spacing[2] }} {...props} />;
 }

@@ -25,7 +25,7 @@ export function Chip({ label, selected = false, onPress, disabled }: ChipProps) 
         disabled && styles.disabled,
       ]}
     >
-      <Text size="sm" weight="semiBold" color={selected ? "orange" : "textMuted"}>
+      <Text size="sm" weight="semiBold" color={selected ? "accent" : "muted"}>
         {label}
       </Text>
     </Pressable>
@@ -38,12 +38,12 @@ const createStyles = (colors: Colors) =>
       alignItems: "center",
       paddingHorizontal: spacing[4],
       paddingVertical: spacing[2],
-      borderRadius: radii.pill,
+      borderRadius: radii.md,
       borderWidth: 1,
-      borderColor: colors.border,
+      borderColor: colors.inputBorder,
       backgroundColor: colors.surface,
     },
-    selected: { borderColor: colors.orange, backgroundColor: colors.accentSoft },
+    selected: { borderColor: colors.accent, backgroundColor: colors.accentSoft },
     pressed: { opacity: 0.8 },
     disabled: { opacity: 0.4 },
   });

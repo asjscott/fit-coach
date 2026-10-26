@@ -1,6 +1,9 @@
-import { Text as RNText, type TextProps as RNTextProps } from "react-native";
+import { Text as RNText, type TextProps as RNTextProps, type TextStyle } from "react-native";
 import { fonts, fontSizes, lineHeight, useTheme, type ColorToken, type FontSize, type FontWeight } from "@/theme";
 import { decorationStyles } from "./styles";
+
+// Every number the user sees has fixed-width digits, so weights, reps and timers line up and don't jitter
+export const TABULAR: TextStyle["fontVariant"] = ["tabular-nums"];
 
 export type TextProps = RNTextProps & {
   size?: FontSize;
@@ -14,8 +17,6 @@ export type TextProps = RNTextProps & {
   highlight?: boolean;
   centered?: boolean;
   isTruncated?: boolean;
-  // Fixed-width digits so changing numbers (weights, reps, timers) don't jitter
-  tabular?: boolean;
 };
 
 export function Text({
@@ -30,7 +31,6 @@ export function Text({
   highlight,
   centered,
   isTruncated,
-  tabular,
   style,
   numberOfLines,
   ...props
@@ -49,7 +49,7 @@ export function Text({
           color: colors[color],
           textAlign: centered ? "center" : undefined,
           backgroundColor: highlight ? colors.accentSoft : undefined,
-          fontVariant: tabular ? ["tabular-nums"] : undefined,
+          fontVariant: TABULAR,
         },
         underline && decorationStyles.underline,
         strikeThrough && decorationStyles.strikeThrough,

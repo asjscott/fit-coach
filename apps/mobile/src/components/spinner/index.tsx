@@ -17,7 +17,7 @@ export type SpinnerProps = Omit<ActivityIndicatorProps, "size" | "color"> & {
   rawColor?: string;
 };
 
-export function Spinner({ size = "sm", color = "orange", rawColor, ...props }: SpinnerProps) {
+export function Spinner({ size = "sm", color = "accent", rawColor, ...props }: SpinnerProps) {
   const { colors } = useTheme();
   return (
     <ActivityIndicator

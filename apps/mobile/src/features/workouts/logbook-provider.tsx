@@ -1,5 +1,12 @@
 import { createLogbook, type FinishResult, type Logbook, type WorkoutTimes } from "@fit/engines";
-import type { Exercise, InProgressWorkout, InProgressWorkoutExercise, SetValues, Workout } from "@fit/shared";
+import {
+  PreviousSets,
+  type Exercise,
+  type InProgressWorkout,
+  type InProgressWorkoutExercise,
+  type SetValues,
+  type Workout,
+} from "@fit/shared";
 import * as Crypto from "expo-crypto";
 import { createContext, use, useCallback, useEffect, useState, type ReactNode } from "react";
 import { useApi } from "@/api";
@@ -43,6 +50,10 @@ type LogbookContextValue = {
 // false when it stays on the phone as a Pending Workout for the next try
 export type FinishOutcome = { status: "pending"; uploaded: Promise<boolean> } | { status: "nothing-to-save" };
 
+// Adding an Exercise waits for its Previous Sets, so a weak signal gives up after this long and
+// falls back to Pending Workouts
+const PREVIOUS_SETS_TIMEOUT_MS = 4000;
+
 const LogbookContext = createContext<LogbookContextValue | null>(null);
 
 // Creates the Logbook once, over the phone's storage and the API, and shares the
@@ -55,6 +66,19 @@ export function LogbookProvider({ children }: { children: ReactNode }) {
       uploader: {
         upload: async (workout) => {
           await api("/workouts", { method: "POST", body: JSON.stringify(workout) });
+        },
+      },
+      previousSets: {
+        forExercise: async (slug) => {
+          const controller = new AbortController();
+          const timeout = setTimeout(() => controller.abort(), PREVIOUS_SETS_TIMEOUT_MS);
+          try {
+            const query = new URLSearchParams({ slug });
+            const answer = await api(`/workouts/previous-sets?${query}`, { signal: controller.signal });
+            return PreviousSets.nullable().parse(answer);
+          } finally {
+            clearTimeout(timeout);
+          }
         },
       },
       newId: Crypto.randomUUID,

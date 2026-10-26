@@ -1,62 +1,46 @@
+import { historyByWeek, summarizeWorkout, weeklyVolume, withPending, type HistoryWeek } from "@fit/engines";
 import type { Workout } from "@fit/shared";
-import { router, useFocusEffect } from "expo-router";
-import { useCallback, useEffect, useRef, useState } from "react";
-import { FlatList } from "react-native";
+import { router } from "expo-router";
+import { Pressable, SectionList, StyleSheet, View } from "react-native";
 import { Alert, AlertText } from "@/components/alert";
-import { Badge, BadgeText } from "@/components/badge";
-import { Button, ButtonText } from "@/components/button";
-import { Card } from "@/components/card";
 import { Loading } from "@/components/loading";
-import { Pressable } from "@/components/pressable";
+import { Ring } from "@/components/ring";
 import { Screen } from "@/components/screen";
-import { HStack } from "@/components/stack";
 import { Spinner } from "@/components/spinner";
 import { Text } from "@/components/text";
-import { useToast } from "@/contexts/toast-context";
-import { spacing } from "@/theme";
-import { dateLabel, durationLabel } from "../format";
+import { useCurrentUser } from "@/features/user/current-user-provider";
+import { spacing, useTheme } from "@/theme";
+import { durationLabel, kgLabel, relativeDateLabel, setsLabel, weekLabel } from "../format";
 import { useHistory } from "../history-provider";
+import { useRefreshHistory } from "../hooks/use-refresh-history";
 import { exerciseName } from "../library";
 import { useLogbook } from "../logbook-provider";
+import { WeeklyVolumeBars } from "../components/weekly-volume-bars";
+
+type Row = Workout & { isPending: boolean };
 
 const exerciseNames = (workout: Workout) => workout.workoutExercises.map(({ slug }) => exerciseName(slug)).join(", ");
 
-type Row = { workout: Workout; isPending: boolean };
-
 export default function HistoryView() {
-  const { workouts, error, isLoading, isLoadingMore, refresh, loadMore } = useHistory();
+  const { workouts, error, isLoading, isLoadingMore, loadMore } = useHistory();
   const { pending } = useLogbook();
-
-  // Reload on every visit, so a Workout just finished shows at the top
-  useFocusEffect(
-    useCallback(() => {
-      refresh();
-    }, [refresh]),
-  );
-
-  // A Pending Workout that just uploaded leaves the phone; reload so it shows from the server
-  const pendingCount = useRef(pending.length);
-  useEffect(() => {
-    if (pending.length < pendingCount.current) refresh();
-    pendingCount.current = pending.length;
-  }, [pending.length, refresh]);
+  const daysPerWeek = useCurrentUser().user?.profile.daysPerWeek;
+  useRefreshHistory();
 
   if (isLoading && !pending.length) return <Loading message="Loading History..." />;
 
-  // Pending Workouts on top, newest first; a Workout the server already has shows once
-  const pendingIds = new Set(pending.map((w) => w.id));
   const isOffline = !workouts && !!error;
-  const rows: Row[] = [
-    ...[...pending].reverse().map((workout) => ({ workout, isPending: true })),
-    ...(workouts ?? []).filter((w) => !pendingIds.has(w.id)).map((workout) => ({ workout, isPending: false })),
-  ];
+  const rows: Row[] = withPending(pending, workouts);
+  const now = new Date();
+  const weeks = historyByWeek(rows).map((week) => ({ ...week, data: week.workouts }));
 
   return (
     <Screen padded={false} edges={["bottom"]}>
-      <FlatList
-        data={rows}
-        keyExtractor={({ workout }) => workout.id}
-        contentContainerStyle={{ padding: spacing[6], gap: spacing[2] }}
+      <SectionList
+        sections={weeks}
+        keyExtractor={(workout) => workout.id}
+        contentContainerStyle={{ padding: spacing[5], paddingBottom: spacing[8] }}
+        stickySectionHeadersEnabled={false}
         onEndReached={loadMore}
         onEndReachedThreshold={0.5}
         ListHeaderComponent={
@@ -64,15 +48,22 @@ export default function HistoryView() {
             <Alert action="muted">
               <AlertText>Showing only Workouts on this phone. The rest of your History needs a connection.</AlertText>
             </Alert>
+          ) : workouts && rows.length ? (
+            // Only once History has loaded, so the weeks' totals are whole
+            <>
+              {error ? <Text color="danger">{error}</Text> : null}
+              <WeeklyVolumeBars weeks={weeklyVolume(rows, now)} />
+            </>
           ) : error ? (
             <Text color="danger">{error}</Text>
           ) : null
         }
-        renderItem={({ item }) => <WorkoutCard {...item} />}
+        renderSectionHeader={({ section }) => <WeekHeader week={section} daysPerWeek={daysPerWeek} now={now} />}
+        renderItem={({ item }) => <WorkoutRow workout={item} now={now} />}
         ListFooterComponent={isLoadingMore || isLoading ? <Spinner /> : null}
         ListEmptyComponent={
           error || isLoading ? null : (
-            <Text color="textMuted" centered style={{ marginTop: spacing[6] }}>
+            <Text color="muted" style={{ marginTop: spacing[2] }}>
               No Workouts yet. Finished Workouts show up here.
             </Text>
           )
@@ -82,61 +73,79 @@ export default function HistoryView() {
   );
 }
 
-function WorkoutCard({ workout, isPending }: Row) {
+// "This week" with a ring, and "2 of 4 Workouts · 6,420 kg" against the user's days per week
+function WeekHeader({ week, daysPerWeek, now }: { week: HistoryWeek<Row>; daysPerWeek?: number; now: Date }) {
+  const n = week.workoutCount;
+  const count = daysPerWeek ? `${n} of ${daysPerWeek} Workouts` : `${n} ${n === 1 ? "Workout" : "Workouts"}`;
+  return (
+    <View style={styles.weekHeader}>
+      {daysPerWeek ? <Ring done={week.workoutCount} target={daysPerWeek} /> : null}
+      <View style={{ flex: 1 }}>
+        <Text size="lg" weight="bold" accessibilityRole="header">
+          {weekLabel(week.start, now)}
+        </Text>
+        <Text size="sm" color="muted">
+          {count} · {kgLabel(week.volumeKg)} kg
+        </Text>
+      </View>
+    </View>
+  );
+}
+
+// When, which Exercises, and the Workout's Volume, Sets and duration; a Pending Workout says it's waiting to sync
+function WorkoutRow({ workout, now }: { workout: Row; now: Date }) {
+  const { colors } = useTheme();
+  const summary = summarizeWorkout(workout);
   return (
     <Pressable
       accessibilityRole="button"
       onPress={() => router.push({ pathname: "/history/[id]", params: { id: workout.id } })}
+      style={({ pressed }) => [
+        styles.row,
+        { borderTopColor: colors.line },
+        pressed && { backgroundColor: colors.raised },
+      ]}
     >
-      <Card size="sm">
-        <HStack justify="between" spacing={4}>
-          <Text weight="semiBold">{dateLabel(workout.startedAt)}</Text>
-          <Text color="textMuted" tabular>
-            {durationLabel(workout)}
-          </Text>
-        </HStack>
-        <Text size="sm" color="textMuted">
+      <View style={{ flex: 1, gap: 2 }}>
+        <Text weight="semiBold">{relativeDateLabel(workout.startedAt, now)}</Text>
+        <Text size="sm" color="muted" numberOfLines={1}>
           {exerciseNames(workout)}
         </Text>
-        {isPending ? <PendingActions workoutId={workout.id} /> : null}
-      </Card>
+        {workout.isPending ? (
+          <Text size="xs" weight="semiBold" color="muted">
+            Waiting to sync
+          </Text>
+        ) : null}
+      </View>
+      <View style={{ alignItems: "flex-end" }}>
+        <Text size="xl" weight="bold">
+          {kgLabel(summary.volumeKg)}
+          <Text size="sm" color="muted">
+            {" kg"}
+          </Text>
+        </Text>
+        <Text size="sm" color="muted">
+          {setsLabel(summary.sets)} · {durationLabel(workout)}
+        </Text>
+      </View>
     </Pressable>
   );
 }
 
-// A Pending Workout can be deleted even offline, so a mistake never uploads
-function PendingActions({ workoutId }: { workoutId: string }) {
-  const { deletePending } = useLogbook();
-  const { showToast } = useToast();
-  const [confirming, setConfirming] = useState(false);
-
-  const handleDelete = async () => {
-    try {
-      await deletePending(workoutId);
-    } catch (err) {
-      showToast("Couldn't delete the Workout", { error: err });
-    }
-  };
-
-  return (
-    <HStack justify="between" spacing={2}>
-      <Badge action="warning" size="sm">
-        <BadgeText>Not uploaded yet</BadgeText>
-      </Badge>
-      {confirming ? (
-        <HStack spacing={2}>
-          <Button size="xs" action="default" variant="outline" onPress={() => setConfirming(false)}>
-            <ButtonText>Keep</ButtonText>
-          </Button>
-          <Button size="xs" action="negative" onPress={handleDelete}>
-            <ButtonText>Delete</ButtonText>
-          </Button>
-        </HStack>
-      ) : (
-        <Button size="xs" action="negative" variant="link" onPress={() => setConfirming(true)}>
-          <ButtonText>Delete</ButtonText>
-        </Button>
-      )}
-    </HStack>
-  );
-}
+const styles = StyleSheet.create({
+  weekHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing[3],
+    marginTop: spacing[7],
+    marginBottom: spacing[3],
+  },
+  row: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing[4],
+    minHeight: 64,
+    paddingVertical: spacing[3],
+    borderTopWidth: StyleSheet.hairlineWidth,
+  },
+});

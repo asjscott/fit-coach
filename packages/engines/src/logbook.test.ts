@@ -1,7 +1,7 @@
-import type { Workout } from "@fit/shared";
+import type { PreviousSets, Workout } from "@fit/shared";
 import { describe, expect, it } from "vitest";
 import { EXERCISES } from "./data/exercises";
-import { createLogbook, LogbookError, type DeviceStorage } from "./logbook";
+import { createLogbook, LogbookError, type DeviceStorage, type PreviousSetsSource } from "./logbook";
 
 const exercise = (slug: string) => {
   const found = EXERCISES.find((e) => e.slug === slug);
@@ -24,9 +24,21 @@ function fakeUploader() {
   return { uploaded, upload: async (workout: Workout) => void uploaded.push(workout) };
 }
 
-function setup(storage = memoryStorage()) {
+// The server's answer for each Exercise; Exercises not listed have none
+function fakePreviousSets(bySlug: Record<string, PreviousSets> = {}): PreviousSetsSource {
+  return { forExercise: async (slug) => bySlug[slug] ?? null };
+}
+
+// No signal: every request fails
+const offline: PreviousSetsSource = {
+  forExercise: async () => {
+    throw new Error("Network request failed");
+  },
+};
+
+function setup(storage = memoryStorage(), previousSets = fakePreviousSets()) {
   const uploader = fakeUploader();
-  const logbook = createLogbook({ storage, uploader, newId: () => crypto.randomUUID() });
+  const logbook = createLogbook({ storage, uploader, previousSets, newId: () => crypto.randomUUID() });
   return { logbook, uploader, storage };
 }
 
@@ -539,5 +551,114 @@ describe("Logbook: signing out", () => {
     expect(await rebuilt.logbook.pending()).toEqual([]);
     await rebuilt.logbook.sync();
     expect(rebuilt.uploader.uploaded).toEqual([]);
+  });
+});
+
+describe("Logbook: Previous Sets", () => {
+  // Goblet squats the server has from Tuesday
+  const fromServer: PreviousSets = {
+    startedAt: "2026-10-20T09:00:00.000Z",
+    endedAt: "2026-10-20T09:45:00.000Z",
+    sets: [
+      { kind: "external", kg: 18, reps: 10, loggedAt: "2026-10-20T09:10:00.000Z" },
+      { kind: "external", kg: 18, reps: 8, loggedAt: "2026-10-20T09:13:00.000Z" },
+    ],
+  };
+
+  it("saves the server's Previous Sets with the Workout Exercise", async () => {
+    const { logbook } = setup(memoryStorage(), fakePreviousSets({ "goblet-squat": fromServer }));
+    await logbook.start(at("09:00"));
+
+    const squat = await logbook.addWorkoutExercise(exercise("goblet-squat"));
+
+    expect(squat.previousSets).toEqual(fromServer);
+    expect((await logbook.inProgress())?.workoutExercises[0].previousSets).toEqual(fromServer);
+  });
+
+  it("still has the Previous Sets when rebuilt over the same storage", async () => {
+    const { logbook, storage } = setup(memoryStorage(), fakePreviousSets({ "goblet-squat": fromServer }));
+    await logbook.start(at("09:00"));
+    await logbook.addWorkoutExercise(exercise("goblet-squat"));
+
+    const rebuilt = setup(storage, offline).logbook;
+
+    expect((await rebuilt.inProgress())?.workoutExercises[0].previousSets).toEqual(fromServer);
+  });
+
+  // Finishes a Workout of goblet squats at 08:00 that stays on the phone: the server can't take it
+  async function pendingSquats(storage: DeviceStorage) {
+    const { logbook } = setup(storage, offline);
+    await logbook.start(at("08:00"));
+    const squat = await logbook.addWorkoutExercise(exercise("goblet-squat"));
+    await logbook.logSet(squat.id, { kind: "external", kg: 20, reps: 6 }, at("08:10"));
+    await logbook.finish({ startedAt: at("08:00"), endedAt: at("08:40"), now: at("08:40") });
+  }
+
+  const fromPending: PreviousSets = {
+    startedAt: "2026-10-24T08:00:00.000Z",
+    endedAt: "2026-10-24T08:40:00.000Z",
+    sets: [{ kind: "external", kg: 20, reps: 6, loggedAt: "2026-10-24T08:10:00.000Z" }],
+  };
+
+  it("takes a Pending Workout newer than the server's", async () => {
+    const storage = memoryStorage();
+    await pendingSquats(storage);
+    const { logbook } = setup(storage, fakePreviousSets({ "goblet-squat": fromServer }));
+    await logbook.start(at("09:00"));
+
+    const squat = await logbook.addWorkoutExercise(exercise("goblet-squat"));
+
+    expect(squat.previousSets).toEqual(fromPending);
+  });
+
+  it("takes the server's when it's newer than any Pending Workout", async () => {
+    const storage = memoryStorage();
+    await pendingSquats(storage);
+    const newer = { ...fromServer, startedAt: "2026-10-24T08:30:00.000Z", endedAt: "2026-10-24T08:50:00.000Z" };
+    const { logbook } = setup(storage, fakePreviousSets({ "goblet-squat": newer }));
+    await logbook.start(at("09:00"));
+
+    const squat = await logbook.addWorkoutExercise(exercise("goblet-squat"));
+
+    expect(squat.previousSets).toEqual(newer);
+  });
+
+  it("with no signal, takes them from a Pending Workout", async () => {
+    const storage = memoryStorage();
+    await pendingSquats(storage);
+    const { logbook } = setup(storage, offline);
+    await logbook.start(at("09:00"));
+
+    const squat = await logbook.addWorkoutExercise(exercise("goblet-squat"));
+
+    expect(squat.previousSets).toEqual(fromPending);
+  });
+
+  it("with no signal and no Pending Workout with the Exercise, adds it with no Previous Sets", async () => {
+    const { logbook } = setup(memoryStorage(), offline);
+    await logbook.start(at("09:00"));
+
+    const squat = await logbook.addWorkoutExercise(exercise("goblet-squat"));
+
+    expect(squat.previousSets).toBeUndefined();
+    expect(await logbook.inProgress()).toMatchObject({ workoutExercises: [{ slug: "goblet-squat" }] });
+  });
+
+  it("uploads the finished Workout without Previous Sets", async () => {
+    const { logbook, uploader } = setup(memoryStorage(), fakePreviousSets({ "goblet-squat": fromServer }));
+    await logbook.start(at("09:00"));
+    const squat = await logbook.addWorkoutExercise(exercise("goblet-squat"));
+    await logbook.logSet(squat.id, { kind: "external", kg: 20, reps: 10 }, at("09:05"));
+
+    await logbook.finish({ startedAt: at("09:00"), endedAt: at("09:30"), now: at("09:30") });
+    await logbook.sync();
+
+    expect(uploader.uploaded[0].workoutExercises).toEqual([
+      {
+        slug: "goblet-squat",
+        loadType: "external",
+        sets: [{ kind: "external", kg: 20, reps: 10, loggedAt: "2026-10-24T09:05:00.000Z" }],
+      },
+    ]);
   });
 });

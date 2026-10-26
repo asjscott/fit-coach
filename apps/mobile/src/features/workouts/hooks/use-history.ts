@@ -1,3 +1,4 @@
+import { weeklyVolumeStart } from "@fit/engines";
 import { Workout } from "@fit/shared";
 import { useCallback, useRef, useState } from "react";
 import { useApi } from "@/api";
@@ -32,14 +33,24 @@ export function useHistoryState() {
     [api],
   );
 
-  // Loads the newest page again, so a just-uploaded Workout shows at the top
+  // Loads the newest pages again, so a just-uploaded Workout shows at the top. Pages back until the
+  // weekly Volume's 8 weeks are covered, so those weeks' totals are whole
   const refresh = useCallback(async () => {
     const current = ++generation.current;
+    const since = weeklyVolumeStart(new Date()).getTime();
     try {
-      const result = await fetchPage();
-      if (current !== generation.current) return;
-      setWorkouts(result.page);
-      setHasMore(result.hasMore);
+      let loaded: Workout[] = [];
+      let more = true;
+      let oldest: Workout | undefined;
+      while (more && (!oldest || Date.parse(oldest.startedAt) >= since)) {
+        const result = await fetchPage(oldest);
+        if (current !== generation.current) return;
+        loaded = [...loaded, ...result.page];
+        more = result.hasMore;
+        oldest = loaded.at(-1);
+      }
+      setWorkouts(loaded);
+      setHasMore(more);
       setError(null);
     } catch (err) {
       // Offline: drop what was shown, so History holds only the Pending Workouts

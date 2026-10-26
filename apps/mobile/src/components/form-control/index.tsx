@@ -41,7 +41,7 @@ export function FormControlLabel({ style, ...props }: ViewProps) {
 export function FormControlLabelText({ children, size, ...props }: TextProps) {
   const { size: parentSize = "md", isRequired } = useFormControlContext();
   return (
-    <Text size={size ?? textSize[parentSize]} weight="semiBold" color="textMuted" {...props}>
+    <Text size={size ?? textSize[parentSize]} weight="semiBold" color="muted" {...props}>
       {children}
       {isRequired && <FormControlLabelAstrick />}
     </Text>
@@ -62,7 +62,7 @@ export function FormControlHelper({ style, ...props }: ViewProps) {
 
 export function FormControlHelperText({ size, ...props }: TextProps) {
   const { size: parentSize = "md" } = useFormControlContext();
-  return <Text size={size ?? textSize[parentSize]} color="textSubtle" {...props} />;
+  return <Text size={size ?? textSize[parentSize]} color="subtle" {...props} />;
 }
 
 // Only rendered while the FormControl is invalid

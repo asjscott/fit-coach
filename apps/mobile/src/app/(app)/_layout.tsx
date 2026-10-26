@@ -4,7 +4,10 @@ import { useCurrentUser } from "@/features/user/current-user-provider";
 import { UserLoadingScreen } from "@/features/user/components/user-loading-screen";
 import { HistoryProvider } from "@/features/workouts/history-provider";
 import { LogbookProvider } from "@/features/workouts/logbook-provider";
-import { fonts, useTheme } from "@/theme";
+import { useTheme } from "@/theme";
+
+// A Workout opened by a link still has the tabs under it to leave to
+export const unstable_settings = { initialRouteName: "(tabs)" };
 
 export default function AppLayout() {
   const { isLoaded, isSignedIn } = useAuth();
@@ -17,23 +20,10 @@ export default function AppLayout() {
   return (
     <LogbookProvider>
       <HistoryProvider>
-        <Stack
-          screenOptions={{
-            contentStyle: { backgroundColor: colors.bg },
-            headerShadowVisible: false,
-            headerTitleStyle: { fontFamily: fonts.semiBold },
-          }}
-        >
-          <Stack.Screen name="index" options={{ headerShown: false }} />
-          <Stack.Screen name="exercises/index" options={{ title: "Exercises" }} />
-          {/* Title is set to the exercise name once it loads */}
-          <Stack.Screen name="exercises/[slug]" options={{ title: "" }} />
-          <Stack.Screen name="workout/index" options={{ title: "Workout" }} />
-          <Stack.Screen name="workout/add-exercise" options={{ title: "Add exercise", presentation: "modal" }} />
-          <Stack.Screen name="workout/finish" options={{ title: "Finish workout" }} />
-          <Stack.Screen name="history/index" options={{ title: "History" }} />
-          <Stack.Screen name="history/[id]" options={{ title: "Workout" }} />
-          <Stack.Screen name="styleguide" options={{ title: "Components" }} />
+        <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.bg } }}>
+          <Stack.Screen name="(tabs)" />
+          {/* The In-progress Workout and its picker and Finish screens cover the tabs */}
+          <Stack.Screen name="workout" options={{ presentation: "fullScreenModal" }} />
         </Stack>
       </HistoryProvider>
     </LogbookProvider>

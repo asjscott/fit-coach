@@ -14,7 +14,7 @@ export function KeyboardDoneBar({ nativeID }: { nativeID: string }) {
     <InputAccessoryView nativeID={nativeID}>
       <View style={styles.bar}>
         <Pressable onPress={Keyboard.dismiss} hitSlop={spacing[2]} accessibilityRole="button">
-          <Text size="sm" weight="semiBold" color="orange">
+          <Text size="sm" weight="semiBold" color="accent">
             Done
           </Text>
         </Pressable>
@@ -30,8 +30,8 @@ const createStyles = (colors: Colors) =>
       justifyContent: "flex-end",
       paddingHorizontal: spacing[4],
       paddingVertical: spacing[3],
-      backgroundColor: colors.surfaceRaised,
+      backgroundColor: colors.surface,
       borderTopWidth: StyleSheet.hairlineWidth,
-      borderTopColor: colors.border,
+      borderTopColor: colors.line,
     },
   });

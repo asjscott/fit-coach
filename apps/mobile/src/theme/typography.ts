@@ -25,5 +25,8 @@ export const fontSizes = {
 
 export type FontSize = keyof typeof fontSizes;
 
+// A big bold number, as in a Stat, a logged Set or a stepper
+export const bigNumber = (fontSize: number) => ({ fontFamily: fonts.bold, fontSize, letterSpacing: -0.5 });
+
 // Body copy breathes more than headings
 export const lineHeight = (fontSize: number, tight = false) => Math.round(fontSize * (tight ? 1.2 : 1.45));

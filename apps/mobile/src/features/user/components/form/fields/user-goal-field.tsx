@@ -41,12 +41,12 @@ export function UserGoalField({ label }: { label?: string }) {
                 >
                   <Card size="lg" selected={selected}>
                     <HStack spacing={4}>
-                      <Icon name={option.icon} color={selected ? "orange" : "textMuted"} />
+                      <Icon name={option.icon} color={selected ? "accent" : "muted"} />
                       <Stack flex spacing={1}>
                         <Text size="lg" weight="semiBold">
                           {option.label}
                         </Text>
-                        <Text size="sm" color="textMuted">
+                        <Text size="sm" color="muted">
                           {option.description}
                         </Text>
                       </Stack>

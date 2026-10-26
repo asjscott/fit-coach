@@ -3,4 +3,6 @@ dist
 .expo
 .env
 .env.*
+!.env.example
 .claude/worktrees
+.DS_Store

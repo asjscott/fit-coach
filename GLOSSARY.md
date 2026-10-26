@@ -26,6 +26,14 @@ _Avoid_: Logged exercise, exercise entry
 One continuous effort of a Workout Exercise: kg and reps for a weighted Exercise, reps for a bodyweight one, or seconds for a timed one. For a one-sided Exercise the values are per side.
 _Avoid_: Round, attempt
 
+**Volume**:
+The total weight moved: kg × reps summed over weighted Sets, doubled for a one-sided Exercise. Bodyweight and timed Sets add nothing to it.
+_Avoid_: Tonnage, load, work
+
+**Previous Sets**:
+The Sets the user did of the same Exercise in their most recent finished Workout that included it, Pending Workouts included, shown as a reference while logging. A variant counts as a different Exercise; if the Exercise appeared twice in that Workout, the later one counts.
+_Avoid_: Last time, previous performance, history (for this)
+
 **History**:
 The user's finished Workouts, newest first.
 _Avoid_: Log, journal, activity
@@ -37,6 +45,14 @@ _Avoid_: Active workout, current workout, draft workout
 **Pending Workout**:
 A finished Workout that hasn't reached the server yet.
 _Avoid_: Unsynced workout, queued workout, offline workout
+
+**Coach**:
+The app itself, deciding what the user should train; there is no human coach.
+_Avoid_: Trainer, AI coach, Plan (when meaning the coach)
+
+**Goal**:
+What the user is training for: losing fat, building muscle, recomposition, or athletic performance.
+_Avoid_: Plan, objective, program
 
 **Manual Workout**:
 A Workout whose exercises the user chose themselves, rather than having them prescribed by the coach.

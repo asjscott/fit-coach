@@ -1,55 +1,62 @@
+// The Performance-led palette (spec #16): neutrals, one solid accent, danger for destructive actions,
+// and success and warning hues kept apart from the accent so status never reads as a shade of it.
+// colors.test.ts checks every pairing the components draw against WCAG AA
 const dark = {
   // Backgrounds, page to most raised
-  bg: "#0A0A0B",
-  surface: "#141416",
-  surfaceRaised: "#1C1C1F",
-  border: "#2A2A2E",
+  bg: "#0D0E10",
+  surface: "#17181B",
+  raised: "#202227",
+  // Hairline separators; decorative, so they stay subtle
+  line: "#2A2C31",
+  // Outlines the user must see: inputs, checkboxes, radios
+  inputBorder: "#6E727B",
+  // Switch knob, white on both tracks as on iOS
+  knob: "#FFFFFF",
   backdrop: "rgba(0, 0, 0, 0.6)",
+  // Drop shadows under floating pieces, such as toasts and slider thumbs
+  shadow: "#000000",
 
-  text: "#FFFFFF",
-  textMuted: "#A1A1AA",
-  textSubtle: "#6B6B73",
-  onAccent: "#FFFFFF",
+  text: "#F4F5F7",
+  muted: "#A9ACB3",
+  subtle: "#8E929A",
 
-  red: "#EF2D2D",
-  orange: "#FF7A1A",
-  accentSoft: "rgba(255, 122, 26, 0.14)",
+  accent: "#FC5200",
+  onAccent: "#0D0E10",
+  // Opaque tints, so their contrast doesn't depend on what's behind them
+  accentSoft: "#321F18",
 
-  success: "#22C55E",
-  successSoft: "rgba(34, 197, 94, 0.14)",
+  danger: "#FF5C7A",
+  dangerSoft: "#3A1F26",
+  success: "#4ADE80",
+  successSoft: "#15291D",
   warning: "#FACC15",
-  warningSoft: "rgba(250, 204, 21, 0.14)",
-  danger: "#EF4444",
-  dangerSoft: "rgba(239, 68, 68, 0.14)",
-  info: "#60A5FA",
-  infoSoft: "rgba(96, 165, 250, 0.14)",
+  warningSoft: "#2E2810",
 };
 
-// Accents are a shade deeper than dark mode so they hold contrast on white
 const light: typeof dark = {
-  bg: "#F6F6F7",
+  bg: "#F7F7F8",
   surface: "#FFFFFF",
-  surfaceRaised: "#EEEEF0",
-  border: "#E2E2E6",
+  raised: "#EDEEF0",
+  line: "#E2E3E6",
+  inputBorder: "#8A8D95",
+  knob: "#FFFFFF",
   backdrop: "rgba(0, 0, 0, 0.4)",
+  shadow: "#000000",
 
-  text: "#0A0A0B",
-  textMuted: "#52525B",
-  textSubtle: "#8B8B94",
+  text: "#121316",
+  muted: "#4A4D55",
+  subtle: "#6B6E76",
+
+  accent: "#C2410C",
   onAccent: "#FFFFFF",
+  accentSoft: "#FAF0EC",
 
-  red: "#E0242A",
-  orange: "#F06A0C",
-  accentSoft: "rgba(240, 106, 12, 0.12)",
-
-  success: "#16A34A",
-  successSoft: "rgba(22, 163, 74, 0.12)",
-  warning: "#CA8A04",
-  warningSoft: "rgba(202, 138, 4, 0.12)",
-  danger: "#DC2626",
-  dangerSoft: "rgba(220, 38, 38, 0.12)",
-  info: "#2563EB",
-  infoSoft: "rgba(37, 99, 235, 0.12)",
+  danger: "#BE123C",
+  dangerSoft: "#FBEDF0",
+  success: "#15803D",
+  successSoft: "#EBF6EE",
+  warning: "#876400",
+  warningSoft: "#FBF4DF",
 };
 
 export const palettes = { light, dark } as const;
@@ -57,8 +64,6 @@ export const palettes = { light, dark } as const;
 export type ColorScheme = keyof typeof palettes;
 export type Colors = typeof dark;
 export type ColorToken = keyof Colors;
-
-export const accentGradient = (colors: Colors) => [colors.red, colors.orange] as const;
 
 // Status colours shared by Alert, Badge and Toast
 export type StatusAction = "success" | "warning" | "error" | "info" | "muted";
@@ -68,6 +73,6 @@ export const statusColors = (colors: Colors, action: StatusAction) =>
     success: { fg: colors.success, bg: colors.successSoft },
     warning: { fg: colors.warning, bg: colors.warningSoft },
     error: { fg: colors.danger, bg: colors.dangerSoft },
-    info: { fg: colors.info, bg: colors.infoSoft },
-    muted: { fg: colors.textMuted, bg: colors.surfaceRaised },
+    info: { fg: colors.muted, bg: colors.raised },
+    muted: { fg: colors.muted, bg: colors.raised },
   })[action];

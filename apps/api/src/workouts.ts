@@ -1,5 +1,6 @@
 import type { WithId } from "mongodb";
-import { Workout, type WorkoutsQuery } from "@fit/shared";
+import { previousSets } from "@fit/engines";
+import { Workout, type PreviousSets, type WorkoutsQuery } from "@fit/shared";
 import { db } from "./db";
 
 // The shape of a workout document in MongoDB: the Workout with its Workout Exercises
@@ -18,6 +19,8 @@ export async function ensureWorkoutIndexes() {
   await workouts.createIndex({ clerkUserId: 1, id: 1 }, { unique: true });
   // History, newest first
   await workouts.createIndex({ clerkUserId: 1, startedAt: -1 });
+  // Previous Sets: the newest Workout with a given Exercise
+  await workouts.createIndex({ clerkUserId: 1, "workoutExercises.slug": 1, startedAt: -1 });
 }
 
 // Idempotent on the Workout id: returns the stored Workout if this user already uploaded it
@@ -55,6 +58,15 @@ export function findWorkouts(clerkUserId: string, query: WorkoutsQuery) {
     .sort({ startedAt: -1, id: -1 })
     .limit(query.limit)
     .toArray();
+}
+
+// The user's Previous Sets for an Exercise, from their newest Workout that has it, or null when none does
+export async function findPreviousSets(clerkUserId: string, slug: string): Promise<PreviousSets | null> {
+  const newest = await workouts.findOne(
+    { clerkUserId, "workoutExercises.slug": slug },
+    { sort: { startedAt: -1, id: -1 } },
+  );
+  return newest && previousSets([toWorkout(newest)], slug);
 }
 
 // Deletes the user's Workout; false when it isn't theirs or doesn't exist. No marker is

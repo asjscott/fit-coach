@@ -45,7 +45,7 @@ export function ChoiceModal({
           <Heading size="md">{title}</Heading>
         </ModalHeader>
         <ModalBody>
-          <Text color="textMuted">{message}</Text>
+          <Text color="muted">{message}</Text>
         </ModalBody>
         <ModalFooter>
           {choices.map(({ label, action = "default" }, i) => (

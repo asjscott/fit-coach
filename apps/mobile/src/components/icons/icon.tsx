@@ -16,7 +16,7 @@ export type IconProps = {
   strokeWidth?: number;
 };
 
-export function Icon({ name, as, size = 24, color = "textMuted", rawColor, strokeWidth = 2 }: IconProps) {
+export function Icon({ name, as, size = 24, color = "muted", rawColor, strokeWidth = 2 }: IconProps) {
   const { colors } = useTheme();
   const Component = as ?? (name ? IconMap[name] : undefined);
 

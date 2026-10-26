@@ -36,7 +36,7 @@ export function RHFSlider({
         <FormControl isInvalid={!!error} isDisabled={disabled || readOnly} isRequired={required}>
           <HStack justify="between">
             <RHFLabel label={label} />
-            <Text weight="semiBold" color="orange" tabular>
+            <Text weight="semiBold" color="accent">
               {formatValue(field.value ?? min)}
             </Text>
           </HStack>
