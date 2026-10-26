@@ -1,5 +1,12 @@
-import type { AssessmentPart, EquipmentProfile, Exercise, InjuryTag, Pattern, TestedPattern } from "@fit/shared";
-import { EXERCISES } from "./data/exercises";
+import {
+  TestedPattern,
+  type AssessmentPart,
+  type EquipmentProfile,
+  type Exercise,
+  type InjuryTag,
+  type Pattern,
+} from "@fit/shared";
+import { exerciseBySlug } from "./data/exercises";
 import { isAvailable, isSafeFor } from "./equipment";
 
 // The Patterns each Assessment Workout tests, in the order its tests are done
@@ -26,9 +33,8 @@ export function testedPatternOf(slug: string): TestedPattern | undefined {
   return (Object.keys(RANKED) as TestedPattern[]).find((pattern) => RANKED[pattern].includes(slug));
 }
 
-const bySlug = new Map(EXERCISES.map((exercise) => [exercise.slug, exercise]));
-const exerciseBySlug = (slug: string) => {
-  const exercise = bySlug.get(slug);
+const libraryExercise = (slug: string) => {
+  const exercise = exerciseBySlug(slug);
   if (!exercise) throw new Error(`No Exercise "${slug}" in the library`);
   return exercise;
 };
@@ -39,15 +45,12 @@ export function chooseTests(
   equipmentProfile: Pick<EquipmentProfile, "tags">,
   injuries: InjuryTag[],
 ): Record<TestedPattern, Exercise | null> {
-  const choose = (slugs: string[]) =>
-    slugs
-      .map(exerciseBySlug)
+  const choose = (pattern: TestedPattern) =>
+    RANKED[pattern]
+      .map(libraryExercise)
       .find((exercise) => isAvailable(exercise, equipmentProfile) && isSafeFor(exercise, injuries)) ?? null;
-  return {
-    squat: choose(RANKED.squat),
-    hinge: choose(RANKED.hinge),
-    push: choose(RANKED.push),
-    pull: choose(RANKED.pull),
-    core: choose(RANKED.core),
-  };
+  return Object.fromEntries(TestedPattern.options.map((pattern) => [pattern, choose(pattern)])) as Record<
+    TestedPattern,
+    Exercise | null
+  >;
 }

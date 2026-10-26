@@ -3,15 +3,15 @@ import {
   type Assessment,
   type AssessmentPattern,
   type AssessmentTest,
+  type BodyProfile,
   type EquipmentProfile,
   type Set,
-  type UserProfile,
   type WorkingLevel,
   type Workout,
 } from "@fit/shared";
-import { isLoadLimited, TOP_SET_RPE } from "./assessment-protocol";
+import { isLoadLimited, isTopSet, TOP_SET_RPE } from "./assessment-protocol";
 import { ASSESSMENT_PATTERNS, testedPatternOf } from "./assessment-tests";
-import { e1rm, MAX_E1RM_REPS } from "./e1rm";
+import { e1rm, epley, MAX_E1RM_REPS } from "./e1rm";
 import {
   KG_PATTERNS,
   referenceStrength,
@@ -28,7 +28,7 @@ function topSetOf(sets: Set[]): { topSet: Set; loadLimited: boolean } | null {
   if (!first) return null;
   if (first.kind !== "external") return { topSet: first, loadLimited: false };
   if (isLoadLimited(sets)) return { topSet: sets[sets.length - 1], loadLimited: true };
-  const topSet = sets.find((set) => (set.rpe ?? 0) >= TOP_SET_RPE);
+  const topSet = sets.find(isTopSet);
   return topSet ? { topSet, loadLimited: false } : null;
 }
 
@@ -48,7 +48,7 @@ function maximumOf(slug: string, set: Set, bodyWeightKg: number) {
     case "bodyweight": {
       const entry = STRENGTH_RATIOS[slug];
       if (entry?.kind !== "bodyweight") throw new Error(`"${slug}" isn't a bodyweight Exercise`);
-      return bodyWeightKg * entry.share * (1 + repMaximum(set) / 30);
+      return epley(bodyWeightKg * entry.share, repMaximum(set));
     }
     case "timed":
       return set.seconds;
@@ -67,7 +67,7 @@ const ESTIMATED_PLANK_SECONDS = 30;
 function estimateReferenceStrength(
   pattern: TestedPattern,
   tests: Partial<Record<TestedPattern, AssessmentTest>>,
-  { weightKg, gender }: Pick<UserProfile, "weightKg" | "gender">,
+  { weightKg, gender }: BodyProfile,
 ) {
   if (pattern === "core") return ESTIMATED_PLANK_SECONDS;
   const typical = (kgPattern: KgPattern) => weightKg * TYPICAL_REFERENCE_PER_KG[gender][kgPattern];
@@ -84,7 +84,7 @@ function estimateReferenceStrength(
 export function assess(
   a: Workout,
   b: Workout,
-  profile: Pick<UserProfile, "weightKg" | "gender">,
+  profile: BodyProfile,
   equipmentProfiles: Pick<EquipmentProfile, "tags" | "loads">[],
 ): { assessment: Omit<Assessment, "id" | "createdAt">; workingLevels: WorkingLevel[] } {
   const tests: Partial<Record<TestedPattern, AssessmentTest>> = {};

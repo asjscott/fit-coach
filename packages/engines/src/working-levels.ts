@@ -1,6 +1,7 @@
 import type { BandLevel, EquipmentProfile, EquipmentTag, Exercise, TestedPattern, WorkingLevel } from "@fit/shared";
 import { EXERCISES } from "./data/exercises";
 import { expandTags, isAvailable } from "./equipment";
+import { epleyLoadKg, epleyReps } from "./e1rm";
 import { STRENGTH_RATIOS } from "./strength-ratios";
 
 // A Working Level in kg is for 8 reps with 2 in reserve, so it's the load whose e1RM at 10 reps is the maximum
@@ -42,10 +43,9 @@ function lightestBand(exercise: Exercise, profiles: Profile[]): BandLevel {
 const bandsOnly = (exercise: Exercise, profiles: Profile[]) =>
   ownedOptions(exercise, profiles).every(({ option }) => option.some(isBandTag));
 
-// Inverts Epley: the reps to failure at this load for this maximum, less those in reserve, capped
+// The reps to failure at this load for this maximum, less those in reserve, capped
 function repTarget(maximumKg: number, loadKg: number) {
-  const repsToFailure = 30 * (maximumKg / loadKg - 1);
-  return Math.min(MAX_REPS, Math.max(MIN_REPS, Math.round(repsToFailure - REPS_IN_RESERVE)));
+  return Math.min(MAX_REPS, Math.max(MIN_REPS, Math.round(epleyReps(maximumKg, loadKg) - REPS_IN_RESERVE)));
 }
 
 function workingLevelOf(
@@ -66,7 +66,7 @@ function workingLevelOf(
   const maximum = reference * entry.ratio;
   switch (entry.kind) {
     case "weighted":
-      return { slug, unit: "kg", kg: maximum / (1 + WORKING_LEVEL_E1RM_REPS / 30) };
+      return { slug, unit: "kg", kg: epleyLoadKg(maximum, WORKING_LEVEL_E1RM_REPS) };
     case "bodyweight":
       return { slug, unit: "reps", reps: repTarget(maximum, bodyWeightKg * entry.share) };
     case "timed":

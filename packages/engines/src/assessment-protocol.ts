@@ -1,5 +1,5 @@
 import type { BodyProfile, EquipmentProfile, InProgressWorkoutExercise, Set } from "@fit/shared";
-import { EXERCISES } from "./data/exercises";
+import { exerciseBySlug } from "./data/exercises";
 import { MAX_E1RM_REPS } from "./e1rm";
 import { availableLoadsKg } from "./equipment";
 import { exerciseMaximum, STRENGTH_RATIOS, TYPICAL_REFERENCE_PER_KG } from "./strength-ratios";
@@ -23,14 +23,15 @@ export const TOP_SET_RPE = 9;
 // How far to aim above the last load, by its RPE: an easy Set jumps further
 const JUMP_BY_RPE: Record<number, number> = { 6: 0.2, 7: 0.1, 8: 0.05 };
 
+// A test Set this hard or harder is its top Set
+export const isTopSet = (set: Pick<Set, "rpe">) => (set.rpe ?? 0) >= TOP_SET_RPE;
+
 // A weighted test with no Set at RPE 9 or higher whose last Set went past 12 reps: the load ran out before the effort
 // did. `assess` takes its maximum as a lower bound; the Logbook ends the test there only at the heaviest load
 export function isLoadLimited(sets: Set[]): boolean {
   const last = sets.at(-1);
-  return last?.kind === "external" && last.reps > MAX_E1RM_REPS && !sets.some((set) => (set.rpe ?? 0) >= TOP_SET_RPE);
+  return last?.kind === "external" && last.reps > MAX_E1RM_REPS && !sets.some(isTopSet);
 }
-
-const bySlug = new Map(EXERCISES.map((exercise) => [exercise.slug, exercise]));
 
 // The first Set is at this share of the likely maximum, so it's easy even for a weaker user
 const FIRST_LOAD_SHARE = 0.5;
@@ -50,9 +51,9 @@ export function protocolState(
   equipmentProfile: Pick<EquipmentProfile, "tags" | "loads">,
   bodyProfile: BodyProfile | undefined,
 ): ProtocolState {
-  const exercise = bySlug.get(slug);
+  const exercise = exerciseBySlug(slug);
   if (exercise && exercise.loadType !== "external") return sets.length ? { status: "done" } : { status: "one-set" };
-  if (sets.some((set) => (set.rpe ?? 0) >= TOP_SET_RPE)) return { status: "done" };
+  if (sets.some(isTopSet)) return { status: "done" };
   const last = sets.at(-1);
   const loads = exercise ? availableLoadsKg(exercise, equipmentProfile) : [];
   if (!last) return { status: "working-up", suggestedKg: exercise ? firstLoadKg(slug, loads, bodyProfile) : null };
