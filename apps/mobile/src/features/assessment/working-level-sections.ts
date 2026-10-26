@@ -24,7 +24,7 @@ function workingLevelLabel(level: WorkingLevel, loadsKg: number[]): string {
 }
 
 // The starting Working Levels for what the primary Equipment Profile supports, one section per Pattern in Pattern
-// order, each Exercise under its first Pattern. A section is estimated when the Pattern it follows from was
+// order, each Exercise under its first Pattern. A section is estimated when the Pattern it follows from wasn't tested
 export function workingLevelSections(
   workingLevels: WorkingLevel[],
   primary: Pick<EquipmentProfile, "tags" | "loads">,

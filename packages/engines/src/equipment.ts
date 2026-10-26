@@ -12,7 +12,6 @@ export function expandTags(tags: EquipmentTag[]): Set<EquipmentTag> {
   return owned;
 }
 
-// The ways of doing the Exercise the profile has everything for
 export function ownedOptions(
   exercise: Pick<Exercise, "equipmentOptions">,
   profile: Pick<EquipmentProfile, "tags">,
