@@ -8,9 +8,7 @@ import { exerciseMaximum, STRENGTH_RATIOS } from "./strength-ratios";
 // taken to RPE 9, so there is no load to suggest. Done: a weighted Set reached RPE 9, or the one Set is logged.
 // Still to come: load-limited (#38)
 export type ProtocolState =
-  | { status: "working-up"; suggestedKg: number | null }
-  | { status: "one-set" }
-  | { status: "done" };
+  { status: "working-up"; suggestedKg: number | null } | { status: "one-set" } | { status: "done" };
 
 // Every Set of a weighted test is 5 reps
 export const TEST_REPS = 5;

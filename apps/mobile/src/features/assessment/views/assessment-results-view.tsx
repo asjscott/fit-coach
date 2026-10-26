@@ -18,7 +18,21 @@ import { workingLevelSections, type WorkingLevelRow } from "../working-level-sec
 // In the order the tests were done: A's, then B's
 const PATTERN_ORDER = [...ASSESSMENT_PATTERNS.A, ...ASSESSMENT_PATTERNS.B];
 
-const maximumLabel = (kg: number) => `${kg.toLocaleString(undefined, { maximumFractionDigits: 1 })} kg`;
+// The test's maximum and what it is: "16.8 kg" Estimated max; for a bodyweight test the reps it was worth, "11 reps"
+// Rep max (its kg is of body weight × a share, which means little to the user); for a timed test "90 s" Held
+function maximumOf({ topSet, maximum }: AssessmentTest) {
+  switch (topSet.kind) {
+    case "external":
+      return {
+        value: `${maximum.toLocaleString(undefined, { maximumFractionDigits: 1 })} kg`,
+        caption: "Estimated max",
+      };
+    case "bodyweight":
+      return { value: `${topSet.reps + (10 - (topSet.rpe ?? 9))} reps`, caption: "Rep max" };
+    case "timed":
+      return { value: `${topSet.seconds} s`, caption: "Held" };
+  }
+}
 
 // The latest Assessment: each test's Exercise, top Set and estimated maximum, the starting Working Levels by Pattern
 // for what the primary Equipment Profile supports (rounded to its loads), and Retake. "Results once synced" while a
@@ -114,6 +128,7 @@ function WorkingLevelRowView({ row }: { row: WorkingLevelRow }) {
 function TestRow({ test }: { test: AssessmentTest }) {
   const { colors } = useTheme();
   const rpe = test.topSet.rpe === undefined ? "" : ` at RPE ${test.topSet.rpe}`;
+  const maximum = maximumOf(test);
   return (
     <View style={[styles.row, { borderTopColor: colors.line }]}>
       <View style={{ flex: 1 }}>
@@ -123,9 +138,9 @@ function TestRow({ test }: { test: AssessmentTest }) {
         </Text>
       </View>
       <View style={styles.maximum}>
-        <Text weight="semiBold">{maximumLabel(test.maximumKg)}</Text>
+        <Text weight="semiBold">{maximum.value}</Text>
         <Text size="xs" color="muted">
-          Estimated max
+          {maximum.caption}
         </Text>
       </View>
     </View>

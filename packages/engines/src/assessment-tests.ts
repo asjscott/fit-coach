@@ -39,9 +39,7 @@ export function chooseTests(
   const choose = (slugs: string[]) =>
     slugs
       .map(exerciseBySlug)
-      .find(
-        (exercise) => isAvailable(exercise, equipmentProfile) && isSafeFor(exercise, injuries),
-      ) ?? null;
+      .find((exercise) => isAvailable(exercise, equipmentProfile) && isSafeFor(exercise, injuries)) ?? null;
   return {
     squat: choose(RANKED.squat),
     hinge: choose(RANKED.hinge),

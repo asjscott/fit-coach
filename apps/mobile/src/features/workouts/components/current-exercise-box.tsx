@@ -41,8 +41,8 @@ export function CurrentExerciseBox({ workoutExercise, position, count }: Current
   const unilateral = libraryExercise(slug)?.unilateral ?? false;
   const editingSet = editingIndex === null ? undefined : sets[editingIndex];
   const nextNumber = sets.length + 1;
-  // In an Assessment Workout every Exercise is a test: Sets of 5, each rated, at the suggested load. The first load
-  // is worked out from body weight and gender
+  // In an Assessment Workout every Exercise is a test, each Set rated: a weighted test works up in Sets of 5 at the
+  // suggested load (the first worked out from body weight and gender), and a bodyweight or timed test is one Set
   const protocol =
     workout?.assessment && primaryEquipment && weightKg !== undefined && gender
       ? protocolState(workoutExercise, primaryEquipment, { weightKg, gender })
@@ -76,7 +76,7 @@ export function CurrentExerciseBox({ workoutExercise, position, count }: Current
       ) : null}
       {protocol ? (
         <Text size="sm" color={protocol.status === "done" ? "accent" : "muted"} style={styles.note}>
-          {protocolLabel(protocol, sets.length)}
+          {protocolLabel(protocol, sets.length, loadType)}
         </Text>
       ) : null}
 
@@ -153,9 +153,15 @@ export function CurrentExerciseBox({ workoutExercise, position, count }: Current
   );
 }
 
-// What the test asks for next: "Sets of 5 …" before the first, then the suggested load, then done
-function protocolLabel(protocol: ProtocolState, setCount: number) {
+// What the test asks for next: "Sets of 5 …" before the first, then the suggested load, then done. A bodyweight or
+// timed test is one Set to RPE 9
+function protocolLabel(protocol: ProtocolState, setCount: number, loadType: LoadType) {
   if (protocol.status === "done") return "Done: that Set was your top Set. On to the next test.";
+  if (protocol.status === "one-set") {
+    return loadType === "timed"
+      ? "One Set, stop at RPE 9: hold until your form is about to break, then log the seconds."
+      : "One Set, stop at RPE 9: as many reps as you can with one left in the tank.";
+  }
   if (protocol.suggestedKg !== null && setCount === 0) {
     return `Sets of ${TEST_REPS}, adding weight each Set until one is RPE 9. Start at ${protocol.suggestedKg} kg.`;
   }
