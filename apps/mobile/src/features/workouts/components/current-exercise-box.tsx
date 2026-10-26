@@ -1,5 +1,5 @@
 import { isRatedTest, TEST_REPS, type ProtocolState } from "@fit/engines";
-import type { InProgressWorkoutExercise, LoadType, SetValues } from "@fit/shared";
+import { RPE_SCALE, type InProgressWorkoutExercise, type LoadType, type SetValues } from "@fit/shared";
 import { useState, type ReactNode } from "react";
 import { StyleSheet, View } from "react-native";
 import { Chip } from "@/components/chip";
@@ -11,7 +11,7 @@ import { useToast } from "@/contexts/toast-context";
 import { usePrimaryEquipmentProfile } from "@/features/user/current-user-provider";
 import { fonts, radii, spacing, useTheme } from "@/theme";
 import { errorMessage } from "@/utils/error-message";
-import { previousSetsLabel } from "../format";
+import { describeSet, previousSetsLabel } from "../format";
 import { exerciseName, libraryExercise } from "../library";
 import { useLogbook } from "../logbook-provider";
 import { draftValues, setDraft, SET_FIELDS, type SetDraft } from "../set-entry";
@@ -178,13 +178,13 @@ function protocolNote(
         return workingUp(`Sets of ${TEST_REPS}, adding weight each Set until one is RPE 9. ${start}`);
       }
       return workingUp(
-        kg === null ? `Add weight for the next Set of ${TEST_REPS}` : `Next: ${kg} kg × ${TEST_REPS}, then rate it`,
+        kg === null
+          ? `Add weight for the next Set of ${TEST_REPS}`
+          : `Next: ${describeSet({ kind: "external", kg, reps: TEST_REPS })}, then rate it`,
       );
     }
   }
 }
-
-const RPE_CHOICES = [6, 7, 8, 9, 10];
 
 type SetEntryProps = {
   heading: string;
@@ -242,7 +242,7 @@ function SetEntry({ heading, loadType, initial, asksRpe = false, submitLabel, on
             RPE: 10 is no more reps, 9 is one more
           </Text>
           <HStack spacing={2}>
-            {RPE_CHOICES.map((choice) => (
+            {RPE_SCALE.map((choice) => (
               <Chip key={choice} label={String(choice)} selected={rpe === choice} onPress={() => setRpe(choice)} />
             ))}
           </HStack>

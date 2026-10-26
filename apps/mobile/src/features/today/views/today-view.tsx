@@ -8,6 +8,7 @@ import { LoadingButton } from "@/components/loading-button";
 import { Screen } from "@/components/screen";
 import { Spinner } from "@/components/spinner";
 import { Text } from "@/components/text";
+import { useChosenTests } from "@/features/assessment/hooks/use-chosen-tests";
 import { useLatestAssessment } from "@/features/assessment/hooks/use-latest-assessment";
 import { useCurrentUser } from "@/features/user/current-user-provider";
 import { ForgottenWorkoutModal } from "@/features/workouts/components/forgotten-workout-modal";
@@ -32,6 +33,7 @@ export default function TodayView() {
   const daysPerWeek = useCurrentUser().user?.profile.daysPerWeek;
   const { latest: latestAssessment } = useLatestAssessment();
   const { dismissed, dismiss } = useDismissedOffer();
+  const tests = useChosenTests();
   useRefreshHistory();
 
   // A forgotten Workout must be finished or discarded before the user carries on
@@ -59,6 +61,7 @@ export default function TodayView() {
           historyLoaded: workouts !== null,
           latestAssessment: latestAssessment && latestAssessment.assessment,
           now,
+          tests,
           dismissed,
         });
 

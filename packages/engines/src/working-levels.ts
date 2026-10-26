@@ -1,6 +1,6 @@
 import {
   BAND_TAGS,
-  type BandLevel,
+  BandLevel,
   type BandTag,
   type EquipmentTag,
   type Exercise,
@@ -23,7 +23,6 @@ const CORE_REPS = 10;
 const BAND_REPS = 12;
 
 const isBandTag = (tag: EquipmentTag): tag is BandTag => (BAND_TAGS as readonly EquipmentTag[]).includes(tag);
-const BAND_LEVELS: BandLevel[] = ["light", "medium", "heavy", "extra_heavy"];
 
 // What the Working Levels are seeded from
 type Seed = {
@@ -43,7 +42,8 @@ function lightestBand(exercise: Exercise, profiles: ProfileWithLoads[]): BandLev
       option.filter(isBandTag).flatMap((tag) => profile.loads[tag]?.levels ?? []),
     ),
   );
-  return BAND_LEVELS.find((level) => levels.has(level)) ?? "light";
+  // The schema lists band levels lightest first
+  return BandLevel.options.find((level) => levels.has(level)) ?? "light";
 }
 
 // A weighted Exercise the user can only do with bands, like a lateral raise with no dumbbells

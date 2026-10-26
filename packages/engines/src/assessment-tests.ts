@@ -1,6 +1,6 @@
 import {
+  AssessmentPart,
   TestedPattern,
-  type AssessmentPart,
   type EquipmentProfile,
   type Exercise,
   type InjuryTag,
@@ -40,18 +40,28 @@ const requireExercise = (slug: string) => {
   return exercise;
 };
 
+// Each tested Pattern's test Exercise, or null when none is available and safe
+export type ChosenTests = Record<TestedPattern, Exercise | null>;
+
 // One test Exercise per tested Pattern from the Equipment Profile: the first on its list that's available and safe,
 // or null when none is
-export function chooseTests(
-  equipmentProfile: Pick<EquipmentProfile, "tags">,
-  injuries: InjuryTag[],
-): Record<TestedPattern, Exercise | null> {
+export function chooseTests(equipmentProfile: Pick<EquipmentProfile, "tags">, injuries: InjuryTag[]): ChosenTests {
   const choose = (pattern: TestedPattern) =>
     CANDIDATE_TESTS[pattern]
       .map(requireExercise)
       .find((exercise) => isAvailable(exercise, equipmentProfile) && isSafeFor(exercise, injuries)) ?? null;
-  return Object.fromEntries(TestedPattern.options.map((pattern) => [pattern, choose(pattern)])) as Record<
-    TestedPattern,
-    Exercise | null
-  >;
+  return Object.fromEntries(TestedPattern.options.map((pattern) => [pattern, choose(pattern)])) as ChosenTests;
 }
+
+// Assessment Workout A or B's tests in order, and its Patterns with no test, which the Assessment estimates
+export function partTests(tests: ChosenTests, part: AssessmentPart) {
+  const patterns = ASSESSMENT_PATTERNS[part];
+  return {
+    exercises: patterns.flatMap((pattern) => tests[pattern] ?? []),
+    untested: patterns.filter((pattern) => !tests[pattern]),
+  };
+}
+
+// Whether both Assessment Workouts have a test to do: with none for A or for B there would never be an Assessment
+export const canAssess = (tests: ChosenTests) =>
+  AssessmentPart.options.every((part) => partTests(tests, part).exercises.length > 0);

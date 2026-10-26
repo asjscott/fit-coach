@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { assessmentOffer, offerKey, pendingB, type AssessmentOfferInput } from "./assessment-offer";
+import { chooseTests } from "./assessment-tests";
 
 const workout = (id: string, day: string, assessment?: "A" | "B", isPending = false) => ({
   id,
@@ -9,7 +10,7 @@ const workout = (id: string, day: string, assessment?: "A" | "B", isPending = fa
 });
 // The latest Assessment, from a B started on this day
 const assessment = (id: string, day: string) => ({ id, bStartedAt: `2026-10-${day}T08:00:00.000Z` });
-// Today's offer on 23 October with History loaded, and nothing dismissed unless a test says so
+// Today's offer on 23 October with History loaded, a test for every Pattern, and nothing dismissed unless a test says so
 const offer = (
   workouts: AssessmentOfferInput["workouts"],
   latestAssessment: AssessmentOfferInput["latestAssessment"],
@@ -20,22 +21,23 @@ const offer = (
     historyLoaded: true,
     latestAssessment,
     now: new Date("2026-10-23T09:00:00Z"),
+    tests: chooseTests({ tags: ["dumbbells"] }, []),
     dismissed: null,
     ...more,
   });
 
 describe("assessmentOffer", () => {
   it("offers A to a user who hasn't done one", () => {
-    expect(offer([workout("w1", "20")], null)).toEqual({ kind: "start", part: "A" });
+    expect(offer([workout("w1", "20")], null)).toEqual({ kind: "start", part: "A", untested: [] });
   });
 
   it("offers A to a user with no Workouts at all", () => {
-    expect(offer([], null)).toEqual({ kind: "start", part: "A" });
+    expect(offer([], null)).toEqual({ kind: "start", part: "A", untested: [] });
   });
 
   it("offers B once A is done, until a B follows it", () => {
     const workouts = [workout("w2", "21"), workout("a1", "20", "A")];
-    expect(offer(workouts, null)).toEqual({ kind: "start", part: "B", aWorkoutId: "a1", redoA: false });
+    expect(offer(workouts, null)).toEqual({ kind: "start", part: "B", aWorkoutId: "a1", redoA: false, untested: [] });
   });
 
   it("doesn't count a B from before the latest A", () => {
@@ -50,6 +52,25 @@ describe("assessmentOffer", () => {
       part: "B",
       redoA: true,
     });
+  });
+
+  it("names the Patterns it can't test, which the Assessment estimates", () => {
+    // Every push on the list, push-up included, is flagged for a wrist injury
+    const tests = chooseTests({ tags: [] }, ["wrist"]);
+    expect(offer([], null, { tests })).toMatchObject({ part: "A", untested: [] });
+    expect(offer([workout("a1", "20", "A")], null, { tests })).toMatchObject({ part: "B", untested: ["push"] });
+  });
+
+  it("says the Assessment is unavailable when A or B has no test at all", () => {
+    const tests = { ...chooseTests({ tags: [] }, []), push: null, pull: null };
+    expect(offer([], null, { tests })).toEqual({ kind: "unavailable" });
+    expect(offer([workout("a1", "20", "A")], null, { tests })).toEqual({ kind: "unavailable" });
+  });
+
+  it("still links to the Results when the Assessment is no longer available", () => {
+    const tests = { ...chooseTests({ tags: [] }, []), squat: null, hinge: null, core: null };
+    const workouts = [workout("b1", "22", "B"), workout("a1", "20", "A")];
+    expect(offer(workouts, assessment("x1", "22"), { tests })).toEqual({ kind: "results", assessmentId: "x1" });
   });
 
   it("says the Results come once synced while B is Pending", () => {

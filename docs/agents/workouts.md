@@ -45,12 +45,14 @@ Two Assessment Workouts (A: squat, hinge, core; B: push, pull) give the Assessme
 
 ```text
 Today offer (packages/engines/src/assessment-offer.ts assessmentOffer, rendered by
-  apps/mobile/src/features/today/components/assessment-section.tsx): start A / start B (+ Redo A) /
-  "Results once synced" / Results link, each dismissable (hooks/use-dismissed-offer.ts, keyed by offerKey)
-Retake: Profile (features/user/views/profile-view.tsx) starts A
+  apps/mobile/src/features/today/components/assessment-section.tsx): start A / start B (+ Redo A), each naming its
+  untested Patterns / unavailable (canAssess: A or B has no test) / "Results once synced" / Results link, each
+  dismissable (hooks/use-dismissed-offer.ts, keyed by offerKey). Tests from hooks/use-chosen-tests.ts
+Retake: Profile (features/user/views/profile-view.tsx) starts A, unless canAssess is false
 Starting (features/assessment/hooks/use-start-assessment.ts → Logbook.startAssessment in packages/engines/src/logbook.ts)
   └─ chooseTests (packages/engines/src/assessment-tests.ts): ranked list per Pattern, first available and safe;
-     ASSESSMENT_PATTERNS, testedPatternOf, referencePatternOf (carry follows hinge)
+     partTests (a part's tests in order, and its untested Patterns), canAssess, ASSESSMENT_PATTERNS, testedPatternOf,
+     referencePatternOf (carry follows hinge)
 Logging (features/workouts/components/current-exercise-box.tsx renders Logbook.protocolState and Logbook.nextSetDraft)
   └─ protocolState (packages/engines/src/assessment-protocol.ts): first load, next load, at-heaviest, one-set, done,
      load-limited; isRatedTest says which test Sets take an RPE (weighted only)

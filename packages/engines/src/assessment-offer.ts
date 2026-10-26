@@ -1,11 +1,14 @@
-import type { Assessment, Workout } from "@fit/shared";
+import type { Assessment, TestedPattern, Workout } from "@fit/shared";
 import { latestAssessmentWorkout } from "./assessment-pairing";
+import { canAssess, partTests, type ChosenTests } from "./assessment-tests";
 
 // What Today offers about the Assessment: to start A, to start B (and redo A when it's stale), that the Results come
-// once B syncs, or a link to the Results. Each names the Workout or Assessment it's about
+// once B syncs, or a link to the Results. Each names the Workout or Assessment it's about. A start names the Patterns
+// it can't test; when A or B has no test at all, the Assessment is unavailable instead
 export type AssessmentOffer =
-  | { kind: "start"; part: "A" }
-  | { kind: "start"; part: "B"; aWorkoutId: string; redoA: boolean }
+  | { kind: "start"; part: "A"; untested: TestedPattern[] }
+  | { kind: "start"; part: "B"; aWorkoutId: string; redoA: boolean; untested: TestedPattern[] }
+  | { kind: "unavailable" }
   | { kind: "syncing"; bWorkoutId: string }
   | { kind: "results"; assessmentId: string };
 
@@ -24,6 +27,8 @@ export type AssessmentOfferInput = {
   // The latest Assessment on the server, null when there is none, undefined until it arrives (or when it can't)
   latestAssessment: Pick<Assessment, "id" | "bStartedAt"> | null | undefined;
   now: Date;
+  // The tests the user's primary Equipment Profile and injuries allow
+  tests: ChosenTests;
   // The key of the offer the user dismissed last, if any
   dismissed: string | null;
 };
@@ -54,7 +59,12 @@ function currentOffer({
   historyLoaded,
   latestAssessment,
   now,
+  tests,
 }: Omit<AssessmentOfferInput, "dismissed">): AssessmentOffer | null {
+  const start = (offer: { part: "A" } | { part: "B"; aWorkoutId: string; redoA: boolean }): AssessmentOffer =>
+    canAssess(tests)
+      ? { kind: "start", ...offer, untested: partTests(tests, offer.part).untested }
+      : { kind: "unavailable" };
   // The latest Assessment counts only with History, so A isn't offered to someone who has done it. Until then only the
   // Pending Workouts on the phone count (ADR 0001)
   const latest = historyLoaded ? latestAssessment : undefined;
@@ -66,12 +76,12 @@ function currentOffer({
     a && (latest === undefined ? a.isPending : !latest || Date.parse(a.startedAt) > Date.parse(latest.bStartedAt));
   if (a && aAwaitsB && aIsNew) {
     const redoA = now.getTime() - Date.parse(a.startedAt) > STALE_A_MS;
-    return { kind: "start", part: "B", aWorkoutId: a.id, redoA };
+    return start({ part: "B", aWorkoutId: a.id, redoA });
   }
   if (latest === undefined) return null;
   // The Assessment is a snapshot, so it stands even once its Workouts are deleted from History
   if (latest) return { kind: "results", assessmentId: latest.id };
-  if (!a) return { kind: "start", part: "A" };
+  if (!a) return start({ part: "A" });
   // B is done but its Assessment hasn't been worked out yet
   return null;
 }

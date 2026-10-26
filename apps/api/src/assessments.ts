@@ -53,13 +53,15 @@ export async function assessIfPaired(clerkUserId: string, workout: Workout, user
         },
       );
       if (!pair) return;
-      const pairedDoc = await workouts.findOne(
-        { clerkUserId, id: part === "B" ? pair.aWorkoutId : pair.bWorkoutId },
-        { session },
-      );
-      if (!pairedDoc) return;
-      const paired = toWorkout(pairedDoc);
-      const [a, b] = part === "B" ? [paired, workout] : [workout, paired];
+      // The uploaded Workout is one of the pair, so only the other is read
+      const load = async (id: string) => {
+        if (id === workout.id) return workout;
+        const doc = await workouts.findOne({ clerkUserId, id }, { session });
+        return doc && toWorkout(doc);
+      };
+      const a = await load(pair.aWorkoutId);
+      const b = await load(pair.bWorkoutId);
+      if (!a || !b) return;
 
       const result = assess(a, b, user.bodyProfile, user.equipmentProfiles);
       const id = randomUUID();

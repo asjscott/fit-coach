@@ -5,11 +5,12 @@ import { BodyProfile } from "./user";
 // Each Set records when it was logged; values are per side for a one-sided Exercise
 const loggedAt = z.iso.datetime();
 // How hard the Set felt (GLOSSARY.md): only Assessment Workouts ask for it so far
+export const RPE_SCALE = [6, 7, 8, 9, 10] as const;
 const rpe = z
   .number()
   .int("RPE must be a whole number")
-  .min(6, "RPE goes from 6 to 10")
-  .max(10, "RPE goes from 6 to 10");
+  .min(RPE_SCALE[0], "RPE goes from 6 to 10")
+  .max(RPE_SCALE[RPE_SCALE.length - 1], "RPE goes from 6 to 10");
 const count = (name: string) =>
   z.number().int(`${name} must be a whole number`).positive(`${name} must be more than 0`);
 

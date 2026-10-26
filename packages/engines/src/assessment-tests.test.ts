@@ -1,6 +1,6 @@
 import { PRESETS, type EquipmentTag, type Pattern } from "@fit/shared";
 import { describe, expect, it } from "vitest";
-import { chooseTests, referencePatternOf } from "./assessment-tests";
+import { canAssess, chooseTests, partTests, referencePatternOf } from "./assessment-tests";
 import { EXERCISES } from "./data/exercises";
 
 const preset = (name: string) => {
@@ -93,6 +93,28 @@ describe("chooseTests", () => {
     );
     expect(chosen.length).toBeGreaterThan(0);
     expect(refused.map((exercise) => exercise.slug)).toEqual([]);
+  });
+});
+
+describe("partTests", () => {
+  it("gives B's tests in order and names a Pattern with no safe test as untested", () => {
+    // Every push on the list, push-up included, is flagged for a wrist injury
+    const { exercises, untested } = partTests(chooseTests({ tags: [] }, ["wrist"]), "B");
+    expect(exercises.map((exercise) => exercise.slug)).toEqual(["inverted-row"]);
+    expect(untested).toEqual(["push"]);
+  });
+});
+
+describe("canAssess", () => {
+  const bodyweight = chooseTests({ tags: [] }, []);
+
+  it("is true while A and B each have a test, though a Pattern has none", () => {
+    expect(canAssess({ ...bodyweight, push: null })).toBe(true);
+  });
+
+  it("is false when A or B has no test at all", () => {
+    expect(canAssess({ ...bodyweight, push: null, pull: null })).toBe(false);
+    expect(canAssess({ ...bodyweight, squat: null, hinge: null, core: null })).toBe(false);
   });
 });
 

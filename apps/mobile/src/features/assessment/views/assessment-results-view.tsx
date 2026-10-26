@@ -9,7 +9,7 @@ import { Text } from "@/components/text";
 import { spacing, useTheme } from "@/theme";
 import { patternLabels } from "@/features/exercises/labels";
 import { usePrimaryEquipmentProfile } from "@/features/user/current-user-provider";
-import { describeSet } from "@/features/workouts/format";
+import { describeSet, weightLabel } from "@/features/workouts/format";
 import { exerciseName } from "@/features/workouts/library";
 import { useLogbook } from "@/features/workouts/logbook-provider";
 import { SyncingNote } from "../components/syncing-note";
@@ -21,21 +21,17 @@ const PATTERN_ORDER = [...ASSESSMENT_PATTERNS.A, ...ASSESSMENT_PATTERNS.B];
 
 const ESTIMATED = "Estimated from your other results";
 
-// "16.8 kg" Estimated maximum. A bodyweight test shows the reps done: its kg, of body weight × a share, means little
-// to the user
+// What a bodyweight or timed test's one Set measured
+const ONE_SET_CAPTIONS = { bodyweight: "Rep maximum", timed: "Held" } as const;
+
+// "16.8 kg" Estimated maximum. A bodyweight or timed test shows its one Set: a bodyweight maximum's kg, of body
+// weight × a share, means little to the user
 function maximumLabel({ topSet, maximum, loadLimited }: AssessmentTest) {
-  switch (topSet.kind) {
-    case "external": {
-      const kg = `${maximum.toLocaleString(undefined, { maximumFractionDigits: 1 })} kg`;
-      return loadLimited
-        ? { value: `at least ${kg}`, caption: "Limited by your equipment" }
-        : { value: kg, caption: "Estimated maximum" };
-    }
-    case "bodyweight":
-      return { value: `${topSet.reps} reps`, caption: "Rep maximum" };
-    case "timed":
-      return { value: `${topSet.seconds} s`, caption: "Held" };
-  }
+  if (topSet.kind !== "external") return { value: describeSet(topSet), caption: ONE_SET_CAPTIONS[topSet.kind] };
+  const kg = weightLabel(maximum);
+  return loadLimited
+    ? { value: `at least ${kg}`, caption: "Limited by your equipment" }
+    : { value: kg, caption: "Estimated maximum" };
 }
 
 // "Results once synced" while a B is Pending, since the server works out the Assessment once it has both

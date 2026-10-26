@@ -1,5 +1,5 @@
 import { ASSESSMENT_PATTERNS, type AssessmentOffer } from "@fit/engines";
-import type { AssessmentPart } from "@fit/shared";
+import type { AssessmentPart, TestedPattern } from "@fit/shared";
 import { router } from "expo-router";
 import { StyleSheet, View } from "react-native";
 import { Icon } from "@/components/icons";
@@ -14,18 +14,18 @@ import { useLogbook } from "@/features/workouts/logbook-provider";
 import { spacing } from "@/theme";
 
 // "squat, hinge and core"
-function patternsInWords(part: AssessmentPart) {
-  const words = ASSESSMENT_PATTERNS[part].map((pattern) => patternLabels[pattern].toLowerCase());
+function patternsInWords(patterns: TestedPattern[]) {
+  const words = patterns.map((pattern) => patternLabels[pattern].toLowerCase());
   return words.length > 1 ? `${words.slice(0, -1).join(", ")} and ${words.at(-1)}` : words[0];
 }
 
 const WHAT_IT_TESTS: Record<AssessmentPart, string> = {
-  A: `Tests your ${patternsInWords("A")}, so the Coach knows your starting strength.`,
-  B: `Tests your ${patternsInWords("B")}, and finishes your Assessment.`,
+  A: `Tests your ${patternsInWords(ASSESSMENT_PATTERNS.A)}, so the Coach knows your starting strength.`,
+  B: `Tests your ${patternsInWords(ASSESSMENT_PATTERNS.B)}, and finishes your Assessment.`,
 };
 
-// Today's Assessment offer: start A or B (and redo a stale A), "Results once synced", or open the Results. Every
-// offer can be dismissed. Starting needs no Workout in progress
+// Today's Assessment offer: start A or B (and redo a stale A), why it's unavailable, "Results once synced", or open
+// the Results. Every offer can be dismissed. Starting needs no Workout in progress
 export function AssessmentSection({ offer, onDismiss }: { offer: AssessmentOffer; onDismiss: () => void }) {
   const { workout } = useLogbook();
   const { start, starting } = useStartAssessment();
@@ -64,11 +64,20 @@ export function AssessmentSection({ offer, onDismiss }: { offer: AssessmentOffer
         />
       ) : offer.kind === "syncing" ? (
         <SyncingNote />
+      ) : offer.kind === "unavailable" ? (
+        <Text size="sm" color="muted">
+          No Assessment test suits your injuries and equipment. Log Manual Workouts with the Exercises you can do.
+        </Text>
       ) : (
         <>
           <Text size="sm" color="muted">
             {WHAT_IT_TESTS[offer.part]}
           </Text>
+          {offer.untested.length > 0 ? (
+            <Text size="sm" color="muted">
+              {`No test suits your injuries and equipment for ${patternsInWords(offer.untested)}, so ${offer.untested.length > 1 ? "they're" : "it's"} estimated from your other results.`}
+            </Text>
+          ) : null}
           {startButton(offer.part, `Start assessment ${offer.part}`)}
           {offer.part === "B" && offer.redoA ? (
             <>

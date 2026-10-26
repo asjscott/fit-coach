@@ -84,6 +84,9 @@ export function weekDatesLabel(start: Date, now = new Date(), locale?: string) {
 // A Volume in whole kg with thousands separators, e.g. "6,420"; the unit is drawn separately
 export const kgLabel = (kg: number) => Math.round(kg).toLocaleString();
 
+// A weight to the tenth of a kg, with its unit: "16.8 kg"
+export const weightLabel = (kg: number) => `${kg.toLocaleString(undefined, { maximumFractionDigits: 1 })} kg`;
+
 export const setsLabel = (sets: number) => `${sets} ${sets === 1 ? "set" : "sets"}`;
 
 // How long an In-progress Workout has run, as a ticking clock for its own screen: "0:45", "48:12", "1:05:09"

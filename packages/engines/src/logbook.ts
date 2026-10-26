@@ -12,7 +12,7 @@ import {
 } from "@fit/shared";
 import type { z } from "zod";
 import { isRatedTest, protocolState, TEST_REPS, type ProtocolState } from "./assessment-protocol";
-import { ASSESSMENT_PATTERNS, chooseTests } from "./assessment-tests";
+import { canAssess, chooseTests, partTests } from "./assessment-tests";
 import type { ProfileWithLoads } from "./equipment";
 import { previousSets } from "./training-summaries";
 
@@ -216,8 +216,8 @@ export function createLogbook({
       now: Date,
     ) => {
       const tests = chooseTests(equipmentProfile, injuries);
-      const exercises = ASSESSMENT_PATTERNS[part].flatMap((pattern) => tests[pattern] ?? []);
-      if (exercises.length === 0) throw new LogbookError("No test suits this equipment and these injuries");
+      if (!canAssess(tests)) throw new LogbookError("No Assessment suits this equipment and these injuries");
+      const { exercises } = partTests(tests, part);
       const fromServer = await Promise.all(
         exercises.map(({ slug }) => previousSetsSource.forExercise(slug).catch(() => null)),
       );
