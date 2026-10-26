@@ -73,7 +73,7 @@ One of the two Workouts the Coach prescribes to measure the user's starting stre
 _Avoid_: Test session, baseline session, test workout
 
 **Assessment**:
-The results of one completed pair of Assessment Workouts: for each tested Pattern, the Exercise used, its top Set, the maximum estimated from it and the Reference Strength that follows. A test is load-limited when the heaviest load available couldn't reach RPE 9, so its maximum is only a lower bound. The newest Assessment is the one that counts.
+The results of one completed pair of Assessment Workouts: for each tested Pattern, the Exercise used, its top Set, the maximum estimated from it and the Reference Strength that follows. A test is load-limited when the heaviest load available couldn't reach RPE 9, so its maximum is only a lower bound. A Pattern is untested when no test was safe for the user's injuries or its test stopped short of RPE 9; its Reference Strength is then estimated from the other Patterns. The newest Assessment is the one that counts.
 _Avoid_: Baseline, test results, fitness test
 
 **Working Level**:

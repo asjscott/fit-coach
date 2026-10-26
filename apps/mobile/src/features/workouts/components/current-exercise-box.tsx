@@ -75,8 +75,12 @@ export function CurrentExerciseBox({ workoutExercise, position, count }: Current
         </Text>
       ) : null}
       {protocol ? (
-        <Text size="sm" color={protocol.status === "done" ? "accent" : "muted"} style={styles.note}>
-          {protocolLabel(protocol, sets.length, loadType)}
+        <Text
+          size="sm"
+          color={protocol.status === "done" || protocol.status === "load-limited" ? "accent" : "muted"}
+          style={styles.note}
+        >
+          {protocolLabel(protocol, sets, loadType)}
         </Text>
       ) : null}
 
@@ -153,10 +157,15 @@ export function CurrentExerciseBox({ workoutExercise, position, count }: Current
   );
 }
 
-// What the test asks for next: "Sets of 5 …" before the first, then the suggested load, then done. A bodyweight or
-// timed test is one Set to RPE 9
-function protocolLabel(protocol: ProtocolState, setCount: number, loadType: LoadType) {
+// What the test asks for next: "Sets of 5 …" before the first, then the suggested load, then done. At the heaviest
+// load it asks for as many reps as possible, since past 12 reps ends the test as load-limited. A bodyweight or timed
+// test is one Set to RPE 9
+function protocolLabel(protocol: ProtocolState, sets: InProgressWorkoutExercise["sets"], loadType: LoadType) {
+  const setCount = sets.length;
   if (protocol.status === "done") return "Done: that Set was your top Set. On to the next test.";
+  if (protocol.status === "load-limited") {
+    return "Done: past 12 reps at your heaviest load. Your result is a lower bound, limited by your equipment.";
+  }
   if (protocol.status === "one-set") {
     return loadType === "timed"
       ? "One Set, stop at RPE 9: hold until your form is about to break, then log the seconds."
@@ -164,6 +173,10 @@ function protocolLabel(protocol: ProtocolState, setCount: number, loadType: Load
   }
   if (protocol.suggestedKg !== null && setCount === 0) {
     return `Sets of ${TEST_REPS}, adding weight each Set until one is RPE 9. Start at ${protocol.suggestedKg} kg.`;
+  }
+  const last = sets.at(-1);
+  if (protocol.suggestedKg !== null && last?.kind === "external" && last.kg === protocol.suggestedKg) {
+    return `${protocol.suggestedKg} kg is your heaviest: as many reps as you can to RPE 9. Past 12 reps ends the test.`;
   }
   if (protocol.suggestedKg !== null) return `Next: ${protocol.suggestedKg} kg × ${TEST_REPS}, then rate it`;
   if (setCount === 0) return `Sets of ${TEST_REPS}, adding weight each Set until one is RPE 9. Start light.`;

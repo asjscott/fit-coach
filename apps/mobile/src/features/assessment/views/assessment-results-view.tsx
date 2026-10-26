@@ -1,5 +1,5 @@
 import { ASSESSMENT_PATTERNS } from "@fit/engines";
-import type { AssessmentTest } from "@fit/shared";
+import type { AssessmentTest, TestedPattern } from "@fit/shared";
 import { StyleSheet, View } from "react-native";
 import { LoadingButton } from "@/components/loading-button";
 import { Loading } from "@/components/loading";
@@ -7,6 +7,7 @@ import { Screen } from "@/components/screen";
 import { SectionLabel } from "@/components/section-label";
 import { Text } from "@/components/text";
 import { spacing, useTheme } from "@/theme";
+import { patternLabels } from "@/features/exercises/labels";
 import { useCurrentUser } from "@/features/user/current-user-provider";
 import { describeSet } from "@/features/workouts/format";
 import { exerciseName } from "@/features/workouts/library";
@@ -18,15 +19,19 @@ import { workingLevelSections, type WorkingLevelRow } from "../working-level-sec
 // In the order the tests were done: A's, then B's
 const PATTERN_ORDER = [...ASSESSMENT_PATTERNS.A, ...ASSESSMENT_PATTERNS.B];
 
+const ESTIMATED = "estimated from your other results";
+
 // The test's maximum and what it is: "16.8 kg" Estimated max; for a bodyweight test the reps it was worth, "11 reps"
 // Rep max (its kg is of body weight × a share, which means little to the user); for a timed test "90 s" Held
-function maximumOf({ topSet, maximum }: AssessmentTest) {
+// A load-limited test's maximum is a floor: "at least 28 kg", limited by your equipment
+function maximumOf({ topSet, maximum, loadLimited }: AssessmentTest) {
   switch (topSet.kind) {
-    case "external":
-      return {
-        value: `${maximum.toLocaleString(undefined, { maximumFractionDigits: 1 })} kg`,
-        caption: "Estimated max",
-      };
+    case "external": {
+      const kg = `${maximum.toLocaleString(undefined, { maximumFractionDigits: 1 })} kg`;
+      return loadLimited
+        ? { value: `at least ${kg}`, caption: "limited by your equipment" }
+        : { value: kg, caption: "Estimated max" };
+    }
     case "bodyweight":
       return { value: `${topSet.reps + (10 - (topSet.rpe ?? 9))} reps`, caption: "Rep max" };
     case "timed":
@@ -36,8 +41,8 @@ function maximumOf({ topSet, maximum }: AssessmentTest) {
 
 // The latest Assessment: each test's Exercise, top Set and estimated maximum, the starting Working Levels by Pattern
 // for what the primary Equipment Profile supports (rounded to its loads), and Retake. "Results once synced" while a
-// B is Pending, since the server works out the Assessment once it has both.
-// Still to come: load-limited and estimated Patterns (#38)
+// B is Pending, since the server works out the Assessment once it has both. An untested Pattern, and the Working
+// Levels that follow from it, are labelled "estimated from your other results".
 export default function AssessmentResultsView() {
   const { latest, error, refresh } = useLatestAssessment();
   const { pending, workout } = useLogbook();
@@ -71,14 +76,19 @@ export default function AssessmentResultsView() {
   }
 
   const { patterns } = latest.assessment;
-  const tests = PATTERN_ORDER.flatMap((pattern) => patterns[pattern] ?? []);
-  const sections = primary ? workingLevelSections(latest.workingLevels, primary) : [];
+  const sections = primary ? workingLevelSections(latest.workingLevels, primary, patterns) : [];
   return (
     <Screen scroll edges={["bottom"]}>
       <SectionLabel style={styles.sectionLabel}>Tests</SectionLabel>
-      {tests.map((test) => (
-        <TestRow key={test.slug} test={test} />
-      ))}
+      {PATTERN_ORDER.map((pattern) => {
+        const result = patterns[pattern];
+        if (!result) return null;
+        return result.estimated ? (
+          <EstimatedRow key={pattern} pattern={pattern} />
+        ) : (
+          <TestRow key={pattern} test={result} />
+        );
+      })}
       {sections.length > 0 ? (
         <>
           <Text weight="semiBold" style={styles.heading}>
@@ -86,7 +96,12 @@ export default function AssessmentResultsView() {
           </Text>
           {sections.map((section) => (
             <View key={section.title} style={styles.section}>
-              <SectionLabel style={styles.sectionLabel}>{section.title}</SectionLabel>
+              <SectionLabel style={section.estimated ? undefined : styles.sectionLabel}>{section.title}</SectionLabel>
+              {section.estimated ? (
+                <Text size="sm" color="muted" style={styles.sectionLabel}>
+                  {ESTIMATED}
+                </Text>
+              ) : null}
               {section.rows.map((row) => (
                 <WorkingLevelRowView key={row.slug} row={row} />
               ))}
@@ -120,6 +135,26 @@ function WorkingLevelRowView({ row }: { row: WorkingLevelRow }) {
     <View style={[styles.levelRow, { borderTopColor: colors.line }]}>
       <Text style={{ flex: 1 }}>{row.name}</Text>
       <Text weight="semiBold">{row.label}</Text>
+    </View>
+  );
+}
+
+// "Push", "Not tested" and "estimated from your other results"
+function EstimatedRow({ pattern }: { pattern: TestedPattern }) {
+  const { colors } = useTheme();
+  return (
+    <View style={[styles.row, { borderTopColor: colors.line }]}>
+      <View style={{ flex: 1 }}>
+        <Text weight="semiBold">{patternLabels[pattern]}</Text>
+        <Text size="sm" color="muted">
+          Not tested
+        </Text>
+      </View>
+      <View style={styles.maximum}>
+        <Text size="xs" color="muted">
+          {ESTIMATED}
+        </Text>
+      </View>
     </View>
   );
 }
