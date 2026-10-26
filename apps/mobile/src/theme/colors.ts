@@ -1,4 +1,5 @@
-// The Performance-led palette (spec #16): neutrals, one solid accent, and danger for destructive actions.
+// The Performance-led palette (spec #16): neutrals, one solid accent, danger for destructive actions,
+// and success and warning hues kept apart from the accent so status never reads as a shade of it.
 // colors.test.ts checks every pairing the components draw against WCAG AA
 const dark = {
   // Backgrounds, page to most raised
@@ -22,8 +23,12 @@ const dark = {
   // Opaque tints, so their contrast doesn't depend on what's behind them
   accentSoft: "#321F18",
 
-  danger: "#FF6B57",
-  dangerSoft: "#372423",
+  danger: "#FF5C7A",
+  dangerSoft: "#3A1F26",
+  success: "#4ADE80",
+  successSoft: "#15291D",
+  warning: "#FACC15",
+  warningSoft: "#2E2810",
 };
 
 const light: typeof dark = {
@@ -43,8 +48,12 @@ const light: typeof dark = {
   onAccent: "#FFFFFF",
   accentSoft: "#FAF0EC",
 
-  danger: "#B91C1C",
-  dangerSoft: "#F9EDED",
+  danger: "#BE123C",
+  dangerSoft: "#FBEDF0",
+  success: "#15803D",
+  successSoft: "#EBF6EE",
+  warning: "#876400",
+  warningSoft: "#FBF4DF",
 };
 
 export const palettes = { light, dark } as const;
@@ -53,13 +62,13 @@ export type ColorScheme = keyof typeof palettes;
 export type Colors = typeof dark;
 export type ColorToken = keyof Colors;
 
-// Status colours shared by Alert, Badge and Toast. One accent, so success and warning share it
+// Status colours shared by Alert, Badge and Toast
 export type StatusAction = "success" | "warning" | "error" | "info" | "muted";
 
 export const statusColors = (colors: Colors, action: StatusAction) =>
   ({
-    success: { fg: colors.accent, bg: colors.accentSoft },
-    warning: { fg: colors.accent, bg: colors.accentSoft },
+    success: { fg: colors.success, bg: colors.successSoft },
+    warning: { fg: colors.warning, bg: colors.warningSoft },
     error: { fg: colors.danger, bg: colors.dangerSoft },
     info: { fg: colors.muted, bg: colors.raised },
     muted: { fg: colors.muted, bg: colors.raised },

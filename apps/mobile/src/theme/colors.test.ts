@@ -23,10 +23,14 @@ const pairings: [ColorToken, ColorToken, number][] = [
   // Solid primary and negative buttons
   ["onAccent", "accent", TEXT],
   ["onAccent", "danger", TEXT],
-  // Selected chips and cards, success and warning badges; error alerts
+  // Selected chips and cards; success, warning and error badges, alerts and toasts
   ["text", "accentSoft", TEXT],
   ["accent", "accentSoft", TEXT],
   ["danger", "dangerSoft", TEXT],
+  ["success", "successSoft", TEXT],
+  ["warning", "warningSoft", TEXT],
+  // Solid positive buttons
+  ["onAccent", "success", TEXT],
   // Input, checkbox and radio outlines, and the focused or checked state
   ["inputBorder", "bg", UI],
   ["inputBorder", "surface", UI],
@@ -39,6 +43,29 @@ describe.each(["dark", "light"] as const)("the %s palette", (scheme) => {
 
   it.each(pairings)("draws %s on %s at %s:1 or more", (fg, bg, minimum) => {
     expect(contrastRatio(colors[fg], colors[bg])).toBeGreaterThanOrEqual(minimum);
+  });
+});
+
+// Degrees apart on the colour wheel, so status colours read as different colours, not shades of the accent
+const hue = (hex: string) => {
+  const [r, g, b] = [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16) / 255);
+  const max = Math.max(r, g, b);
+  const delta = max - Math.min(r, g, b);
+  const sector = max === r ? ((g - b) / delta) % 6 : max === g ? (b - r) / delta + 2 : (r - g) / delta + 4;
+  return (sector * 60 + 360) % 360;
+};
+const hueDistance = (a: string, b: string) => {
+  const d = Math.abs(hue(a) - hue(b));
+  return Math.min(d, 360 - d);
+};
+
+describe.each(["dark", "light"] as const)("the %s status colours", (scheme) => {
+  const colors = palettes[scheme];
+  const distinct = ["accent", "danger", "success", "warning"] as const;
+  const pairs = distinct.flatMap((a, i) => distinct.slice(i + 1).map((b) => [a, b] as const));
+
+  it.each(pairs)("keep %s and %s at least 25° apart in hue", (a, b) => {
+    expect(hueDistance(colors[a], colors[b])).toBeGreaterThanOrEqual(25);
   });
 });
 
@@ -55,7 +82,7 @@ describe("the spec's tokens", () => {
       inputBorder: "#6E727B",
       accent: "#FC5200",
       onAccent: "#0D0E10",
-      danger: "#FF6B57",
+      danger: "#FF5C7A",
     });
     expect(palettes.light).toMatchObject({
       bg: "#F7F7F8",
@@ -68,7 +95,7 @@ describe("the spec's tokens", () => {
       inputBorder: "#8A8D95",
       accent: "#C2410C",
       onAccent: "#FFFFFF",
-      danger: "#B91C1C",
+      danger: "#BE123C",
     });
   });
 });

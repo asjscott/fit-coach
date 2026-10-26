@@ -21,7 +21,7 @@ export const buttonForeground = (colors: Colors, action: ButtonAction, variant: 
   return {
     primary: colors.accent,
     secondary: colors.text,
-    positive: colors.accent,
+    positive: colors.success,
     negative: colors.danger,
     default: colors.text,
   }[action];
@@ -31,7 +31,7 @@ export const buttonBackground = (colors: Colors, action: ButtonAction) =>
   ({
     primary: colors.accent,
     secondary: colors.raised,
-    positive: colors.accent,
+    positive: colors.success,
     negative: colors.danger,
     default: "transparent",
   })[action];
@@ -40,7 +40,7 @@ export const buttonBorder = (colors: Colors, action: ButtonAction) =>
   ({
     primary: colors.accent,
     secondary: colors.inputBorder,
-    positive: colors.accent,
+    positive: colors.success,
     negative: colors.danger,
     default: colors.inputBorder,
   })[action];
