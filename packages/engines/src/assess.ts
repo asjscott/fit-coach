@@ -55,8 +55,6 @@ function maximumOf(slug: string, set: Set, bodyWeightKg: number) {
   }
 }
 
-// Turns a pair of Assessment Workouts into the Assessment and the Working Levels it sets. Each Workout is read only
-// for the Patterns it tests.
 // A Pattern that wasn't measured is estimated a fifth lighter than the others suggest: it's the softer number, and it's
 // often untested because of an injury
 const ESTIMATE_SHARE = 0.8;
@@ -81,7 +79,8 @@ function estimateReferenceStrength(
   return typical(pattern) * share * ESTIMATE_SHARE;
 }
 
-// The Working Levels cover every Exercise available in any of the user's Equipment Profiles.
+// Turns a pair of Assessment Workouts into the Assessment and the Working Levels it sets. Each Workout is read only
+// for the Patterns it tests. The Working Levels cover every Exercise available in any of the user's Equipment Profiles
 export function assess(
   a: Workout,
   b: Workout,
