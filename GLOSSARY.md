@@ -14,6 +14,10 @@ _Avoid_: Exercise type, measure
 A movement in the library, such as a goblet squat, with how it is loaded, the muscles it works and its easier and harder variants.
 _Avoid_: Movement, lift
 
+**Pattern**:
+The kind of movement an Exercise trains: squat, hinge, push, pull, carry or core.
+_Avoid_: Movement pattern, category
+
 **Workout**:
 One occasion when the user trained, from start to finish, made up of the exercises they did in the order they did them.
 _Avoid_: Session, training session
@@ -23,8 +27,12 @@ One library Exercise as done within a particular Workout, holding the Sets the u
 _Avoid_: Logged exercise, exercise entry
 
 **Set**:
-One continuous effort of a Workout Exercise: kg and reps for a weighted Exercise, reps for a bodyweight one, or seconds for a timed one. For a one-sided Exercise the values are per side.
+One continuous effort of a Workout Exercise: kg and reps for a weighted Exercise, reps for a bodyweight one, or seconds for a timed one, optionally with its RPE. For a one-sided Exercise the values are per side.
 _Avoid_: Round, attempt
+
+**RPE**:
+How hard a Set felt, from 6 to 10, where 10 means no more reps were possible and 9 means one more was.
+_Avoid_: Effort, difficulty, intensity
 
 **Volume**:
 The total weight moved: kg × reps summed over weighted Sets, doubled for a one-sided Exercise. Bodyweight and timed Sets add nothing to it.
@@ -57,3 +65,21 @@ _Avoid_: Plan, objective, program
 **Manual Workout**:
 A Workout whose exercises the user chose themselves, rather than having them prescribed by the coach.
 _Avoid_: Custom workout, freestyle workout
+
+### Assessment
+
+**Assessment Workout**:
+One of the two Workouts the Coach prescribes to measure the user's starting strength: A tests squat, hinge and core, B tests push and pull.
+_Avoid_: Test session, baseline session, test workout
+
+**Assessment**:
+The results of one completed pair of Assessment Workouts: for each tested Pattern, the Exercise used, its top Set, the maximum estimated from it and the Reference Strength that follows. A test is load-limited when the heaviest load available couldn't reach RPE 9, so its maximum is only a lower bound. The newest Assessment is the one that counts.
+_Avoid_: Baseline, test results, fitness test
+
+**Working Level**:
+What the Coach will prescribe next for one Exercise for this user: kg for 8 reps for a weighted Exercise, a band level and reps for a band Exercise, reps for a bodyweight one, seconds for a timed one. An Assessment sets the first one.
+_Avoid_: Exercise state, starting load, current weight
+
+**Reference Strength**:
+The user's estimated one-rep maximum in kg on a Pattern's barbell lift (for core, the seconds they can hold a plank), from which the Working Levels of every Exercise in that Pattern follow.
+_Avoid_: Strength score, base e1RM
