@@ -752,6 +752,18 @@ describe("Logbook: Assessment Workouts", () => {
     expect(await log(20, 13, 8)).toEqual({ status: "load-limited" });
   });
 
+  it("suggests a heavier dumbbell when a lighter one passes 12 reps short of RPE 9", async () => {
+    const { logbook } = setup();
+    const workout = await logbook.startAssessment({ part: "A", equipmentProfile: dumbbellsOnly, ...user }, at("09:00"));
+    const squat = await logbook.logSet(
+      workout.workoutExercises[0].id,
+      { kind: "external", kg: 16, reps: 13, rpe: 8 },
+      at("09:05"),
+    );
+
+    expect(logbook.protocolState(workout, squat, dumbbellsOnly)).toEqual({ status: "working-up", suggestedKg: 20 });
+  });
+
   it("keeps working up when a Set stops at 12 reps or fewer short of RPE 9", async () => {
     const { logbook } = setup();
     const workout = await logbook.startAssessment({ part: "A", equipmentProfile: dumbbellsOnly, ...user }, at("09:00"));
