@@ -1,4 +1,4 @@
-import type { Set, Workout } from "@fit/shared";
+import type { Set, SetValues, Workout } from "@fit/shared";
 
 // How Workouts and Sets read on screen
 
@@ -84,6 +84,9 @@ export function weekDatesLabel(start: Date, now = new Date(), locale?: string) {
 // A Volume in whole kg with thousands separators, e.g. "6,420"; the unit is drawn separately
 export const kgLabel = (kg: number) => Math.round(kg).toLocaleString();
 
+// A weight to the tenth of a kg, with its unit: "16.8 kg"
+export const weightLabel = (kg: number) => `${kg.toLocaleString(undefined, { maximumFractionDigits: 1 })} kg`;
+
 export const setsLabel = (sets: number) => `${sets} ${sets === 1 ? "set" : "sets"}`;
 
 // How long an In-progress Workout has run, as a ticking clock for its own screen: "0:45", "48:12", "1:05:09"
@@ -119,7 +122,7 @@ export function workoutExerciseSummary(sets: readonly Set[], previous?: readonly
 }
 
 // A Set's numbers and the units after them, as it reads: 16 "kg ×" 10, 12 "reps", 45 "s"
-export function setParts(set: Set): [number, string][] {
+export function setParts(set: Set | SetValues): [number, string][] {
   switch (set.kind) {
     case "external":
       return [
@@ -134,7 +137,7 @@ export function setParts(set: Set): [number, string][] {
 }
 
 // A Set as its Load Type records it: "16 kg × 10"; add " per side" for a one-sided Exercise
-export const describeSet = (set: Set) =>
+export const describeSet = (set: Set | SetValues) =>
   setParts(set)
     .map(([value, unit]) => (unit ? `${value} ${unit}` : String(value)))
     .join(" ");

@@ -1,4 +1,5 @@
 import { useAuth } from "@clerk/expo";
+import { canAssess } from "@fit/engines";
 import { HealthResponse } from "@fit/shared";
 import { useEffect, useState, type ReactNode } from "react";
 import { Divider } from "@/components/divider";
@@ -9,7 +10,9 @@ import { HStack, Stack } from "@/components/stack";
 import { Text } from "@/components/text";
 import { useToast } from "@/contexts/toast-context";
 import { equipmentSummary } from "@/features/equipment/equipment-summary";
-import { useCurrentUser } from "@/features/user/current-user-provider";
+import { useChosenTests } from "@/features/assessment/hooks/use-chosen-tests";
+import { useStartAssessment } from "@/features/assessment/hooks/use-start-assessment";
+import { useCurrentUser, usePrimaryEquipmentProfile } from "@/features/user/current-user-provider";
 import { genderLabel } from "@/features/user/components/form/fields/user-gender-field";
 import { goalLabel } from "@/features/user/components/form/fields/user-goal-field";
 import { injuryLabel } from "@/features/user/components/form/fields/user-injuries-field";
@@ -20,7 +23,10 @@ import { useApi } from "@/api";
 export default function ProfileView() {
   const { signOut } = useAuth();
   const { user } = useCurrentUser();
+  const equipment = usePrimaryEquipmentProfile();
   const logbook = useLogbook();
+  const assessment = useStartAssessment();
+  const tests = useChosenTests();
   const { showToast } = useToast();
   // What signing out would lose, while the user confirms; null when not asking
   const [signOutWarningText, setSignOutWarningText] = useState<string | null>(null);
@@ -54,7 +60,6 @@ export default function ProfileView() {
   // The layout only renders this screen once the user is loaded and onboarded
   if (!user?.onboardedAt) return null;
   const { profile } = user;
-  const equipment = user.equipmentProfiles.find((p) => p.isPrimary);
 
   return (
     <Screen scroll edges={["bottom"]}>
@@ -67,6 +72,30 @@ export default function ProfileView() {
             label="Injuries"
             value={profile.injuries?.length ? profile.injuries.map(injuryLabel).join(", ") : "None"}
           />
+        </Section>
+        <Divider />
+        {/* Retaking lives here for now: Today only offers the first Assessment, then its Results */}
+        <Section label="Assessment">
+          <Text size="sm" color="muted">
+            Retake after a break or a big change. A new Assessment replaces your Working Levels.
+          </Text>
+          {!canAssess(tests) ? (
+            <Text size="sm" color="muted">
+              No Assessment test suits your injuries and equipment.
+            </Text>
+          ) : logbook.workout ? (
+            <Text size="sm" color="muted">
+              Finish your Workout in progress first.
+            </Text>
+          ) : (
+            <LoadingButton
+              label="Retake assessment"
+              action="secondary"
+              icon="dumbbell"
+              loading={assessment.starting === "A"}
+              onPress={() => assessment.start("A")}
+            />
+          )}
         </Section>
         <Divider />
         <Section label="Profile">

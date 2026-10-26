@@ -82,3 +82,8 @@ export function useCurrentUser() {
   if (!context) throw new Error("useCurrentUser must be used inside <CurrentUserProvider>");
   return context;
 }
+
+// The Equipment Profile the user trains with by default; undefined until the user loads
+export function usePrimaryEquipmentProfile() {
+  return useCurrentUser().user?.equipmentProfiles.find((profile) => profile.isPrimary);
+}

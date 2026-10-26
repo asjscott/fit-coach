@@ -1,4 +1,4 @@
-import type { PreviousSets, Workout } from "@fit/shared";
+import type { BodyProfile, EquipmentProfile, PreviousSets, UserProfile, Workout } from "@fit/shared";
 import { describe, expect, it } from "vitest";
 import { EXERCISES } from "./data/exercises";
 import { createLogbook, LogbookError, type DeviceStorage, type PreviousSetsSource } from "./logbook";
@@ -660,5 +660,306 @@ describe("Logbook: Previous Sets", () => {
         sets: [{ kind: "external", kg: 20, reps: 10, loggedAt: "2026-10-24T09:05:00.000Z" }],
       },
     ]);
+  });
+});
+
+describe("Logbook: Assessment Workouts", () => {
+  // Dumbbells only, a pair of each of these
+  const dumbbellsOnly: EquipmentProfile = {
+    id: "home",
+    name: "Home",
+    location: "home",
+    isPrimary: true,
+    tags: ["dumbbells"],
+    loads: { dumbbells: { kind: "fixed", weightsKg: [8, 10, 12, 14, 16, 20] } },
+  };
+  const user = { injuries: [], bodyProfile: { weightKg: 80, gender: "male" } } satisfies Pick<
+    UserProfile,
+    "injuries"
+  > & { bodyProfile: BodyProfile };
+
+  it("adds the tests for A in order, goblet squat first for dumbbells only and the plank last", async () => {
+    const { logbook } = setup();
+
+    const workout = await logbook.startAssessment({ part: "A", equipmentProfile: dumbbellsOnly, ...user }, at("09:00"));
+
+    expect(workout.assessment).toBe("A");
+    expect(workout.workoutExercises.map((we) => we.slug)).toEqual([
+      "goblet-squat",
+      "dumbbell-romanian-deadlift",
+      "plank",
+    ]);
+    expect(await logbook.inProgress()).toEqual(workout);
+  });
+
+  it("skips tests flagged against the user's injuries, leaving out a Pattern with none safe", async () => {
+    const { logbook } = setup();
+    const bodyweightOnly: EquipmentProfile = { ...dumbbellsOnly, tags: [], loads: {} };
+
+    // The dumbbell Romanian deadlift is flagged for a lower back injury; every push, push-up included, for a wrist one
+    const a = await logbook.startAssessment(
+      { part: "A", equipmentProfile: dumbbellsOnly, ...user, injuries: ["lower_back"] },
+      at("09:00"),
+    );
+    await logbook.discard();
+    const b = await logbook.startAssessment(
+      { part: "B", equipmentProfile: bodyweightOnly, ...user, injuries: ["wrist"] },
+      at("10:00"),
+    );
+
+    expect(a.workoutExercises.map((we) => we.slug)).toEqual(["goblet-squat", "single-leg-glute-bridge", "plank"]);
+    expect(b.workoutExercises.map((we) => we.slug)).toEqual(["inverted-row"]);
+  });
+
+  it("refuses to add, remove or reorder its Exercises", async () => {
+    const { logbook } = setup();
+    const workout = await logbook.startAssessment({ part: "A", equipmentProfile: dumbbellsOnly, ...user }, at("09:00"));
+    const [squat] = workout.workoutExercises;
+
+    await expect(logbook.addWorkoutExercise(exercise("plank"))).rejects.toThrow(LogbookError);
+    await expect(logbook.removeWorkoutExercise(squat.id)).rejects.toThrow(LogbookError);
+    await expect(logbook.moveWorkoutExercise(squat.id, 1)).rejects.toThrow(LogbookError);
+    expect(await logbook.inProgress()).toEqual(workout);
+  });
+
+  it("refuses a weighted test Set without an RPE", async () => {
+    const { logbook } = setup();
+    const workout = await logbook.startAssessment({ part: "A", equipmentProfile: dumbbellsOnly, ...user }, at("09:00"));
+    const [squat] = workout.workoutExercises;
+
+    await expect(logbook.logSet(squat.id, { kind: "external", kg: 10, reps: 5 }, at("09:05"))).rejects.toThrow(
+      "Rate how hard the Set felt",
+    );
+    await logbook.logSet(squat.id, { kind: "external", kg: 10, reps: 5, rpe: 7 }, at("09:05"));
+    await expect(logbook.editSet(squat.id, 0, { kind: "external", kg: 10, reps: 5 })).rejects.toThrow(LogbookError);
+    expect((await logbook.inProgress())?.workoutExercises[0].sets).toEqual([
+      { kind: "external", kg: 10, reps: 5, rpe: 7, loggedAt: "2026-10-24T09:05:00.000Z" },
+    ]);
+  });
+
+  it("suggests each next load from the actual dumbbells until a Set at RPE 9 marks the test done", async () => {
+    const { logbook } = setup();
+    const workout = await logbook.startAssessment({ part: "A", equipmentProfile: dumbbellsOnly, ...user }, at("09:00"));
+    const squatId = workout.workoutExercises[0].id;
+    const logAndSuggest = async (kg: number, rpe: number) => {
+      const squat = await logbook.logSet(squatId, { kind: "external", kg, reps: 5, rpe }, at("09:05"));
+      return logbook.protocolState(workout, squat, dumbbellsOnly);
+    };
+
+    // An easy Set jumps further; the suggestion is always a dumbbell the user has
+    expect(await logAndSuggest(8, 6)).toEqual({ status: "working-up", suggestedKg: 10 });
+    expect(await logAndSuggest(10, 7)).toEqual({ status: "working-up", suggestedKg: 12 });
+    expect(await logAndSuggest(12, 8)).toEqual({ status: "working-up", suggestedKg: 14 });
+    expect(await logAndSuggest(14, 8)).toEqual({ status: "working-up", suggestedKg: 16 });
+    expect(await logAndSuggest(16, 9)).toEqual({ status: "done" });
+  });
+
+  it("ends the test as load-limited when the heaviest dumbbell passes 12 reps short of RPE 9", async () => {
+    const { logbook } = setup();
+    const workout = await logbook.startAssessment({ part: "A", equipmentProfile: dumbbellsOnly, ...user }, at("09:00"));
+    const squatId = workout.workoutExercises[0].id;
+    const log = async (kg: number, reps: number, rpe: number) =>
+      logbook.protocolState(
+        workout,
+        await logbook.logSet(squatId, { kind: "external", kg, reps, rpe }, at("09:05")),
+        dumbbellsOnly,
+      );
+
+    // At the heaviest dumbbell it says so, and suggests the same again
+    expect(await log(16, 5, 6)).toEqual({ status: "working-up", suggestedKg: 20 });
+    expect(await log(20, 5, 6)).toEqual({ status: "at-heaviest", suggestedKg: 20 });
+    expect(await log(20, 13, 8)).toEqual({ status: "load-limited" });
+  });
+
+  it("suggests a heavier dumbbell when a lighter one passes 12 reps short of RPE 9", async () => {
+    const { logbook } = setup();
+    const workout = await logbook.startAssessment({ part: "A", equipmentProfile: dumbbellsOnly, ...user }, at("09:00"));
+    const squat = await logbook.logSet(
+      workout.workoutExercises[0].id,
+      { kind: "external", kg: 16, reps: 13, rpe: 8 },
+      at("09:05"),
+    );
+
+    expect(logbook.protocolState(workout, squat, dumbbellsOnly)).toEqual({ status: "working-up", suggestedKg: 20 });
+  });
+
+  it("keeps working up when a Set stops at 12 reps or fewer short of RPE 9", async () => {
+    const { logbook } = setup();
+    const workout = await logbook.startAssessment({ part: "A", equipmentProfile: dumbbellsOnly, ...user }, at("09:00"));
+    const squat = await logbook.logSet(
+      workout.workoutExercises[0].id,
+      { kind: "external", kg: 20, reps: 12, rpe: 8 },
+      at("09:05"),
+    );
+
+    expect(logbook.protocolState(workout, squat, dumbbellsOnly)).toEqual({ status: "at-heaviest", suggestedKg: 20 });
+  });
+
+  it("suggests a conservative first load the dumbbells actually have", async () => {
+    const { logbook } = setup();
+    const workout = await logbook.startAssessment({ part: "A", equipmentProfile: dumbbellsOnly, ...user }, at("09:00"));
+    const [squat, hinge] = workout.workoutExercises.map((we) => logbook.protocolState(workout, we, dumbbellsOnly));
+
+    // An 80 kg man likely has a goblet squat maximum of about 32 kg and a dumbbell Romanian deadlift of about 30 kg
+    // per dumbbell
+    for (const state of [squat, hinge]) {
+      expect(state.status).toBe("working-up");
+      const kg = state.status === "working-up" ? state.suggestedKg : null;
+      expect([8, 10, 12, 14, 16, 20]).toContain(kg);
+      expect(kg).toBeLessThan(25);
+    }
+  });
+
+  it("suggests a lighter first load for a lighter user", async () => {
+    const firstLoad = async (profile: BodyProfile) => {
+      const { logbook } = setup();
+      const workout = await logbook.startAssessment(
+        { part: "A", equipmentProfile: dumbbellsOnly, injuries: [], bodyProfile: profile },
+        at("09:00"),
+      );
+      const state = logbook.protocolState(workout, workout.workoutExercises[0], dumbbellsOnly);
+      return state.status === "working-up" ? state.suggestedKg : null;
+    };
+
+    expect(await firstLoad({ weightKg: 55, gender: "female" })).toBeLessThan((await firstLoad(user.bodyProfile)) ?? 0);
+  });
+
+  it("keeps suggesting from the body weight and gender it started with", async () => {
+    const { logbook } = setup();
+    await logbook.startAssessment({ part: "A", equipmentProfile: dumbbellsOnly, ...user }, at("09:00"));
+
+    // The screen reads the In-progress Workout back, whatever the profile says by now
+    const workout = await logbook.inProgress();
+    if (!workout) throw new Error("No In-progress Workout");
+    expect(workout.bodyProfile).toEqual({ weightKg: 80, gender: "male" });
+    expect(logbook.protocolState(workout, workout.workoutExercises[0], dumbbellsOnly)).toEqual({
+      status: "working-up",
+      suggestedKg: 16,
+    });
+  });
+
+  it("starts a barbell test no lighter than the bar", async () => {
+    const homeGym: EquipmentProfile = {
+      ...dumbbellsOnly,
+      tags: ["barbell", "plates", "power_rack", "flat_bench"],
+      loads: { barbell: { barKg: 20, platesKg: [5, 10, 20] } },
+    };
+    const { logbook } = setup();
+    const workout = await logbook.startAssessment(
+      { part: "B", equipmentProfile: homeGym, injuries: [], bodyProfile: { weightKg: 45, gender: "female" } },
+      at("09:00"),
+    );
+
+    expect(workout.workoutExercises[0].slug).toBe("barbell-bench-press");
+    expect(logbook.protocolState(workout, workout.workoutExercises[0], homeGym)).toEqual({
+      status: "working-up",
+      suggestedKg: 20,
+    });
+  });
+
+  it("steps a barbell test through bar-plus-plate-pair loads", async () => {
+    const homeGym: EquipmentProfile = {
+      ...dumbbellsOnly,
+      tags: ["barbell", "plates", "power_rack"],
+      loads: { barbell: { barKg: 20, platesKg: [5, 10, 20] } },
+    };
+    const { logbook } = setup();
+    const workout = await logbook.startAssessment({ part: "A", equipmentProfile: homeGym, ...user }, at("09:00"));
+    const squat = await logbook.logSet(
+      workout.workoutExercises[0].id,
+      { kind: "external", kg: 60, reps: 5, rpe: 8 },
+      at("09:05"),
+    );
+
+    expect(squat.slug).toBe("back-squat");
+    // The smallest pair is 2 x 5 kg, so the next load up is 70
+    expect(logbook.protocolState(workout, squat, homeGym)).toEqual({ status: "working-up", suggestedKg: 70 });
+  });
+
+  it("drafts the next Set without the last Set's RPE, so each Set is rated afresh", async () => {
+    const { logbook } = setup();
+    const { workoutExercises } = await logbook.startAssessment(
+      { part: "A", equipmentProfile: dumbbellsOnly, ...user },
+      at("09:00"),
+    );
+    const squat = await logbook.logSet(
+      workoutExercises[0].id,
+      { kind: "external", kg: 10, reps: 5, rpe: 7 },
+      at("09:05"),
+    );
+
+    expect(logbook.nextSetDraft(squat)).toEqual({ kind: "external", kg: 10, reps: 5 });
+  });
+
+  it("drafts a weighted test's next Set at the suggested load, for 5 reps", async () => {
+    const { logbook } = setup();
+    const workout = await logbook.startAssessment({ part: "A", equipmentProfile: dumbbellsOnly, ...user }, at("09:00"));
+    const squat = await logbook.logSet(
+      workout.workoutExercises[0].id,
+      { kind: "external", kg: 10, reps: 6, rpe: 7 },
+      at("09:05"),
+    );
+
+    const protocol = logbook.protocolState(workout, squat, dumbbellsOnly);
+    expect(logbook.nextSetDraft(squat, protocol)).toEqual({ kind: "external", kg: 12, reps: 5 });
+  });
+
+  describe("with no equipment", () => {
+    const bodyweightOnly: EquipmentProfile = { ...dumbbellsOnly, tags: [], loads: {} };
+
+    it("adds bodyweight tests and the plank", async () => {
+      const { logbook } = setup();
+
+      const a = await logbook.startAssessment({ part: "A", equipmentProfile: bodyweightOnly, ...user }, at("09:00"));
+
+      expect(a.workoutExercises.map((we) => we.slug)).toEqual(["bodyweight-squat", "single-leg-glute-bridge", "plank"]);
+    });
+
+    it("asks for one Set of as many reps as possible, unrated, and is done after it", async () => {
+      const { logbook } = setup();
+      const workout = await logbook.startAssessment(
+        { part: "B", equipmentProfile: bodyweightOnly, ...user },
+        at("09:00"),
+      );
+      const [pushUp] = workout.workoutExercises;
+
+      expect(pushUp.slug).toBe("push-up");
+      expect(logbook.protocolState(workout, pushUp, bodyweightOnly)).toEqual({ status: "one-set" });
+      const logged = await logbook.logSet(pushUp.id, { kind: "bodyweight", reps: 18 }, at("09:05"));
+      expect(logged.sets).toEqual([{ kind: "bodyweight", reps: 18, loggedAt: "2026-10-24T09:05:00.000Z" }]);
+      expect(logbook.protocolState(workout, logged, bodyweightOnly)).toEqual({ status: "done" });
+    });
+
+    it("logs the plank's Set in seconds held, unrated", async () => {
+      const { logbook } = setup();
+      const workout = await logbook.startAssessment(
+        { part: "A", equipmentProfile: bodyweightOnly, ...user },
+        at("09:00"),
+      );
+      const plank = workout.workoutExercises[2];
+
+      expect(logbook.protocolState(workout, plank, bodyweightOnly)).toEqual({ status: "one-set" });
+      const logged = await logbook.logSet(plank.id, { kind: "timed", seconds: 75 }, at("09:20"));
+      expect(logged.sets).toEqual([{ kind: "timed", seconds: 75, loggedAt: "2026-10-24T09:20:00.000Z" }]);
+      expect(logbook.protocolState(workout, logged, bodyweightOnly)).toEqual({ status: "done" });
+    });
+  });
+
+  it("finishes as a Pending Workout carrying which Assessment Workout it is, without untouched tests", async () => {
+    const { logbook, uploader } = setup();
+    const { workoutExercises } = await logbook.startAssessment(
+      { part: "B", equipmentProfile: dumbbellsOnly, ...user },
+      at("09:00"),
+    );
+    await logbook.logSet(workoutExercises[0].id, { kind: "external", kg: 14, reps: 5, rpe: 9 }, at("09:05"));
+
+    const result = await logbook.finish({ startedAt: at("09:00"), endedAt: at("09:30"), now: at("09:30") });
+    await logbook.sync();
+
+    expect(result).toMatchObject({ status: "pending", workout: { assessment: "B" } });
+    expect(uploader.uploaded[0]).toMatchObject({
+      assessment: "B",
+      workoutExercises: [{ slug: "dumbbell-floor-press", sets: [{ kg: 14, reps: 5, rpe: 9 }] }],
+    });
   });
 });

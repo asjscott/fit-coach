@@ -62,6 +62,24 @@ describe("Workout", () => {
     const awkward = { ...gobletSquat, sets: [{ kind: "external", kg: 22.3, reps: 10, loggedAt }] };
     expect(Workout.safeParse(workout([awkward])).success).toBe(false);
   });
+
+  it("keeps a Set's RPE", () => {
+    const rated = { ...gobletSquat, sets: [{ kind: "external", kg: 22.5, reps: 5, rpe: 9, loggedAt }] };
+    expect(Workout.parse(workout([rated])).workoutExercises[0].sets[0]).toMatchObject({ rpe: 9 });
+  });
+
+  it.each([[5], [11], [8.5]])("rejects an RPE of %s", (rpe) => {
+    const rated = { ...gobletSquat, sets: [{ kind: "external", kg: 22.5, reps: 5, rpe, loggedAt }] };
+    expect(Workout.safeParse(workout([rated])).success).toBe(false);
+  });
+
+  it("keeps which Assessment Workout it is", () => {
+    expect(Workout.parse({ ...workout([gobletSquat]), assessment: "A" }).assessment).toBe("A");
+  });
+
+  it("rejects an Assessment Workout other than A or B", () => {
+    expect(Workout.safeParse({ ...workout([gobletSquat]), assessment: "C" }).success).toBe(false);
+  });
 });
 
 const previousSets = {
@@ -84,6 +102,12 @@ describe("InProgressWorkout", () => {
 
   it("accepts a Workout Exercise without Previous Sets", () => {
     expect(InProgressWorkout.safeParse(inProgress({ ...gobletSquat, sets: [] })).success).toBe(true);
+  });
+
+  it("keeps which Assessment Workout it is", () => {
+    expect(InProgressWorkout.parse({ ...inProgress({ ...gobletSquat, sets: [] }), assessment: "B" }).assessment).toBe(
+      "B",
+    );
   });
 });
 

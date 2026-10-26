@@ -1,5 +1,6 @@
 import { ObjectId, type WithId } from "mongodb";
 import {
+  BodyProfile,
   EquipmentProfile,
   type EquipmentProfileInput,
   OnboardingProfile,
@@ -32,6 +33,16 @@ export async function migrateUsers() {
 
 export function findUser(clerkUserId: string) {
   return users.findOne({ clerkUserId });
+}
+
+// What logging needs from a user. Onboarding requires weight and gender, and they can't be removed after
+export type OnboardedUser = { bodyProfile: BodyProfile; equipmentProfiles: EquipmentProfile[] };
+
+// The user once onboarded, or null before
+export async function findOnboardedUser(clerkUserId: string): Promise<OnboardedUser | null> {
+  const user = await findUser(clerkUserId);
+  if (!user?.onboardedAt) return null;
+  return { bodyProfile: BodyProfile.parse(user.profile), equipmentProfiles: user.equipmentProfiles };
 }
 
 // Idempotent: returns the existing document if this Clerk user already has one

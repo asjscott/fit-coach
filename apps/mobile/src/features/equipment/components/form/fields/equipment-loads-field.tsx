@@ -1,10 +1,10 @@
-import { BandLevel, EQUIPMENT_LABELS, type EquipmentTag } from "@fit/shared";
+import { BAND_TAGS, BandLevel, EQUIPMENT_LABELS, type EquipmentTag } from "@fit/shared";
 import { useFormContext, useWatch } from "react-hook-form";
 import { Box } from "@/components/box";
 import { RHFChipSelect, RHFMultiSelect, RHFTextField, type Option } from "@/components/hook-form";
 import { HStack, Stack } from "@/components/stack";
 import {
-  bandTags,
+  bandLevelLabels,
   barWeightsKg,
   dumbbellWeightsKg,
   kettlebellWeightsKg,
@@ -18,12 +18,6 @@ const dumbbellKindOptions: Option[] = [
   { value: "fixed", label: "Fixed set" },
 ];
 
-const bandLevelLabels: Record<BandLevel, string> = {
-  light: "Light",
-  medium: "Medium",
-  heavy: "Heavy",
-  extra_heavy: "Extra heavy",
-};
 const bandLevelOptions: Option[] = BandLevel.options.map((value) => ({ value, label: bandLevelLabels[value] }));
 
 // The weights for each selected piece of equipment, stored under loads.<tag>; every answer is optional
@@ -86,7 +80,7 @@ export function EquipmentLoadsField({ tags }: { tags: EquipmentTag[] }) {
         </Stack>
       )}
 
-      {bandTags.filter(has).map((tag) => (
+      {BAND_TAGS.filter(has).map((tag) => (
         <RHFChipSelect
           key={tag}
           name={`loads.${tag}.levels`}

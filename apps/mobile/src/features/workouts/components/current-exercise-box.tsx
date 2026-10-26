@@ -1,14 +1,17 @@
-import type { InProgressWorkoutExercise, LoadType, SetValues } from "@fit/shared";
+import { isRatedTest, TEST_REPS, type ProtocolState } from "@fit/engines";
+import { RPE_SCALE, type InProgressWorkoutExercise, type LoadType, type SetValues } from "@fit/shared";
 import { useState, type ReactNode } from "react";
 import { StyleSheet, View } from "react-native";
+import { Chip } from "@/components/chip";
 import { LoadingButton } from "@/components/loading-button";
 import { SectionLabel } from "@/components/section-label";
 import { HStack, Stack } from "@/components/stack";
 import { Text } from "@/components/text";
 import { useToast } from "@/contexts/toast-context";
+import { usePrimaryEquipmentProfile } from "@/features/user/current-user-provider";
 import { fonts, radii, spacing, useTheme } from "@/theme";
 import { errorMessage } from "@/utils/error-message";
-import { previousSetsLabel } from "../format";
+import { describeSet, previousSetsLabel } from "../format";
 import { exerciseName, libraryExercise } from "../library";
 import { useLogbook } from "../logbook-provider";
 import { draftValues, setDraft, SET_FIELDS, type SetDraft } from "../set-entry";
@@ -27,7 +30,8 @@ export type CurrentExerciseBoxProps = {
 // steppers for the next Set, which starts from the previous one
 export function CurrentExerciseBox({ workoutExercise, position, count }: CurrentExerciseBoxProps) {
   const { colors } = useTheme();
-  const { logSet, editSet, deleteSet, nextSetDraft } = useLogbook();
+  const { workout, logSet, editSet, deleteSet, nextSetDraft, protocolState } = useLogbook();
+  const primaryEquipment = usePrimaryEquipmentProfile();
   const { showToast } = useToast();
   // The Set being corrected, or null while logging a new one
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
@@ -35,6 +39,11 @@ export function CurrentExerciseBox({ workoutExercise, position, count }: Current
   const unilateral = libraryExercise(slug)?.unilateral ?? false;
   const editingSet = editingIndex === null ? undefined : sets[editingIndex];
   const nextNumber = sets.length + 1;
+  // In an Assessment Workout every Exercise is a test, and the Logbook says what it asks for next
+  const protocol =
+    workout?.assessment && primaryEquipment ? protocolState(workout, workoutExercise, primaryEquipment) : undefined;
+  const note = protocol && protocolNote(protocol, sets.length, loadType);
+  const asksRpe = !!workout && isRatedTest(workout, loadType);
 
   return (
     <View style={[styles.box, { backgroundColor: colors.surface, borderColor: colors.accent }]}>
@@ -55,6 +64,11 @@ export function CurrentExerciseBox({ workoutExercise, position, count }: Current
       {unilateral ? (
         <Text size="sm" color="muted" style={styles.note}>
           Log one side; the values count for each side
+        </Text>
+      ) : null}
+      {note ? (
+        <Text size="sm" color={note.finished ? "accent" : "muted"} style={styles.note}>
+          {note.text}
         </Text>
       ) : null}
 
@@ -79,6 +93,7 @@ export function CurrentExerciseBox({ workoutExercise, position, count }: Current
           heading={`Editing set ${editingIndex + 1}`}
           loadType={loadType}
           initial={editingSet}
+          asksRpe={asksRpe}
           submitLabel={`Save set ${editingIndex + 1}`}
           onSubmit={async (values) => {
             await editSet(id, editingIndex, values);
@@ -117,7 +132,8 @@ export function CurrentExerciseBox({ workoutExercise, position, count }: Current
           key={`new-${sets.length}`}
           heading={`Set ${nextNumber}`}
           loadType={loadType}
-          initial={nextSetDraft(workoutExercise)}
+          initial={nextSetDraft(workoutExercise, protocol)}
+          asksRpe={asksRpe}
           submitLabel={`Log set ${nextNumber}`}
           onSubmit={(values) => logSet(id, values)}
         />
@@ -129,21 +145,66 @@ export function CurrentExerciseBox({ workoutExercise, position, count }: Current
   );
 }
 
+// What the test asks for next, and whether it's finished: Sets of 5 working up to RPE 9, the heaviest load for as many
+// reps as possible (past 12 ends it as load-limited), or a bodyweight or timed test's one Set to the maximum
+function protocolNote(
+  protocol: ProtocolState,
+  setCount: number,
+  loadType: LoadType,
+): { text: string; finished: boolean } {
+  const workingUp = (text: string) => ({ text, finished: false });
+  switch (protocol.status) {
+    case "done":
+      return { text: "Done: that Set was your top Set. On to the next test.", finished: true };
+    case "load-limited":
+      return {
+        text: "Done: past 12 reps at your heaviest load. Your result is a lower bound, limited by your equipment.",
+        finished: true,
+      };
+    case "one-set":
+      return workingUp(
+        loadType === "timed"
+          ? "One Set: hold as long as you can with good form, then log the seconds."
+          : "One Set: as many reps as you can with good form.",
+      );
+    case "at-heaviest":
+      return workingUp(
+        `${protocol.suggestedKg} kg is your heaviest: as many reps as you can to RPE 9. Past 12 reps ends the test.`,
+      );
+    case "working-up": {
+      const kg = protocol.suggestedKg;
+      if (setCount === 0) {
+        const start = kg === null ? "Start light." : `Start at ${kg} kg.`;
+        return workingUp(`Sets of ${TEST_REPS}, adding weight each Set until one is RPE 9. ${start}`);
+      }
+      return workingUp(
+        kg === null
+          ? `Add weight for the next Set of ${TEST_REPS}`
+          : `Next: ${describeSet({ kind: "external", kg, reps: TEST_REPS })}, then rate it`,
+      );
+    }
+  }
+}
+
 type SetEntryProps = {
   heading: string;
   loadType: LoadType;
   // The previous Set, the Set being edited, or null for an empty start
   initial: SetValues | null;
+  // Asks how hard the Set felt, for an Assessment Workout's test Sets
+  asksRpe?: boolean;
   submitLabel: string;
   onSubmit: (values: SetValues) => Promise<void>;
   // Shown under the submit button, e.g. Delete set and Cancel while editing
   children?: ReactNode;
 };
 
-// "Set 3", one stepper per value the Load Type records, and the button that logs or saves the Set
-function SetEntry({ heading, loadType, initial, submitLabel, onSubmit, children }: SetEntryProps) {
+// "Set 3", one stepper per value the Load Type records, RPE chips when asked, and the button that logs or saves
+// the Set
+function SetEntry({ heading, loadType, initial, asksRpe = false, submitLabel, onSubmit, children }: SetEntryProps) {
   const { showToast } = useToast();
   const [draft, setDraftState] = useState<SetDraft>(() => setDraft(loadType, initial));
+  const [rpe, setRpe] = useState<number | undefined>(initial?.rpe);
   const [saving, setSaving] = useState(false);
 
   const handleSubmit = async () => {
@@ -154,7 +215,7 @@ function SetEntry({ heading, loadType, initial, submitLabel, onSubmit, children 
     }
     setSaving(true);
     try {
-      await onSubmit(result.values);
+      await onSubmit(asksRpe ? { ...result.values, rpe } : result.values);
     } catch (err) {
       showToast(errorMessage(err), { error: err });
     } finally {
@@ -175,6 +236,18 @@ function SetEntry({ heading, loadType, initial, submitLabel, onSubmit, children 
           onChange={(value) => setDraftState((prev) => ({ ...prev, [field]: value }))}
         />
       ))}
+      {asksRpe ? (
+        <Stack spacing={2}>
+          <Text size="sm" color="muted">
+            RPE: 10 is no more reps, 9 is one more
+          </Text>
+          <HStack spacing={2}>
+            {RPE_SCALE.map((choice) => (
+              <Chip key={choice} label={String(choice)} selected={rpe === choice} onPress={() => setRpe(choice)} />
+            ))}
+          </HStack>
+        </Stack>
+      ) : null}
       <LoadingButton label={submitLabel} size="lg" loading={saving} onPress={handleSubmit} fullWidth />
       {children}
     </Stack>

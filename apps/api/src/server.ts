@@ -1,6 +1,8 @@
 import cors from "@fastify/cors";
 import Fastify from "fastify";
 import { serializerCompiler, validatorCompiler } from "fastify-type-provider-zod";
+import { ensureAssessmentIndexes } from "./assessments";
+import { assessmentRoutes } from "./routes/assessments";
 import { exerciseRoutes } from "./routes/exercises";
 import { userRoutes } from "./routes/users";
 import { workoutRoutes } from "./routes/workouts";
@@ -30,11 +32,14 @@ await ensureUserIndexes().catch((err) => app.log.error(err, "Failed to create us
 
 await ensureWorkoutIndexes().catch((err) => app.log.error(err, "Failed to create workout indexes"));
 
+await ensureAssessmentIndexes().catch((err) => app.log.error(err, "Failed to create assessment indexes"));
+
 await migrateUsers().catch((err) => app.log.error(err, "Failed to migrate users"));
 
 await app.register(userRoutes);
 await app.register(exerciseRoutes);
 await app.register(workoutRoutes);
+await app.register(assessmentRoutes);
 
 app.get("/health", async () => {
   return HealthResponse.parse({
