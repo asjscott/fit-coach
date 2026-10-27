@@ -8,6 +8,8 @@ tests are enforced by CI, so they are not repeated here.
 - Name code, tests and UI copy with the terms in `GLOSSARY.md`, and none of the terms it lists under _Avoid_.
 - In UI sentences, capitalise glossary terms: "Add an Exercise to start logging Sets.", "This Workout isn't in your
   History.". Button labels stay in sentence case: "Start workout", "Log set".
+- Where the spec or ticket and `GLOSSARY.md` define a term differently, raise it as a finding naming both, rather than
+  judging the code against either one.
 
 ## Reuse before writing
 
