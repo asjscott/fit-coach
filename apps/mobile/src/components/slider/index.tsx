@@ -1,5 +1,5 @@
 import { createContext, use, useMemo, useRef, useState, type ReactNode } from "react";
-import { PanResponder, StyleSheet, View, type StyleProp, type ViewStyle } from "react-native";
+import { PanResponder, StyleSheet, View, type HostInstance, type StyleProp, type ViewStyle } from "react-native";
 import { radii, useTheme } from "@/theme";
 import { useFormControlContext } from "../form-control";
 import { sliderSizes, type SliderSize } from "./styles";
@@ -51,7 +51,7 @@ export function Slider({
   // Latest values for the gesture callbacks, which are created once
   const latest = useRef({ left: 0, width: 0, current, minValue, maxValue, step, disabled, onChange, onChangeEnd });
   latest.current = { ...latest.current, current, minValue, maxValue, step, disabled, onChange, onChangeEnd };
-  const rootRef = useRef<View>(null);
+  const rootRef = useRef<HostInstance>(null);
 
   const panResponder = useMemo(() => {
     const valueAt = (pageX: number) => {

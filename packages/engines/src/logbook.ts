@@ -1,12 +1,19 @@
 import {
   InProgressWorkout,
   Workout,
+  type AssessmentPart,
+  type BodyProfile,
+  type EquipmentProfile,
   type Exercise,
   type InProgressWorkoutExercise,
   type PreviousSets,
   type SetValues,
+  type UserProfile,
 } from "@fit/shared";
 import type { z } from "zod";
+import { isRatedTest, protocolState, TEST_REPS, type ProtocolState } from "./assessment-protocol";
+import { canAssess, chooseTests, partTests } from "./assessment-tests";
+import type { ProfileWithLoads } from "./equipment";
 import { previousSets } from "./training-summaries";
 
 // Strings by key: SQLite on the phone, localStorage on web, a Map in tests
@@ -99,6 +106,29 @@ export function createLogbook({
   // Shared by overlapping sync() calls, so no Workout is uploaded twice at once
   let syncing: Promise<void> | null = null;
 
+  // A Workout Exercise with its Previous Sets snapshot: the server's or a Pending Workout's, whichever is newer
+  function newWorkoutExercise(
+    { slug, loadType }: Pick<Exercise, "slug" | "loadType">,
+    fromServer: PreviousSets | null,
+    pending: Workout[],
+  ): InProgressWorkoutExercise {
+    const asWorkout = fromServer && { ...fromServer, workoutExercises: [{ slug, sets: fromServer.sets }] };
+    const latest = previousSets(asWorkout ? [...pending, asWorkout] : pending, slug);
+    return { id: newId(), slug, loadType, sets: [], ...(latest && { previousSets: latest }) };
+  }
+
+  // Its tests were chosen and ordered for it, so the results mean what they say
+  function refuseIfAssessment(workout: InProgressWorkout) {
+    if (workout.assessment) throw new LogbookError("An Assessment Workout's Exercises can't be changed");
+  }
+
+  // A weighted test's Sets are read by their RPE
+  function refuseUnratedTestSet(workout: InProgressWorkout, values: SetValues) {
+    if (isRatedTest(workout, values.kind) && values.rpe === undefined) {
+      throw new LogbookError("Rate how hard the Set felt");
+    }
+  }
+
   function findWorkoutExercise(workout: InProgressWorkout, workoutExerciseId: string) {
     const workoutExercise = workout.workoutExercises.find((we) => we.id === workoutExerciseId);
     if (!workoutExercise) throw new LogbookError("No such Workout Exercise in this Workout");
@@ -112,7 +142,7 @@ export function createLogbook({
   }
 
   async function finishAs(
-    { id, workoutExercises }: InProgressWorkout,
+    { id, assessment, workoutExercises }: InProgressWorkout,
     { startedAt, endedAt, now }: WorkoutTimes & { now: Date },
   ): Promise<FinishResult> {
     const withSets = workoutExercises.filter(({ sets }) => sets.length > 0);
@@ -122,6 +152,7 @@ export function createLogbook({
       id,
       startedAt: startedAt.toISOString(),
       endedAt: endedAt.toISOString(),
+      ...(assessment && { assessment }),
       workoutExercises: withSets.map(({ slug, loadType, sets }) => ({ slug, loadType, sets })),
     });
     await writePending([...(await readPending()), workout]);
@@ -157,29 +188,58 @@ export function createLogbook({
     // Previous Sets (ADR 0002): the server's or a Pending Workout's, whichever Workout is newer.
     // With no signal only Pending Workouts count; with neither, there are no Previous Sets.
     // The server is asked outside the queue, so other changes never wait on the network
-    addWorkoutExercise: async ({ slug, loadType }: Pick<Exercise, "slug" | "loadType">) => {
-      const fromServer = await previousSetsSource.forExercise(slug).catch(() => null);
+    addWorkoutExercise: async (exercise: Pick<Exercise, "slug" | "loadType">) => {
+      const fromServer = await previousSetsSource.forExercise(exercise.slug).catch(() => null);
       return serially(async () => {
         const workout = await readOrThrow();
-        const pending = await readPending();
-        const asWorkout = fromServer && { ...fromServer, workoutExercises: [{ slug, sets: fromServer.sets }] };
-        const latest = previousSets(asWorkout ? [...pending, asWorkout] : pending, slug);
-        const workoutExercise: InProgressWorkoutExercise = {
-          id: newId(),
-          slug,
-          loadType,
-          sets: [],
-          ...(latest && { previousSets: latest }),
-        };
+        refuseIfAssessment(workout);
+        const workoutExercise = newWorkoutExercise(exercise, fromServer, await readPending());
         workout.workoutExercises.push(workoutExercise);
         await write(workout);
         return workoutExercise;
       });
     },
 
+    // Starts Assessment Workout A or B with its tests already added, in order: one per Pattern, chosen from the
+    // primary Equipment Profile and the user's injuries. Body weight and gender are for the first suggested load
+    startAssessment: async (
+      {
+        part,
+        equipmentProfile,
+        injuries,
+        bodyProfile,
+      }: {
+        part: AssessmentPart;
+        equipmentProfile: Pick<EquipmentProfile, "tags">;
+        bodyProfile: BodyProfile;
+      } & Pick<UserProfile, "injuries">,
+      now: Date,
+    ) => {
+      const tests = chooseTests(equipmentProfile, injuries);
+      if (!canAssess(tests)) throw new LogbookError("No Assessment suits this equipment and these injuries");
+      const { exercises } = partTests(tests, part);
+      const fromServer = await Promise.all(
+        exercises.map(({ slug }) => previousSetsSource.forExercise(slug).catch(() => null)),
+      );
+      return serially(async () => {
+        if (await read()) throw new LogbookError("A Workout is already in progress");
+        const pending = await readPending();
+        const workout: InProgressWorkout = {
+          id: newId(),
+          startedAt: now.toISOString(),
+          assessment: part,
+          bodyProfile,
+          workoutExercises: exercises.map((exercise, i) => newWorkoutExercise(exercise, fromServer[i], pending)),
+        };
+        await write(workout);
+        return workout;
+      });
+    },
+
     removeWorkoutExercise: (workoutExerciseId: string) =>
       serially(async () => {
         const workout = await readOrThrow();
+        refuseIfAssessment(workout);
         const workoutExercise = findWorkoutExercise(workout, workoutExerciseId);
         workout.workoutExercises = workout.workoutExercises.filter((we) => we !== workoutExercise);
         await write(workout);
@@ -189,6 +249,7 @@ export function createLogbook({
     moveWorkoutExercise: (workoutExerciseId: string, toIndex: number) =>
       serially(async () => {
         const workout = await readOrThrow();
+        refuseIfAssessment(workout);
         const workoutExercise = findWorkoutExercise(workout, workoutExerciseId);
         const { workoutExercises } = workout;
         if (!Number.isInteger(toIndex) || toIndex < 0 || toIndex >= workoutExercises.length) {
@@ -203,6 +264,7 @@ export function createLogbook({
       serially(async () => {
         const workout = await readOrThrow();
         const workoutExercise = findWorkoutExercise(workout, workoutExerciseId);
+        refuseUnratedTestSet(workout, values);
         workoutExercise.sets.push({ ...values, loggedAt: now.toISOString() });
         await write(parseOrThrow(InProgressWorkout, workout));
         return workoutExercise;
@@ -214,6 +276,7 @@ export function createLogbook({
         const workout = await readOrThrow();
         const { sets } = findWorkoutExercise(workout, workoutExerciseId);
         const set = findSet(sets, setIndex);
+        refuseUnratedTestSet(workout, values);
         sets[setIndex] = { ...values, loggedAt: set.loggedAt };
         await write(parseOrThrow(InProgressWorkout, workout));
       }),
@@ -227,12 +290,26 @@ export function createLogbook({
         await write(workout);
       }),
 
-    // The values to pre-fill the next Set with: the last Set's, or null for the first Set
-    nextSetDraft: (workoutExercise: InProgressWorkoutExercise): SetValues | null => {
+    // The values to pre-fill the next Set with: a test's suggested load, else the last Set's (not its RPE: each Set is
+    // rated on its own), or null for the first Set
+    nextSetDraft: (workoutExercise: InProgressWorkoutExercise, protocol?: ProtocolState): SetValues | null => {
+      if (protocol && "suggestedKg" in protocol && protocol.suggestedKg !== null) {
+        return { kind: "external", kg: protocol.suggestedKg, reps: TEST_REPS };
+      }
       const last = workoutExercise.sets.at(-1);
       if (!last) return null;
-      return Object.fromEntries(Object.entries(last).filter(([key]) => key !== "loggedAt")) as SetValues;
+      return Object.fromEntries(
+        Object.entries(last).filter(([key]) => key !== "loggedAt" && key !== "rpe"),
+      ) as SetValues;
     },
+
+    // For a test Exercise of an Assessment Workout: the suggested next load, or done. The logging screen only renders
+    // it. The first load follows the body weight and gender the Workout started with
+    protocolState: (
+      { bodyProfile }: Pick<InProgressWorkout, "bodyProfile">,
+      workoutExercise: Pick<InProgressWorkoutExercise, "slug" | "sets">,
+      equipmentProfile: ProfileWithLoads,
+    ) => protocolState(workoutExercise, equipmentProfile, bodyProfile),
 
     // Turns the in-progress Workout into a Pending Workout; sync() uploads it. Workout
     // Exercises with no Sets are dropped; with no Sets at all there is nothing to save,

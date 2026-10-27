@@ -135,6 +135,10 @@ export const DumbbellLoads = z.discriminatedUnion("kind", [
 export const BandLevel = z.enum(["light", "medium", "heavy", "extra_heavy"]);
 export type BandLevel = z.infer<typeof BandLevel>;
 
+// The equipment whose loads are band levels
+export const BAND_TAGS = ["loop_bands", "mini_bands", "tube_bands"] as const satisfies EquipmentTag[];
+export type BandTag = (typeof BAND_TAGS)[number];
+
 export const EquipmentProfile = z.object({
   id: z.string(),
   name: z.string().min(1).max(40),

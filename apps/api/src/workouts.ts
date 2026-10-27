@@ -21,6 +21,8 @@ export async function ensureWorkoutIndexes() {
   await workouts.createIndex({ clerkUserId: 1, startedAt: -1 });
   // Previous Sets: the newest Workout with a given Exercise
   await workouts.createIndex({ clerkUserId: 1, "workoutExercises.slug": 1, startedAt: -1 });
+  // Pairing Assessment Workouts: the user's As and Bs
+  await workouts.createIndex({ clerkUserId: 1, assessment: 1, startedAt: -1 });
 }
 
 // Idempotent on the Workout id: returns the stored Workout if this user already uploaded it
@@ -77,11 +79,12 @@ export async function deleteWorkout(clerkUserId: string, id: string) {
 }
 
 // Convert a database document into the shape the app expects
-export function toWorkout({ id, startedAt, endedAt, workoutExercises }: WithId<WorkoutDoc>): Workout {
+export function toWorkout({ id, startedAt, endedAt, assessment, workoutExercises }: WithId<WorkoutDoc>): Workout {
   return Workout.parse({
     id,
     startedAt: startedAt.toISOString(),
     endedAt: endedAt.toISOString(),
+    ...(assessment && { assessment }),
     workoutExercises,
   });
 }

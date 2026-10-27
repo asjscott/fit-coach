@@ -13,7 +13,7 @@ import {
   toTrainingSetup,
   TrainingSetup,
 } from "@/features/equipment/training-setup";
-import { useCurrentUser } from "@/features/user/current-user-provider";
+import { useCurrentUser, usePrimaryEquipmentProfile } from "@/features/user/current-user-provider";
 import { useNotifications } from "@/hooks/use-notifications";
 import type { Stage, StageAction } from "../form/staged-form";
 
@@ -33,7 +33,7 @@ export function useUserOnboarding() {
   const { user, updateUser, saveEquipmentProfile } = useCurrentUser();
   const { handleError } = useNotifications();
   const profile = user?.profile ?? {};
-  const primaryEquipment = user?.equipmentProfiles.find((p) => p.isPrimary);
+  const primaryEquipment = usePrimaryEquipmentProfile();
 
   // Captured once so the completion message doesn't flip when the save stamps onboardedAt
   const [isEditing] = useState(!!user?.onboardedAt);

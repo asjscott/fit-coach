@@ -1,5 +1,5 @@
 import { useEffect, useRef } from "react";
-import { Animated, StyleSheet, View } from "react-native";
+import { Animated, Pressable, StyleSheet, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { radii, spacing, statusColors, useTheme, type StatusAction } from "@/theme";
 import { Icon, type IconName } from "../icons";
@@ -14,16 +14,20 @@ const icons: Record<ToastType, IconName> = {
   info: "info",
 };
 
+export type ToastAction = { label: string; onPress: () => void };
+
 export type ToastProps = {
   message: string;
   type?: ToastType;
   duration?: number;
+  // A button at the end of the toast; pressing it also hides the toast
+  action?: ToastAction;
   onHide?: () => void;
   isVisible: boolean;
 };
 
 // Slides down from the top, waits, then slides away and calls onHide
-export function Toast({ message, type = "info", duration = 3000, onHide, isVisible }: ToastProps) {
+export function Toast({ message, type = "info", duration = 3000, action, onHide, isVisible }: ToastProps) {
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
   const translateY = useRef(new Animated.Value(-150)).current;
@@ -59,6 +63,20 @@ export function Toast({ message, type = "info", duration = 3000, onHide, isVisib
         <Text size="sm" weight="medium" numberOfLines={3} style={{ flex: 1 }}>
           {message}
         </Text>
+        {action ? (
+          <Pressable
+            accessibilityRole="button"
+            hitSlop={spacing[2]}
+            onPress={() => {
+              action.onPress();
+              onHideRef.current?.();
+            }}
+          >
+            <Text size="sm" weight="semiBold" style={{ color: fg }}>
+              {action.label}
+            </Text>
+          </Pressable>
+        ) : null}
       </View>
     </Animated.View>
   );

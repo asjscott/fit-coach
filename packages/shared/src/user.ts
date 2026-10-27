@@ -23,6 +23,10 @@ export const UserProfile = z.object({
 
 export type UserProfile = z.infer<typeof UserProfile>;
 
+// What the Assessment's strength estimates scale with: the typical strength for this body weight and gender
+export const BodyProfile = UserProfile.pick({ weightKg: true, gender: true });
+export type BodyProfile = z.infer<typeof BodyProfile>;
+
 // Fields that must be filled before a user counts as onboarded; injuries are optional
 export const OnboardingProfile = UserProfile.omit({ injuries: true });
 export type OnboardingProfile = z.infer<typeof OnboardingProfile>;

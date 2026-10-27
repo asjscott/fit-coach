@@ -1,4 +1,4 @@
-import { lastWorkout, thisWeek, withPending } from "@fit/engines";
+import { assessmentOffer, lastWorkout, offerKey, thisWeek, withPending } from "@fit/engines";
 import { router } from "expo-router";
 import { useEffect } from "react";
 import { View } from "react-native";
@@ -8,6 +8,8 @@ import { LoadingButton } from "@/components/loading-button";
 import { Screen } from "@/components/screen";
 import { Spinner } from "@/components/spinner";
 import { Text } from "@/components/text";
+import { useChosenTests } from "@/features/assessment/hooks/use-chosen-tests";
+import { useLatestAssessment } from "@/features/assessment/hooks/use-latest-assessment";
 import { useCurrentUser } from "@/features/user/current-user-provider";
 import { ForgottenWorkoutModal } from "@/features/workouts/components/forgotten-workout-modal";
 import { useHistory } from "@/features/workouts/history-provider";
@@ -18,6 +20,8 @@ import { spacing } from "@/theme";
 import { LastWorkoutSection } from "../components/last-workout-section";
 import { ThisWeekSection } from "../components/this-week-section";
 import { todayState, todayStatus } from "../today-status";
+import { AssessmentSection } from "../components/assessment-section";
+import { useDismissedOffer } from "../hooks/use-dismissed-offer";
 
 // The training hub: Start or Resume, this week against the user's days per week, and the last Workout
 export default function TodayView() {
@@ -27,6 +31,9 @@ export default function TodayView() {
   const { isLoaded, isStale, pending } = logbook;
   const { workouts, error } = useHistory();
   const daysPerWeek = useCurrentUser().user?.profile.daysPerWeek;
+  const { latest: latestAssessment } = useLatestAssessment();
+  const { dismissed, dismiss } = useDismissedOffer();
+  const tests = useChosenTests();
   useRefreshHistory();
 
   // A forgotten Workout must be finished or discarded before the user carries on
@@ -46,6 +53,17 @@ export default function TodayView() {
   const last = lastWorkout(all);
   const state = todayState({ historyLoaded: workouts !== null, failed: !!error, workoutCount: all.length });
   const status = todayStatus({ state, workoutCount: week.workoutCount, target: week.target });
+  const offer =
+    dismissed === undefined
+      ? null
+      : assessmentOffer({
+          workouts: all,
+          historyLoaded: workouts !== null,
+          latestAssessment: latestAssessment && latestAssessment.assessment,
+          now,
+          tests,
+          dismissed,
+        });
 
   return (
     <Screen scroll edges={["top"]}>
@@ -69,6 +87,11 @@ export default function TodayView() {
           </Text>
         ) : null}
       </View>
+      {offer ? (
+        <View style={{ marginTop: spacing[5] }}>
+          <AssessmentSection offer={offer} onDismiss={() => dismiss(offerKey(offer))} />
+        </View>
+      ) : null}
       <Divider spacing={6} />
       {state === "loading" ? (
         <Spinner />

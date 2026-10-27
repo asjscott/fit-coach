@@ -1,8 +1,16 @@
 import { z } from "zod";
 import { LoadType } from "./exercises";
+import { BodyProfile } from "./user";
 
 // Each Set records when it was logged; values are per side for a one-sided Exercise
 const loggedAt = z.iso.datetime();
+// How hard the Set felt (GLOSSARY.md): only Assessment Workouts ask for it so far
+export const RPE_SCALE = [6, 7, 8, 9, 10] as const;
+const rpe = z
+  .number()
+  .int("RPE must be a whole number")
+  .min(RPE_SCALE[0], "RPE goes from 6 to 10")
+  .max(RPE_SCALE[RPE_SCALE.length - 1], "RPE goes from 6 to 10");
 const count = (name: string) =>
   z.number().int(`${name} must be a whole number`).positive(`${name} must be more than 0`);
 
@@ -11,15 +19,20 @@ export const Set = z.discriminatedUnion("kind", [
     kind: z.literal("external"),
     kg: z.number().positive("Weight must be more than 0").multipleOf(0.25, "Use 0.25 kg steps"),
     reps: count("Reps"),
+    rpe: rpe.optional(),
     loggedAt,
   }),
-  z.object({ kind: z.literal("bodyweight"), reps: count("Reps"), loggedAt }),
-  z.object({ kind: z.literal("timed"), seconds: count("Seconds"), loggedAt }),
+  z.object({ kind: z.literal("bodyweight"), reps: count("Reps"), rpe: rpe.optional(), loggedAt }),
+  z.object({ kind: z.literal("timed"), seconds: count("Seconds"), rpe: rpe.optional(), loggedAt }),
 ]);
 export type Set = z.infer<typeof Set>;
 
 // What the user enters for a Set; the Logbook adds loggedAt
 export type SetValues = Set extends infer S ? (S extends Set ? Omit<S, "loggedAt"> : never) : never;
+
+// Which of the two Assessment Workouts (GLOSSARY.md) a Workout is; absent on any other Workout
+export const AssessmentPart = z.enum(["A", "B"]);
+export type AssessmentPart = z.infer<typeof AssessmentPart>;
 
 // The Load Type is a snapshot, so the server can check Sets without knowing the library.
 // The slug is checked for shape only: the phone's library and the server's can drift apart
@@ -48,6 +61,7 @@ export const Workout = z
     id: z.uuid(),
     startedAt: z.iso.datetime(),
     endedAt: z.iso.datetime(),
+    assessment: AssessmentPart.optional(),
     workoutExercises: z.array(WorkoutExercise).min(1),
   })
   .refine((workout) => Date.parse(workout.endedAt) > Date.parse(workout.startedAt), {
@@ -75,6 +89,9 @@ export type PreviousSetsQuery = z.infer<typeof PreviousSetsQuery>;
 export const InProgressWorkout = z.object({
   id: z.uuid(),
   startedAt: z.iso.datetime(),
+  assessment: AssessmentPart.optional(),
+  // An Assessment Workout's first suggested loads come from the profile it started with, not a later edit
+  bodyProfile: BodyProfile.optional(),
   workoutExercises: z.array(
     z
       .object({ id: z.string(), ...workoutExerciseFields, sets: z.array(Set), previousSets: PreviousSets.optional() })

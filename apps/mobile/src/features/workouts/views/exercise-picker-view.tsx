@@ -10,7 +10,7 @@ import { Text } from "@/components/text";
 import { useToast } from "@/contexts/toast-context";
 import { ExerciseRow } from "@/features/exercises/components/exercise-row";
 import { neededEquipment } from "@/features/exercises/needed-equipment";
-import { useCurrentUser } from "@/features/user/current-user-provider";
+import { useCurrentUser, usePrimaryEquipmentProfile } from "@/features/user/current-user-provider";
 import { spacing } from "@/theme";
 import { useLogbook } from "../logbook-provider";
 
@@ -24,7 +24,7 @@ export default function ExercisePickerView() {
   const [adding, setAdding] = useState(false);
 
   // No primary profile counts as no equipment
-  const tags = user?.equipmentProfiles.find((p) => p.isPrimary)?.tags ?? [];
+  const tags = usePrimaryEquipmentProfile()?.tags ?? [];
   const rows = pickerRows(EXERCISES, { tags, injuries: user?.profile.injuries ?? [], search: query });
 
   const handlePick = async (exercise: Exercise) => {

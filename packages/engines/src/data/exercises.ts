@@ -351,3 +351,8 @@ const Base: Exercise[] = [
 ];
 
 export const EXERCISES: Exercise[] = [...Base, ...BATCH_1, ...BATCH_2, ...BATCH_3, ...BATCH_4];
+
+const bySlug = new Map(EXERCISES.map((exercise) => [exercise.slug, exercise]));
+
+// The library Exercise with this slug, or undefined for one the library doesn't have
+export const exerciseBySlug = (slug: string): Exercise | undefined => bySlug.get(slug);

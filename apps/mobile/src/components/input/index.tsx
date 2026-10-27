@@ -6,6 +6,7 @@ import {
   View,
   type PressableProps,
   type StyleProp,
+  type TextInputInstance,
   type TextInputProps,
   type ViewStyle,
 } from "react-native";
@@ -79,7 +80,7 @@ export function Input({
   );
 }
 
-export type InputFieldProps = TextInputProps & { type?: "text" | "password"; ref?: Ref<TextInput> };
+export type InputFieldProps = TextInputProps & { type?: "text" | "password"; ref?: Ref<TextInputInstance> };
 
 export function InputField({ type = "text", style, onFocus, onBlur, ...props }: InputFieldProps) {
   const { colors, scheme } = useTheme();
