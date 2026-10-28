@@ -34,10 +34,9 @@ Cause, as far as the run got: `src/app/(auth)/sign-in.tsx` calls `startHostedAut
 
 Not checked: whether a dev build (`npx expo run:android`, after adding `android.package`) signs in, and whether iOS Expo Go signs in. iOS's web auth session catches any custom scheme, so iOS may work.
 
-Possible fixes, still to be decided:
+Fix (#44): in Expo Go, sign-in now passes an Expo Go `redirectUrl` (`exp://<dev-server-host>:<port>/--/hosted-auth-callback`, from `Linking.createURL`). Dev builds and production keep the `mobile://` default.
 
-- Pass an Expo Go-friendly `redirectUrl` (an `exp://…/--/hosted-auth-callback` from `Linking.createURL`) when running in Expo Go. Check that the Clerk instance allows that redirect.
-- Or drop Expo Go for this checklist: set `android.package` / `ios.bundleIdentifier`, use a dev build, and say so under "Run from" above.
+**Before rerunning:** allow that `exp://…/--/hosted-auth-callback` link as a redirect URL on the Clerk dev instance (Clerk dashboard, see "Signing in from Expo Go" in the README). The host is the address Expo Go shows for the project, so add the one for the machine and network you run from. Then check Create account and Sign in on Android Expo Go, and Sign in on iOS Expo Go.
 
 A test account was created on the Clerk dev instance during the run: `mc-dumbbells+clerk_test@example.com`. Its sign-up finished; only the hand-back to the app failed.
 
