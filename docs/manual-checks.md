@@ -37,7 +37,7 @@ Fix (#44): in Expo Go, detected with `isRunningInExpoGo()` from `expo` (the nati
 - The callback link also reaches expo-router, which showed "Unmatched Route". `src/app/+native-intent.ts` rewrites it to Sign in, which moves on once the session is active.
 - expo-web-browser opens the Custom Tab through a proxy activity whose task stays alive after a sign-in that returns by link. The next Sign in or Create account brought back that finished tab, and Clerk rejected its stale state ("Hosted auth callback state did not match"). Sign-in now opens the tab directly (`useProxyActivity: false`).
 
-Checked after the fix, on the Android emulator in Expo Go: Sign in, then Sign out and Create account in the same session, both reach onboarding signed in. Closing the tab with ✕ returns to Sign in, and Sign in opens a new tab. Not checked: iOS Expo Go (no way to tap on the iOS simulator here).
+Checked after the fix, on the Android emulator in Expo Go: Sign in, then Sign out and Create account in the same session, both reach onboarding signed in. Closing the tab with ✕ returns to Sign in, and Sign in opens a new tab. Checked by hand on the iOS simulator on 2026-10-28.
 
 Test accounts on the Clerk dev instance: `mc-dumbbells+clerk_test@example.com` (created in the 2026-10-27 run) and `mc-44-android+clerk_test@example.com` (created while checking the #44 fix).
 
