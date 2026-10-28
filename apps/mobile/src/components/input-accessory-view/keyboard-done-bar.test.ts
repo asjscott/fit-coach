@@ -6,13 +6,23 @@ import { elementPath } from "../../utils/element-path";
 vi.mock("react-native", () => ({
   InputAccessoryView: "InputAccessoryView",
   View: "View",
+  Pressable: "Pressable",
   Keyboard: { dismiss: () => {} },
   Platform: { OS: "ios" },
   StyleSheet: { create: <T>(styles: T) => styles },
 }));
-vi.mock("@/theme", () => ({ radii: { pill: 999 }, spacing: [0, 4, 8, 12, 16], useThemedStyles: () => ({}) }));
+vi.mock("@/theme", () => ({
+  radii: { pill: 999 },
+  spacing: [0, 4, 8, 12, 16],
+  useTheme: () => ({ scheme: "light" }),
+  useThemedStyles: () => ({}),
+}));
+vi.mock("expo-glass-effect", () => ({
+  GlassView: "GlassView",
+  isGlassEffectAPIAvailable: () => true,
+  isLiquidGlassAvailable: () => true,
+}));
 vi.mock("../icons", () => ({ Icon: "Icon" }));
-vi.mock("../pressable", () => ({ Pressable: "Pressable" }));
 
 const { KeyboardDoneBar } = await import("./index");
 
