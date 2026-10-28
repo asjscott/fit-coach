@@ -1,4 +1,4 @@
-import { exerciseLoadsKg, isRatedTest, TEST_REPS, type ProtocolState } from "@fit/engines";
+import { exerciseLoadsKg, isRatedTest, isTestFinished, TEST_REPS, type ProtocolState } from "@fit/engines";
 import { RPE_SCALE, type InProgressWorkoutExercise, type LoadType, type SetValues } from "@fit/shared";
 import { useState, type ReactNode } from "react";
 import { StyleSheet, View } from "react-native";
@@ -25,11 +25,14 @@ export type CurrentExerciseBoxProps = {
   // Its place in the Workout, from 0, and how many there are
   position: number;
   count: number;
+  // An Assessment Workout's first test that isn't done, opened by "Next test" once this test is done; none when
+  // every test is done
+  onNextTest?: () => void;
 };
 
 // The Workout Exercise being logged: its name, Previous Sets, the Sets so far (each with a ⋯ to edit or delete it) and
-// steppers for the next Set, which starts from the previous one
-export function CurrentExerciseBox({ workoutExercise, position, count }: CurrentExerciseBoxProps) {
+// steppers for the next Set, which starts from the previous one. A test that's done takes no more Sets
+export function CurrentExerciseBox({ workoutExercise, position, count, onNextTest }: CurrentExerciseBoxProps) {
   const { colors } = useTheme();
   const { workout, logSet, editSet, deleteSet, nextSetDraft, protocolState, nextLoadKg } = useLogbook();
   const primaryEquipment = usePrimaryEquipmentProfile();
@@ -47,6 +50,7 @@ export function CurrentExerciseBox({ workoutExercise, position, count }: Current
   const protocol =
     workout?.assessment && primaryEquipment ? protocolState(workout, workoutExercise, primaryEquipment) : undefined;
   const note = protocol && protocolNote(protocol, sets.length, loadType);
+  const testFinished = !!protocol && isTestFinished(protocol);
   const asksRpe = !!workout && isRatedTest(workout, loadType);
   const kgSteps: KgSteps = {
     stepKg: (kg, direction) => nextLoadKg(slug, kg, direction, primaryEquipment),
@@ -123,6 +127,12 @@ export function CurrentExerciseBox({ workoutExercise, position, count }: Current
         >
           <LoadingButton label="Cancel" size="md" action="secondary" onPress={() => setEditingIndex(null)} />
         </SetEntry>
+      ) : testFinished ? (
+        onNextTest ? (
+          <View style={styles.entry}>
+            <LoadingButton label="Next test" size="lg" onPress={onNextTest} fullWidth />
+          </View>
+        ) : null
       ) : (
         // Remounts after each Set, so the steppers start from the Set just logged
         <SetEntry

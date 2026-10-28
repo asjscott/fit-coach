@@ -45,14 +45,25 @@ function firstLoadKg(slug: string, loads: number[], bodyProfile: BodyProfile | u
   return loads.filter((kg) => kg <= likelyMaximum * FIRST_LOAD_SHARE).at(-1) ?? loads[0];
 }
 
+// A test in either state takes no more Sets, and an Assessment Workout moves on from it
+export const isTestFinished = ({ status }: ProtocolState) => status === "done" || status === "load-limited";
+
+// Whether a test has its result, whatever the equipment: a bodyweight or timed test's one Set, or a weighted test's top
+// Set. Load-limited also ends a weighted test, but only the Equipment Profile's loads can tell (protocolState)
+export function isTestDone({ slug, sets }: Pick<InProgressWorkoutExercise, "slug" | "sets">): boolean {
+  const exercise = exerciseBySlug(slug);
+  if (exercise && exercise.loadType !== "external") return sets.length > 0;
+  return sets.some(isTopSet);
+}
+
 export function protocolState(
   { slug, sets }: Pick<InProgressWorkoutExercise, "slug" | "sets">,
   equipmentProfile: ProfileWithLoads,
   bodyProfile: BodyProfile | undefined,
 ): ProtocolState {
+  if (isTestDone({ slug, sets })) return { status: "done" };
   const exercise = exerciseBySlug(slug);
-  if (exercise && exercise.loadType !== "external") return sets.length ? { status: "done" } : { status: "one-set" };
-  if (sets.some(isTopSet)) return { status: "done" };
+  if (exercise && exercise.loadType !== "external") return { status: "one-set" };
   const last = sets.at(-1);
   const loads = exerciseLoadsKg(slug, equipmentProfile);
   if (!last) return { status: "working-up", suggestedKg: exercise ? firstLoadKg(slug, loads, bodyProfile) : null };
