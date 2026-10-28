@@ -73,6 +73,7 @@ describe("chooseTests", () => {
   it("gives a Pattern no test when nothing on its list is safe", () => {
     // Every push on the list, push-up included, is flagged for a wrist injury
     expect(chooseTests({ tags: [] }, ["wrist"]).push).toBeNull();
+    expect(chooseTests(preset("Kettlebells"), ["wrist"]).push).toBeNull();
   });
 
   // The one-arm dumbbell row is the spec's deliberate exception: ranked for pull after the two-sided options
