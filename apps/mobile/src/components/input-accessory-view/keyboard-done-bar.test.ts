@@ -6,13 +6,13 @@ import { elementPath } from "../../utils/element-path";
 vi.mock("react-native", () => ({
   InputAccessoryView: "InputAccessoryView",
   View: "View",
-  Pressable: "Pressable",
   Keyboard: { dismiss: () => {} },
   Platform: { OS: "ios" },
-  StyleSheet: { create: <T>(styles: T) => styles, hairlineWidth: 1 },
+  StyleSheet: { create: <T>(styles: T) => styles },
 }));
-vi.mock("@/theme", () => ({ spacing: [0, 4, 8, 12, 16], useThemedStyles: () => ({}) }));
-vi.mock("../text", () => ({ Text: "Text" }));
+vi.mock("@/theme", () => ({ radii: { pill: 999 }, spacing: [0, 4, 8, 12, 16], useThemedStyles: () => ({}) }));
+vi.mock("../icons", () => ({ Icon: "Icon" }));
+vi.mock("../pressable", () => ({ Pressable: "Pressable" }));
 
 const { KeyboardDoneBar } = await import("./index");
 
@@ -26,5 +26,13 @@ describe("KeyboardDoneBar on iOS", () => {
     );
     expect(path).not.toBeNull();
     expect(path!.slice(0, -1).some((element) => element.props.pointerEvents === "none")).toBe(true);
+  });
+
+  it("is a button screen readers call Done", () => {
+    const path = elementPath<{ accessibilityRole?: string; accessibilityLabel?: string }>(
+      KeyboardDoneBar({ nativeID: "field" }),
+      (element) => element.props.accessibilityRole === "button",
+    );
+    expect(path?.at(-1)?.props.accessibilityLabel).toBe("Done");
   });
 });
