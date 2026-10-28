@@ -95,7 +95,7 @@ function WorkoutDetail({ workout, note, onDelete }: WorkoutDetailProps) {
   };
 
   return (
-    <Screen scroll edges={["bottom"]}>
+    <Screen scroll="screen" edges={["bottom"]}>
       <NavStack.Screen
         options={{
           title: dateLabel(workout.startedAt),

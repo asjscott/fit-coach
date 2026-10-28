@@ -26,7 +26,7 @@ export default function ExercisesView() {
   if (isLoading) return <Loading message="Loading Exercises…" />;
 
   return (
-    <Screen padded={false} scrollsItself edges={["bottom"]}>
+    <Screen padded={false} scroll="content" edges={["bottom"]}>
       <SectionList
         sections={sections}
         keyExtractor={(row) => row.exercise.slug}

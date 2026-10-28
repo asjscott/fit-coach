@@ -68,7 +68,7 @@ export default function AssessmentResultsView() {
   const { patterns } = latest.assessment;
   const sections = primary ? workingLevelSections(latest.workingLevels, primary, patterns) : [];
   return (
-    <Screen scroll edges={["bottom"]}>
+    <Screen scroll="screen" edges={["bottom"]}>
       <SectionLabel style={styles.sectionLabel}>Tests</SectionLabel>
       {PATTERN_ORDER.map((pattern) => {
         const result = patterns[pattern];

@@ -22,7 +22,7 @@ export function OnboardingView() {
     : { label: "Sign out", onPress: () => signOut() };
 
   return (
-    <Screen scrollsItself>
+    <Screen scroll="content">
       <HStack justify="end">
         <Button action="default" variant="link" size="sm" onPress={exit.onPress}>
           <ButtonText>{exit.label}</ButtonText>
