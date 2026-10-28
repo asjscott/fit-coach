@@ -1,9 +1,11 @@
+import { useEffect, useRef } from "react";
 import { StyleSheet } from "react-native";
 import { Icon, type IconName } from "@/components/icons";
 import { Input, InputField } from "@/components/input";
 import { Pressable } from "@/components/pressable";
 import { Text } from "@/components/text";
 import { bigNumber, radii, spacing, useTheme } from "@/theme";
+import { startRepeating } from "../hold-to-repeat";
 import { stepValue, STEPS, type SetField } from "../set-entry";
 
 // The unit drawn beside each field, filled or not
@@ -23,14 +25,21 @@ export type SetStepperProps = {
   onChange: (value: string) => void;
 };
 
-// One Set value with − and + either side: kg by 2, reps by 1, seconds by 5. Any value can still be typed
+// One Set value with − and + either side: kg by 2, reps by 1, seconds by 5, repeating while held. Any value can
+// still be typed
 export function SetStepper({ field, value, onChange }: SetStepperProps) {
   const unit = UNITS[field];
-  const step = (direction: 1 | -1) => onChange(stepValue(field, value, direction));
+  // The latest value, so steps repeated while held build on each other before the parent re-renders
+  const latest = useRef(value);
+  latest.current = value;
+  const step = (direction: 1 | -1) => {
+    latest.current = stepValue(field, latest.current, direction);
+    onChange(latest.current);
+  };
 
   return (
     <Input size="xl" style={styles.root}>
-      <StepButton icon="minus" label={`Minus ${STEP_NAMES[field]}`} onPress={() => step(-1)} />
+      <StepButton icon="minus" label={`Minus ${STEP_NAMES[field]}`} onStep={() => step(-1)} />
       <InputField
         value={value}
         onChangeText={onChange}
@@ -43,18 +52,35 @@ export function SetStepper({ field, value, onChange }: SetStepperProps) {
       <Text color="muted" weight="medium" style={styles.unit} importantForAccessibility="no">
         {unit}
       </Text>
-      <StepButton icon="plus" label={`Plus ${STEP_NAMES[field]}`} onPress={() => step(1)} />
+      <StepButton icon="plus" label={`Plus ${STEP_NAMES[field]}`} onStep={() => step(1)} />
     </Input>
   );
 }
 
-function StepButton({ icon, label, onPress }: { icon: IconName; label: string; onPress: () => void }) {
+// How long a press must last before it repeats; a shorter one is a tap
+const HOLD_DELAY = 400;
+
+// A tap (or a screen reader's activation, which is onPress) steps once; holding steps until release
+function StepButton({ icon, label, onStep }: { icon: IconName; label: string; onStep: () => void }) {
   const { colors } = useTheme();
+  const release = useRef<(() => void) | null>(null);
+  const stop = () => {
+    release.current?.();
+    release.current = null;
+  };
+  useEffect(() => stop, []);
+
   return (
     <Pressable
       accessibilityRole="button"
       accessibilityLabel={label}
-      onPress={onPress}
+      onPress={onStep}
+      delayLongPress={HOLD_DELAY}
+      onLongPress={() => {
+        stop();
+        release.current = startRepeating(onStep);
+      }}
+      onPressOut={stop}
       style={[styles.button, { backgroundColor: colors.raised }]}
     >
       <Icon name={icon} color="text" size={22} />
