@@ -30,13 +30,16 @@ Expected: the custom tab closes and the app is signed in.
 
 Actual: the custom tab stays on "If you are not redirected automatically, tap Continue". Tapping Continue does nothing. The page's redirect is `mobile:///hosted-auth-callback?created_session_id=…`. Expo Go registers only `exp`, `exps` and its own schemes, not `mobile`, so nothing receives the callback. Sending the URL to Expo Go by hand (`adb shell am start -n host.exp.exponent/.LauncherActivity -d "mobile:///…"`) gives Expo Go's "Something went wrong" screen. It happens every time.
 
-Cause, as far as the run got: `src/app/(auth)/sign-in.tsx` calls `startHostedAuth({ mode })` with no `redirectUrl`. `app.json` sets no `android.package` or `ios.bundleIdentifier`, so `getDefaultRedirectUrl` in `@clerk/expo/dist/hooks/useHostedAuth.js` falls back to `AuthSession.makeRedirectUri({ path: "hosted-auth-callback" })`, which uses `Linking.createURL`. That only gives `mobile:///…` when `Constants.executionEnvironment` isn't `"storeClient"`: in Expo Go it gives an `exp://` link. So the app was probably not detected as running in Expo Go; this is still to be confirmed on the device (#44). The same file notes that on Android the default redirect also needs the Clerk Expo config plugin, which only takes effect in a dev build.
+Cause, confirmed on the emulator on 2026-10-28 (#44): Expo Go 58.0.5 on Android reports `Constants.executionEnvironment` as `"bare"` and `appOwnership` as `null`. Clerk's `getDefaultRedirectUrl` and `Linking.createURL` both spot Expo Go by `executionEnvironment === "storeClient"`, so they took it for a bare build and used the app's `mobile` scheme. Newer `@clerk/expo` (4.14.4) and the latest SDK 58 Expo packages check the same thing.
 
-Not checked: whether a dev build (`npx expo run:android`, after adding `android.package`) signs in, and whether iOS Expo Go signs in. iOS's web auth session catches any custom scheme, so iOS may work.
+Fix (#44): in Expo Go, detected with `isRunningInExpoGo()` from `expo` (the native `ExpoGo` module exists only there), sign-in passes `exp://<dev server>/--/hosted-auth-callback` as the `redirectUrl`. Dev builds and production keep Clerk's default. The Clerk dev instance accepted the link with no dashboard change. Two more things were needed on Android:
 
-Passing an `exp://` `redirectUrl` from `Linking.createURL` in Expo Go was tried and didn't help: it is what Clerk already does there. The next steps are on #44. The fallback is still to drop Expo Go for this checklist: set `android.package` / `ios.bundleIdentifier`, use a dev build, and say so under "Run from" above.
+- The callback link also reaches expo-router, which showed "Unmatched Route". `src/app/+native-intent.ts` rewrites it to Sign in, which moves on once the session is active.
+- expo-web-browser opens the Custom Tab through a proxy activity whose task stays alive after a sign-in that returns by link. The next Sign in or Create account brought back that finished tab, and Clerk rejected its stale state ("Hosted auth callback state did not match"). Sign-in now opens the tab directly (`useProxyActivity: false`).
 
-A test account was created on the Clerk dev instance during the run: `mc-dumbbells+clerk_test@example.com`. Its sign-up finished; only the hand-back to the app failed.
+Checked after the fix, on the Android emulator in Expo Go: Sign in, then Sign out and Create account in the same session, both reach onboarding signed in. Closing the tab with ✕ returns to Sign in, and Sign in opens a new tab. Not checked: iOS Expo Go (no way to tap on the iOS simulator here).
+
+Test accounts on the Clerk dev instance: `mc-dumbbells+clerk_test@example.com` (created in the 2026-10-27 run) and `mc-44-android+clerk_test@example.com` (created while checking the #44 fix).
 
 ### Tooling: an agent can't drive the simulators on this machine
 
