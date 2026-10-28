@@ -1,10 +1,20 @@
 import type { Set } from "@fit/shared";
 import { StyleSheet, View } from "react-native";
-import { Icon } from "@/components/icons";
+import { Icon, type IconName } from "@/components/icons";
 import { Pressable } from "@/components/pressable";
 import { Text } from "@/components/text";
-import { bigNumber, fonts, spacing, useTheme } from "@/theme";
+import { bigNumber, fonts, radii, spacing, useTheme } from "@/theme";
 import { describeSet, setParts } from "../format";
+
+// What can be done to a logged Set from its row: its ⋯ opens Edit and Delete in the row, and a tick closes them
+export type SetRowActions = {
+  // Showing Edit, Delete and the tick in place of the ⋯
+  open: boolean;
+  onOpen: () => void;
+  onClose: () => void;
+  onEdit: () => void;
+  onDelete: () => void;
+};
 
 export type SetRowProps = {
   set: Set;
@@ -13,22 +23,29 @@ export type SetRowProps = {
   unilateral?: boolean;
   // Being corrected below
   editing?: boolean;
-  // Makes the row a button, ticked as logged, e.g. to correct the Set
-  onPress?: () => void;
+  // Ticks the row as logged and gives it a ⋯, e.g. on the In-progress Workout
+  actions?: SetRowActions;
 };
 
 // A logged Set in a list, its values as big numbers and small units: "Set 1   16 kg × 10 per side"
-export function SetRow({ set, index, unilateral = false, editing = false, onPress }: SetRowProps) {
+export function SetRow({ set, index, unilateral = false, editing = false, actions }: SetRowProps) {
   const { colors } = useTheme();
-  const values = (
-    <>
+  const number = index + 1;
+
+  return (
+    <View
+      accessible={!actions}
+      accessibilityLabel={`Set ${number}, ${describeSet(set)}${unilateral ? " per side" : ""}`}
+      style={[styles.row, { borderTopColor: colors.line }]}
+    >
+      {actions ? <Icon name="check" color="accent" size={18} /> : null}
       <Text
         size="sm"
         color={editing ? "accent" : "subtle"}
         weight={editing ? "semiBold" : "regular"}
         style={styles.label}
       >
-        Set {index + 1}
+        Set {number}
       </Text>
       <Text style={styles.values}>
         {setParts(set).map(([value, unit], i) => (
@@ -47,43 +64,52 @@ export function SetRow({ set, index, unilateral = false, editing = false, onPres
           </Text>
         ) : null}
       </Text>
-    </>
+      {!actions ? null : actions.open ? (
+        <>
+          <RowButton icon="pencil" label={`Edit set ${number}`} active={editing} onPress={actions.onEdit} />
+          <RowButton icon="trash" label={`Delete set ${number}`} color="danger" onPress={actions.onDelete} />
+          <RowButton icon="check" label={`Done with set ${number}`} onPress={actions.onClose} />
+        </>
+      ) : (
+        <RowButton icon="ellipsis" label={`Set ${number} actions`} color="text" onPress={actions.onOpen} />
+      )}
+    </View>
   );
-  const description = `Set ${index + 1}, ${describeSet(set)}${unilateral ? " per side" : ""}`;
+}
 
-  if (!onPress) {
-    return (
-      <View accessible accessibilityLabel={description} style={[styles.row, { borderTopColor: colors.line }]}>
-        {values}
-      </View>
-    );
-  }
+function RowButton({
+  icon,
+  label,
+  color = "muted",
+  active = false,
+  onPress,
+}: {
+  icon: IconName;
+  label: string;
+  color?: "muted" | "text" | "danger";
+  // Highlighted while its action is under way, e.g. Edit while editing
+  active?: boolean;
+  onPress: () => void;
+}) {
+  const { colors } = useTheme();
   return (
     <Pressable
       accessibilityRole="button"
-      accessibilityLabel={`${description}. Edit`}
+      accessibilityLabel={label}
       onPress={onPress}
-      style={[styles.row, { borderTopColor: colors.line }]}
+      style={[styles.button, active && { backgroundColor: colors.accentSoft }]}
     >
-      {values}
-      <View style={styles.trailing}>
-        {editing ? (
-          <Text size="sm" color="accent" weight="semiBold">
-            Editing
-          </Text>
-        ) : (
-          <Icon name="check" color="accent" size={20} />
-        )}
-      </View>
+      <Icon name={icon} color={active ? "accent" : color} size={icon === "ellipsis" ? 22 : 20} />
     </Pressable>
   );
 }
 
 const styles = StyleSheet.create({
   row: {
-    minHeight: 52,
+    minHeight: 56,
     flexDirection: "row",
     alignItems: "center",
+    gap: spacing[2],
     borderTopWidth: StyleSheet.hairlineWidth,
     paddingVertical: spacing[1],
   },
@@ -91,5 +117,5 @@ const styles = StyleSheet.create({
   values: { flex: 1 },
   number: { ...bigNumber(26), lineHeight: 32 },
   unit: { fontFamily: fonts.medium, fontSize: 14 },
-  trailing: { minWidth: 24, alignItems: "flex-end" },
+  button: { width: 44, height: 44, borderRadius: radii.sm, alignItems: "center", justifyContent: "center" },
 });

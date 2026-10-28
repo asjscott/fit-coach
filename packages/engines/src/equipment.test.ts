@@ -1,7 +1,7 @@
 import type { EquipmentTag } from "@fit/shared";
 import { describe, expect, it } from "vitest";
 import { EXERCISES } from "./data/exercises";
-import { isAvailable, isSafeFor } from "./equipment";
+import { exerciseLoadsKg, isAvailable, isSafeFor, type ProfileWithLoads } from "./equipment";
 
 const exercise = (slug: string) => {
   const found = EXERCISES.find((e) => e.slug === slug);
@@ -37,5 +37,21 @@ describe("isSafeFor", () => {
 
   it("allows the same squat with no injuries", () => {
     expect(isSafeFor(exercise("back-squat"), [])).toBe(true);
+  });
+});
+
+describe("exerciseLoadsKg", () => {
+  const dumbbells: ProfileWithLoads = {
+    tags: ["dumbbells"],
+    loads: { dumbbells: { kind: "fixed", weightsKg: [16, 8, 12] } },
+  };
+
+  it("gives the loads the profile makes for the Exercise with this slug, lightest first", () => {
+    expect(exerciseLoadsKg("goblet-squat", dumbbells)).toEqual([8, 12, 16]);
+  });
+
+  it("knows no loads for a slug not in the library, or without a profile", () => {
+    expect(exerciseLoadsKg("not-in-the-library", dumbbells)).toEqual([]);
+    expect(exerciseLoadsKg("goblet-squat", undefined)).toEqual([]);
   });
 });

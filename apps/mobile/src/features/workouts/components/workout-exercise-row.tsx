@@ -10,16 +10,15 @@ import { WorkoutExerciseMenu } from "./workout-exercise-menu";
 
 export type WorkoutExerciseRowProps = {
   workoutExercise: InProgressWorkoutExercise;
-  // Its place in the Workout, from 0, and how many there are
+  // Its place in the Workout, from 0
   position: number;
-  count: number;
   // Makes it the current Workout Exercise
   onPress: () => void;
 };
 
 // A Workout Exercise that isn't current, collapsed to one row: a tick once it has Sets (else its number), its
 // name and a one-line summary of its Sets (its Previous Sets before any), and its ⋯ menu. Pressing the row makes it current
-export function WorkoutExerciseRow({ workoutExercise, position, count, onPress }: WorkoutExerciseRowProps) {
+export function WorkoutExerciseRow({ workoutExercise, position, onPress }: WorkoutExerciseRowProps) {
   const { colors } = useTheme();
   const name = exerciseName(workoutExercise.slug);
   const summary = workoutExerciseSummary(workoutExercise.sets, workoutExercise.previousSets?.sets);
@@ -57,7 +56,7 @@ export function WorkoutExerciseRow({ workoutExercise, position, count, onPress }
           </Text>
         </View>
       </Pressable>
-      <WorkoutExerciseMenu workoutExercise={workoutExercise} position={position} count={count} />
+      <WorkoutExerciseMenu workoutExercise={workoutExercise} />
     </View>
   );
 }

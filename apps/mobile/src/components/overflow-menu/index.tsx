@@ -1,6 +1,6 @@
-import Ellipsis from "lucide-react-native/icons/ellipsis";
 import { useState } from "react";
-import { Pressable } from "react-native";
+import { Pressable, StyleSheet } from "react-native";
+import { spacing } from "@/theme";
 import {
   Actionsheet,
   ActionsheetBackdrop,
@@ -10,13 +10,15 @@ import {
   ActionsheetItem,
   ActionsheetItemText,
 } from "../actionsheet";
-import { Icon } from "../icons";
+import { Icon, type IconName } from "../icons";
 
 export type OverflowMenuItem = {
   label: string;
   onPress: () => void;
   // Drawn in danger, e.g. "Delete workout"
   destructive?: boolean;
+  // Drawn before the label, e.g. "trash"
+  icon?: IconName;
 };
 
 export type OverflowMenuProps = {
@@ -26,9 +28,11 @@ export type OverflowMenuProps = {
 };
 
 // A ⋯ button that opens its actions in a bottom sheet, keeping rare or destructive actions out of the way.
-// The sheet closes before an item runs, so the item can open its own confirmation
+// An item runs once the sheet has gone, so it can open its own confirmation
 export function OverflowMenu({ label, items }: OverflowMenuProps) {
   const [isOpen, setIsOpen] = useState(false);
+  // The item picked, waiting for the sheet to close
+  const [picked, setPicked] = useState<OverflowMenuItem | null>(null);
 
   return (
     <>
@@ -39,9 +43,16 @@ export function OverflowMenu({ label, items }: OverflowMenuProps) {
         onPress={() => setIsOpen(true)}
         style={{ width: 44, height: 44, alignItems: "center", justifyContent: "center" }}
       >
-        <Icon as={Ellipsis} color="text" size={22} />
+        <Icon name="ellipsis" color="text" size={22} />
       </Pressable>
-      <Actionsheet isOpen={isOpen} onClose={() => setIsOpen(false)}>
+      <Actionsheet
+        isOpen={isOpen}
+        onClose={() => setIsOpen(false)}
+        onClosed={() => {
+          picked?.onPress();
+          setPicked(null);
+        }}
+      >
         <ActionsheetBackdrop />
         <ActionsheetContent>
           <ActionsheetDragIndicatorWrapper>
@@ -50,11 +61,13 @@ export function OverflowMenu({ label, items }: OverflowMenuProps) {
           {items.map((item) => (
             <ActionsheetItem
               key={item.label}
+              style={item.icon ? styles.withIcon : undefined}
               onPress={() => {
+                setPicked(item);
                 setIsOpen(false);
-                item.onPress();
               }}
             >
+              {item.icon ? <Icon name={item.icon} color={item.destructive ? "danger" : "text"} size={20} /> : null}
               <ActionsheetItemText color={item.destructive ? "danger" : "text"}>{item.label}</ActionsheetItemText>
             </ActionsheetItem>
           ))}
@@ -63,3 +76,7 @@ export function OverflowMenu({ label, items }: OverflowMenuProps) {
     </>
   );
 }
+
+const styles = StyleSheet.create({
+  withIcon: { flexDirection: "row", alignItems: "center", gap: spacing[3] },
+});

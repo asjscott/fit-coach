@@ -18,12 +18,13 @@ type LogbookContextValue = {
   protocolState: Logbook["protocolState"];
   addWorkoutExercise: (exercise: Pick<Exercise, "slug" | "loadType">) => Promise<void>;
   removeWorkoutExercise: (workoutExerciseId: string) => Promise<void>;
-  moveWorkoutExercise: (workoutExerciseId: string, toIndex: number) => Promise<void>;
   logSet: (workoutExerciseId: string, values: SetValues) => Promise<void>;
   editSet: (workoutExerciseId: string, setIndex: number, values: SetValues) => Promise<void>;
   deleteSet: (workoutExerciseId: string, setIndex: number) => Promise<void>;
   // The values a new Set starts with: a test's suggested load, else the last Set's, or null for the first
   nextSetDraft: Logbook["nextSetDraft"];
+  // Where the kg stepper goes on − or +
+  nextLoadKg: Logbook["nextLoadKg"];
   // Ends the Workout with these times, resolving as soon as it is a Pending Workout, then
   // tries to upload it (see FinishOutcome). Resolves to "nothing-to-save" with no Sets,
   // leaving the Workout in progress to be discarded. Rejects with a LogbookError for invalid times
@@ -142,11 +143,6 @@ export function LogbookProvider({ children }: { children: ReactNode }) {
     [logbook, run],
   );
 
-  const moveWorkoutExercise = useCallback(
-    (workoutExerciseId: string, toIndex: number) => run(() => logbook.moveWorkoutExercise(workoutExerciseId, toIndex)),
-    [logbook, run],
-  );
-
   const editSet = useCallback(
     (workoutExerciseId: string, setIndex: number, values: SetValues) =>
       run(() => logbook.editSet(workoutExerciseId, setIndex, values)),
@@ -203,11 +199,11 @@ export function LogbookProvider({ children }: { children: ReactNode }) {
         protocolState: logbook.protocolState,
         addWorkoutExercise,
         removeWorkoutExercise,
-        moveWorkoutExercise,
         logSet,
         editSet,
         deleteSet,
         nextSetDraft: logbook.nextSetDraft,
+        nextLoadKg: logbook.nextLoadKg,
         finish,
         finishAtLastSet,
         discard,

@@ -1,3 +1,4 @@
+import { UNKNOWN_LOADS_STEP_KG, type StepDirection } from "@fit/engines";
 import type { LoadType, SetValues } from "@fit/shared";
 
 // Entering a Set's values with −/+ steppers: what each step adds, and turning typed text into the values the
@@ -29,8 +30,16 @@ export function draftValues(loadType: LoadType, draft: SetDraft): { values: SetV
   return { values: { kind: loadType, ...Object.fromEntries(numbers) } as SetValues };
 }
 
-// One tap of − or +
-export const STEPS: Record<SetField, number> = { kg: 2, reps: 1, seconds: 5 };
+// kg has no fixed step: it goes to the next load the Logbook gives (Logbook.nextLoadKg)
+export const STEPS: Record<Exclude<SetField, "kg">, number> = { reps: 1, seconds: 5 };
+
+export type KgStep = (kg: number, direction: StepDirection) => number;
+
+// For screen readers: with the equipment's loads known, a tap's size changes from load to load, so it isn't named
+export function kgStepLabel(direction: StepDirection, loadsKnown: boolean): string {
+  if (loadsKnown) return direction === 1 ? "Next heavier weight" : "Next lighter weight";
+  return `${direction === 1 ? "Plus" : "Minus"} ${UNKNOWN_LOADS_STEP_KG} kg`;
+}
 
 // The smallest amount each field records: weights in 0.25 kg steps, reps and seconds whole
 const RESOLUTION: Record<SetField, number> = { kg: 0.25, reps: 1, seconds: 1 };
@@ -43,10 +52,13 @@ export function parseField(text: string): number {
 
 const roundTo = (value: number, resolution: number) => Math.round(value / resolution) * resolution;
 
-// The field's text after one tap of − (-1) or + (1). Steps from the typed value, first rounded to what the
-// field records; from nothing when the field is empty or not a number; never below zero
-export function stepValue(field: SetField, text: string, direction: 1 | -1): string {
+// Steps from the typed value, first rounded to what the field records; from nothing when the field is empty or not a
+// number; never below zero
+export function stepValue(field: "kg", text: string, direction: StepDirection, stepKg: KgStep): string;
+export function stepValue(field: Exclude<SetField, "kg">, text: string, direction: StepDirection): string;
+export function stepValue(field: SetField, text: string, direction: StepDirection, stepKg?: KgStep): string {
   const typed = parseField(text);
   const from = Number.isFinite(typed) ? roundTo(typed, RESOLUTION[field]) : 0;
-  return String(Math.max(0, from + STEPS[field] * direction));
+  const to = field === "kg" ? stepKg!(from, direction) : from + STEPS[field] * direction;
+  return String(Math.max(0, to));
 }

@@ -13,7 +13,7 @@ import {
 import type { z } from "zod";
 import { isRatedTest, protocolState, TEST_REPS, type ProtocolState } from "./assessment-protocol";
 import { canAssess, chooseTests, partTests } from "./assessment-tests";
-import type { ProfileWithLoads } from "./equipment";
+import { exerciseLoadsKg, stepLoadKg, type ProfileWithLoads, type StepDirection } from "./equipment";
 import { previousSets } from "./training-summaries";
 
 // Strings by key: SQLite on the phone, localStorage on web, a Map in tests
@@ -310,6 +310,10 @@ export function createLogbook({
       workoutExercise: Pick<InProgressWorkoutExercise, "slug" | "sets">,
       equipmentProfile: ProfileWithLoads,
     ) => protocolState(workoutExercise, equipmentProfile, bodyProfile),
+
+    // The Logbook rather than the screen decides, so Manual and Assessment Workouts step through the same loads (#58)
+    nextLoadKg: (slug: string, kg: number, direction: StepDirection, equipmentProfile: ProfileWithLoads | undefined) =>
+      stepLoadKg(kg, direction, exerciseLoadsKg(slug, equipmentProfile)),
 
     // Turns the in-progress Workout into a Pending Workout; sync() uploads it. Workout
     // Exercises with no Sets are dropped; with no Sets at all there is nothing to save,

@@ -148,7 +148,7 @@ export const BATCH_3: Exercise[] = [
     secondsPerSet: 105,
     regression: "push-up",
     progression: "dumbbell-bench-press",
-    avoidWith: ["shoulder"],
+    avoidWith: ["wrist", "shoulder"],
     cues: ["Lie on the floor, knees bent", "Lower until your upper arms touch the floor", "Press straight up"],
     videoUrl: null,
   },
