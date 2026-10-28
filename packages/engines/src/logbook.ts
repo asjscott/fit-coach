@@ -13,7 +13,8 @@ import {
 import type { z } from "zod";
 import { isRatedTest, protocolState, TEST_REPS, type ProtocolState } from "./assessment-protocol";
 import { canAssess, chooseTests, partTests } from "./assessment-tests";
-import type { ProfileWithLoads } from "./equipment";
+import { exerciseBySlug } from "./data/exercises";
+import { availableLoadsKg, stepLoadKg, type ProfileWithLoads } from "./equipment";
 import { previousSets } from "./training-summaries";
 
 // Strings by key: SQLite on the phone, localStorage on web, a Map in tests
@@ -310,6 +311,14 @@ export function createLogbook({
       workoutExercise: Pick<InProgressWorkoutExercise, "slug" | "sets">,
       equipmentProfile: ProfileWithLoads,
     ) => protocolState(workoutExercise, equipmentProfile, bodyProfile),
+
+    // One tap of the kg stepper's − (-1) or + (1) from `kg`, in any Workout: the next lighter or heavier load the
+    // primary Equipment Profile makes for the Exercise
+    nextLoadKg: (slug: string, kg: number, direction: 1 | -1, equipmentProfile: ProfileWithLoads | undefined) => {
+      const exercise = exerciseBySlug(slug);
+      const loads = exercise && equipmentProfile ? availableLoadsKg(exercise, equipmentProfile) : [];
+      return stepLoadKg(kg, direction, loads);
+    },
 
     // Turns the in-progress Workout into a Pending Workout; sync() uploads it. Workout
     // Exercises with no Sets are dropped; with no Sets at all there is nothing to save,
