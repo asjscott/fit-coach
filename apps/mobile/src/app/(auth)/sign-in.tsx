@@ -1,5 +1,8 @@
 import { useClerk } from "@clerk/expo";
 import { useHostedAuth } from "@clerk/expo/hosted-auth";
+import { isRunningInExpoGo } from "expo";
+import Constants from "expo-constants";
+import type { AuthSessionOpenOptions } from "expo-web-browser";
 import { useState } from "react";
 import { Platform } from "react-native";
 import { ButtonGroup } from "@/components/button";
@@ -8,7 +11,12 @@ import { LoadingButton } from "@/components/loading-button";
 import { Screen } from "@/components/screen";
 import { Stack } from "@/components/stack";
 import { Text } from "@/components/text";
+import { hostedAuthRedirectUrl } from "@/features/auth/hosted-auth-redirect";
 import { errorMessage } from "@/utils/error-message";
+
+// expo-web-browser's proxy activity outlives an Android sign-in that returns by link, and the next sign-in reopens
+// its finished tab (#44). Clerk passes these options on but only types some of them.
+const AUTH_SESSION_OPTIONS: AuthSessionOpenOptions = { useProxyActivity: false };
 
 export default function SignInScreen() {
   const clerk = useClerk();
@@ -24,7 +32,11 @@ export default function SignInScreen() {
         await (mode === "sign-in" ? clerk.redirectToSignIn() : clerk.redirectToSignUp());
         return;
       }
-      await startHostedAuth({ mode });
+      const redirectUrl = hostedAuthRedirectUrl({
+        inExpoGo: isRunningInExpoGo(),
+        hostUri: Constants.expoConfig?.hostUri,
+      });
+      await startHostedAuth({ mode, redirectUrl, authSessionOptions: AUTH_SESSION_OPTIONS });
     } catch (err) {
       setError(errorMessage(err));
     }

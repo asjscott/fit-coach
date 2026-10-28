@@ -11,7 +11,15 @@ import {
   type UserProfile,
 } from "@fit/shared";
 import type { z } from "zod";
-import { isRatedTest, protocolState, TEST_REPS, type ProtocolState } from "./assessment-protocol";
+import {
+  hasTestResult,
+  isRatedTest,
+  protocolState,
+  TEST_REPS,
+  testProgress,
+  type ProtocolState,
+  type TestProgress,
+} from "./assessment-protocol";
 import { canAssess, chooseTests, partTests } from "./assessment-tests";
 import { exerciseLoadsKg, stepLoadKg, type ProfileWithLoads, type StepDirection } from "./equipment";
 import { previousSets } from "./training-summaries";
@@ -127,6 +135,11 @@ export function createLogbook({
     if (isRatedTest(workout, values.kind) && values.rpe === undefined) {
       throw new LogbookError("Rate how hard the Set felt");
     }
+  }
+
+  // A test that has its result takes no more Sets; correcting or deleting its Sets can reopen it
+  function refuseSetOnDoneTest(workout: InProgressWorkout, workoutExercise: InProgressWorkoutExercise) {
+    if (workout.assessment && hasTestResult(workoutExercise)) throw new LogbookError("This test is done");
   }
 
   function findWorkoutExercise(workout: InProgressWorkout, workoutExerciseId: string) {
@@ -265,6 +278,7 @@ export function createLogbook({
         const workout = await readOrThrow();
         const workoutExercise = findWorkoutExercise(workout, workoutExerciseId);
         refuseUnratedTestSet(workout, values);
+        refuseSetOnDoneTest(workout, workoutExercise);
         workoutExercise.sets.push({ ...values, loggedAt: now.toISOString() });
         await write(parseOrThrow(InProgressWorkout, workout));
         return workoutExercise;
@@ -310,6 +324,12 @@ export function createLogbook({
       workoutExercise: Pick<InProgressWorkoutExercise, "slug" | "sets">,
       equipmentProfile: ProfileWithLoads,
     ) => protocolState(workoutExercise, equipmentProfile, bodyProfile),
+
+    // For an Assessment Workout: the test to open next and whether every test is done, so the screen only renders it
+    testProgress: (
+      workout: Pick<InProgressWorkout, "workoutExercises" | "bodyProfile">,
+      equipmentProfile: ProfileWithLoads,
+    ): TestProgress => testProgress(workout, equipmentProfile),
 
     // The Logbook rather than the screen decides, so Manual and Assessment Workouts step through the same loads (#58)
     nextLoadKg: (slug: string, kg: number, direction: StepDirection, equipmentProfile: ProfileWithLoads | undefined) =>

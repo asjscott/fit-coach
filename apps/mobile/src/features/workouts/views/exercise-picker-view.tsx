@@ -40,7 +40,7 @@ export default function ExercisePickerView() {
   };
 
   return (
-    <Screen padded={false} edges={["bottom"]}>
+    <Screen padded={false} scroll="content" edges={["bottom"]}>
       <FlatList
         data={rows}
         keyExtractor={(row) => row.exercise.slug}

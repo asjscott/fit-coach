@@ -122,7 +122,7 @@ export default function ComponentsView() {
 
   return (
     <>
-      <Screen scroll edges={["bottom"]}>
+      <Screen scroll="screen" edges={["bottom"]}>
         <Stack spacing={10}>
           <Section title="Theme">
             <HStack spacing={2}>

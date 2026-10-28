@@ -14,6 +14,7 @@ import { Stack } from "@/components/stack";
 import { Stat } from "@/components/stat";
 import { Text } from "@/components/text";
 import { useToast } from "@/contexts/toast-context";
+import { usePrimaryEquipmentProfile } from "@/features/user/current-user-provider";
 import { useNow } from "@/hooks/use-now";
 import { fonts, spacing, useTheme } from "@/theme";
 import { errorMessage } from "@/utils/error-message";
@@ -41,15 +42,21 @@ export default function WorkoutView() {
 
 function InProgress({ workout }: { workout: InProgressWorkout }) {
   const { colors } = useTheme();
-  const { discard } = useLogbook();
+  const { discard, testProgress } = useLogbook();
+  const primaryEquipment = usePrimaryEquipmentProfile();
   const { showToast } = useToast();
   const leaveWorkout = useLeaveWorkout();
   const [confirmingDiscard, setConfirmingDiscard] = useState(false);
   const { workoutExercises } = workout;
-  const [currentId, choose] = useCurrentWorkoutExercise(workoutExercises.map((we) => we.id));
+  const tests = workout.assessment && primaryEquipment ? testProgress(workout, primaryEquipment) : undefined;
+  const [currentId, choose] = useCurrentWorkoutExercise(
+    workoutExercises.map((we) => we.id),
+    tests?.nextTestId,
+  );
+  const nextTestId = tests?.nextTestId;
 
   return (
-    <Screen padded={false} edges={["bottom"]}>
+    <Screen padded={false} scroll="content" edges={["bottom"]}>
       <NavStack.Screen
         options={{
           headerTitle: () => (
@@ -77,7 +84,12 @@ function InProgress({ workout }: { workout: InProgressWorkout }) {
           {workoutExercises.map((workoutExercise, i) =>
             workoutExercise.id === currentId ? (
               <View key={workoutExercise.id} style={styles.current}>
-                <CurrentExerciseBox workoutExercise={workoutExercise} position={i} count={workoutExercises.length} />
+                <CurrentExerciseBox
+                  workoutExercise={workoutExercise}
+                  position={i}
+                  count={workoutExercises.length}
+                  onNextTest={nextTestId ? () => choose(nextTestId) : undefined}
+                />
               </View>
             ) : (
               <WorkoutExerciseRow
@@ -105,7 +117,13 @@ function InProgress({ workout }: { workout: InProgressWorkout }) {
         )}
       </KeyboardAwareScrollView>
       <View style={[styles.footer, { borderTopColor: colors.line, backgroundColor: colors.bg }]}>
-        <LoadingButton label="Finish" action="secondary" href="/workout/finish" fullWidth />
+        {/* Finish is the main button once every test is done; finishing early stays possible (untested Patterns) */}
+        <LoadingButton
+          label="Finish"
+          action={tests?.allDone ? "primary" : "secondary"}
+          href="/workout/finish"
+          fullWidth
+        />
       </View>
       <ConfirmModal
         isOpen={confirmingDiscard}

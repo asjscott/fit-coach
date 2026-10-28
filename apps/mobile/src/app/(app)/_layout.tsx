@@ -28,7 +28,13 @@ export default function AppLayout() {
           <Stack.Screen name="workout" options={{ presentation: "fullScreenModal" }} />
           <Stack.Screen
             name="assessment-results"
-            options={{ ...stackScreenOptions, headerShown: true, title: "Assessment results" }}
+            // A bare chevron: the back title would be "(tabs)", the route group's name
+            options={{
+              ...stackScreenOptions,
+              headerShown: true,
+              title: "Assessment results",
+              headerBackButtonDisplayMode: "minimal",
+            }}
           />
         </Stack>
       </HistoryProvider>
