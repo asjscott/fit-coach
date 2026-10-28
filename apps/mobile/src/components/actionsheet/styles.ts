@@ -13,7 +13,8 @@ export const createActionsheetStyles = (colors: Colors) =>
       paddingTop: spacing[2],
       maxHeight: "85%",
     },
-    dragIndicatorWrapper: { alignItems: "center", paddingVertical: spacing[2] },
+    // Tall enough to grab
+    dragIndicatorWrapper: { alignItems: "center", paddingVertical: spacing[3] },
     dragIndicator: { width: 40, height: 4, borderRadius: radii.pill, backgroundColor: colors.line },
     item: {
       flexDirection: "row",

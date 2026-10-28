@@ -18,7 +18,6 @@ type LogbookContextValue = {
   protocolState: Logbook["protocolState"];
   addWorkoutExercise: (exercise: Pick<Exercise, "slug" | "loadType">) => Promise<void>;
   removeWorkoutExercise: (workoutExerciseId: string) => Promise<void>;
-  moveWorkoutExercise: (workoutExerciseId: string, toIndex: number) => Promise<void>;
   logSet: (workoutExerciseId: string, values: SetValues) => Promise<void>;
   editSet: (workoutExerciseId: string, setIndex: number, values: SetValues) => Promise<void>;
   deleteSet: (workoutExerciseId: string, setIndex: number) => Promise<void>;
@@ -142,11 +141,6 @@ export function LogbookProvider({ children }: { children: ReactNode }) {
     [logbook, run],
   );
 
-  const moveWorkoutExercise = useCallback(
-    (workoutExerciseId: string, toIndex: number) => run(() => logbook.moveWorkoutExercise(workoutExerciseId, toIndex)),
-    [logbook, run],
-  );
-
   const editSet = useCallback(
     (workoutExerciseId: string, setIndex: number, values: SetValues) =>
       run(() => logbook.editSet(workoutExerciseId, setIndex, values)),
@@ -203,7 +197,6 @@ export function LogbookProvider({ children }: { children: ReactNode }) {
         protocolState: logbook.protocolState,
         addWorkoutExercise,
         removeWorkoutExercise,
-        moveWorkoutExercise,
         logSet,
         editSet,
         deleteSet,

@@ -2,6 +2,7 @@ import { isRatedTest, TEST_REPS, type ProtocolState } from "@fit/engines";
 import { RPE_SCALE, type InProgressWorkoutExercise, type LoadType, type SetValues } from "@fit/shared";
 import { useState, type ReactNode } from "react";
 import { StyleSheet, View } from "react-native";
+import { ConfirmModal } from "@/components/choice-modal";
 import { Chip } from "@/components/chip";
 import { LoadingButton } from "@/components/loading-button";
 import { SectionLabel } from "@/components/section-label";
@@ -26,7 +27,7 @@ export type CurrentExerciseBoxProps = {
   count: number;
 };
 
-// The Workout Exercise being logged: its name, Previous Sets, the Sets so far (press one to correct it) and
+// The Workout Exercise being logged: its name, Previous Sets, the Sets so far (each with a ⋯ to edit or delete it) and
 // steppers for the next Set, which starts from the previous one
 export function CurrentExerciseBox({ workoutExercise, position, count }: CurrentExerciseBoxProps) {
   const { colors } = useTheme();
@@ -35,6 +36,9 @@ export function CurrentExerciseBox({ workoutExercise, position, count }: Current
   const { showToast } = useToast();
   // The Set being corrected, or null while logging a new one
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
+  // The Set whose row shows Edit and Delete, and the Set waiting for its delete to be confirmed
+  const [actionsIndex, setActionsIndex] = useState<number | null>(null);
+  const [deletingIndex, setDeletingIndex] = useState<number | null>(null);
   const { id, slug, loadType, sets, previousSets } = workoutExercise;
   const unilateral = libraryExercise(slug)?.unilateral ?? false;
   const editingSet = editingIndex === null ? undefined : sets[editingIndex];
@@ -54,7 +58,7 @@ export function CurrentExerciseBox({ workoutExercise, position, count }: Current
             {exerciseName(slug)}
           </Text>
         </Stack>
-        <WorkoutExerciseMenu workoutExercise={workoutExercise} position={position} count={count} />
+        <WorkoutExerciseMenu workoutExercise={workoutExercise} />
       </HStack>
       {previousSets ? (
         <Text size="sm" color="subtle" style={styles.note}>
@@ -81,7 +85,19 @@ export function CurrentExerciseBox({ workoutExercise, position, count }: Current
               index={i}
               unilateral={unilateral}
               editing={editingIndex === i}
-              onPress={() => setEditingIndex(editingIndex === i ? null : i)}
+              actions={{
+                open: actionsIndex === i,
+                onOpen: () => {
+                  setActionsIndex(i);
+                  if (editingIndex !== i) setEditingIndex(null);
+                },
+                onClose: () => {
+                  setActionsIndex(null);
+                  if (editingIndex === i) setEditingIndex(null);
+                },
+                onEdit: () => setEditingIndex(editingIndex === i ? null : i),
+                onDelete: () => setDeletingIndex(i),
+              }}
             />
           ))}
         </View>
@@ -100,31 +116,7 @@ export function CurrentExerciseBox({ workoutExercise, position, count }: Current
             setEditingIndex(null);
           }}
         >
-          <HStack spacing={2}>
-            <LoadingButton
-              label="Delete set"
-              size="md"
-              action="negative"
-              variant="outline"
-              icon="trash"
-              style={styles.half}
-              onPress={async () => {
-                try {
-                  await deleteSet(id, editingIndex);
-                  setEditingIndex(null);
-                } catch (err) {
-                  showToast(errorMessage(err), { error: err });
-                }
-              }}
-            />
-            <LoadingButton
-              label="Cancel"
-              size="md"
-              action="secondary"
-              style={styles.half}
-              onPress={() => setEditingIndex(null)}
-            />
-          </HStack>
+          <LoadingButton label="Cancel" size="md" action="secondary" onPress={() => setEditingIndex(null)} />
         </SetEntry>
       ) : (
         // Remounts after each Set, so the steppers start from the Set just logged
@@ -138,6 +130,26 @@ export function CurrentExerciseBox({ workoutExercise, position, count }: Current
           onSubmit={(values) => logSet(id, values)}
         />
       )}
+
+      <ConfirmModal
+        isOpen={deletingIndex !== null}
+        title={`Delete set ${(deletingIndex ?? 0) + 1}?`}
+        message="It can't be brought back."
+        confirmLabel="Delete"
+        onCancel={() => setDeletingIndex(null)}
+        onConfirm={async () => {
+          const index = deletingIndex;
+          setDeletingIndex(null);
+          if (index === null) return;
+          try {
+            await deleteSet(id, index);
+            setActionsIndex(null);
+            setEditingIndex(null);
+          } catch (err) {
+            showToast(errorMessage(err), { error: err });
+          }
+        }}
+      />
 
       {/* Kept free for the rest timer, so adding it later doesn't move anything */}
       <View style={styles.restSlot} />
@@ -195,7 +207,7 @@ type SetEntryProps = {
   asksRpe?: boolean;
   submitLabel: string;
   onSubmit: (values: SetValues) => Promise<void>;
-  // Shown under the submit button, e.g. Delete set and Cancel while editing
+  // Shown under the submit button, e.g. Cancel while editing
   children?: ReactNode;
 };
 
@@ -261,6 +273,5 @@ const styles = StyleSheet.create({
   note: { marginTop: spacing[1] },
   sets: { marginTop: spacing[3] },
   entry: { marginTop: spacing[4] },
-  half: { flex: 1 },
   restSlot: { height: 44, marginTop: spacing[3] },
 });

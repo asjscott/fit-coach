@@ -84,7 +84,6 @@ function InProgress({ workout }: { workout: InProgressWorkout }) {
                 key={workoutExercise.id}
                 workoutExercise={workoutExercise}
                 position={i}
-                count={workoutExercises.length}
                 onPress={() => choose(workoutExercise.id)}
               />
             ),

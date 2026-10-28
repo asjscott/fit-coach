@@ -13,6 +13,7 @@ import CircleCheck from "lucide-react-native/icons/circle-check";
 import CircleX from "lucide-react-native/icons/circle-x";
 import Clock from "lucide-react-native/icons/clock";
 import Dumbbell from "lucide-react-native/icons/dumbbell";
+import Ellipsis from "lucide-react-native/icons/ellipsis";
 import Eye from "lucide-react-native/icons/eye";
 import EyeOff from "lucide-react-native/icons/eye-off";
 import Flame from "lucide-react-native/icons/flame";
@@ -20,6 +21,7 @@ import House from "lucide-react-native/icons/house";
 import Info from "lucide-react-native/icons/info";
 import LogOut from "lucide-react-native/icons/log-out";
 import Minus from "lucide-react-native/icons/minus";
+import Pencil from "lucide-react-native/icons/pencil";
 import Moon from "lucide-react-native/icons/moon";
 import Plus from "lucide-react-native/icons/plus";
 import Ruler from "lucide-react-native/icons/ruler";
@@ -51,6 +53,7 @@ export const IconMap = {
   clock: Clock,
   dark: Moon,
   dumbbell: Dumbbell,
+  ellipsis: Ellipsis,
   eye: Eye,
   eyeClosed: EyeOff,
   flame: Flame,
@@ -59,6 +62,7 @@ export const IconMap = {
   info: Info,
   light: Sun,
   minus: Minus,
+  pencil: Pencil,
   plus: Plus,
   search: Search,
   settings: Settings,
