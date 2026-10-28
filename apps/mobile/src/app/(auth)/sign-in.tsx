@@ -1,5 +1,7 @@
 import { useClerk } from "@clerk/expo";
 import { useHostedAuth } from "@clerk/expo/hosted-auth";
+import Constants, { ExecutionEnvironment } from "expo-constants";
+import * as Linking from "expo-linking";
 import { useState } from "react";
 import { Platform } from "react-native";
 import { ButtonGroup } from "@/components/button";
@@ -8,6 +10,7 @@ import { LoadingButton } from "@/components/loading-button";
 import { Screen } from "@/components/screen";
 import { Stack } from "@/components/stack";
 import { Text } from "@/components/text";
+import { hostedAuthRedirectUrl } from "@/features/auth/hosted-auth-redirect";
 import { errorMessage } from "@/utils/error-message";
 
 export default function SignInScreen() {
@@ -24,7 +27,11 @@ export default function SignInScreen() {
         await (mode === "sign-in" ? clerk.redirectToSignIn() : clerk.redirectToSignUp());
         return;
       }
-      await startHostedAuth({ mode });
+      const redirectUrl = hostedAuthRedirectUrl({
+        inExpoGo: Constants.executionEnvironment === ExecutionEnvironment.StoreClient,
+        createURL: Linking.createURL,
+      });
+      await startHostedAuth({ mode, redirectUrl });
     } catch (err) {
       setError(errorMessage(err));
     }
