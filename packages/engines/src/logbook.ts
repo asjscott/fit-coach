@@ -11,7 +11,7 @@ import {
   type UserProfile,
 } from "@fit/shared";
 import type { z } from "zod";
-import { isRatedTest, protocolState, TEST_REPS, type ProtocolState } from "./assessment-protocol";
+import { isRatedTest, isTestDone, protocolState, TEST_REPS, type ProtocolState } from "./assessment-protocol";
 import { canAssess, chooseTests, partTests } from "./assessment-tests";
 import { exerciseLoadsKg, stepLoadKg, type ProfileWithLoads, type StepDirection } from "./equipment";
 import { previousSets } from "./training-summaries";
@@ -127,6 +127,11 @@ export function createLogbook({
     if (isRatedTest(workout, values.kind) && values.rpe === undefined) {
       throw new LogbookError("Rate how hard the Set felt");
     }
+  }
+
+  // A test that has its result takes no more Sets; correcting or deleting its Sets can reopen it
+  function refuseSetOnDoneTest(workout: InProgressWorkout, workoutExercise: InProgressWorkoutExercise) {
+    if (workout.assessment && isTestDone(workoutExercise)) throw new LogbookError("This test is done");
   }
 
   function findWorkoutExercise(workout: InProgressWorkout, workoutExerciseId: string) {
@@ -265,6 +270,7 @@ export function createLogbook({
         const workout = await readOrThrow();
         const workoutExercise = findWorkoutExercise(workout, workoutExerciseId);
         refuseUnratedTestSet(workout, values);
+        refuseSetOnDoneTest(workout, workoutExercise);
         workoutExercise.sets.push({ ...values, loggedAt: now.toISOString() });
         await write(parseOrThrow(InProgressWorkout, workout));
         return workoutExercise;

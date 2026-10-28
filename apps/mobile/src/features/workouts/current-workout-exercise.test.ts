@@ -74,7 +74,57 @@ describe("currentWorkoutExercise", () => {
     });
 
     it("stays on the test the user tapped", () => {
-      expect(currentWorkoutExercise({ ids: tests, seenIds: tests, chosenId: "plank", doneIds: [] })).toBe("plank");
+      expect(
+        currentWorkoutExercise({ ids: tests, seenIds: tests, chosenId: "plank", doneIds: [], seenDoneIds: [] }),
+      ).toBe("plank");
+    });
+
+    it("moves on to the first test that isn't done when the current one is done", () => {
+      expect(
+        currentWorkoutExercise({
+          ids: tests,
+          seenIds: tests,
+          chosenId: "deadlift",
+          doneIds: ["deadlift"],
+          seenDoneIds: [],
+        }),
+      ).toBe("goblet-squat");
+    });
+
+    it("stays on a done test the user tapped", () => {
+      expect(
+        currentWorkoutExercise({
+          ids: tests,
+          seenIds: tests,
+          chosenId: "goblet-squat",
+          doneIds: ["goblet-squat"],
+          seenDoneIds: ["goblet-squat"],
+        }),
+      ).toBe("goblet-squat");
+    });
+
+    it("stays on the last test once it's done and every test is done", () => {
+      expect(
+        currentWorkoutExercise({
+          ids: tests,
+          seenIds: tests,
+          chosenId: "plank",
+          doneIds: tests,
+          seenDoneIds: ["goblet-squat", "deadlift"],
+        }),
+      ).toBe("plank");
+    });
+
+    it("stays on a test done out of order when it was the last one left", () => {
+      expect(
+        currentWorkoutExercise({
+          ids: tests,
+          seenIds: tests,
+          chosenId: "deadlift",
+          doneIds: ["goblet-squat", "plank", "deadlift"],
+          seenDoneIds: ["goblet-squat", "plank"],
+        }),
+      ).toBe("deadlift");
     });
   });
 });

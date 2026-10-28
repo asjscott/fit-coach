@@ -80,6 +80,11 @@ Schemas: packages/shared/src/assessments.ts; Set.rpe and Workout.assessment in w
   load reads it from there, not from the current profile.
 - **Only weighted tests are rated.** A bodyweight or timed test is one unrated Set to the most reps or seconds the user
   can do, and that Set is its maximum; the Logbook refuses an unrated weighted test Set.
+- **A done test takes no more Sets** (#52): the Logbook refuses one once `isTestDone` (a bodyweight or timed test's
+  one Set, or a top Set); load-limited needs the loads, so only the screen enforces it (`isTestFinished`). Correcting
+  or deleting the Set reopens the test. The current box swaps Log set for "Next test"; the Workout moves on by itself
+  when the open test becomes done (`currentWorkoutExercise`'s `seenDoneIds`), but a done test the user taps stays
+  open; Finish turns primary once every test is done.
 - **Load-limited means different things in the two places.** The Logbook ends a test only when a Set past 12 reps
   short of RPE 9 was at the heaviest load the Equipment Profile has (or the loads aren't known); `assess` has no loads,
   so any last Set past 12 reps without a top Set is load-limited.

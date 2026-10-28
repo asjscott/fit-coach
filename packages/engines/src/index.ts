@@ -2,7 +2,7 @@ export * from "./assess";
 export * from "./assessment-offer";
 export * from "./assessment-pairing";
 // The Logbook reports a test's protocol state, so `protocolState` itself isn't exported
-export { isRatedTest, TEST_REPS, type ProtocolState } from "./assessment-protocol";
+export { isRatedTest, isTestFinished, TEST_REPS, type ProtocolState } from "./assessment-protocol";
 export * from "./assessment-tests";
 export * from "./data/exercises";
 export * from "./e1rm";

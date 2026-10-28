@@ -1,4 +1,4 @@
-import { setCount, workoutVolume } from "@fit/engines";
+import { isTestFinished, setCount, workoutVolume } from "@fit/engines";
 import type { InProgressWorkout } from "@fit/shared";
 import { Stack as NavStack, router } from "expo-router";
 import { useState } from "react";
@@ -48,19 +48,20 @@ function InProgress({ workout }: { workout: InProgressWorkout }) {
   const leaveWorkout = useLeaveWorkout();
   const [confirmingDiscard, setConfirmingDiscard] = useState(false);
   const { workoutExercises } = workout;
-  // An Assessment Workout is followed in order, so it opens on the first test that isn't done
+  // An Assessment Workout is followed in order: it opens on the first test that isn't done, and moves on from each
+  // test once it's done
   const doneIds = workout.assessment
     ? workoutExercises
-        .filter((we) => {
-          const status = primaryEquipment && protocolState(workout, we, primaryEquipment).status;
-          return status === "done" || status === "load-limited";
-        })
+        .filter((we) => !!primaryEquipment && isTestFinished(protocolState(workout, we, primaryEquipment)))
         .map((we) => we.id)
     : null;
   const [currentId, choose] = useCurrentWorkoutExercise(
     workoutExercises.map((we) => we.id),
     doneIds,
   );
+  const nextTestId = doneIds && workoutExercises.find((we) => !doneIds.includes(we.id))?.id;
+  // Finish is the main button once every test is done; finishing early stays possible (untested Patterns)
+  const allTestsDone = !!doneIds && workoutExercises.length > 0 && nextTestId === undefined;
 
   return (
     <Screen padded={false} edges={["bottom"]}>
@@ -91,7 +92,12 @@ function InProgress({ workout }: { workout: InProgressWorkout }) {
           {workoutExercises.map((workoutExercise, i) =>
             workoutExercise.id === currentId ? (
               <View key={workoutExercise.id} style={styles.current}>
-                <CurrentExerciseBox workoutExercise={workoutExercise} position={i} count={workoutExercises.length} />
+                <CurrentExerciseBox
+                  workoutExercise={workoutExercise}
+                  position={i}
+                  count={workoutExercises.length}
+                  onNextTest={nextTestId ? () => choose(nextTestId) : undefined}
+                />
               </View>
             ) : (
               <WorkoutExerciseRow
@@ -119,7 +125,12 @@ function InProgress({ workout }: { workout: InProgressWorkout }) {
         )}
       </KeyboardAwareScrollView>
       <View style={[styles.footer, { borderTopColor: colors.line, backgroundColor: colors.bg }]}>
-        <LoadingButton label="Finish" action="secondary" href="/workout/finish" fullWidth />
+        <LoadingButton
+          label="Finish"
+          action={allTestsDone ? "primary" : "secondary"}
+          href="/workout/finish"
+          fullWidth
+        />
       </View>
       <ConfirmModal
         isOpen={confirmingDiscard}

@@ -754,6 +754,20 @@ describe("Logbook: Assessment Workouts", () => {
     expect(await logAndSuggest(16, 9)).toEqual({ status: "done" });
   });
 
+  it("refuses another Set once a weighted test has its top Set, until that Set is corrected", async () => {
+    const { logbook } = setup();
+    const workout = await logbook.startAssessment({ part: "A", equipmentProfile: dumbbellsOnly, ...user }, at("09:00"));
+    const squatId = workout.workoutExercises[0].id;
+    await logbook.logSet(squatId, { kind: "external", kg: 16, reps: 5, rpe: 9 }, at("09:05"));
+
+    await expect(logbook.logSet(squatId, { kind: "external", kg: 20, reps: 5, rpe: 9 }, at("09:06"))).rejects.toThrow(
+      "This test is done",
+    );
+    await logbook.editSet(squatId, 0, { kind: "external", kg: 16, reps: 5, rpe: 8 });
+    await logbook.logSet(squatId, { kind: "external", kg: 20, reps: 5, rpe: 9 }, at("09:07"));
+    expect((await logbook.inProgress())?.workoutExercises[0].sets).toHaveLength(2);
+  });
+
   it("ends the test as load-limited when the heaviest dumbbell passes 12 reps short of RPE 9", async () => {
     const { logbook } = setup();
     const workout = await logbook.startAssessment({ part: "A", equipmentProfile: dumbbellsOnly, ...user }, at("09:00"));
@@ -928,6 +942,21 @@ describe("Logbook: Assessment Workouts", () => {
       const logged = await logbook.logSet(pushUp.id, { kind: "bodyweight", reps: 18 }, at("09:05"));
       expect(logged.sets).toEqual([{ kind: "bodyweight", reps: 18, loggedAt: "2026-10-24T09:05:00.000Z" }]);
       expect(logbook.protocolState(workout, logged, bodyweightOnly)).toEqual({ status: "done" });
+    });
+
+    it("refuses a second Set on a bodyweight test", async () => {
+      const { logbook } = setup();
+      const workout = await logbook.startAssessment(
+        { part: "B", equipmentProfile: bodyweightOnly, ...user },
+        at("09:00"),
+      );
+      const [pushUp] = workout.workoutExercises;
+      await logbook.logSet(pushUp.id, { kind: "bodyweight", reps: 18 }, at("09:05"));
+
+      await expect(logbook.logSet(pushUp.id, { kind: "bodyweight", reps: 20 }, at("09:06"))).rejects.toThrow(
+        "This test is done",
+      );
+      expect((await logbook.inProgress())?.workoutExercises[0].sets).toHaveLength(1);
     });
 
     it("logs the plank's Set in seconds held, unrated", async () => {
