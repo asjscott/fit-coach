@@ -1,4 +1,4 @@
-import { isRatedTest, TEST_REPS, type ProtocolState } from "@fit/engines";
+import { exerciseLoadsKg, isRatedTest, TEST_REPS, type ProtocolState } from "@fit/engines";
 import { RPE_SCALE, type InProgressWorkoutExercise, type LoadType, type SetValues } from "@fit/shared";
 import { useState, type ReactNode } from "react";
 import { StyleSheet, View } from "react-native";
@@ -17,7 +17,7 @@ import { exerciseName, libraryExercise } from "../library";
 import { useLogbook } from "../logbook-provider";
 import { draftValues, setDraft, SET_FIELDS, type SetDraft } from "../set-entry";
 import { SetRow } from "./set-row";
-import { SetStepper } from "./set-stepper";
+import { SetStepper, type KgSteps } from "./set-stepper";
 import { WorkoutExerciseMenu } from "./workout-exercise-menu";
 
 export type CurrentExerciseBoxProps = {
@@ -31,7 +31,7 @@ export type CurrentExerciseBoxProps = {
 // steppers for the next Set, which starts from the previous one
 export function CurrentExerciseBox({ workoutExercise, position, count }: CurrentExerciseBoxProps) {
   const { colors } = useTheme();
-  const { workout, logSet, editSet, deleteSet, nextSetDraft, protocolState } = useLogbook();
+  const { workout, logSet, editSet, deleteSet, nextSetDraft, protocolState, nextLoadKg } = useLogbook();
   const primaryEquipment = usePrimaryEquipmentProfile();
   const { showToast } = useToast();
   // The Set being corrected, or null while logging a new one
@@ -48,6 +48,10 @@ export function CurrentExerciseBox({ workoutExercise, position, count }: Current
     workout?.assessment && primaryEquipment ? protocolState(workout, workoutExercise, primaryEquipment) : undefined;
   const note = protocol && protocolNote(protocol, sets.length, loadType);
   const asksRpe = !!workout && isRatedTest(workout, loadType);
+  const kgSteps: KgSteps = {
+    stepKg: (kg, direction) => nextLoadKg(slug, kg, direction, primaryEquipment),
+    loadsKnown: exerciseLoadsKg(slug, primaryEquipment).length > 0,
+  };
 
   return (
     <View style={[styles.box, { backgroundColor: colors.surface, borderColor: colors.accent }]}>
@@ -110,6 +114,7 @@ export function CurrentExerciseBox({ workoutExercise, position, count }: Current
           loadType={loadType}
           initial={editingSet}
           asksRpe={asksRpe}
+          kgSteps={kgSteps}
           submitLabel={`Save set ${editingIndex + 1}`}
           onSubmit={async (values) => {
             await editSet(id, editingIndex, values);
@@ -126,6 +131,7 @@ export function CurrentExerciseBox({ workoutExercise, position, count }: Current
           loadType={loadType}
           initial={nextSetDraft(workoutExercise, protocol)}
           asksRpe={asksRpe}
+          kgSteps={kgSteps}
           submitLabel={`Log set ${nextNumber}`}
           onSubmit={(values) => logSet(id, values)}
         />
@@ -205,6 +211,7 @@ type SetEntryProps = {
   initial: SetValues | null;
   // Asks how hard the Set felt, for an Assessment Workout's test Sets
   asksRpe?: boolean;
+  kgSteps: KgSteps;
   submitLabel: string;
   onSubmit: (values: SetValues) => Promise<void>;
   // Shown under the submit button, e.g. Cancel while editing
@@ -213,7 +220,16 @@ type SetEntryProps = {
 
 // "Set 3", one stepper per value the Load Type records, RPE chips when asked, and the button that logs or saves
 // the Set
-function SetEntry({ heading, loadType, initial, asksRpe = false, submitLabel, onSubmit, children }: SetEntryProps) {
+function SetEntry({
+  heading,
+  loadType,
+  initial,
+  asksRpe = false,
+  kgSteps,
+  submitLabel,
+  onSubmit,
+  children,
+}: SetEntryProps) {
   const { showToast } = useToast();
   const [draft, setDraftState] = useState<SetDraft>(() => setDraft(loadType, initial));
   const [rpe, setRpe] = useState<number | undefined>(initial?.rpe);
@@ -240,14 +256,15 @@ function SetEntry({ heading, loadType, initial, asksRpe = false, submitLabel, on
       <Text size="sm" color="muted" weight="semiBold">
         {heading}
       </Text>
-      {SET_FIELDS[loadType].map((field) => (
-        <SetStepper
-          key={field}
-          field={field}
-          value={draft[field] ?? ""}
-          onChange={(value) => setDraftState((prev) => ({ ...prev, [field]: value }))}
-        />
-      ))}
+      {SET_FIELDS[loadType].map((field) => {
+        const value = draft[field] ?? "";
+        const onChange = (text: string) => setDraftState((prev) => ({ ...prev, [field]: text }));
+        return field === "kg" ? (
+          <SetStepper key={field} field={field} value={value} onChange={onChange} {...kgSteps} />
+        ) : (
+          <SetStepper key={field} field={field} value={value} onChange={onChange} />
+        );
+      })}
       {asksRpe ? (
         <Stack spacing={2}>
           <Text size="sm" color="muted">

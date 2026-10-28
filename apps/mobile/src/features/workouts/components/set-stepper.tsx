@@ -1,36 +1,58 @@
+import type { StepDirection } from "@fit/engines";
+import { useEffect, useRef } from "react";
 import { StyleSheet } from "react-native";
 import { Icon, type IconName } from "@/components/icons";
 import { Input, InputField } from "@/components/input";
 import { Pressable } from "@/components/pressable";
 import { Text } from "@/components/text";
 import { bigNumber, radii, spacing, useTheme } from "@/theme";
-import { stepValue, STEPS, type SetField } from "../set-entry";
+import { startRepeating } from "../hold-to-repeat";
+import { kgStepLabel, stepValue, STEPS, type KgStep, type SetField } from "../set-entry";
 
 // The unit drawn beside each field, filled or not
 const UNITS: Record<SetField, string> = { kg: "kg", reps: "reps", seconds: "s" };
 
-// One step, for screen readers: "Plus 2 kg", "Minus 1 rep"
-const STEP_NAMES: Record<SetField, string> = {
-  kg: `${STEPS.kg} kg`,
+// One step of reps or seconds, for screen readers: "Plus 1 rep", "Minus 5 seconds"
+const STEP_NAMES: Record<Exclude<SetField, "kg">, string> = {
   reps: `${STEPS.reps} rep`,
   seconds: `${STEPS.seconds} seconds`,
 };
 
+export type KgSteps = {
+  stepKg: KgStep;
+  // Else kg steps by 2, and screen readers say so
+  loadsKnown: boolean;
+};
+
 export type SetStepperProps = {
-  field: SetField;
   // What's typed, e.g. "16.25"
   value: string;
   onChange: (value: string) => void;
-};
+} & (({ field: "kg" } & KgSteps) | { field: Exclude<SetField, "kg"> });
 
-// One Set value with − and + either side: kg by 2, reps by 1, seconds by 5. Any value can still be typed
-export function SetStepper({ field, value, onChange }: SetStepperProps) {
+// One Set value with − and + either side: kg to the next load, reps by 1, seconds by 5, repeating while held. Any
+// value can still be typed
+export function SetStepper(props: SetStepperProps) {
+  const { field, value, onChange } = props;
   const unit = UNITS[field];
-  const step = (direction: 1 | -1) => onChange(stepValue(field, value, direction));
+  // The latest value, so steps repeated while held build on each other before the parent re-renders
+  const latest = useRef(value);
+  latest.current = value;
+  const step = (direction: StepDirection) => {
+    latest.current =
+      props.field === "kg"
+        ? stepValue("kg", latest.current, direction, props.stepKg)
+        : stepValue(props.field, latest.current, direction);
+    onChange(latest.current);
+  };
+  const label = (direction: StepDirection) =>
+    props.field === "kg"
+      ? kgStepLabel(direction, props.loadsKnown)
+      : `${direction === 1 ? "Plus" : "Minus"} ${STEP_NAMES[props.field]}`;
 
   return (
     <Input size="xl" style={styles.root}>
-      <StepButton icon="minus" label={`Minus ${STEP_NAMES[field]}`} onPress={() => step(-1)} />
+      <StepButton icon="minus" label={label(-1)} onStep={() => step(-1)} />
       <InputField
         value={value}
         onChangeText={onChange}
@@ -43,18 +65,35 @@ export function SetStepper({ field, value, onChange }: SetStepperProps) {
       <Text color="muted" weight="medium" style={styles.unit} importantForAccessibility="no">
         {unit}
       </Text>
-      <StepButton icon="plus" label={`Plus ${STEP_NAMES[field]}`} onPress={() => step(1)} />
+      <StepButton icon="plus" label={label(1)} onStep={() => step(1)} />
     </Input>
   );
 }
 
-function StepButton({ icon, label, onPress }: { icon: IconName; label: string; onPress: () => void }) {
+// How long a press must last before it repeats; a shorter one is a tap
+const HOLD_DELAY = 400;
+
+// A tap (or a screen reader's activation, which is onPress) steps once; holding steps until release
+function StepButton({ icon, label, onStep }: { icon: IconName; label: string; onStep: () => void }) {
   const { colors } = useTheme();
+  const release = useRef<(() => void) | null>(null);
+  const stop = () => {
+    release.current?.();
+    release.current = null;
+  };
+  useEffect(() => stop, []);
+
   return (
     <Pressable
       accessibilityRole="button"
       accessibilityLabel={label}
-      onPress={onPress}
+      onPress={onStep}
+      delayLongPress={HOLD_DELAY}
+      onLongPress={() => {
+        stop();
+        release.current = startRepeating(onStep);
+      }}
+      onPressOut={stop}
       style={[styles.button, { backgroundColor: colors.raised }]}
     >
       <Icon name={icon} color="text" size={22} />

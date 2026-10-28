@@ -1,7 +1,7 @@
 import type { BodyProfile, InProgressWorkout, InProgressWorkoutExercise, LoadType, Set } from "@fit/shared";
 import { exerciseBySlug } from "./data/exercises";
 import { MAX_E1RM_REPS } from "./e1rm";
-import { availableLoadsKg, type ProfileWithLoads } from "./equipment";
+import { exerciseLoadsKg, type ProfileWithLoads } from "./equipment";
 import { exerciseMaximum, STRENGTH_RATIOS, typicalReferenceStrength } from "./strength-ratios";
 
 // Where a test Exercise is in its protocol, for the logging screen to render. The suggested load is null when the
@@ -54,7 +54,7 @@ export function protocolState(
   if (exercise && exercise.loadType !== "external") return sets.length ? { status: "done" } : { status: "one-set" };
   if (sets.some(isTopSet)) return { status: "done" };
   const last = sets.at(-1);
-  const loads = exercise ? availableLoadsKg(exercise, equipmentProfile) : [];
+  const loads = exerciseLoadsKg(slug, equipmentProfile);
   if (!last) return { status: "working-up", suggestedKg: exercise ? firstLoadKg(slug, loads, bodyProfile) : null };
   if (last.kind !== "external") return { status: "working-up", suggestedKg: null };
   // Past 12 reps short of RPE 9 ends the test only when there's no heavier load to try (or the loads aren't known)
