@@ -9,14 +9,23 @@ type Selection = {
   seenIds: readonly string[];
   // The current one last time, or null before there was one
   chosenId: string | null;
+  // An Assessment Workout is followed in order: the ids of its tests that are done. Null for a Manual Workout
+  doneIds: readonly string[] | null;
 };
 
-// A newly added Workout Exercise becomes current; otherwise the chosen one stays, or the last one when it's gone
-export function currentWorkoutExercise({ ids, seenIds, chosenId }: Selection): string | null {
+// Where the Workout opens when nothing is chosen: an Assessment Workout's first test that isn't done, otherwise the
+// last Workout Exercise
+function opening({ ids, doneIds }: Pick<Selection, "ids" | "doneIds">): string | null {
+  const notDone = doneIds && ids.find((id) => !doneIds.includes(id));
+  return notDone ?? ids[ids.length - 1] ?? null;
+}
+
+// A newly added Workout Exercise becomes current; otherwise the chosen one stays, or the opening one when it's gone
+export function currentWorkoutExercise({ ids, seenIds, chosenId, doneIds }: Selection): string | null {
   const added = ids.filter((id) => !seenIds.includes(id));
   if (added.length) return added[added.length - 1] ?? null;
   if (chosenId !== null && ids.includes(chosenId)) return chosenId;
-  return ids[ids.length - 1] ?? null;
+  return opening({ ids, doneIds });
 }
 
 const sameIds = (a: readonly string[], b: readonly string[]) =>
@@ -24,9 +33,9 @@ const sameIds = (a: readonly string[], b: readonly string[]) =>
 
 // The current Workout Exercise's id, and a way to choose another. Kept in step with the ids during render,
 // so a newly added Workout Exercise opens straight away
-export function useCurrentWorkoutExercise(ids: readonly string[]) {
-  const [selection, setSelection] = useState<Omit<Selection, "ids">>({ seenIds: ids, chosenId: null });
-  const currentId = currentWorkoutExercise({ ids, ...selection });
+export function useCurrentWorkoutExercise(ids: readonly string[], doneIds: readonly string[] | null) {
+  const [selection, setSelection] = useState<Pick<Selection, "seenIds" | "chosenId">>({ seenIds: ids, chosenId: null });
+  const currentId = currentWorkoutExercise({ ids, doneIds, ...selection });
   if (currentId !== selection.chosenId || !sameIds(ids, selection.seenIds)) {
     setSelection({ seenIds: ids, chosenId: currentId });
   }
