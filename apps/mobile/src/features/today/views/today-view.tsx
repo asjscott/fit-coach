@@ -66,7 +66,7 @@ export default function TodayView() {
         });
 
   return (
-    <Screen scroll edges={["top"]}>
+    <Screen scroll="screen" edges={["top"]}>
       <View style={{ gap: spacing[1] }}>
         <Text size="sm" weight="semiBold" color="muted">
           {now.toLocaleDateString([], { weekday: "long", day: "numeric", month: "long" })}

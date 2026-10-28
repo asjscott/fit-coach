@@ -56,7 +56,7 @@ function InProgress({ workout }: { workout: InProgressWorkout }) {
   const nextTestId = tests?.nextTestId;
 
   return (
-    <Screen padded={false} edges={["bottom"]}>
+    <Screen padded={false} scroll="content" edges={["bottom"]}>
       <NavStack.Screen
         options={{
           headerTitle: () => (

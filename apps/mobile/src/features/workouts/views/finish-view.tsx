@@ -82,7 +82,7 @@ export default function FinishView() {
   };
 
   return (
-    <Screen scroll edges={["bottom"]} contentStyle={{ flexGrow: 1 }}>
+    <Screen scroll="screen" edges={["bottom"]} contentStyle={{ flexGrow: 1 }}>
       <View style={styles.times}>
         <Text color="muted" style={{ flex: 1 }}>
           {relativeDateLabel(startedAt.toISOString())} – {timeLabel(endedAt.toISOString())}

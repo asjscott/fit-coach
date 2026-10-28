@@ -27,7 +27,7 @@ export default function ExerciseDetailView() {
   }
 
   return (
-    <Screen scroll edges={["bottom"]}>
+    <Screen scroll="screen" edges={["bottom"]}>
       <RouterStack.Screen options={{ title: exercise.name }} />
       <Stack spacing={5} flex>
         <Stack spacing={2}>

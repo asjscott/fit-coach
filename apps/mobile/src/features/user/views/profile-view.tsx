@@ -62,7 +62,7 @@ export default function ProfileView() {
   const { profile } = user;
 
   return (
-    <Screen scroll edges={["bottom"]}>
+    <Screen scroll="screen" edges={["bottom"]}>
       <Stack spacing={5}>
         <Section label="Training">
           <Row label="Goal" value={profile.goal && goalLabel(profile.goal)} />
