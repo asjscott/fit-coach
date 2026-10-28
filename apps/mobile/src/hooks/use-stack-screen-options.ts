@@ -5,9 +5,7 @@ export function useStackScreenOptions() {
   const { colors } = useTheme();
   return {
     contentStyle: { backgroundColor: colors.bg },
-    // On iOS 26 the header defaults to a translucent Liquid Glass bar that content scrolls under.
-    // Screens lay out from the top of their view (`Screen` drops the "top" edge under a header),
-    // so keep the header opaque and the content below it.
+    // Left unset, iOS 26 makes the header a translucent Liquid Glass bar with content laid out under it (#45)
     headerTransparent: false,
     headerShadowVisible: false,
     headerTitleStyle: { fontFamily: fonts.semiBold },
