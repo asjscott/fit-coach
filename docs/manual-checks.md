@@ -30,14 +30,11 @@ Expected: the custom tab closes and the app is signed in.
 
 Actual: the custom tab stays on "If you are not redirected automatically, tap Continue". Tapping Continue does nothing. The page's redirect is `mobile:///hosted-auth-callback?created_session_id=…`. Expo Go registers only `exp`, `exps` and its own schemes, not `mobile`, so nothing receives the callback. Sending the URL to Expo Go by hand (`adb shell am start -n host.exp.exponent/.LauncherActivity -d "mobile:///…"`) gives Expo Go's "Something went wrong" screen. It happens every time.
 
-Cause, as far as the run got: `src/app/(auth)/sign-in.tsx` calls `startHostedAuth({ mode })` with no `redirectUrl`. `app.json` sets no `android.package` or `ios.bundleIdentifier`, so `getDefaultRedirectUrl` in `@clerk/expo/dist/hooks/useHostedAuth.js` falls back to `AuthSession.makeRedirectUri({ path: "hosted-auth-callback" })`, which gives `mobile:///hosted-auth-callback` even in Expo Go. The same file notes that on Android the default redirect also needs the Clerk Expo config plugin, which only takes effect in a dev build.
+Cause, as far as the run got: `src/app/(auth)/sign-in.tsx` calls `startHostedAuth({ mode })` with no `redirectUrl`. `app.json` sets no `android.package` or `ios.bundleIdentifier`, so `getDefaultRedirectUrl` in `@clerk/expo/dist/hooks/useHostedAuth.js` falls back to `AuthSession.makeRedirectUri({ path: "hosted-auth-callback" })`, which uses `Linking.createURL`. That only gives `mobile:///…` when `Constants.executionEnvironment` isn't `"storeClient"`: in Expo Go it gives an `exp://` link. So the app was probably not detected as running in Expo Go; this is still to be confirmed on the device (#44). The same file notes that on Android the default redirect also needs the Clerk Expo config plugin, which only takes effect in a dev build.
 
 Not checked: whether a dev build (`npx expo run:android`, after adding `android.package`) signs in, and whether iOS Expo Go signs in. iOS's web auth session catches any custom scheme, so iOS may work.
 
-Possible fixes, still to be decided:
-
-- Pass an Expo Go-friendly `redirectUrl` (an `exp://…/--/hosted-auth-callback` from `Linking.createURL`) when running in Expo Go. Check that the Clerk instance allows that redirect.
-- Or drop Expo Go for this checklist: set `android.package` / `ios.bundleIdentifier`, use a dev build, and say so under "Run from" above.
+Passing an `exp://` `redirectUrl` from `Linking.createURL` in Expo Go was tried and didn't help: it is what Clerk already does there. The next steps are on #44. The fallback is still to drop Expo Go for this checklist: set `android.package` / `ios.bundleIdentifier`, use a dev build, and say so under "Run from" above.
 
 A test account was created on the Clerk dev instance during the run: `mc-dumbbells+clerk_test@example.com`. Its sign-up finished; only the hand-back to the app failed.
 

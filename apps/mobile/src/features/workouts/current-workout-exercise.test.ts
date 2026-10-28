@@ -35,4 +35,26 @@ describe("currentWorkoutExercise", () => {
       currentWorkoutExercise({ ids: ["squat", "row"], seenIds: ["squat", "plank", "row"], chosenId: "plank" }),
     ).toBe("row");
   });
+
+  describe("in an Assessment Workout", () => {
+    const tests = ["goblet-squat", "deadlift", "plank"];
+
+    it("opens on the next test, the first that isn't done", () => {
+      expect(currentWorkoutExercise({ ids: tests, seenIds: tests, chosenId: null, nextTestId: "deadlift" })).toBe(
+        "deadlift",
+      );
+    });
+
+    it("opens on the last test when every test is done", () => {
+      expect(currentWorkoutExercise({ ids: tests, seenIds: tests, chosenId: null, nextTestId: undefined })).toBe(
+        "plank",
+      );
+    });
+
+    it("stays on the open test once it's done, for Next test to move on", () => {
+      expect(
+        currentWorkoutExercise({ ids: tests, seenIds: tests, chosenId: "goblet-squat", nextTestId: "deadlift" }),
+      ).toBe("goblet-squat");
+    });
+  });
 });

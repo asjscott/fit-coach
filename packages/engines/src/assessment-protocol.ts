@@ -45,14 +45,34 @@ function firstLoadKg(slug: string, loads: number[], bodyProfile: BodyProfile | u
   return loads.filter((kg) => kg <= likelyMaximum * FIRST_LOAD_SHARE).at(-1) ?? loads[0];
 }
 
+// Done or load-limited; only done is known without the Equipment Profile's loads (hasTestResult)
+export const takesNoMoreSets = ({ status }: ProtocolState) => status === "done" || status === "load-limited";
+
+export function hasTestResult({ slug, sets }: Pick<InProgressWorkoutExercise, "slug" | "sets">): boolean {
+  const exercise = exerciseBySlug(slug);
+  if (exercise && exercise.loadType !== "external") return sets.length > 0;
+  return sets.some(isTopSet);
+}
+
+// An Assessment Workout is followed in order: the next test is the first that still takes Sets
+export type TestProgress = { nextTestId: string | undefined; allDone: boolean };
+
+export function testProgress(
+  { workoutExercises, bodyProfile }: Pick<InProgressWorkout, "workoutExercises" | "bodyProfile">,
+  equipmentProfile: ProfileWithLoads,
+): TestProgress {
+  const next = workoutExercises.find((we) => !takesNoMoreSets(protocolState(we, equipmentProfile, bodyProfile)));
+  return { nextTestId: next?.id, allDone: workoutExercises.length > 0 && !next };
+}
+
 export function protocolState(
   { slug, sets }: Pick<InProgressWorkoutExercise, "slug" | "sets">,
   equipmentProfile: ProfileWithLoads,
   bodyProfile: BodyProfile | undefined,
 ): ProtocolState {
+  if (hasTestResult({ slug, sets })) return { status: "done" };
   const exercise = exerciseBySlug(slug);
-  if (exercise && exercise.loadType !== "external") return sets.length ? { status: "done" } : { status: "one-set" };
-  if (sets.some(isTopSet)) return { status: "done" };
+  if (exercise && exercise.loadType !== "external") return { status: "one-set" };
   const last = sets.at(-1);
   const loads = exerciseLoadsKg(slug, equipmentProfile);
   if (!last) return { status: "working-up", suggestedKg: exercise ? firstLoadKg(slug, loads, bodyProfile) : null };
