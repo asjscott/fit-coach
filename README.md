@@ -44,13 +44,6 @@ cp apps/mobile/.env.example apps/mobile/.env
 Each example file says where its values come from: the connection string from MongoDB Atlas and the keys from the
 Clerk dashboard. A new database needs the exercise catalogue: `pnpm --filter @fit/api seed:exercises`.
 
-**Signing in from Expo Go.** In Expo Go the app asks Clerk to hand back to an Expo Go link,
-`exp://<dev-server-host>:<port>/--/hosted-auth-callback` (from `Linking.createURL`), because Expo Go can't receive
-the app's `mobile://` scheme. The Clerk dev instance must allow that link as a redirect URL, or sign-in fails in
-Expo Go. Add it in the Clerk dashboard (the redirect allowlist under the native application settings) for each dev
-server address you use: the host is the address Expo Go shows for the project, so it changes with the dev machine's
-network. Dev builds and production keep Clerk's default return link and need no extra entry.
-
 ### 4. Device tooling
 
 The quickest targets are the browser (press `w` in the Expo dev server) and
