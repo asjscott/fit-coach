@@ -30,6 +30,11 @@ export function draftValues(loadType: LoadType, draft: SetDraft): { values: SetV
   return { values: { kind: loadType, ...Object.fromEntries(numbers) } as SetValues };
 }
 
+// A rated test Set (an Assessment's weighted test) can't be logged without an RPE, so Log set waits for a chip
+export function rpeMissing(asksRpe: boolean, rpe: number | undefined): boolean {
+  return asksRpe && rpe === undefined;
+}
+
 // kg has no fixed step: it goes to the next load the Logbook gives (Logbook.nextLoadKg)
 export const STEPS: Record<Exclude<SetField, "kg">, number> = { reps: 1, seconds: 5 };
 

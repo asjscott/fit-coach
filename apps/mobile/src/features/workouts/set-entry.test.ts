@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { StepDirection } from "@fit/engines";
-import { draftValues, kgStepLabel, setDraft, stepValue } from "./set-entry";
+import { draftValues, kgStepLabel, rpeMissing, setDraft, stepValue } from "./set-entry";
 
 describe("stepValue", () => {
   // Stands in for the Logbook's next load: 10 kg a step, so it can't be mistaken for any other rule
@@ -85,5 +85,16 @@ describe("a Set draft", () => {
     expect(draftValues("external", { kg: "16.3", reps: "10" })).toEqual({
       values: { kind: "external", kg: 16.3, reps: 10 },
     });
+  });
+});
+
+describe("rpeMissing", () => {
+  it("holds back a rated test Set until an RPE is picked", () => {
+    expect(rpeMissing(true, undefined)).toBe(true);
+    expect(rpeMissing(true, 9)).toBe(false);
+  });
+
+  it("never holds back a Set that isn't rated", () => {
+    expect(rpeMissing(false, undefined)).toBe(false);
   });
 });
