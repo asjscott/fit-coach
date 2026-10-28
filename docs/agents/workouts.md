@@ -61,7 +61,8 @@ Starting (features/assessment/hooks/use-start-assessment.ts → Logbook.startAss
 Logging (features/workouts/components/current-exercise-box.tsx renders Logbook.protocolState as a banner, worded by
   protocol-note.ts, and Logbook.nextSetDraft)
   └─ protocolState (packages/engines/src/assessment-protocol.ts): first load, next load, at-heaviest, one-set, done,
-     load-limited; isRatedTest says which test Sets take an RPE (weighted only)
+     load-limited; isRatedTest says which test Sets take an RPE (weighted only); testProgress (the next test, all done)
+     for views/workout-view.tsx
 Server (apps/api/src/assessments.ts assessIfPaired, called by POST /workouts in routes/workouts.ts)
   ├─ pairToAssess (packages/engines/src/assessment-pairing.ts): which A and B make the Assessment; Today's offer shares
   │  its latestAssessmentWorkout
@@ -81,11 +82,12 @@ Schemas: packages/shared/src/assessments.ts; Set.rpe and Workout.assessment in w
   load reads it from there, not from the current profile.
 - **Only weighted tests are rated.** A bodyweight or timed test is one unrated Set to the most reps or seconds the user
   can do, and that Set is its maximum; the Logbook refuses an unrated weighted test Set.
-- **A done test takes no more Sets** (#52): the Logbook refuses one once `isTestDone` (a bodyweight or timed test's
-  one Set, or a top Set); load-limited needs the loads, so only the screen enforces it (`isTestFinished`). Correcting
-  or deleting the Set reopens the test. The current box swaps Log set for "Next test"; the Workout moves on by itself
-  when the open test becomes done (`currentWorkoutExercise`'s `seenDoneIds`), but a done test the user taps stays
-  open; Finish turns primary once every test is done.
+- **A done test takes no more Sets** (#52): the Logbook refuses one once `hasTestResult` (a bodyweight or timed test's
+  one Set, or a top Set); load-limited needs the loads, so only the screen enforces it (`takesNoMoreSets`). Correcting
+  or deleting the Set reopens the test. `Logbook.testProgress` gives the next test (the first that still takes Sets)
+  and whether all are done. The Workout opens on the next test (#49), but never moves by itself: a test that becomes
+  done stays open with its Done banner and "Next test" in place of Log set (#52, #53). Finish turns primary once every
+  test is done.
 - **Load-limited means different things in the two places.** The Logbook ends a test only when a Set past 12 reps
   short of RPE 9 was at the heaviest load the Equipment Profile has (or the loads aren't known); `assess` has no loads,
   so any last Set past 12 reps without a top Set is load-limited.

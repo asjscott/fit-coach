@@ -1,4 +1,4 @@
-import { isTestFinished, setCount, workoutVolume } from "@fit/engines";
+import { setCount, workoutVolume } from "@fit/engines";
 import type { InProgressWorkout } from "@fit/shared";
 import { Stack as NavStack, router } from "expo-router";
 import { useState } from "react";
@@ -42,26 +42,18 @@ export default function WorkoutView() {
 
 function InProgress({ workout }: { workout: InProgressWorkout }) {
   const { colors } = useTheme();
-  const { discard, protocolState } = useLogbook();
+  const { discard, testProgress } = useLogbook();
   const primaryEquipment = usePrimaryEquipmentProfile();
   const { showToast } = useToast();
   const leaveWorkout = useLeaveWorkout();
   const [confirmingDiscard, setConfirmingDiscard] = useState(false);
   const { workoutExercises } = workout;
-  // An Assessment Workout is followed in order: it opens on the first test that isn't done, and moves on from each
-  // test once it's done
-  const doneIds = workout.assessment
-    ? workoutExercises
-        .filter((we) => !!primaryEquipment && isTestFinished(protocolState(workout, we, primaryEquipment)))
-        .map((we) => we.id)
-    : null;
+  const tests = workout.assessment && primaryEquipment ? testProgress(workout, primaryEquipment) : undefined;
   const [currentId, choose] = useCurrentWorkoutExercise(
     workoutExercises.map((we) => we.id),
-    doneIds,
+    tests?.nextTestId,
   );
-  const nextTestId = doneIds && workoutExercises.find((we) => !doneIds.includes(we.id))?.id;
-  // Finish is the main button once every test is done; finishing early stays possible (untested Patterns)
-  const allTestsDone = !!doneIds && workoutExercises.length > 0 && nextTestId === undefined;
+  const nextTestId = tests?.nextTestId;
 
   return (
     <Screen padded={false} edges={["bottom"]}>
@@ -125,9 +117,10 @@ function InProgress({ workout }: { workout: InProgressWorkout }) {
         )}
       </KeyboardAwareScrollView>
       <View style={[styles.footer, { borderTopColor: colors.line, backgroundColor: colors.bg }]}>
+        {/* Finish is the main button once every test is done; finishing early stays possible (untested Patterns) */}
         <LoadingButton
           label="Finish"
-          action={allTestsDone ? "primary" : "secondary"}
+          action={tests?.allDone ? "primary" : "secondary"}
           href="/workout/finish"
           fullWidth
         />

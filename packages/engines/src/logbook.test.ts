@@ -785,6 +785,23 @@ describe("Logbook: Assessment Workouts", () => {
     expect(await log(20, 13, 8)).toEqual({ status: "load-limited" });
   });
 
+  it("reports the next test as the first one without a result, skipping done and load-limited tests", async () => {
+    const { logbook } = setup();
+    const started = await logbook.startAssessment({ part: "A", equipmentProfile: dumbbellsOnly, ...user }, at("09:00"));
+    const [squat, hinge, core] = started.workoutExercises;
+    const progress = async () => logbook.testProgress((await logbook.inProgress())!, dumbbellsOnly);
+
+    expect(await progress()).toEqual({ nextTestId: squat.id, allDone: false });
+    // The hinge is done out of order; the squat is still next
+    await logbook.logSet(hinge.id, { kind: "external", kg: 16, reps: 5, rpe: 9 }, at("09:05"));
+    expect(await progress()).toEqual({ nextTestId: squat.id, allDone: false });
+    // Past 12 reps at the heaviest dumbbell ends the squat as load-limited
+    await logbook.logSet(squat.id, { kind: "external", kg: 20, reps: 13, rpe: 8 }, at("09:10"));
+    expect(await progress()).toEqual({ nextTestId: core.id, allDone: false });
+    await logbook.logSet(core.id, { kind: "timed", seconds: 60 }, at("09:15"));
+    expect(await progress()).toEqual({ nextTestId: undefined, allDone: true });
+  });
+
   it("suggests a heavier dumbbell when a lighter one passes 12 reps short of RPE 9", async () => {
     const { logbook } = setup();
     const workout = await logbook.startAssessment({ part: "A", equipmentProfile: dumbbellsOnly, ...user }, at("09:00"));

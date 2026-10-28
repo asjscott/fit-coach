@@ -1,4 +1,4 @@
-import { exerciseLoadsKg, isRatedTest, isTestFinished } from "@fit/engines";
+import { exerciseLoadsKg, isRatedTest, takesNoMoreSets } from "@fit/engines";
 import { RPE_SCALE, type InProgressWorkoutExercise, type LoadType, type SetValues } from "@fit/shared";
 import { useState, type ReactNode } from "react";
 import { StyleSheet, View } from "react-native";
@@ -52,7 +52,7 @@ export function CurrentExerciseBox({ workoutExercise, position, count, onNextTes
   const protocol =
     workout?.assessment && primaryEquipment ? protocolState(workout, workoutExercise, primaryEquipment) : undefined;
   const note = protocol && protocolNote(protocol, sets.length, loadType, { nextTest: !!onNextTest });
-  const testFinished = !!protocol && isTestFinished(protocol);
+  const testFinished = !!protocol && takesNoMoreSets(protocol);
   const asksRpe = !!workout && isRatedTest(workout, loadType);
   const kgSteps: KgSteps = {
     stepKg: (kg, direction) => nextLoadKg(slug, kg, direction, primaryEquipment),

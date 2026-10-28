@@ -16,6 +16,8 @@ type LogbookContextValue = {
   startAssessment: (options: AssessmentOptions) => Promise<void>;
   // For a test Exercise of an Assessment Workout: the suggested next load, or done
   protocolState: Logbook["protocolState"];
+  // For an Assessment Workout: its next test, and whether every test is done
+  testProgress: Logbook["testProgress"];
   addWorkoutExercise: (exercise: Pick<Exercise, "slug" | "loadType">) => Promise<void>;
   removeWorkoutExercise: (workoutExerciseId: string) => Promise<void>;
   logSet: (workoutExerciseId: string, values: SetValues) => Promise<void>;
@@ -197,6 +199,7 @@ export function LogbookProvider({ children }: { children: ReactNode }) {
         start,
         startAssessment,
         protocolState: logbook.protocolState,
+        testProgress: logbook.testProgress,
         addWorkoutExercise,
         removeWorkoutExercise,
         logSet,
