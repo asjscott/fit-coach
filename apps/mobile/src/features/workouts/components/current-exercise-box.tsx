@@ -1,4 +1,4 @@
-import { isRatedTest, TEST_REPS, type ProtocolState } from "@fit/engines";
+import { exerciseLoadsKg, isRatedTest, TEST_REPS, type ProtocolState } from "@fit/engines";
 import { RPE_SCALE, type InProgressWorkoutExercise, type LoadType, type SetValues } from "@fit/shared";
 import { useState, type ReactNode } from "react";
 import { StyleSheet, View } from "react-native";
@@ -15,9 +15,9 @@ import { errorMessage } from "@/utils/error-message";
 import { describeSet, previousSetsLabel } from "../format";
 import { exerciseName, libraryExercise } from "../library";
 import { useLogbook } from "../logbook-provider";
-import { draftValues, setDraft, SET_FIELDS, type KgStep, type SetDraft } from "../set-entry";
+import { draftValues, setDraft, SET_FIELDS, type SetDraft } from "../set-entry";
 import { SetRow } from "./set-row";
-import { SetStepper } from "./set-stepper";
+import { SetStepper, type KgSteps } from "./set-stepper";
 import { WorkoutExerciseMenu } from "./workout-exercise-menu";
 
 export type CurrentExerciseBoxProps = {
@@ -48,8 +48,10 @@ export function CurrentExerciseBox({ workoutExercise, position, count }: Current
     workout?.assessment && primaryEquipment ? protocolState(workout, workoutExercise, primaryEquipment) : undefined;
   const note = protocol && protocolNote(protocol, sets.length, loadType);
   const asksRpe = !!workout && isRatedTest(workout, loadType);
-  // kg steps through the loads the primary Equipment Profile makes for this Exercise, in any Workout
-  const stepKg: KgStep = (kg, direction) => nextLoadKg(slug, kg, direction, primaryEquipment);
+  const kgSteps: KgSteps = {
+    stepKg: (kg, direction) => nextLoadKg(slug, kg, direction, primaryEquipment),
+    loadsKnown: exerciseLoadsKg(slug, primaryEquipment).length > 0,
+  };
 
   return (
     <View style={[styles.box, { backgroundColor: colors.surface, borderColor: colors.accent }]}>
@@ -112,7 +114,7 @@ export function CurrentExerciseBox({ workoutExercise, position, count }: Current
           loadType={loadType}
           initial={editingSet}
           asksRpe={asksRpe}
-          stepKg={stepKg}
+          kgSteps={kgSteps}
           submitLabel={`Save set ${editingIndex + 1}`}
           onSubmit={async (values) => {
             await editSet(id, editingIndex, values);
@@ -129,7 +131,7 @@ export function CurrentExerciseBox({ workoutExercise, position, count }: Current
           loadType={loadType}
           initial={nextSetDraft(workoutExercise, protocol)}
           asksRpe={asksRpe}
-          stepKg={stepKg}
+          kgSteps={kgSteps}
           submitLabel={`Log set ${nextNumber}`}
           onSubmit={(values) => logSet(id, values)}
         />
@@ -209,7 +211,7 @@ type SetEntryProps = {
   initial: SetValues | null;
   // Asks how hard the Set felt, for an Assessment Workout's test Sets
   asksRpe?: boolean;
-  stepKg: KgStep;
+  kgSteps: KgSteps;
   submitLabel: string;
   onSubmit: (values: SetValues) => Promise<void>;
   // Shown under the submit button, e.g. Cancel while editing
@@ -223,7 +225,7 @@ function SetEntry({
   loadType,
   initial,
   asksRpe = false,
-  stepKg,
+  kgSteps,
   submitLabel,
   onSubmit,
   children,
@@ -254,15 +256,15 @@ function SetEntry({
       <Text size="sm" color="muted" weight="semiBold">
         {heading}
       </Text>
-      {SET_FIELDS[loadType].map((field) => (
-        <SetStepper
-          key={field}
-          field={field}
-          value={draft[field] ?? ""}
-          onChange={(value) => setDraftState((prev) => ({ ...prev, [field]: value }))}
-          stepKg={stepKg}
-        />
-      ))}
+      {SET_FIELDS[loadType].map((field) => {
+        const value = draft[field] ?? "";
+        const onChange = (text: string) => setDraftState((prev) => ({ ...prev, [field]: text }));
+        return field === "kg" ? (
+          <SetStepper key={field} field={field} value={value} onChange={onChange} {...kgSteps} />
+        ) : (
+          <SetStepper key={field} field={field} value={value} onChange={onChange} />
+        );
+      })}
       {asksRpe ? (
         <Stack spacing={2}>
           <Text size="sm" color="muted">

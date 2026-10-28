@@ -23,7 +23,7 @@ type LogbookContextValue = {
   deleteSet: (workoutExerciseId: string, setIndex: number) => Promise<void>;
   // The values a new Set starts with: a test's suggested load, else the last Set's, or null for the first
   nextSetDraft: Logbook["nextSetDraft"];
-  // Where the kg stepper goes on − or +: the next load the primary Equipment Profile makes for the Exercise
+  // Where the kg stepper goes on − or +
   nextLoadKg: Logbook["nextLoadKg"];
   // Ends the Workout with these times, resolving as soon as it is a Pending Workout, then
   // tries to upload it (see FinishOutcome). Resolves to "nothing-to-save" with no Sets,

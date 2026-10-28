@@ -1,4 +1,5 @@
 import type { EquipmentProfile, EquipmentTag, Exercise, InjuryTag } from "@fit/shared";
+import { exerciseBySlug } from "./data/exercises";
 
 // Owning one item means owning another, e.g. a power rack includes a pull-up bar
 const IMPLIES: Partial<Record<EquipmentTag, EquipmentTag[]>> = {
@@ -65,12 +66,20 @@ export function availableLoadsKg(exercise: Pick<Exercise, "equipmentOptions">, p
   return [...new Set(loads)].sort((a, b) => a - b);
 }
 
-// The kg stepper's step when the loads aren't known
+// By slug, for callers that hold only a Workout Exercise; empty when either the Exercise or the profile is unknown
+export function exerciseLoadsKg(slug: string, profile: ProfileWithLoads | undefined): number[] {
+  const exercise = exerciseBySlug(slug);
+  return exercise && profile ? availableLoadsKg(exercise, profile) : [];
+}
+
+// −1 for lighter, fewer or shorter; 1 for heavier, more or longer
+export type StepDirection = 1 | -1;
+
+// Matches the 2 kg the stepper took before it knew the equipment (#58)
 export const UNKNOWN_LOADS_STEP_KG = 2;
 
-// One tap of the kg stepper's − (-1) or + (1) from `kg`: the next lighter or heavier of the loads, staying put past
-// the lightest or heaviest. By 2 kg, never below 0, when the loads aren't known
-export function stepLoadKg(kg: number, direction: 1 | -1, loadsKg: number[]): number {
+// Past the lightest or heaviest load there's nothing to step to, so kg stays put rather than leaving the equipment
+export function stepLoadKg(kg: number, direction: StepDirection, loadsKg: number[]): number {
   if (!loadsKg.length) return Math.max(0, kg + UNKNOWN_LOADS_STEP_KG * direction);
   const next = direction === 1 ? loadsKg.find((load) => load > kg) : loadsKg.filter((load) => load < kg).at(-1);
   return next ?? kg;

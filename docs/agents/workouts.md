@@ -37,9 +37,10 @@ Schemas shared by app and API: packages/shared/src/workouts.ts
 - **Exercises come from the library built into the app** (`EXERCISES` in `@fit/engines`), not `/exercises`, so the picker
   works offline; an unknown slug is shown as-is (`exerciseName`).
 - **The kg stepper steps through real loads** (#58): `Logbook.nextLoadKg` gives the next lighter or heavier load the
-  primary Equipment Profile makes for the Exercise (`availableLoadsKg`, the same loads the Assessment suggests from;
+  primary Equipment Profile makes for the Exercise (`exerciseLoadsKg`, the same loads the Assessment suggests from;
   rule in `stepLoadKg`, `packages/engines/src/equipment.ts`), staying put past the lightest or heaviest, and by 2 kg
-  when the loads aren't known. `set-entry.ts` only parses the typed text and steps reps (1) and seconds (5).
+  when the loads aren't known. `set-entry.ts` only parses the typed text, steps reps (1) and seconds (5), and names
+  the kg step for screen readers (`kgStepLabel`: "Next heavier weight", or "Plus 2 kg" when the loads aren't known).
 - **New native modules need a new development build** (`expo-sqlite`, `expo-network` so far). Add dependencies with
   `npx expo install` and check the SDK 58 docs first (`apps/mobile/AGENTS.md`).
 

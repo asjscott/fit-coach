@@ -981,6 +981,19 @@ describe("Logbook: the next load for the kg stepper", () => {
     expect(logbook.nextLoadKg("goblet-squat", 12.5, -1, home)).toBe(10);
   });
 
+  it("steps through the same dumbbells in an Assessment Workout's test", async () => {
+    const { logbook } = setup();
+    const workout = await logbook.startAssessment(
+      { part: "A", equipmentProfile: home, injuries: [], bodyProfile: { weightKg: 80, gender: "male" } },
+      at("09:00"),
+    );
+    const test = workout.workoutExercises[0].slug;
+
+    expect(test).toBe("goblet-squat");
+    expect(logbook.nextLoadKg(test, 10, 1, home)).toBe(12.5);
+    expect(logbook.nextLoadKg(test, 10, -1, home)).toBe(8);
+  });
+
   it("steps through bar plus plate pairs", () => {
     const { logbook } = setup();
     const gym: EquipmentProfile = {

@@ -13,8 +13,7 @@ import {
 import type { z } from "zod";
 import { isRatedTest, protocolState, TEST_REPS, type ProtocolState } from "./assessment-protocol";
 import { canAssess, chooseTests, partTests } from "./assessment-tests";
-import { exerciseBySlug } from "./data/exercises";
-import { availableLoadsKg, stepLoadKg, type ProfileWithLoads } from "./equipment";
+import { exerciseLoadsKg, stepLoadKg, type ProfileWithLoads, type StepDirection } from "./equipment";
 import { previousSets } from "./training-summaries";
 
 // Strings by key: SQLite on the phone, localStorage on web, a Map in tests
@@ -312,13 +311,9 @@ export function createLogbook({
       equipmentProfile: ProfileWithLoads,
     ) => protocolState(workoutExercise, equipmentProfile, bodyProfile),
 
-    // One tap of the kg stepper's − (-1) or + (1) from `kg`, in any Workout: the next lighter or heavier load the
-    // primary Equipment Profile makes for the Exercise
-    nextLoadKg: (slug: string, kg: number, direction: 1 | -1, equipmentProfile: ProfileWithLoads | undefined) => {
-      const exercise = exerciseBySlug(slug);
-      const loads = exercise && equipmentProfile ? availableLoadsKg(exercise, equipmentProfile) : [];
-      return stepLoadKg(kg, direction, loads);
-    },
+    // The Logbook rather than the screen decides, so Manual and Assessment Workouts step through the same loads (#58)
+    nextLoadKg: (slug: string, kg: number, direction: StepDirection, equipmentProfile: ProfileWithLoads | undefined) =>
+      stepLoadKg(kg, direction, exerciseLoadsKg(slug, equipmentProfile)),
 
     // Turns the in-progress Workout into a Pending Workout; sync() uploads it. Workout
     // Exercises with no Sets are dropped; with no Sets at all there is nothing to save,
