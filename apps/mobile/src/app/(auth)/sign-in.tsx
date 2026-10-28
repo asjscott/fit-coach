@@ -14,9 +14,8 @@ import { Text } from "@/components/text";
 import { hostedAuthRedirectUrl } from "@/features/auth/hosted-auth-redirect";
 import { errorMessage } from "@/utils/error-message";
 
-// On Android, opens Account Portal in a Custom Tab directly rather than through expo-web-browser's proxy activity.
-// The proxy's task outlives a sign-in that returns by link, and the next sign-in brings that finished tab back
-// instead of opening a new one (#44). Clerk passes these on to openAuthSessionAsync but only types some of them
+// expo-web-browser's proxy activity outlives an Android sign-in that returns by link, and the next sign-in reopens
+// its finished tab (#44). Clerk passes these options on but only types some of them.
 const AUTH_SESSION_OPTIONS: AuthSessionOpenOptions = { useProxyActivity: false };
 
 export default function SignInScreen() {

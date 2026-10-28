@@ -1,7 +1,8 @@
-// The return link to pass to Clerk's startHostedAuth, or undefined to keep Clerk's default.
-// Expo Go only receives exp:// links, not the app's mobile:// scheme, so in Expo Go the Account Portal hands back to
-// the dev server's exp://…/--/hosted-auth-callback. Clerk and Linking.createURL can't be left to build it: they spot
-// Expo Go by Constants.executionEnvironment, which Expo Go on Android reports as "bare" (#44)
+// Where Account Portal hands back to after a native sign-in; Clerk reads the link, so no screen shows it
+export const HOSTED_AUTH_CALLBACK = "hosted-auth-callback";
+
+// Expo Go only receives exp:// links, and Clerk can't tell it's in Expo Go on Android, where Expo Go reports
+// executionEnvironment "bare" (#44). Undefined keeps Clerk's default
 export function hostedAuthRedirectUrl({
   inExpoGo,
   hostUri,
@@ -10,5 +11,5 @@ export function hostedAuthRedirectUrl({
   // The dev server's address, e.g. "10.0.0.6:8081"
   hostUri: string | undefined;
 }): string | undefined {
-  return inExpoGo && hostUri ? `exp://${hostUri}/--/hosted-auth-callback` : undefined;
+  return inExpoGo && hostUri ? `exp://${hostUri}/--/${HOSTED_AUTH_CALLBACK}` : undefined;
 }

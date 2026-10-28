@@ -37,8 +37,7 @@ export function Screen({
       {children}
     </KeyboardAwareScrollView>
   ) : scrollsItself || Platform.OS === "web" ? (
-    // The children's scroll view dismisses the keyboard. On web there's no on-screen keyboard to dismiss, and a click
-    // on an input would bubble up here and blur it
+    // On web there's no on-screen keyboard to dismiss, and a click on an input would bubble up here and blur it
     <View style={[styles.fill, content]}>{children}</View>
   ) : (
     // Tapping empty space dismisses the keyboard
