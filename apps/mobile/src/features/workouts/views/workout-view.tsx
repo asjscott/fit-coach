@@ -14,6 +14,7 @@ import { Stack } from "@/components/stack";
 import { Stat } from "@/components/stat";
 import { Text } from "@/components/text";
 import { useToast } from "@/contexts/toast-context";
+import { usePrimaryEquipmentProfile } from "@/features/user/current-user-provider";
 import { useNow } from "@/hooks/use-now";
 import { fonts, spacing, useTheme } from "@/theme";
 import { errorMessage } from "@/utils/error-message";
@@ -41,12 +42,25 @@ export default function WorkoutView() {
 
 function InProgress({ workout }: { workout: InProgressWorkout }) {
   const { colors } = useTheme();
-  const { discard } = useLogbook();
+  const { discard, protocolState } = useLogbook();
+  const primaryEquipment = usePrimaryEquipmentProfile();
   const { showToast } = useToast();
   const leaveWorkout = useLeaveWorkout();
   const [confirmingDiscard, setConfirmingDiscard] = useState(false);
   const { workoutExercises } = workout;
-  const [currentId, choose] = useCurrentWorkoutExercise(workoutExercises.map((we) => we.id));
+  // An Assessment Workout is followed in order, so it opens on the first test that isn't done
+  const doneIds = workout.assessment
+    ? workoutExercises
+        .filter((we) => {
+          const status = primaryEquipment && protocolState(workout, we, primaryEquipment).status;
+          return status === "done" || status === "load-limited";
+        })
+        .map((we) => we.id)
+    : null;
+  const [currentId, choose] = useCurrentWorkoutExercise(
+    workoutExercises.map((we) => we.id),
+    doneIds,
+  );
 
   return (
     <Screen padded={false} edges={["bottom"]}>
