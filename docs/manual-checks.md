@@ -126,7 +126,7 @@ Gathered from the on-phone acceptance criteria of #35–#39 and the review fixes
 - [ticj] **A2** You can't add, remove or reorder its Exercises.
   - Result: Pass· Notes:
 - [tick] **A3** The first suggested load is one of your dumbbells, and it feels light.
-  - Result: Fail· Notes: Starts with the heaviest load
+  - Result: Pass· Notes: Starts with the heaviest load, 10 kg. Not a bug (#50): it was already below half the likely maximum, so it's the right first load.
 - [tick] **A4** Each Set needs an RPE chip (6–10).
   - Result: Pass· Notes: Log set should be disabled until RPE is selected
 - [tick] **A5** After each Set, the hint reads like "Next: 14 kg × 5, then rate it" and moves through your actual dumbbells.
