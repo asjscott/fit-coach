@@ -1,7 +1,8 @@
-import { exerciseLoadsKg, isRatedTest, isTestFinished, TEST_REPS, type ProtocolState } from "@fit/engines";
+import { exerciseLoadsKg, isRatedTest, isTestFinished } from "@fit/engines";
 import { RPE_SCALE, type InProgressWorkoutExercise, type LoadType, type SetValues } from "@fit/shared";
 import { useState, type ReactNode } from "react";
 import { StyleSheet, View } from "react-native";
+import { Alert, AlertIcon, AlertText } from "@/components/alert";
 import { ConfirmModal } from "@/components/choice-modal";
 import { Chip } from "@/components/chip";
 import { LoadingButton } from "@/components/loading-button";
@@ -12,9 +13,10 @@ import { useToast } from "@/contexts/toast-context";
 import { usePrimaryEquipmentProfile } from "@/features/user/current-user-provider";
 import { fonts, radii, spacing, useTheme } from "@/theme";
 import { errorMessage } from "@/utils/error-message";
-import { describeSet, previousSetsLabel } from "../format";
+import { previousSetsLabel } from "../format";
 import { exerciseName, libraryExercise } from "../library";
 import { useLogbook } from "../logbook-provider";
+import { protocolNote } from "../protocol-note";
 import { draftValues, rpeMissing, setDraft, SET_FIELDS, type SetDraft } from "../set-entry";
 import { SetRow } from "./set-row";
 import { SetStepper, type KgSteps } from "./set-stepper";
@@ -49,7 +51,7 @@ export function CurrentExerciseBox({ workoutExercise, position, count, onNextTes
   // In an Assessment Workout every Exercise is a test, and the Logbook says what it asks for next
   const protocol =
     workout?.assessment && primaryEquipment ? protocolState(workout, workoutExercise, primaryEquipment) : undefined;
-  const note = protocol && protocolNote(protocol, sets.length, loadType);
+  const note = protocol && protocolNote(protocol, sets.length, loadType, { nextTest: !!onNextTest });
   const testFinished = !!protocol && isTestFinished(protocol);
   const asksRpe = !!workout && isRatedTest(workout, loadType);
   const kgSteps: KgSteps = {
@@ -79,9 +81,13 @@ export function CurrentExerciseBox({ workoutExercise, position, count, onNextTes
         </Text>
       ) : null}
       {note ? (
-        <Text size="sm" color={note.finished ? "accent" : "muted"} style={styles.note}>
-          {note.text}
-        </Text>
+        // A banner, so what the test asks for next is easy to see between Sets
+        <Alert action={note.finished ? "success" : "info"} style={styles.banner}>
+          <AlertIcon />
+          <AlertText size="md" weight="semiBold">
+            {note.text}
+          </AlertText>
+        </Alert>
       ) : null}
 
       {sets.length > 0 ? (
@@ -171,47 +177,6 @@ export function CurrentExerciseBox({ workoutExercise, position, count, onNextTes
       <View style={styles.restSlot} />
     </View>
   );
-}
-
-// What the test asks for next, and whether it's finished: Sets of 5 working up to RPE 9, the heaviest load for as many
-// reps as possible (past 12 ends it as load-limited), or a bodyweight or timed test's one Set to the maximum
-function protocolNote(
-  protocol: ProtocolState,
-  setCount: number,
-  loadType: LoadType,
-): { text: string; finished: boolean } {
-  const workingUp = (text: string) => ({ text, finished: false });
-  switch (protocol.status) {
-    case "done":
-      return { text: "Done: that Set was your top Set. On to the next test.", finished: true };
-    case "load-limited":
-      return {
-        text: "Done: past 12 reps at your heaviest load. Your result is a lower bound, limited by your equipment.",
-        finished: true,
-      };
-    case "one-set":
-      return workingUp(
-        loadType === "timed"
-          ? "One Set: hold as long as you can with good form, then log the seconds."
-          : "One Set: as many reps as you can with good form.",
-      );
-    case "at-heaviest":
-      return workingUp(
-        `${protocol.suggestedKg} kg is your heaviest: as many reps as you can to RPE 9. Past 12 reps ends the test.`,
-      );
-    case "working-up": {
-      const kg = protocol.suggestedKg;
-      if (setCount === 0) {
-        const start = kg === null ? "Start light." : `Start at ${kg} kg.`;
-        return workingUp(`Sets of ${TEST_REPS}, adding weight each Set until one is RPE 9. ${start}`);
-      }
-      return workingUp(
-        kg === null
-          ? `Add weight for the next Set of ${TEST_REPS}`
-          : `Next: ${describeSet({ kind: "external", kg, reps: TEST_REPS })}, then rate it`,
-      );
-    }
-  }
 }
 
 type SetEntryProps = {
@@ -305,6 +270,7 @@ const styles = StyleSheet.create({
   title: { flex: 1, paddingTop: spacing[1] },
   name: { fontFamily: fonts.bold, fontSize: 22, lineHeight: 28, letterSpacing: -0.3 },
   note: { marginTop: spacing[1] },
+  banner: { marginTop: spacing[3] },
   sets: { marginTop: spacing[3] },
   entry: { marginTop: spacing[4] },
   restSlot: { height: 44, marginTop: spacing[3] },

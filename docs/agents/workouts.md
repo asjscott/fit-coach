@@ -58,7 +58,8 @@ Starting (features/assessment/hooks/use-start-assessment.ts → Logbook.startAss
   └─ chooseTests (packages/engines/src/assessment-tests.ts): ranked list per Pattern, first available and safe;
      partTests (a part's tests in order, and its untested Patterns), canAssess, ASSESSMENT_PATTERNS, testedPatternOf,
      referencePatternOf (carry follows hinge)
-Logging (features/workouts/components/current-exercise-box.tsx renders Logbook.protocolState and Logbook.nextSetDraft)
+Logging (features/workouts/components/current-exercise-box.tsx renders Logbook.protocolState as a banner, worded by
+  protocol-note.ts, and Logbook.nextSetDraft)
   └─ protocolState (packages/engines/src/assessment-protocol.ts): first load, next load, at-heaviest, one-set, done,
      load-limited; isRatedTest says which test Sets take an RPE (weighted only)
 Server (apps/api/src/assessments.ts assessIfPaired, called by POST /workouts in routes/workouts.ts)
