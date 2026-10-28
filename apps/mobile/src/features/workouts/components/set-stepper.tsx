@@ -1,3 +1,4 @@
+import type { StepDirection } from "@fit/engines";
 import { useEffect, useRef } from "react";
 import { StyleSheet } from "react-native";
 import { Icon, type IconName } from "@/components/icons";
@@ -6,42 +7,52 @@ import { Pressable } from "@/components/pressable";
 import { Text } from "@/components/text";
 import { bigNumber, radii, spacing, useTheme } from "@/theme";
 import { startRepeating } from "../hold-to-repeat";
-import { stepValue, STEPS, type KgStep, type SetField } from "../set-entry";
+import { kgStepLabel, stepValue, STEPS, type KgStep, type SetField } from "../set-entry";
 
 // The unit drawn beside each field, filled or not
 const UNITS: Record<SetField, string> = { kg: "kg", reps: "reps", seconds: "s" };
 
-// One step, for screen readers: "Plus 1 rep", "Minus 5 seconds", "Plus one load"
-const STEP_NAMES: Record<SetField, string> = {
-  kg: "one load",
+// One step of reps or seconds, for screen readers: "Plus 1 rep", "Minus 5 seconds"
+const STEP_NAMES: Record<Exclude<SetField, "kg">, string> = {
   reps: `${STEPS.reps} rep`,
   seconds: `${STEPS.seconds} seconds`,
 };
 
+export type KgSteps = {
+  stepKg: KgStep;
+  // Else kg steps by 2, and screen readers say so
+  loadsKnown: boolean;
+};
+
 export type SetStepperProps = {
-  field: SetField;
   // What's typed, e.g. "16.25"
   value: string;
   onChange: (value: string) => void;
-  // Where kg goes on − or +: the Logbook's next load
-  stepKg: KgStep;
-};
+} & (({ field: "kg" } & KgSteps) | { field: Exclude<SetField, "kg"> });
 
 // One Set value with − and + either side: kg to the next load, reps by 1, seconds by 5, repeating while held. Any
 // value can still be typed
-export function SetStepper({ field, value, onChange, stepKg }: SetStepperProps) {
+export function SetStepper(props: SetStepperProps) {
+  const { field, value, onChange } = props;
   const unit = UNITS[field];
   // The latest value, so steps repeated while held build on each other before the parent re-renders
   const latest = useRef(value);
   latest.current = value;
-  const step = (direction: 1 | -1) => {
-    latest.current = stepValue(field, latest.current, direction, stepKg);
+  const step = (direction: StepDirection) => {
+    latest.current =
+      props.field === "kg"
+        ? stepValue("kg", latest.current, direction, props.stepKg)
+        : stepValue(props.field, latest.current, direction);
     onChange(latest.current);
   };
+  const label = (direction: StepDirection) =>
+    props.field === "kg"
+      ? kgStepLabel(direction, props.loadsKnown)
+      : `${direction === 1 ? "Plus" : "Minus"} ${STEP_NAMES[props.field]}`;
 
   return (
     <Input size="xl" style={styles.root}>
-      <StepButton icon="minus" label={`Minus ${STEP_NAMES[field]}`} onStep={() => step(-1)} />
+      <StepButton icon="minus" label={label(-1)} onStep={() => step(-1)} />
       <InputField
         value={value}
         onChangeText={onChange}
@@ -54,7 +65,7 @@ export function SetStepper({ field, value, onChange, stepKg }: SetStepperProps) 
       <Text color="muted" weight="medium" style={styles.unit} importantForAccessibility="no">
         {unit}
       </Text>
-      <StepButton icon="plus" label={`Plus ${STEP_NAMES[field]}`} onStep={() => step(1)} />
+      <StepButton icon="plus" label={label(1)} onStep={() => step(1)} />
     </Input>
   );
 }
