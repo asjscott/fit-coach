@@ -176,8 +176,10 @@ export function ActionsheetDragIndicatorWrapper({ children }: { children?: React
   );
 }
 
-// On web, a touch drag here would otherwise scroll the page instead of reaching the gesture
-const webNoScroll = Platform.OS === "web" ? ({ touchAction: "none", cursor: "grab" } as ViewStyle) : undefined;
+// On web, a touch drag here would otherwise scroll the page instead of reaching the gesture. Web-only CSS, which
+// React Native's style types don't know ("grab" isn't one of its cursors)
+const webNoScroll =
+  Platform.OS === "web" ? ({ touchAction: "none", cursor: "grab" } as unknown as ViewStyle) : undefined;
 
 export function ActionsheetDragIndicator() {
   const styles = useThemedStyles(createActionsheetStyles);
