@@ -15,7 +15,7 @@ import { errorMessage } from "@/utils/error-message";
 import { describeSet, previousSetsLabel } from "../format";
 import { exerciseName, libraryExercise } from "../library";
 import { useLogbook } from "../logbook-provider";
-import { draftValues, setDraft, SET_FIELDS, type SetDraft } from "../set-entry";
+import { draftValues, rpeMissing, setDraft, SET_FIELDS, type SetDraft } from "../set-entry";
 import { SetRow } from "./set-row";
 import { SetStepper, type KgSteps } from "./set-stepper";
 import { WorkoutExerciseMenu } from "./workout-exercise-menu";
@@ -277,7 +277,14 @@ function SetEntry({
           </HStack>
         </Stack>
       ) : null}
-      <LoadingButton label={submitLabel} size="lg" loading={saving} onPress={handleSubmit} fullWidth />
+      <LoadingButton
+        label={submitLabel}
+        size="lg"
+        loading={saving}
+        disabled={rpeMissing(asksRpe, rpe)}
+        onPress={handleSubmit}
+        fullWidth
+      />
       {children}
     </Stack>
   );
