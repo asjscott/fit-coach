@@ -963,3 +963,58 @@ describe("Logbook: Assessment Workouts", () => {
     });
   });
 });
+
+describe("Logbook: the next load for the kg stepper", () => {
+  const home: EquipmentProfile = {
+    id: "home",
+    name: "Home",
+    location: "home",
+    isPrimary: true,
+    tags: ["dumbbells"],
+    loads: { dumbbells: { kind: "fixed", weightsKg: [8, 10, 12.5, 16, 20] } },
+  };
+
+  it("steps through the dumbbells the primary Equipment Profile has", () => {
+    const { logbook } = setup();
+
+    expect(logbook.nextLoadKg("goblet-squat", 12.5, 1, home)).toBe(16);
+    expect(logbook.nextLoadKg("goblet-squat", 12.5, -1, home)).toBe(10);
+  });
+
+  it("steps through bar plus plate pairs", () => {
+    const { logbook } = setup();
+    const gym: EquipmentProfile = {
+      ...home,
+      tags: ["barbell", "plates", "squat_rack"],
+      loads: { barbell: { barKg: 20, platesKg: [5, 10] } },
+    };
+
+    // A pair of 5s, a pair of 10s, then a 10 and a 5 each side
+    expect(logbook.nextLoadKg("back-squat", 20, 1, gym)).toBe(30);
+    expect(logbook.nextLoadKg("back-squat", 30, 1, gym)).toBe(40);
+    expect(logbook.nextLoadKg("back-squat", 50, -1, gym)).toBe(40);
+  });
+
+  it("goes from a typed value to the nearest load below or above it", () => {
+    const { logbook } = setup();
+
+    expect(logbook.nextLoadKg("goblet-squat", 13.25, 1, home)).toBe(16);
+    expect(logbook.nextLoadKg("goblet-squat", 13.25, -1, home)).toBe(12.5);
+  });
+
+  it("stays put at the heaviest load and at the lightest", () => {
+    const { logbook } = setup();
+
+    expect(logbook.nextLoadKg("goblet-squat", 20, 1, home)).toBe(20);
+    expect(logbook.nextLoadKg("goblet-squat", 8, -1, home)).toBe(8);
+  });
+
+  it("steps by 2 kg, never below 0, when the primary Equipment Profile has no loads for the Exercise", () => {
+    const { logbook } = setup();
+    const bodyweightOnly: EquipmentProfile = { ...home, tags: [], loads: {} };
+
+    expect(logbook.nextLoadKg("goblet-squat", 12.5, 1, bodyweightOnly)).toBe(14.5);
+    expect(logbook.nextLoadKg("goblet-squat", 12.5, -1, undefined)).toBe(10.5);
+    expect(logbook.nextLoadKg("not-in-the-library", 1, -1, home)).toBe(0);
+  });
+});

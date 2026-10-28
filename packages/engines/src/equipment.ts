@@ -65,6 +65,17 @@ export function availableLoadsKg(exercise: Pick<Exercise, "equipmentOptions">, p
   return [...new Set(loads)].sort((a, b) => a - b);
 }
 
+// The kg stepper's step when the loads aren't known
+export const UNKNOWN_LOADS_STEP_KG = 2;
+
+// One tap of the kg stepper's − (-1) or + (1) from `kg`: the next lighter or heavier of the loads, staying put past
+// the lightest or heaviest. By 2 kg, never below 0, when the loads aren't known
+export function stepLoadKg(kg: number, direction: 1 | -1, loadsKg: number[]): number {
+  if (!loadsKg.length) return Math.max(0, kg + UNKNOWN_LOADS_STEP_KG * direction);
+  const next = direction === 1 ? loadsKg.find((load) => load > kg) : loadsKg.filter((load) => load < kg).at(-1);
+  return next ?? kg;
+}
+
 export function isSafeFor(exercise: Pick<Exercise, "avoidWith">, injuries: InjuryTag[]): boolean {
   return !exercise.avoidWith.some((tag) => injuries.includes(tag));
 }

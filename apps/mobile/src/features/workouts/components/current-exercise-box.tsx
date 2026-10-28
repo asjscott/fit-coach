@@ -15,7 +15,7 @@ import { errorMessage } from "@/utils/error-message";
 import { describeSet, previousSetsLabel } from "../format";
 import { exerciseName, libraryExercise } from "../library";
 import { useLogbook } from "../logbook-provider";
-import { draftValues, setDraft, SET_FIELDS, type SetDraft } from "../set-entry";
+import { draftValues, setDraft, SET_FIELDS, type KgStep, type SetDraft } from "../set-entry";
 import { SetRow } from "./set-row";
 import { SetStepper } from "./set-stepper";
 import { WorkoutExerciseMenu } from "./workout-exercise-menu";
@@ -31,7 +31,7 @@ export type CurrentExerciseBoxProps = {
 // steppers for the next Set, which starts from the previous one
 export function CurrentExerciseBox({ workoutExercise, position, count }: CurrentExerciseBoxProps) {
   const { colors } = useTheme();
-  const { workout, logSet, editSet, deleteSet, nextSetDraft, protocolState } = useLogbook();
+  const { workout, logSet, editSet, deleteSet, nextSetDraft, protocolState, nextLoadKg } = useLogbook();
   const primaryEquipment = usePrimaryEquipmentProfile();
   const { showToast } = useToast();
   // The Set being corrected, or null while logging a new one
@@ -48,6 +48,8 @@ export function CurrentExerciseBox({ workoutExercise, position, count }: Current
     workout?.assessment && primaryEquipment ? protocolState(workout, workoutExercise, primaryEquipment) : undefined;
   const note = protocol && protocolNote(protocol, sets.length, loadType);
   const asksRpe = !!workout && isRatedTest(workout, loadType);
+  // kg steps through the loads the primary Equipment Profile makes for this Exercise, in any Workout
+  const stepKg: KgStep = (kg, direction) => nextLoadKg(slug, kg, direction, primaryEquipment);
 
   return (
     <View style={[styles.box, { backgroundColor: colors.surface, borderColor: colors.accent }]}>
@@ -110,6 +112,7 @@ export function CurrentExerciseBox({ workoutExercise, position, count }: Current
           loadType={loadType}
           initial={editingSet}
           asksRpe={asksRpe}
+          stepKg={stepKg}
           submitLabel={`Save set ${editingIndex + 1}`}
           onSubmit={async (values) => {
             await editSet(id, editingIndex, values);
@@ -126,6 +129,7 @@ export function CurrentExerciseBox({ workoutExercise, position, count }: Current
           loadType={loadType}
           initial={nextSetDraft(workoutExercise, protocol)}
           asksRpe={asksRpe}
+          stepKg={stepKg}
           submitLabel={`Log set ${nextNumber}`}
           onSubmit={(values) => logSet(id, values)}
         />
@@ -205,6 +209,7 @@ type SetEntryProps = {
   initial: SetValues | null;
   // Asks how hard the Set felt, for an Assessment Workout's test Sets
   asksRpe?: boolean;
+  stepKg: KgStep;
   submitLabel: string;
   onSubmit: (values: SetValues) => Promise<void>;
   // Shown under the submit button, e.g. Cancel while editing
@@ -213,7 +218,16 @@ type SetEntryProps = {
 
 // "Set 3", one stepper per value the Load Type records, RPE chips when asked, and the button that logs or saves
 // the Set
-function SetEntry({ heading, loadType, initial, asksRpe = false, submitLabel, onSubmit, children }: SetEntryProps) {
+function SetEntry({
+  heading,
+  loadType,
+  initial,
+  asksRpe = false,
+  stepKg,
+  submitLabel,
+  onSubmit,
+  children,
+}: SetEntryProps) {
   const { showToast } = useToast();
   const [draft, setDraftState] = useState<SetDraft>(() => setDraft(loadType, initial));
   const [rpe, setRpe] = useState<number | undefined>(initial?.rpe);
@@ -246,6 +260,7 @@ function SetEntry({ heading, loadType, initial, asksRpe = false, submitLabel, on
           field={field}
           value={draft[field] ?? ""}
           onChange={(value) => setDraftState((prev) => ({ ...prev, [field]: value }))}
+          stepKg={stepKg}
         />
       ))}
       {asksRpe ? (

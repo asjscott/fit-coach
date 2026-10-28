@@ -29,8 +29,11 @@ export function draftValues(loadType: LoadType, draft: SetDraft): { values: SetV
   return { values: { kind: loadType, ...Object.fromEntries(numbers) } as SetValues };
 }
 
-// One tap of − or +
-export const STEPS: Record<SetField, number> = { kg: 2, reps: 1, seconds: 5 };
+// One tap of − or + for reps and seconds. kg goes to the next load the Logbook gives (Logbook.nextLoadKg)
+export const STEPS: Record<Exclude<SetField, "kg">, number> = { reps: 1, seconds: 5 };
+
+// The kg after one tap of − (-1) or + (1) from `kg`
+export type KgStep = (kg: number, direction: 1 | -1) => number;
 
 // The smallest amount each field records: weights in 0.25 kg steps, reps and seconds whole
 const RESOLUTION: Record<SetField, number> = { kg: 0.25, reps: 1, seconds: 1 };
@@ -43,10 +46,12 @@ export function parseField(text: string): number {
 
 const roundTo = (value: number, resolution: number) => Math.round(value / resolution) * resolution;
 
-// The field's text after one tap of − (-1) or + (1). Steps from the typed value, first rounded to what the
-// field records; from nothing when the field is empty or not a number; never below zero
-export function stepValue(field: SetField, text: string, direction: 1 | -1): string {
+// The field's text after one tap of − (-1) or + (1): kg by `stepKg`, reps and seconds by STEPS. Steps from the typed
+// value, first rounded to what the field records; from nothing when the field is empty or not a number; never below
+// zero
+export function stepValue(field: SetField, text: string, direction: 1 | -1, stepKg: KgStep): string {
   const typed = parseField(text);
   const from = Number.isFinite(typed) ? roundTo(typed, RESOLUTION[field]) : 0;
-  return String(Math.max(0, from + STEPS[field] * direction));
+  const to = field === "kg" ? stepKg(from, direction) : from + STEPS[field] * direction;
+  return String(Math.max(0, to));
 }

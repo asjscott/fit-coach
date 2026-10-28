@@ -6,14 +6,14 @@ import { Pressable } from "@/components/pressable";
 import { Text } from "@/components/text";
 import { bigNumber, radii, spacing, useTheme } from "@/theme";
 import { startRepeating } from "../hold-to-repeat";
-import { stepValue, STEPS, type SetField } from "../set-entry";
+import { stepValue, STEPS, type KgStep, type SetField } from "../set-entry";
 
 // The unit drawn beside each field, filled or not
 const UNITS: Record<SetField, string> = { kg: "kg", reps: "reps", seconds: "s" };
 
-// One step, for screen readers: "Plus 2 kg", "Minus 1 rep"
+// One step, for screen readers: "Plus 1 rep", "Minus 5 seconds", "Plus one load"
 const STEP_NAMES: Record<SetField, string> = {
-  kg: `${STEPS.kg} kg`,
+  kg: "one load",
   reps: `${STEPS.reps} rep`,
   seconds: `${STEPS.seconds} seconds`,
 };
@@ -23,17 +23,19 @@ export type SetStepperProps = {
   // What's typed, e.g. "16.25"
   value: string;
   onChange: (value: string) => void;
+  // Where kg goes on − or +: the Logbook's next load
+  stepKg: KgStep;
 };
 
-// One Set value with − and + either side: kg by 2, reps by 1, seconds by 5, repeating while held. Any value can
-// still be typed
-export function SetStepper({ field, value, onChange }: SetStepperProps) {
+// One Set value with − and + either side: kg to the next load, reps by 1, seconds by 5, repeating while held. Any
+// value can still be typed
+export function SetStepper({ field, value, onChange, stepKg }: SetStepperProps) {
   const unit = UNITS[field];
   // The latest value, so steps repeated while held build on each other before the parent re-renders
   const latest = useRef(value);
   latest.current = value;
   const step = (direction: 1 | -1) => {
-    latest.current = stepValue(field, latest.current, direction);
+    latest.current = stepValue(field, latest.current, direction, stepKg);
     onChange(latest.current);
   };
 
