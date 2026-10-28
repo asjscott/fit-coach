@@ -8,6 +8,9 @@ import { KeyboardAwareScrollView } from "../keyboard-aware-scroll-view";
 export type ScreenProps = {
   children: ReactNode;
   scroll?: boolean;
+  // The children bring their own scroll view or list, which dismisses the keyboard itself. Tap-to-dismiss would wrap
+  // it in a Pressable, which takes drags that start on anything not pressable, so it wouldn't scroll (#63)
+  scrollsItself?: boolean;
   // Lift content above the keyboard on non-scrolling screens with inputs
   keyboardAvoiding?: boolean;
   padded?: boolean;
@@ -20,6 +23,7 @@ export type ScreenProps = {
 export function Screen({
   children,
   scroll = false,
+  scrollsItself = false,
   keyboardAvoiding = false,
   padded = true,
   edges = ["top", "bottom"],
@@ -32,8 +36,9 @@ export function Screen({
     <KeyboardAwareScrollView contentContainerStyle={[styles.scrollContent, content]}>
       {children}
     </KeyboardAwareScrollView>
-  ) : Platform.OS === "web" ? (
-    // No on-screen keyboard to dismiss, and a click on an input would bubble up here and blur it
+  ) : scrollsItself || Platform.OS === "web" ? (
+    // The children's scroll view dismisses the keyboard. On web there's no on-screen keyboard to dismiss, and a click
+    // on an input would bubble up here and blur it
     <View style={[styles.fill, content]}>{children}</View>
   ) : (
     // Tapping empty space dismisses the keyboard

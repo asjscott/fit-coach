@@ -35,7 +35,7 @@ export default function HistoryView() {
   const weeks = historyByWeek(rows).map((week) => ({ ...week, data: week.workouts }));
 
   return (
-    <Screen padded={false} edges={["bottom"]}>
+    <Screen padded={false} scrollsItself edges={["bottom"]}>
       <SectionList
         sections={weeks}
         keyExtractor={(workout) => workout.id}
