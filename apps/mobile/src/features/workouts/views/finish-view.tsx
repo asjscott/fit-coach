@@ -11,7 +11,7 @@ import { useToast } from "@/contexts/toast-context";
 import { spacing, useTheme } from "@/theme";
 import { DateTimeField } from "../components/date-time-field";
 import { NothingToSaveModal } from "../components/nothing-to-save-modal";
-import { kgLabel, relativeDateLabel, setsLabel, timeLabel, timeStat } from "../format";
+import { kgLabel, setsLabel, timeStat, workoutWhenLabel } from "../format";
 import { useHasEnded } from "../hooks/use-has-ended";
 import { useLeaveWorkout } from "../hooks/use-leave-workout";
 import { exerciseName } from "../library";
@@ -85,7 +85,7 @@ export default function FinishView() {
     <Screen scroll="screen" edges={["bottom"]} contentStyle={{ flexGrow: 1 }}>
       <View style={styles.times}>
         <Text color="muted" style={{ flex: 1 }}>
-          {relativeDateLabel(startedAt.toISOString())} – {timeLabel(endedAt.toISOString())}
+          {workoutWhenLabel({ startedAt: startedAt.toISOString(), endedAt: endedAt.toISOString() })}
         </Text>
         <LoadingButton
           label={isEditingTimes ? "Done" : "Edit times"}

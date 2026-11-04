@@ -27,10 +27,12 @@ export type SetRowProps = {
   actions?: SetRowActions;
 };
 
-// A logged Set in a list, its values as big numbers and small units: "Set 1   16 kg × 10 per side"
+// A logged Set in a list, its values as big numbers and small units: "Set 1   16 kg × 10 per side". Always one line, so
+// the row keeps its height: the open row gives the tick and "Set" up to the buttons, and long values shrink to fit
 export function SetRow({ set, index, unilateral = false, editing = false, actions }: SetRowProps) {
   const { colors } = useTheme();
   const number = index + 1;
+  const open = actions?.open ?? false;
 
   return (
     <View
@@ -38,16 +40,16 @@ export function SetRow({ set, index, unilateral = false, editing = false, action
       accessibilityLabel={`Set ${number}, ${describeSet(set)}${unilateral ? " per side" : ""}`}
       style={[styles.row, { borderTopColor: colors.line }]}
     >
-      {actions ? <Icon name="check" color="accent" size={18} /> : null}
+      {actions && !open ? <Icon name="check" color="accent" size={18} /> : null}
       <Text
         size="sm"
         color={editing ? "accent" : "subtle"}
         weight={editing ? "semiBold" : "regular"}
-        style={styles.label}
+        style={!open && styles.label}
       >
-        Set {number}
+        {open ? number : `Set ${number}`}
       </Text>
-      <Text style={styles.values}>
+      <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.6} style={styles.values}>
         {setParts(set).map(([value, unit], i) => (
           <Text key={i}>
             <Text style={styles.number}>{value}</Text>
@@ -64,12 +66,12 @@ export function SetRow({ set, index, unilateral = false, editing = false, action
           </Text>
         ) : null}
       </Text>
-      {!actions ? null : actions.open ? (
-        <>
+      {!actions ? null : open ? (
+        <View style={styles.buttons}>
           <RowButton icon="pencil" label={`Edit set ${number}`} active={editing} onPress={actions.onEdit} />
           <RowButton icon="trash" label={`Delete set ${number}`} color="danger" onPress={actions.onDelete} />
           <RowButton icon="check" label={`Done with set ${number}`} onPress={actions.onClose} />
-        </>
+        </View>
       ) : (
         <RowButton icon="ellipsis" label={`Set ${number} actions`} color="text" onPress={actions.onOpen} />
       )}
@@ -117,5 +119,6 @@ const styles = StyleSheet.create({
   values: { flex: 1 },
   number: { ...bigNumber(26), lineHeight: 32 },
   unit: { fontFamily: fonts.medium, fontSize: 14 },
+  buttons: { flexDirection: "row" },
   button: { width: 44, height: 44, borderRadius: radii.sm, alignItems: "center", justifyContent: "center" },
 });
