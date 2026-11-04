@@ -20,7 +20,7 @@ import { UserWeightField } from "@/features/user/components/form/fields/user-wei
 import { useUserOnboarding, type OnboardingValues } from "../hooks/use-user-onboarding";
 import { CompleteStage, FormStage, StagedForm } from "./staged-form";
 
-export function UserOnboardingForm() {
+export function UserOnboardingForm({ exit }: { exit: { label: string; onPress: () => void } }) {
   const { onboardingForm, stage, onStageChange, onSubmit, isSaving, isEditing } = useUserOnboarding();
   // Which optional stages show depends on earlier answers. useWatch rather than
   // watch(), which the React Compiler memoizes and so never updates
@@ -44,6 +44,7 @@ export function UserOnboardingForm() {
           onStageChange={onStageChange}
           onSubmit={onSubmit}
           isSubmitting={isSaving}
+          exit={exit}
           renderComplete={() =>
             isEditing ? (
               <CompleteStage title="Profile updated" message="Your plan will use your new answers." />

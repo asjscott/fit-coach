@@ -1,11 +1,8 @@
 import { Controller, useFormContext } from "react-hook-form";
-import { Card } from "@/components/card";
+import { ChoiceCards } from "@/components/choice-cards";
 import { FormControl } from "@/components/form-control";
 import { RHFHelperText, RHFLabel } from "@/components/hook-form";
-import { Icon, type IconName } from "@/components/icons";
-import { Pressable } from "@/components/pressable";
-import { HStack, Stack } from "@/components/stack";
-import { Text } from "@/components/text";
+import type { IconName } from "@/components/icons";
 import { TrainingSetup } from "@/features/equipment/training-setup";
 
 const setupDetails: Record<TrainingSetup, { label: string; description: string; icon: IconName }> = {
@@ -27,33 +24,7 @@ export function TrainingSetupField({ label }: { label?: string }) {
       render={({ field, fieldState: { error } }) => (
         <FormControl isInvalid={!!error} isRequired>
           <RHFLabel label={label} />
-          <Stack spacing={3} accessibilityRole="radiogroup">
-            {trainingSetupOptions.map((option) => {
-              const selected = field.value === option.value;
-              return (
-                <Pressable
-                  key={option.value}
-                  accessibilityRole="radio"
-                  accessibilityState={{ checked: selected }}
-                  onPress={() => field.onChange(option.value)}
-                >
-                  <Card size="lg" selected={selected}>
-                    <HStack spacing={4}>
-                      <Icon name={option.icon} color={selected ? "accent" : "muted"} />
-                      <Stack flex spacing={1}>
-                        <Text size="lg" weight="semiBold">
-                          {option.label}
-                        </Text>
-                        <Text size="sm" color="muted">
-                          {option.description}
-                        </Text>
-                      </Stack>
-                    </HStack>
-                  </Card>
-                </Pressable>
-              );
-            })}
-          </Stack>
+          <ChoiceCards options={trainingSetupOptions} value={field.value} onChange={field.onChange} />
           <RHFHelperText error={error?.message} />
         </FormControl>
       )}

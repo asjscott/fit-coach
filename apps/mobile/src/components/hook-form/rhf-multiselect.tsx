@@ -18,7 +18,7 @@ import { RHFHelperText } from "./rhf-helper-text";
 import { RHFLabel } from "./rhf-label";
 import type { Option, RHFFieldProps } from "./types";
 
-export type RHFMultiSelectProps = RHFFieldProps & { options: Option[]; placeholder?: string };
+export type RHFMultiSelectProps = RHFFieldProps & { options: Option[]; placeholder?: string; inline?: boolean };
 
 const MAX_CHARS = 30;
 const MAX_ITEMS = 2;
@@ -50,6 +50,7 @@ export function RHFMultiSelect({
   disabled,
   options,
   placeholder = "Select options",
+  inline,
 }: RHFMultiSelectProps) {
   const { control } = useFormContext();
   return (
@@ -62,7 +63,13 @@ export function RHFMultiSelect({
           field.onChange(selected.includes(value) ? selected.filter((v) => v !== value) : [...selected, value]);
 
         return (
-          <FormControl isInvalid={!!error} isReadOnly={readOnly} isDisabled={disabled} isRequired={required}>
+          <FormControl
+            isInvalid={!!error}
+            isReadOnly={readOnly}
+            isDisabled={disabled}
+            isRequired={required}
+            inline={inline}
+          >
             <RHFLabel label={label} />
             <Select>
               <SelectTrigger>
