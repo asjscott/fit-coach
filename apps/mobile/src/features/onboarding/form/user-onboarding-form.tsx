@@ -8,7 +8,7 @@ import { EquipmentPresetsField } from "@/features/equipment/components/form/fiel
 import { EquipmentTagsField } from "@/features/equipment/components/form/fields/equipment-tags-field";
 import { TrainingSetupField } from "@/features/equipment/components/form/fields/training-setup-field";
 import { EquipmentLoadsField } from "@/features/equipment/components/form/fields/equipment-loads-field";
-import { hasLoadTags } from "@/features/equipment/loads";
+import { loadScreens } from "@/features/equipment/loads";
 import { asksForLoads, selectableGroups, selectedTags } from "@/features/equipment/training-setup";
 import { UserBirthYearField } from "@/features/user/components/form/fields/user-birth-year-field";
 import { UserDaysPerWeekField } from "@/features/user/components/form/fields/user-days-per-week-field";
@@ -29,7 +29,7 @@ export function UserOnboardingForm({ exit }: { exit: { label: string; onPress: (
   const tags = selectedTags(trainingSetup, equipment);
   // Gym has everything and no equipment has nothing, so neither is asked to pick
   const picksEquipment = trainingSetup === "home" || trainingSetup === "bodyweight";
-  const asksLoads = asksForLoads(trainingSetup) && hasLoadTags(tags);
+  const weightScreens = asksForLoads(trainingSetup) ? loadScreens(tags) : [];
 
   return (
     <>
@@ -98,15 +98,16 @@ export function UserOnboardingForm({ exit }: { exit: { label: string; onPress: (
               <EquipmentTagsField groups={selectableGroups[trainingSetup]} />
             </FormStage>
           )}
-          {asksLoads && (
+          {weightScreens.map((screenTags) => (
             <FormStage<OnboardingValues>
+              key={screenTags.join()}
               fields={["loads"]}
               title="What weights do you have?"
               message="So we can pick the right loads. Skip anything you're not sure of."
             >
-              <EquipmentLoadsField tags={tags} />
+              <EquipmentLoadsField tags={screenTags} />
             </FormStage>
-          )}
+          ))}
           <FormStage<OnboardingValues>
             fields={["injuries"]}
             title="Any injuries?"

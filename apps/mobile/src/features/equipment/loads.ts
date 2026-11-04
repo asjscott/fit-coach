@@ -12,7 +12,30 @@ export const bandLevelLabels: Record<BandLevel, string> = {
   extra_heavy: "Extra heavy",
 };
 
-export const hasLoadTags = (tags: EquipmentTag[]) => loadTags.some((tag) => tags.includes(tag));
+// A weights stage holds this many rows of questions and still fits on the smallest phone (#71)
+const MAX_LOAD_ROWS = 3;
+
+// Dumbbells ask their kind then their weights; a barbell asks its weight then the plates
+const loadRows = (tag: LoadTag, tags: EquipmentTag[]) =>
+  tag === "dumbbells" || (tag === "barbell" && tags.includes("plates")) ? 2 : 1;
+
+// The equipment each weights stage asks about, in order, moving to another stage only when the next piece won't fit.
+// Plates go with their barbell. Empty when there's nothing to ask
+export function loadScreens(tags: EquipmentTag[]): EquipmentTag[][] {
+  const screens: { rows: number; tags: EquipmentTag[] }[] = [];
+  for (const tag of loadTags.filter((tag) => tags.includes(tag))) {
+    const rows = loadRows(tag, tags);
+    const screenTags: EquipmentTag[] = tag === "barbell" && tags.includes("plates") ? [tag, "plates"] : [tag];
+    const last = screens.at(-1);
+    if (last && last.rows + rows <= MAX_LOAD_ROWS) {
+      last.rows += rows;
+      last.tags.push(...screenTags);
+    } else {
+      screens.push({ rows, tags: screenTags });
+    }
+  }
+  return screens.map((screen) => screen.tags);
+}
 
 // Common sizes offered in the dropdowns
 export const dumbbellWeightsKg = [

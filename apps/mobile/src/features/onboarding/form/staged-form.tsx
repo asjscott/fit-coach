@@ -1,8 +1,9 @@
 import { router } from "expo-router";
-import { Children, isValidElement, useEffect, useRef, type ReactNode } from "react";
-import { View, type ScrollViewInstance } from "react-native";
+import { Children, isValidElement, useEffect, useState, type ReactNode } from "react";
+import { View } from "react-native";
 import type { FieldPath, FieldValues } from "react-hook-form";
 import { Button, ButtonBanner, ButtonText, LeftButtons, RightButtons } from "@/components/button";
+import { CompactChoiceCards } from "@/components/choice-cards";
 import { Heading } from "@/components/heading";
 import { KeyboardAwareScrollView } from "@/components/keyboard-aware-scroll-view";
 import { Loading } from "@/components/loading";
@@ -75,6 +76,27 @@ export function CompleteStage({
 
 // ----------------------------------------------------------------------
 
+// Scrolls a stage that runs past the screen, after shrinking its cards in case that's enough to fit it (#71)
+function StageBody({ children }: { children: ReactNode }) {
+  const [viewportHeight, setViewportHeight] = useState(0);
+  const [contentHeight, setContentHeight] = useState(0);
+  const [compact, setCompact] = useState(false);
+  // Stays compact once set: going back to large would only overflow again
+  if (!compact && viewportHeight > 0 && contentHeight > viewportHeight) setCompact(true);
+
+  return (
+    <KeyboardAwareScrollView
+      contentContainerStyle={{ flexGrow: 1, paddingBottom: spacing[4] }}
+      onLayout={(event) => setViewportHeight(event.nativeEvent.layout.height)}
+      onContentSizeChange={(_width, height) => setContentHeight(height)}
+    >
+      <CompactChoiceCards value={compact}>{children}</CompactChoiceCards>
+    </KeyboardAwareScrollView>
+  );
+}
+
+// ----------------------------------------------------------------------
+
 type StagedFormProps<T extends FieldValues> = {
   // 1-based index into the child stages, or "complete"
   stage: Stage;
@@ -97,7 +119,6 @@ export function StagedForm<T extends FieldValues>({
   children,
   renderComplete = () => <CompleteStage />,
 }: StagedFormProps<T>) {
-  const scrollRef = useRef<ScrollViewInstance>(null);
   const stages = Children.toArray(children);
   const stageCount = stages.length;
   const showComplete = stage === "complete";
@@ -106,11 +127,6 @@ export function StagedForm<T extends FieldValues>({
   const showPrevious = !showComplete && stage > 1;
   const showNext = !showComplete && stage < stageCount;
   const showSubmit = stage === stageCount;
-
-  // Each stage starts at the top
-  useEffect(() => {
-    scrollRef.current?.scrollTo({ y: 0, animated: false });
-  }, [stage]);
 
   return (
     <View style={{ flex: 1 }}>
@@ -137,10 +153,11 @@ export function StagedForm<T extends FieldValues>({
         )}
       </Stack>
 
-      <KeyboardAwareScrollView ref={scrollRef} contentContainerStyle={{ flexGrow: 1, paddingBottom: spacing[4] }}>
+      {/* Keyed so each stage starts at the top, measured afresh */}
+      <StageBody key={stage}>
         {current}
         {showComplete && renderComplete()}
-      </KeyboardAwareScrollView>
+      </StageBody>
 
       {!showComplete && (
         <ButtonBanner style={{ paddingTop: spacing[3] }}>

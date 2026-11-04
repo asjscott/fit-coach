@@ -1,6 +1,6 @@
 import { Controller, useFormContext } from "react-hook-form";
 import { Checkbox, CheckboxIcon, CheckboxIndicator, CheckboxLabel } from "../checkbox";
-import { FormControl } from "../form-control";
+import { FormControl, FormControlRow } from "../form-control";
 import {
   Select,
   SelectBackdrop,
@@ -70,39 +70,41 @@ export function RHFMultiSelect({
             isRequired={required}
             inline={inline}
           >
-            <RHFLabel label={label} />
-            <Select>
-              <SelectTrigger>
-                <SelectInput value={getDisplayLabel(selected, options)} placeholder={placeholder} />
-                <SelectIcon />
-              </SelectTrigger>
-              <SelectPortal>
-                <SelectBackdrop />
-                <SelectContent>
-                  <SelectDragIndicatorWrapper>
-                    <SelectDragIndicator />
-                  </SelectDragIndicatorWrapper>
-                  <SelectScrollView>
-                    {options.map((option) => (
-                      <SelectItem
-                        key={option.value}
-                        value={option.value}
-                        // Toggle without closing so several can be picked
-                        onPress={() => toggle(option.value)}
-                        label={
-                          <Checkbox isChecked={selected.includes(option.value)} onChange={() => toggle(option.value)}>
-                            <CheckboxIndicator>
-                              <CheckboxIcon />
-                            </CheckboxIndicator>
-                            <CheckboxLabel>{option.label}</CheckboxLabel>
-                          </Checkbox>
-                        }
-                      />
-                    ))}
-                  </SelectScrollView>
-                </SelectContent>
-              </SelectPortal>
-            </Select>
+            <FormControlRow>
+              <RHFLabel label={label} />
+              <Select>
+                <SelectTrigger>
+                  <SelectInput value={getDisplayLabel(selected, options)} placeholder={placeholder} />
+                  <SelectIcon />
+                </SelectTrigger>
+                <SelectPortal>
+                  <SelectBackdrop />
+                  <SelectContent>
+                    <SelectDragIndicatorWrapper>
+                      <SelectDragIndicator />
+                    </SelectDragIndicatorWrapper>
+                    <SelectScrollView>
+                      {options.map((option) => (
+                        <SelectItem
+                          key={option.value}
+                          value={option.value}
+                          // Toggle without closing so several can be picked
+                          onPress={() => toggle(option.value)}
+                          label={
+                            <Checkbox isChecked={selected.includes(option.value)} onChange={() => toggle(option.value)}>
+                              <CheckboxIndicator>
+                                <CheckboxIcon />
+                              </CheckboxIndicator>
+                              <CheckboxLabel>{option.label}</CheckboxLabel>
+                            </Checkbox>
+                          }
+                        />
+                      ))}
+                    </SelectScrollView>
+                  </SelectContent>
+                </SelectPortal>
+              </Select>
+            </FormControlRow>
             <RHFHelperText error={error?.message} helperText={helperText} />
           </FormControl>
         );

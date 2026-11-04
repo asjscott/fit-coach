@@ -33,9 +33,15 @@ export type FormControlProps = FormControlState & {
 export function FormControl({ style, children, size = "md", ...state }: FormControlProps) {
   return (
     <FormControlContext value={{ size, ...state }}>
-      <View style={[state.inline ? inlineStyle : { gap: spacing[1] }, style]}>{children}</View>
+      <View style={[{ gap: spacing[1] }, style]}>{children}</View>
     </FormControlContext>
   );
+}
+
+// Holds the label and the input, side by side when inline, so helper text after it still gets the full width
+export function FormControlRow({ children }: { children: ReactNode }) {
+  const { inline } = useFormControlContext();
+  return inline ? <View style={inlineStyle}>{children}</View> : children;
 }
 
 export function FormControlLabel({ style, ...props }: ViewProps) {
