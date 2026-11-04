@@ -56,7 +56,7 @@ describe("assessmentOffer", () => {
 
   it("names the Patterns it can't test, which the Assessment estimates", () => {
     // Every push on the list, push-up included, is flagged for a wrist injury
-    const tests = chooseTests({ tags: [] }, ["wrist"]);
+    const tests = chooseTests({ tags: ["table"] }, ["wrist"]);
     expect(offer([], null, { tests })).toMatchObject({ part: "A", untested: [] });
     expect(offer([workout("a1", "20", "A")], null, { tests })).toMatchObject({ part: "B", untested: ["push"] });
   });

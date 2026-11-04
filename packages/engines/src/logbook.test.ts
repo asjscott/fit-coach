@@ -703,7 +703,7 @@ describe("Logbook: Assessment Workouts", () => {
     );
     await logbook.discard();
     const b = await logbook.startAssessment(
-      { part: "B", equipmentProfile: bodyweightOnly, ...user, injuries: ["wrist"] },
+      { part: "B", equipmentProfile: { ...bodyweightOnly, tags: ["table"] }, ...user, injuries: ["wrist"] },
       at("10:00"),
     );
 

@@ -15,8 +15,8 @@ export const ASSESSMENT_PATTERNS: Record<AssessmentPart, TestedPattern[]> = {
   B: ["push", "pull"],
 };
 
-// Each Pattern's candidate tests, best first: two-sided weighted lifts, then the rest, ending with one that needs no
-// equipment. Band Exercises are never tests
+// Each Pattern's candidate tests, best first: two-sided weighted lifts, then the rest, ending with the one needing
+// the least equipment: nothing at all, but a bar or a table for pull. Band Exercises are never tests
 const CANDIDATE_TESTS: Record<TestedPattern, string[]> = {
   squat: ["back-squat", "goblet-squat", "bodyweight-squat"],
   hinge: ["deadlift", "barbell-romanian-deadlift", "dumbbell-romanian-deadlift", "single-leg-glute-bridge"],

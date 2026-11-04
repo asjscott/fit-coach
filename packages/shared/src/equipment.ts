@@ -26,7 +26,7 @@ export const EQUIPMENT_LABELS: Record<EquipmentTag, string> = {
   power_rack: "Power rack",
   landmine: "Landmine",
 
-  // Bodyweight stations (8)
+  // Bodyweight stations (9)
   pull_up_bar: "Pull-up bar",
   rings: "Gymnastic rings",
   dip_station: "Dip station",
@@ -35,6 +35,7 @@ export const EQUIPMENT_LABELS: Record<EquipmentTag, string> = {
   plyo_box: "Plyo box",
   ab_wheel: "Ab wheel",
   sliders: "Sliders",
+  table: "Sturdy table",
 
   // Bands and cables (4)
   loop_bands: "Loop bands",
@@ -74,6 +75,7 @@ export const EQUIPMENT_GROUPS = [
       "plyo_box",
       "ab_wheel",
       "sliders",
+      "table",
     ],
   },
   { key: "bands_cables", name: "Bands and cables", tags: ["loop_bands", "mini_bands", "tube_bands", "cable_machine"] },
@@ -110,6 +112,7 @@ export const EquipmentTag = z.enum([
   "plyo_box",
   "ab_wheel",
   "sliders",
+  "table",
   // Bands and cables
   "loop_bands",
   "mini_bands",

@@ -240,7 +240,7 @@ const Base: Exercise[] = [
     name: "Inverted row",
     patterns: [{ pattern: "pull", credit: 1 }],
     muscles: { primary: ["lats", "upper_back"], secondary: ["biceps", "rear_delts"] },
-    equipmentOptions: [[]],
+    equipmentOptions: [["pull_up_bar"], ["table"]],
     loadType: "bodyweight",
     unilateral: false,
     secondsPerSet: 90,

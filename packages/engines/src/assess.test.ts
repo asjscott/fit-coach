@@ -346,7 +346,7 @@ describe("assess", () => {
       expect(Object.keys(assessment.patterns).sort()).toEqual(["core", "hinge", "pull", "push", "squat"]);
       const available = [
         ...["bodyweight-squat", "bulgarian-split-squat", "single-leg-glute-bridge", "incline-push-up", "push-up"],
-        ...["inverted-row", "plank", "dead-bug", "decline-push-up", "archer-push-up", "pike-push-up", "glute-bridge"],
+        ...["plank", "dead-bug", "decline-push-up", "archer-push-up", "pike-push-up", "glute-bridge"],
         ...["single-leg-romanian-deadlift", "split-squat", "reverse-lunge", "shrimp-squat", "pistol-squat"],
         ...["cossack-squat", "side-plank", "hollow-hold", "bird-dog", "prone-ytw"],
       ];

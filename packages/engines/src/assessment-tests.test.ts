@@ -34,14 +34,15 @@ describe("chooseTests", () => {
     });
   });
 
-  it("gives bodyweight only a bodyweight test for every Pattern", () => {
+  it("gives bodyweight only a bodyweight test for every Pattern but pull, which needs a bar or a table", () => {
     expect(slugsOf(chooseTests({ tags: [] }, []))).toEqual({
       squat: "bodyweight-squat",
       hinge: "single-leg-glute-bridge",
       push: "push-up",
-      pull: "inverted-row",
+      pull: null,
       core: "plank",
     });
+    expect(slugsOf(chooseTests({ tags: ["table"] }, [])).pull).toBe("inverted-row");
   });
 
   it("gives everyone the plank for core", () => {
@@ -100,14 +101,18 @@ describe("chooseTests", () => {
 describe("partTests", () => {
   it("gives B's tests in order and names a Pattern with no safe test as untested", () => {
     // Every push on the list, push-up included, is flagged for a wrist injury
-    const { exercises, untested } = partTests(chooseTests({ tags: [] }, ["wrist"]), "B");
+    const { exercises, untested } = partTests(chooseTests({ tags: ["table"] }, ["wrist"]), "B");
     expect(exercises.map((exercise) => exercise.slug)).toEqual(["inverted-row"]);
     expect(untested).toEqual(["push"]);
   });
 });
 
 describe("canAssess", () => {
-  const bodyweight = chooseTests({ tags: [] }, []);
+  const bodyweight = chooseTests({ tags: ["table"] }, []);
+
+  it("is false with no equipment and a wrist injury: B has neither a pull nor a safe push", () => {
+    expect(canAssess(chooseTests({ tags: [] }, ["wrist"]))).toBe(false);
+  });
 
   it("is true while A and B each have a test, though a Pattern has none", () => {
     expect(canAssess({ ...bodyweight, push: null })).toBe(true);
