@@ -1,14 +1,14 @@
-import { Pattern, type Assessment, type InjuryTag, type WorkingLevel } from "@fit/shared";
+import { Pattern, type Assessment, type Exercise, type InjuryTag, type WorkingLevel } from "@fit/shared";
 import { referencePatternOf } from "./assessment-tests";
 import { exerciseBySlug } from "./data/exercises";
-import { availableLoadsKg, isAvailable, isSafeFor, roundToLoadKg, type ProfileWithLoads } from "./equipment";
+import { isAvailable, isSafeFor, roundToLoadKg, type ProfileWithLoads } from "./equipment";
 
 // One Pattern's starting Working Levels on the Results. Estimated: the Pattern they follow from wasn't tested
 export type WorkingLevelSection = { pattern: Pattern; estimated: boolean; workingLevels: WorkingLevel[] };
 
 // As the user would do it: kg rounded to a load the profile has, seconds to whole ones
-function asDone(level: WorkingLevel, loadsKg: number[]): WorkingLevel {
-  if (level.unit === "kg") return { ...level, kg: roundToLoadKg(level.kg, loadsKg) };
+function asDone(level: WorkingLevel, exercise: Exercise, equipmentProfile: ProfileWithLoads): WorkingLevel {
+  if (level.unit === "kg") return { ...level, kg: roundToLoadKg(level.kg, exercise, equipmentProfile) };
   if (level.unit === "seconds") return { ...level, seconds: Math.round(level.seconds) };
   return level;
 }
@@ -24,8 +24,7 @@ export function workingLevelSections(
   const placed = workingLevels.flatMap((level) => {
     const exercise = exerciseBySlug(level.slug);
     if (!exercise || !isAvailable(exercise, equipmentProfile) || !isSafeFor(exercise, injuries)) return [];
-    const workingLevel = asDone(level, availableLoadsKg(exercise, equipmentProfile));
-    return [{ pattern: exercise.patterns[0].pattern, workingLevel }];
+    return [{ pattern: exercise.patterns[0].pattern, workingLevel: asDone(level, exercise, equipmentProfile) }];
   });
   return Pattern.options
     .map((pattern) => ({
