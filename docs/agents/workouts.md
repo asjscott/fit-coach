@@ -41,7 +41,16 @@ Schemas shared by app and API: packages/shared/src/workouts.ts
   rule in `stepLoadKg`, `packages/engines/src/equipment.ts`), staying put past the lightest or heaviest, and by 2 kg
   when the loads aren't known. `set-entry.ts` only parses the typed text, steps reps (1) and seconds (5), and names
   the kg step for screen readers (`kgStepLabel`: "Next heavier weight", or "Plus 2 kg" when the loads aren't known).
-- **New native modules need a new development build** (`expo-sqlite`, `expo-network` so far). Add dependencies with
+- **Times follow the phone's 12- or 24-hour setting, not its locale** (#69): `timeLabel` and Android's time dialog both
+  read `uses24HourClock` (`format.ts`, from `expo-localization`), and the dialog is 24-hour whatever the phone says
+  without it. The iOS pickers follow the setting by themselves. Hermes alone goes by the language: en-GB with a Canadian
+  region is 24-hour there and 12-hour in the pickers.
+- **On iOS a presented screen needs a `SafeAreaProvider` inside it** (#68). A `SafeAreaView` looks for its provider up
+  its superviews, and iOS hosts a presented modal outside the root provider's views. With none found, the view falls
+  back on its own insets and gets no change notifications, so it can keep a zero bottom inset. `workout/_layout.tsx` has
+  the provider, on iOS only; web's static build keeps Expo Router's non-measuring provider. The Add exercise sheet is
+  presented on top, outside it, and has no inset, which its list doesn't need to clear the home indicator.
+- **New native modules need a new development build** (`expo-sqlite`, `expo-network`, `expo-localization` so far). Add dependencies with
   `npx expo install` and check the SDK 58 docs first (`apps/mobile/AGENTS.md`).
 
 ## Assessment (spec #29)

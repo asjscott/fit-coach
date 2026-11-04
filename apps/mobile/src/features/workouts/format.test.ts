@@ -1,5 +1,5 @@
 import type { Set } from "@fit/shared";
-import { describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
   describeSet,
   durationLabel,
@@ -8,10 +8,20 @@ import {
   previousSetsLabel,
   setParts,
   setsSummary,
+  timeLabel,
   timeStat,
   weekDatesLabel,
   workoutExerciseSummary,
+  workoutTimesLabel,
+  workoutWhenLabel,
 } from "./format";
+
+const phone = vi.hoisted(() => ({ uses24hourClock: false as boolean | null }));
+vi.mock("expo-localization", () => ({ getCalendars: () => [phone] }));
+
+beforeEach(() => {
+  phone.uses24hourClock = false;
+});
 
 const minutes = (n: number) => n * 60_000;
 
@@ -27,6 +37,58 @@ describe("elapsedLabel", () => {
 
   it("reads 0 min when the phone's clock is behind the start", () => {
     expect(elapsedLabel(-minutes(2))).toBe("0 min");
+  });
+});
+
+// A moment on a local date, so these read the same in any time zone
+const at = (day: number, hours: number, minutes: number) => new Date(2026, 10, day, hours, minutes).toISOString();
+const now = new Date(2026, 10, 4, 12, 0);
+
+describe("timeLabel", () => {
+  it("follows the phone's 12-hour clock", () => {
+    expect(timeLabel(at(4, 19, 53))).toMatch(/^7:53\sPM$/i);
+  });
+
+  it("follows the phone's 24-hour clock", () => {
+    phone.uses24hourClock = true;
+    expect(timeLabel(at(4, 19, 53))).toBe("19:53");
+    expect(timeLabel(at(4, 0, 5))).toMatch(/^0?0:05$/);
+  });
+
+  it("leaves it to the locale when the browser doesn't say", () => {
+    phone.uses24hourClock = null;
+    expect(timeLabel(at(4, 19, 53))).toMatch(/7:53|19:53/);
+  });
+});
+
+describe("workoutWhenLabel", () => {
+  it("says the date once when the Workout starts and ends on it", () => {
+    expect(workoutWhenLabel({ startedAt: at(4, 7, 1), endedAt: at(4, 7, 7) }, now)).toMatch(
+      /^Today, 7:01\sAM – 7:07\sAM$/i,
+    );
+  });
+
+  it("gives both dates when the Workout runs past midnight", () => {
+    expect(workoutWhenLabel({ startedAt: at(3, 23, 30), endedAt: at(4, 0, 15) }, now)).toMatch(
+      /^Yesterday, 11:30\sPM – Today, 12:15\sAM$/i,
+    );
+  });
+
+  it("gives both dates when the start was moved to an earlier date", () => {
+    const label = workoutWhenLabel({ startedAt: new Date(2026, 9, 20, 7, 1).toISOString(), endedAt: at(4, 7, 7) }, now);
+    expect(label).toMatch(/(20 Oct|Oct 20), 7:01\sAM – Today, 7:07\sAM$/i);
+  });
+});
+
+describe("workoutTimesLabel", () => {
+  it("is just the times on one date", () => {
+    expect(workoutTimesLabel({ startedAt: at(4, 7, 1), endedAt: at(4, 7, 7) }, now)).toMatch(/^7:01\sAM – 7:07\sAM$/i);
+  });
+
+  it("gives both dates when they differ", () => {
+    expect(workoutTimesLabel({ startedAt: at(3, 23, 30), endedAt: at(4, 0, 15) }, now)).toMatch(
+      /^Yesterday, 11:30\sPM – Today, 12:15\sAM$/i,
+    );
   });
 });
 

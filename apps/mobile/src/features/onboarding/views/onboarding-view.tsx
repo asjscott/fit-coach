@@ -1,9 +1,6 @@
 import { useAuth } from "@clerk/expo";
 import { Redirect, router } from "expo-router";
-import { Pressable } from "@/components/pressable";
 import { Screen } from "@/components/screen";
-import { HStack } from "@/components/stack";
-import { Text } from "@/components/text";
 import { useCurrentUser } from "@/features/user/current-user-provider";
 import { UserLoadingScreen } from "@/features/user/components/user-loading-screen";
 import { UserOnboardingForm } from "../form/user-onboarding-form";
@@ -24,19 +21,7 @@ export function OnboardingView() {
 
   return (
     <Screen scroll="content">
-      {/* Body-sized and muted so it doesn't compete with the stage's title, in a row a touch target tall (#56) */}
-      <HStack justify="end">
-        <Pressable
-          accessibilityRole="button"
-          onPress={exit.onPress}
-          style={{ minHeight: 44, justifyContent: "center" }}
-        >
-          <Text weight="medium" color="muted">
-            {exit.label}
-          </Text>
-        </Pressable>
-      </HStack>
-      <UserOnboardingForm />
+      <UserOnboardingForm exit={exit} />
     </Screen>
   );
 }

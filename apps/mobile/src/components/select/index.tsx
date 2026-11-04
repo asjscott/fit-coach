@@ -81,7 +81,7 @@ export type SelectTriggerProps = {
 export function SelectTrigger({ variant = "outline", size = "lg", style, children }: SelectTriggerProps) {
   const styles = useThemedStyles(createInputStyles);
   const { open, isOpen, isDisabled } = useSelectContext();
-  const { isInvalid } = useFormControlContext();
+  const { isInvalid, inline } = useFormControlContext();
 
   return (
     <Pressable
@@ -93,7 +93,8 @@ export function SelectTrigger({ variant = "outline", size = "lg", style, childre
         styles.root,
         styles[variant],
         localStyles.trigger,
-        { height: inputSizes[size].height },
+        { height: inputSizes[inline ? "md" : size].height },
+        inline && { flex: 3 },
         isOpen && styles.focused,
         isInvalid && styles.invalid,
         isDisabled && styles.disabled,

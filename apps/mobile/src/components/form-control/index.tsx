@@ -12,12 +12,16 @@ type FormControlState = {
   isReadOnly?: boolean;
   isRequired?: boolean;
   size?: FormControlSize;
+  // Label beside the input rather than above it, for a stack of fields that has to stay short
+  inline?: boolean;
 };
 
 const FormControlContext = createContext<FormControlState>({});
 
 // Inputs read invalid/disabled/read-only state from the nearest FormControl
 export const useFormControlContext = () => use(FormControlContext);
+
+const inlineStyle: ViewStyle = { flexDirection: "row", alignItems: "center", gap: spacing[3] };
 
 const textSize: Record<FormControlSize, FontSize> = { sm: "xs", md: "sm", lg: "md" };
 
@@ -34,8 +38,15 @@ export function FormControl({ style, children, size = "md", ...state }: FormCont
   );
 }
 
+// Holds the label and the input, side by side when inline, so helper text after it still gets the full width
+export function FormControlRow({ children }: { children: ReactNode }) {
+  const { inline } = useFormControlContext();
+  return inline ? <View style={inlineStyle}>{children}</View> : children;
+}
+
 export function FormControlLabel({ style, ...props }: ViewProps) {
-  return <View style={[{ flexDirection: "row", alignItems: "center" }, style]} {...props} />;
+  const { inline } = useFormControlContext();
+  return <View style={[{ flexDirection: "row", alignItems: "center" }, inline && { flex: 2 }, style]} {...props} />;
 }
 
 export function FormControlLabelText({ children, size, ...props }: TextProps) {
