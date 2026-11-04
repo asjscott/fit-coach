@@ -1,6 +1,9 @@
 import type { Set, SetValues, Workout } from "@fit/shared";
+import { getCalendars } from "expo-localization";
 
 // How Workouts and Sets read on screen
+
+type WorkoutTimes = Pick<Workout, "startedAt" | "endedAt">;
 
 export const dateLabel = (iso: string) =>
   new Date(iso).toLocaleDateString(undefined, {
@@ -10,7 +13,20 @@ export const dateLabel = (iso: string) =>
     year: "numeric",
   });
 
-export const timeLabel = (iso: string) => new Date(iso).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
+// The phone's own 12- or 24-hour setting, which the locale alone can disagree with. Unknown in some browsers. Read each
+// time, as Android can change it while the app runs
+export const uses24HourClock = () => getCalendars()[0].uses24hourClock ?? undefined;
+
+const HOUR_CYCLES = { true: "h23", false: "h12" } as const;
+
+export const timeLabel = (iso: string) => {
+  const uses24Hour = uses24HourClock();
+  return new Date(iso).toLocaleTimeString([], {
+    hour: "numeric",
+    minute: "2-digit",
+    hourCycle: uses24Hour === undefined ? undefined : HOUR_CYCLES[`${uses24Hour}`],
+  });
+};
 
 // Two digits, for clocks: "05"
 export const twoDigits = (n: number) => String(n).padStart(2, "0");
@@ -26,7 +42,7 @@ const statLabel = ({ value, unit }: { value: string; unit: string }) => `${value
 // A length of time as a Stat's value and unit, to the nearest minute
 export const timeStat = (ms: number) => minutesStat(Math.round(ms / 60_000));
 
-export const durationLabel = ({ startedAt, endedAt }: Pick<Workout, "startedAt" | "endedAt">) =>
+export const durationLabel = ({ startedAt, endedAt }: WorkoutTimes) =>
   statLabel(timeStat(Date.parse(endedAt) - Date.parse(startedAt)));
 
 // How long an In-progress Workout has run, in whole minutes; 0 if the phone's clock has moved back
@@ -54,6 +70,21 @@ export function relativeDateLabel(iso: string, now = new Date()) {
   });
   return `${day.replace(",", "")}, ${time}`;
 }
+
+const onSameDate = ({ startedAt, endedAt }: WorkoutTimes) => daysBetween(new Date(startedAt), new Date(endedAt)) === 0;
+
+// When a Workout ran, the end's date only if it isn't the start's: "Today, 7:01 AM – 7:07 AM",
+// "Yesterday, 11:30 PM – Today, 12:15 AM"
+export const workoutWhenLabel = (workout: WorkoutTimes, now = new Date()) =>
+  `${relativeDateLabel(workout.startedAt, now)} – ${
+    onSameDate(workout) ? timeLabel(workout.endedAt) : relativeDateLabel(workout.endedAt, now)
+  }`;
+
+// The same below a heading that has the start's date: "7:01 AM – 7:07 AM", or both dates when they differ
+export const workoutTimesLabel = (workout: WorkoutTimes, now = new Date()) =>
+  onSameDate(workout)
+    ? `${timeLabel(workout.startedAt)} – ${timeLabel(workout.endedAt)}`
+    : workoutWhenLabel(workout, now);
 
 // A week of History by its Monday: "This week", "Last week", then its dates
 export function weekLabel(start: Date, now = new Date()) {
