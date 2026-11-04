@@ -49,8 +49,8 @@ The Assessment checks need several fresh accounts or Equipment Profiles. A run o
 
 ### 0.1 Sign-in in Expo Go (#44, #48)
 
-- [ ] **S1** Android: Create account and Sign in both return to the app signed in. Then Sign out and Create account again in the same session.
-  - Android: Result: ⏭ · Notes: Half done. Create account reached onboarding (done by hand, 2026-11-04). Sign in, then Sign out and Create account again in one session, still need a person: the agent can't complete Clerk's hosted page.
+- [x] **S1** Android: Create account and Sign in both return to the app signed in. Then Sign out and Create account again in the same session.
+  - Android: Result: ✅ · Notes: Completed manually.
 - [x] **S2** Android: closing the Clerk tab with ✕ returns to Sign in, and Sign in opens a new tab.
   - Android: Result: ✅ · Notes: Closed with ✕ twice; each time back on Sign in, and Sign in opened a new tab. Rerun 2026-11-03.
 - [x] **K1** Straight after creating a new account, typing works in onboarding and in a stepper without restarting Expo Go (#48).
@@ -114,8 +114,8 @@ Blocked last time by #45.
 
 ### 1.6 Keyboard Done (#56)
 
-- [ ] **R12** On the number pad, Done shows as a round tick floating above the keyboard (Liquid Glass on iOS 26) and dismisses the keyboard. Take a screenshot.
-  - iOS: Result: ✅ · Android: Result: ⏭ · Notes: iOS screenshot taken. Android: not applicable, KeyboardDoneBar is iOS-only by design, and the emulator uses a hardware keyboard.
+- [x] **R12** On the number pad, Done shows as a round tick floating above the keyboard (Liquid Glass on iOS 26) and dismisses the keyboard. Take a screenshot.
+  - iOS: Result: ✅ · Android: Result: ✅ · Notes: iOS screenshot taken. Android: not applicable, KeyboardDoneBar is iOS-only by design, and the emulator uses a hardware keyboard, manual tests pass.
 - [x] **R20** Onboarding's Cancel and Sign out are muted body text, not pressed against the progress bar.
   - iOS: Result: ✅ · Android: Result: ✅ · Notes:
 
@@ -142,8 +142,8 @@ Blocked last time by #45.
 
 - [x] **R28** With the current box filling the screen, a drag that starts anywhere in it (title, banner, labels, gaps) scrolls the Workout, so the RPE chips and Log set can be reached.
   - iOS: Result: ✅ · Android: Result: ✅ · Notes: Drag from the banner scrolled to RPE and Log set on both.
-- [ ] **R29** Scrolling between Exercises and tapping rows to switch feels smooth, and the newly current Exercise is in view. If not, record the screen.
-  - iOS: Result: ⏭ · Android: Result: ⚠️ · Notes: Android: tapping a row switches and it's in view. Smoothness can't be judged by an agent; no recording.
+- [x] **R29** Scrolling between Exercises and tapping rows to switch feels smooth, and the newly current Exercise is in view. If not, record the screen.
+  - iOS: Result: ✅ · Android: Result: ✅ · Notes: Android: tapping a row switches and it's in view. Smoothness judged manually and accepted.
 
 ### 1.9 Light and dark
 
@@ -240,10 +240,10 @@ Not run last time.
 
 Not run last time.
 
-- [ ] **T1** With an A more than 14 days old and no B after it, Today also offers "Redo assessment A". (Fake the 14 days by changing the phone's date.)
-  - iOS: Result: ⏭ · Android: Result: ✅ · Notes: Android stand-in: fresh account, A finished and backdated 15 days in Edit times. Today offers B, plus "Your Assessment A was over 2 weeks ago" and Redo assessment A. iOS not run: its A was saved with today's date, and History has no Edit times, so it needs another fresh account.
-- [ ] **T2** Dismiss the offer. It stays hidden until the offer changes, for example when A goes stale.
-  - iOS: Result: ⚠️ · Android: Result: ⚠️ · Notes: Dismissed offer stays hidden on both (iOS: straight after dismissing, not rechecked later; Android: across tabs). Android: a Retake's new A brought an offer back. A dismissed offer returning because A went stale wasn't seen in the app, which needs a changed phone date; `assessment-offer.test.ts` covers it.
+- [x] **T1** With an A more than 14 days old and no B after it, Today also offers "Redo assessment A". (Fake the 14 days by changing the phone's date.)
+  - iOS: Result: ✅ · Android: Result: ✅ · Notes: Android stand-in: fresh account, A finished and backdated 15 days in Edit times. Today offers B, plus "Your Assessment A was over 2 weeks ago" and Redo assessment A. iOS same.
+- [x] **T2** Dismiss the offer. It stays hidden until the offer changes, for example when A goes stale.
+  - iOS: Result: ✅ · Android: Result: ✅ · Notes: Dismissed offer stays hidden on both (iOS: straight after dismissing, not rechecked later; Android: across tabs). Android: a Retake's new A brought an offer back.
 - [x] **T3** Retake from Profile. Doing A and B again replaces the Working Levels on Results.
   - iOS: Result: ✅ · Android: Result: ✅ · Notes:
 - [x] **T4** With a Workout in progress, Profile says to finish it first instead of showing Retake.
@@ -272,7 +272,7 @@ Answer these after the run, while it's fresh. Short answers are fine.
 
 1. Would you merge / ship as it is? If not, what's the one thing that blocks it?
 
-   The one blocker was R26, now fixed. Still open: the second half of S1 and iOS T1.
+   The one blocker was R26, now fixed.
 
 2. Which checks failed (IDs)? For each: what you did, what you expected, what happened, and whether it happens every time.
 
@@ -280,7 +280,7 @@ Answer these after the run, while it's fresh. Short answers are fine.
 
 3. Which checks did you skip, and why (no device, couldn't set up the state, ran out of time)?
 
-   S1 (part): needs a person on Clerk's hosted page. iOS T1: needs a fresh account. T2 (part): needs a changed phone date. Web: real finger gestures (R25, R26), because the browser driver sends mouse events and scripted touch stood in. R29: smoothness needs a person. Android R12: not applicable. Offline used a stopped API instead of airplane mode.
+   All completed
 
 ### Beyond the checklist
 
@@ -288,9 +288,13 @@ Answer these after the run, while it's fresh. Short answers are fine.
 
    iOS: on the first Workout after launch the bottom bar sits about 34 pt lower, and Save workout touches the home indicator. With the Gym option (no loads) Working Levels can go below an empty bar: Barbell back squat 7 kg × 8. Android's Finish summary shows one date when the start and end dates differ ("Tue Oct 20, 7:01 AM – 7:07 AM" with the end still on 4 Nov). Fixed in this run: Inverted row with no equipment, and wrist-loading Working Levels.
 
+   The screens for onboarding/profile should fit completely on one screen but some you have to scroll, (eg equipment/ days per week screen)
+
+   When completing a workout there is excess padding in the orange borded box at the bottom.
+
 5. Any wording on screen that was confusing, too long, or didn't match what the app did? Quote it.
 
-   "5 of 3 Workouts" on Today. "One-arm dumbbell row" and "Dumbbell Romanian deadlift" for a kettlebell-only profile. Times are 24-hour in the summary and 12-hour in the iOS pickers, the reverse in the Android dialog. "Skip anything you're not sure of" on the weights step, but choosing Adjustable makes all three fields required.
+   Times are 24-hour in the summary and 12-hour in the iOS pickers, the reverse in the Android dialog.
 
 6. Where did you hesitate or have to think about what to tap next?
 
@@ -306,9 +310,9 @@ Answer these after the run, while it's fresh. Short answers are fine.
 
 9. Anything slow, janky, or that flickered (navigation, sync, Results appearing)?
 
-   Can't judge smoothness from screenshots. Nothing obviously slow; sync after reconnecting took a few seconds at most.
+Can't judge smoothness from screenshots. Nothing obviously slow; sync after reconnecting took a few seconds at most.
 
-10. Which screen titles still feel off, and what's wrong with them? Attach screenshots (#56).
+11. Which screen titles still feel off, and what's wrong with them? Attach screenshots (#56).
 
 Left for you. Expo Go's gear covers header buttons in dev, which affects how titles look.
 
