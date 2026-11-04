@@ -8,7 +8,7 @@ import { SectionLabel } from "@/components/section-label";
 import { Text } from "@/components/text";
 import { spacing, useTheme } from "@/theme";
 import { patternLabels } from "@/features/exercises/labels";
-import { usePrimaryEquipmentProfile } from "@/features/user/current-user-provider";
+import { useCurrentUser, usePrimaryEquipmentProfile } from "@/features/user/current-user-provider";
 import { describeSet, weightLabel } from "@/features/workouts/format";
 import { exerciseName } from "@/features/workouts/library";
 import { useLogbook } from "@/features/workouts/logbook-provider";
@@ -39,6 +39,7 @@ export default function AssessmentResultsView() {
   const { latest, error, refresh } = useLatestAssessment();
   const { pending } = useLogbook();
   const primary = usePrimaryEquipmentProfile();
+  const injuries = useCurrentUser().user?.profile.injuries;
 
   if (pendingB(withPending(pending, null))) {
     return (
@@ -66,7 +67,7 @@ export default function AssessmentResultsView() {
   }
 
   const { patterns } = latest.assessment;
-  const sections = primary ? workingLevelSections(latest.workingLevels, primary, patterns) : [];
+  const sections = primary ? workingLevelSections(latest.workingLevels, primary, patterns, injuries ?? []) : [];
   return (
     <Screen scroll="screen" edges={["bottom"]}>
       <SectionLabel style={styles.sectionLabel}>Tests</SectionLabel>

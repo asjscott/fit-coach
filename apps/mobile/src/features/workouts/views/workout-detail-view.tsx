@@ -14,7 +14,7 @@ import { useToast } from "@/contexts/toast-context";
 import { spacing, useTheme } from "@/theme";
 import { errorMessage } from "@/utils/error-message";
 import { SetRow } from "../components/set-row";
-import { dateLabel, kgLabel, timeLabel, timeStat } from "../format";
+import { dateLabel, kgLabel, timeStat, workoutTimesLabel } from "../format";
 import { useHistory } from "../history-provider";
 import { exerciseName, libraryExercise } from "../library";
 import { useLogbook } from "../logbook-provider";
@@ -108,9 +108,7 @@ function WorkoutDetail({ workout, note, onDelete }: WorkoutDetailProps) {
         }}
       />
       <Stack spacing={1}>
-        <Text color="muted">
-          {timeLabel(workout.startedAt)} – {timeLabel(workout.endedAt)}
-        </Text>
+        <Text color="muted">{workoutTimesLabel(workout)}</Text>
         {note !== undefined && (
           <Text size="sm" color="muted">
             {note}

@@ -1,4 +1,4 @@
-import { createContext, use, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { createContext, use, useEffect, useMemo, useRef, useState, type ReactNode, type RefObject } from "react";
 import {
   Animated,
   FlatList,
@@ -20,6 +20,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { spacing, useThemedStyles } from "@/theme";
 import { Icon, type IconComponent, type IconName } from "../icons";
 import { Text, type TextProps } from "../text";
+import { pullsSheet } from "./pulls-sheet";
 import { createActionsheetStyles } from "./styles";
 
 // progress runs 0 (closed) to 1 (open); drag is how far the user has pulled the content down, by the drag indicator
@@ -30,6 +31,8 @@ type ActionsheetContextValue = {
   drag: Animated.Value;
   contentPan: PanResponderInstance;
   indicatorPan: PanResponderInstance;
+  // How far a list in the sheet is scrolled
+  listScrollY: RefObject<number>;
 };
 
 const ActionsheetContext = createContext<ActionsheetContextValue | null>(null);
@@ -60,6 +63,7 @@ export function Actionsheet({ isOpen, onClose, onClosed, children }: Actionsheet
   const styles = useThemedStyles(createActionsheetStyles);
   const progress = useRef(new Animated.Value(0)).current;
   const drag = useRef(new Animated.Value(0)).current;
+  const listScrollY = useRef(0);
   // Stay mounted through the close animation
   const [mounted, setMounted] = useState(isOpen);
   // The latest onClosed for the animation's callback, which isn't rerun when it changes
@@ -89,7 +93,7 @@ export function Actionsheet({ isOpen, onClose, onClosed, children }: Actionsheet
       // Takes a downward drag from an item too, which a tap leaves alone
       contentPan: PanResponder.create({
         ...pull,
-        onMoveShouldSetPanResponderCapture: (_, { dx, dy }) => dy > 6 && Math.abs(dy) > Math.abs(dx),
+        onMoveShouldSetPanResponderCapture: (_, gesture) => pullsSheet(gesture, listScrollY.current),
       }),
       // The drag indicator is for pulling, so it takes the touch straight away and keeps it
       indicatorPan: PanResponder.create({
@@ -110,6 +114,7 @@ export function Actionsheet({ isOpen, onClose, onClosed, children }: Actionsheet
       if (!finished || isOpen) return;
       setMounted(false);
       drag.setValue(0);
+      listScrollY.current = 0;
       closedPending.current = true;
       // On iOS the native modal is still dismissing here, so onDismiss runs it, or this in case onDismiss never comes
       if (Platform.OS === "ios") setTimeout(runClosed, IOS_DISMISS_FALLBACK_MS);
@@ -125,7 +130,7 @@ export function Actionsheet({ isOpen, onClose, onClosed, children }: Actionsheet
       onRequestClose={onClose}
       onDismiss={Platform.OS === "ios" ? runClosed : undefined}
     >
-      <ActionsheetContext value={{ onClose, progress, drag, contentPan, indicatorPan }}>
+      <ActionsheetContext value={{ onClose, progress, drag, contentPan, indicatorPan, listScrollY }}>
         <View style={styles.root}>{children}</View>
       </ActionsheetContext>
     </Modal>
@@ -206,8 +211,19 @@ export function ActionsheetIcon({ name, as, size = 20 }: { name?: IconName; as?:
   return <Icon name={name} as={as} size={size} color="muted" />;
 }
 
-export function ActionsheetScrollView(props: ScrollViewProps) {
-  return <ScrollView showsVerticalScrollIndicator={false} {...props} />;
+export function ActionsheetScrollView({ onScroll, ...props }: ScrollViewProps) {
+  const { listScrollY } = useActionsheetContext();
+  return (
+    <ScrollView
+      showsVerticalScrollIndicator={false}
+      scrollEventThrottle={16}
+      onScroll={(event) => {
+        listScrollY.current = event.nativeEvent.contentOffset.y;
+        onScroll?.(event);
+      }}
+      {...props}
+    />
+  );
 }
 
 export function ActionsheetFlatList<T>(props: FlatListProps<T>) {

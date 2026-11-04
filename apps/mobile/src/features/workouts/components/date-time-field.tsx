@@ -5,7 +5,7 @@ import { FormControl, FormControlError, FormControlErrorText } from "@/component
 import { Pressable } from "@/components/pressable";
 import { Text } from "@/components/text";
 import { radii, spacing, useTheme } from "@/theme";
-import { dateLabel, timeLabel } from "../format";
+import { dateLabel, timeLabel, uses24HourClock } from "../format";
 
 export type DateTimeFieldProps = {
   label: string;
@@ -86,6 +86,7 @@ function AndroidPickers({ label, value, onChange }: Omit<DateTimeFieldProps, "er
           mode={open}
           presentation="dialog"
           value={value}
+          is24Hour={uses24HourClock()}
           accentColor={colors.accent}
           onValueChange={(_, date) => handlePicked(date)}
           onDismiss={() => setOpen(null)}

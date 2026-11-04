@@ -1,8 +1,6 @@
 import { useAuth } from "@clerk/expo";
 import { Redirect, router } from "expo-router";
-import { Button, ButtonText } from "@/components/button";
 import { Screen } from "@/components/screen";
-import { HStack } from "@/components/stack";
 import { useCurrentUser } from "@/features/user/current-user-provider";
 import { UserLoadingScreen } from "@/features/user/components/user-loading-screen";
 import { UserOnboardingForm } from "../form/user-onboarding-form";
@@ -23,12 +21,7 @@ export function OnboardingView() {
 
   return (
     <Screen scroll="content">
-      <HStack justify="end">
-        <Button action="default" variant="link" size="sm" onPress={exit.onPress}>
-          <ButtonText>{exit.label}</ButtonText>
-        </Button>
-      </HStack>
-      <UserOnboardingForm />
+      <UserOnboardingForm exit={exit} />
     </Screen>
   );
 }

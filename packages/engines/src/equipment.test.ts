@@ -12,6 +12,12 @@ const exercise = (slug: string) => {
 const owning = (...tags: EquipmentTag[]) => ({ tags });
 
 describe("isAvailable", () => {
+  it("needs a bar or a table for an inverted row", () => {
+    expect(isAvailable(exercise("inverted-row"), { tags: [] })).toBe(false);
+    expect(isAvailable(exercise("inverted-row"), { tags: ["pull_up_bar"] })).toBe(true);
+    expect(isAvailable(exercise("inverted-row"), { tags: ["table"] })).toBe(true);
+  });
+
   it("makes a bodyweight exercise ([[]]) available with no equipment", () => {
     expect(isAvailable({ equipmentOptions: [[]] }, owning())).toBe(true);
     expect(isAvailable(exercise("push-up"), owning())).toBe(true);
