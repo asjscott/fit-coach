@@ -89,21 +89,23 @@ export function isSafeFor(exercise: Pick<Exercise, "avoidWith">, injuries: Injur
   return !exercise.avoidWith.some((tag) => injuries.includes(tag));
 }
 
+// A load as the user would lift it: the nearest of the loads (the lighter on a tie), or to the nearest 0.5 kg when
+// the loads aren't known
+export function roundToLoadKg(kg: number, loadsKg: number[]): number {
+  if (!loadsKg.length) return Math.round(kg * 2) / 2;
+  return loadsKg.reduce((best, load) => (Math.abs(load - kg) < Math.abs(best - kg) ? load : best));
+}
+
 // The standard bar, for a profile that has a barbell but doesn't say what it weighs (#70)
 const ASSUMED_BAR_KG = 20;
 
-// A load as the user would lift it: the nearest of the loads the profile offers for the Exercise (the lighter on a
-// tie). When the loads aren't known, the nearest 0.5 kg, and never lighter than the bar if the Exercise needs one
-export function roundToLoadKg(
+// True when every way the profile can do the Exercise needs a barbell, and kg is lighter than the bar alone
+export function isUnderEmptyBar(
   kg: number,
   exercise: Pick<Exercise, "equipmentOptions">,
   profile: ProfileWithLoads,
-): number {
-  const loadsKg = availableLoadsKg(exercise, profile);
-  if (loadsKg.length) {
-    return loadsKg.reduce((best, load) => (Math.abs(load - kg) < Math.abs(best - kg) ? load : best));
-  }
-  const rounded = Math.round(kg * 2) / 2;
-  const needsBar = ownedOptions(exercise, profile).every((option) => option.includes("barbell"));
-  return needsBar ? Math.max(rounded, ASSUMED_BAR_KG) : rounded;
+): boolean {
+  const options = ownedOptions(exercise, profile);
+  const needsBar = options.length > 0 && options.every((option) => option.includes("barbell"));
+  return needsBar && kg < (profile.loads.barbell?.barKg ?? ASSUMED_BAR_KG);
 }

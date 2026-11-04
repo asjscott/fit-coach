@@ -66,21 +66,18 @@ describe("workingLevelSections", () => {
     expect(bySlug["push-up"]).toEqual({ slug: "push-up", unit: "reps", reps: 12 });
   });
 
-  describe("with a barbell and no loads known", () => {
+  describe("a barbell Exercise lighter than the bar", () => {
     const gym: ProfileWithLoads = { tags: ["barbell", "plates", "squat_rack", "dumbbells"], loads: {} };
-    const kgOf = (slug: string, kg: number, profile: ProfileWithLoads) =>
+    const levelFor = (slug: string, kg: number, profile: ProfileWithLoads) =>
       workingLevelSections([{ slug, unit: "kg", kg }], profile, patterns, []).flatMap((s) => s.workingLevels)[0];
 
-    it("never goes lighter than a 20 kg bar", () => {
-      expect(kgOf("back-squat", 7, gym)).toEqual({ slug: "back-squat", unit: "kg", kg: 20 });
+    it("is left out under an assumed 20 kg bar when the loads aren't known", () => {
+      expect(levelFor("back-squat", 19.5, gym)).toBeUndefined();
     });
 
-    it("still rounds to the nearest 0.5 kg above the bar", () => {
-      expect(kgOf("back-squat", 62.3, gym)).toEqual({ slug: "back-squat", unit: "kg", kg: 62.5 });
-    });
-
-    it("leaves an Exercise that needs no bar alone", () => {
-      expect(kgOf("goblet-squat", 7, gym)).toEqual({ slug: "goblet-squat", unit: "kg", kg: 7 });
+    it("stays at the bar itself, and rounds to the nearest 0.5 kg above it", () => {
+      expect(levelFor("back-squat", 20, gym)).toEqual({ slug: "back-squat", unit: "kg", kg: 20 });
+      expect(levelFor("back-squat", 62.3, gym)).toEqual({ slug: "back-squat", unit: "kg", kg: 62.5 });
     });
 
     it("goes by the profile's own bar once the loads are known", () => {
@@ -89,7 +86,18 @@ describe("workingLevelSections", () => {
         loads: { barbell: { barKg: 15, platesKg: [5] } },
       };
 
-      expect(kgOf("back-squat", 7, lightBar)).toEqual({ slug: "back-squat", unit: "kg", kg: 15 });
+      expect(levelFor("back-squat", 14, lightBar)).toBeUndefined();
+      expect(levelFor("back-squat", 16, lightBar)).toEqual({ slug: "back-squat", unit: "kg", kg: 15 });
+    });
+
+    it("leaves an Exercise that needs no bar alone", () => {
+      expect(levelFor("goblet-squat", 7, gym)).toEqual({ slug: "goblet-squat", unit: "kg", kg: 7 });
+    });
+
+    it("drops the Pattern's section when it was the only Exercise there", () => {
+      const sections = workingLevelSections([{ slug: "back-squat", unit: "kg", kg: 7 }], gym, patterns, []);
+
+      expect(sections).toEqual([]);
     });
   });
 

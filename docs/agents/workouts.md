@@ -107,8 +107,8 @@ Schemas: packages/shared/src/assessments.ts; Set.rpe and Workout.assessment in w
 - **Bodyweight maximums use Epley uncapped** (`epley`), because the Working Level inverts it (`epleyReps`) and the
   round trip must give the tested Exercise back its reps; `e1rm` refuses more than 12 reps.
 - **Results round a Working Level to what the user can lift** (`roundToLoadKg`): the nearest load the profile offers,
-  or the nearest 0.5 kg when the loads aren't known. With no loads, an Exercise that needs a barbell stays at or above an
-  assumed 20 kg bar (#70). The stored Working Level isn't changed.
+  or the nearest 0.5 kg when the loads aren't known. An Exercise that needs a barbell is left out when its Working Level
+  is under the empty bar, the profile's own or an assumed 20 kg (#70). The stored Working Level isn't changed.
 - **Stored Assessments without a field the schema later required** (`referenceStrength`, `maximum`, `bStartedAt`)
   fail to parse in `findLatestAssessment`: dev data only, so drop the collection.
 
