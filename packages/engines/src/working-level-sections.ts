@@ -1,7 +1,7 @@
-import { Pattern, type Assessment, type WorkingLevel } from "@fit/shared";
+import { Pattern, type Assessment, type InjuryTag, type WorkingLevel } from "@fit/shared";
 import { referencePatternOf } from "./assessment-tests";
 import { exerciseBySlug } from "./data/exercises";
-import { availableLoadsKg, isAvailable, roundToLoadKg, type ProfileWithLoads } from "./equipment";
+import { availableLoadsKg, isAvailable, isSafeFor, roundToLoadKg, type ProfileWithLoads } from "./equipment";
 
 // One Pattern's starting Working Levels on the Results. Estimated: the Pattern they follow from wasn't tested
 export type WorkingLevelSection = { pattern: Pattern; estimated: boolean; workingLevels: WorkingLevel[] };
@@ -13,16 +13,17 @@ function asDone(level: WorkingLevel, loadsKg: number[]): WorkingLevel {
   return level;
 }
 
-// The Working Levels for what the Equipment Profile supports, one section per Pattern in Pattern order, each
-// Exercise under its first Pattern
+// The Working Levels for what the Equipment Profile supports and the injuries allow, one section per Pattern in
+// Pattern order, each Exercise under its first Pattern
 export function workingLevelSections(
   workingLevels: WorkingLevel[],
   equipmentProfile: ProfileWithLoads,
   patterns: Assessment["patterns"],
+  injuries: InjuryTag[],
 ): WorkingLevelSection[] {
   const placed = workingLevels.flatMap((level) => {
     const exercise = exerciseBySlug(level.slug);
-    if (!exercise || !isAvailable(exercise, equipmentProfile)) return [];
+    if (!exercise || !isAvailable(exercise, equipmentProfile) || !isSafeFor(exercise, injuries)) return [];
     const workingLevel = asDone(level, availableLoadsKg(exercise, equipmentProfile));
     return [{ pattern: exercise.patterns[0].pattern, workingLevel }];
   });

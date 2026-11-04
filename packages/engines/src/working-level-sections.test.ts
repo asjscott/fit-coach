@@ -35,7 +35,7 @@ const levels: WorkingLevel[] = [
 
 describe("workingLevelSections", () => {
   it("groups the Working Levels the profile supports by Pattern, in Pattern order", () => {
-    const sections = workingLevelSections(levels, dumbbells, patterns);
+    const sections = workingLevelSections(levels, dumbbells, patterns, []);
 
     // No barbell, so no back squat
     expect(sections.map((s) => [s.pattern, s.workingLevels.map((l) => l.slug)])).toEqual([
@@ -46,9 +46,16 @@ describe("workingLevelSections", () => {
     ]);
   });
 
+  it("leaves out what an injury rules out", () => {
+    const sections = workingLevelSections(levels, dumbbells, patterns, ["wrist"]);
+
+    // Push-up is flagged for wrists, and it was the only push here
+    expect(sections.map((s) => s.pattern)).toEqual(["squat", "carry", "core"]);
+  });
+
   it("rounds kg to a dumbbell the profile has, the lighter on a tie, and seconds to whole ones", () => {
     const bySlug = Object.fromEntries(
-      workingLevelSections(levels, dumbbells, patterns)
+      workingLevelSections(levels, dumbbells, patterns, [])
         .flatMap((s) => s.workingLevels)
         .map((l) => [l.slug, l]),
     );
@@ -60,7 +67,7 @@ describe("workingLevelSections", () => {
   });
 
   it("marks a section estimated when the Pattern it follows from wasn't tested: carry follows hinge", () => {
-    const sections = workingLevelSections(levels, dumbbells, patterns);
+    const sections = workingLevelSections(levels, dumbbells, patterns, []);
 
     expect(sections.find((s) => s.pattern === "carry")?.estimated).toBe(true);
     expect(sections.find((s) => s.pattern === "squat")?.estimated).toBe(false);
