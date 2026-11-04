@@ -8,7 +8,7 @@ import { EquipmentPresetsField } from "@/features/equipment/components/form/fiel
 import { EquipmentTagsField } from "@/features/equipment/components/form/fields/equipment-tags-field";
 import { TrainingSetupField } from "@/features/equipment/components/form/fields/training-setup-field";
 import { EquipmentLoadsField } from "@/features/equipment/components/form/fields/equipment-loads-field";
-import { hasLoadTags } from "@/features/equipment/loads";
+import { loadScreens } from "@/features/equipment/loads";
 import { asksForLoads, selectableGroups, selectedTags } from "@/features/equipment/training-setup";
 import { UserBirthYearField } from "@/features/user/components/form/fields/user-birth-year-field";
 import { UserDaysPerWeekField } from "@/features/user/components/form/fields/user-days-per-week-field";
@@ -20,7 +20,7 @@ import { UserWeightField } from "@/features/user/components/form/fields/user-wei
 import { useUserOnboarding, type OnboardingValues } from "../hooks/use-user-onboarding";
 import { CompleteStage, FormStage, StagedForm } from "./staged-form";
 
-export function UserOnboardingForm() {
+export function UserOnboardingForm({ exit }: { exit: { label: string; onPress: () => void } }) {
   const { onboardingForm, stage, onStageChange, onSubmit, isSaving, isEditing } = useUserOnboarding();
   // Which optional stages show depends on earlier answers. useWatch rather than
   // watch(), which the React Compiler memoizes and so never updates
@@ -29,7 +29,7 @@ export function UserOnboardingForm() {
   const tags = selectedTags(trainingSetup, equipment);
   // Gym has everything and no equipment has nothing, so neither is asked to pick
   const picksEquipment = trainingSetup === "home" || trainingSetup === "bodyweight";
-  const asksLoads = asksForLoads(trainingSetup) && hasLoadTags(tags);
+  const weightScreens = asksForLoads(trainingSetup) ? loadScreens(tags) : [];
 
   return (
     <>
@@ -44,6 +44,7 @@ export function UserOnboardingForm() {
           onStageChange={onStageChange}
           onSubmit={onSubmit}
           isSubmitting={isSaving}
+          exit={exit}
           renderComplete={() =>
             isEditing ? (
               <CompleteStage title="Profile updated" message="Your plan will use your new answers." />
@@ -97,15 +98,16 @@ export function UserOnboardingForm() {
               <EquipmentTagsField groups={selectableGroups[trainingSetup]} />
             </FormStage>
           )}
-          {asksLoads && (
+          {weightScreens.map((screenTags) => (
             <FormStage<OnboardingValues>
+              key={screenTags.join()}
               fields={["loads"]}
               title="What weights do you have?"
               message="So we can pick the right loads. Skip anything you're not sure of."
             >
-              <EquipmentLoadsField tags={tags} />
+              <EquipmentLoadsField tags={screenTags} />
             </FormStage>
-          )}
+          ))}
           <FormStage<OnboardingValues>
             fields={["injuries"]}
             title="Any injuries?"

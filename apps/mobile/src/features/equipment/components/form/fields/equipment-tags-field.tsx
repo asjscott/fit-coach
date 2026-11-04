@@ -8,6 +8,7 @@ export function EquipmentTagsField({ groups }: { groups: EquipmentGroupKey[] }) 
       key={group.key}
       name={`equipment.${group.key}`}
       label={group.name}
+      inline
       placeholder="None"
       options={group.tags.map((tag) => ({ value: tag, label: EQUIPMENT_LABELS[tag] }))}
     />
