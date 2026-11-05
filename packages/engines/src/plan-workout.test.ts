@@ -1,6 +1,6 @@
-import type { WorkingLevel } from "@fit/shared";
+import type { Goal, WorkingLevel } from "@fit/shared";
 import { describe, expect, it } from "vitest";
-import { exerciseBySlug } from "./data/exercises";
+import { exerciseBySlug, EXERCISES } from "./data/exercises";
 import type { ProfileWithLoads } from "./equipment";
 import { planWorkout, type PlanWorkoutInput } from "./plan-workout";
 
@@ -56,11 +56,40 @@ const week = (sets: Record<string, number>) => ({
 });
 
 const earlierWorkouts = (count: number) =>
-  Array.from({ length: count }, (_, index) => logged(`earlier-${index}`, "dumbbell-lateral-raise", 1));
+  Array.from({ length: count }, (_, index) => logged(`earlier-${index}`, "plank", 1));
 
 const strength = (referenceStrength: number) => ({ referenceStrength, estimated: true as const });
 
 const withBench = [...levels, kg("dumbbell-floor-press", 20)];
+
+const fullHomeGym: ProfileWithLoads = {
+  tags: ["barbell", "plates", "power_rack", "adjustable_bench", "dumbbells", "pull_up_bar"],
+  loads: {
+    barbell: { barKg: 20, platesKg: [20, 10, 5, 2.5, 1.25] },
+    dumbbells: { kind: "adjustable", minKg: 2.5, maxKg: 40, stepKg: 2.5 },
+  },
+};
+const kettlebells: ProfileWithLoads = {
+  tags: ["kettlebells"],
+  loads: { kettlebells: { weightsKg: [8, 12, 16, 20, 24, 32] } },
+};
+const assessment = {
+  bodyWeightKg: 75,
+  patterns: {
+    squat: strength(100),
+    hinge: strength(120),
+    push: strength(70),
+    pull: strength(70),
+    core: strength(60),
+  },
+};
+const onFullGym = (more: Partial<PlanWorkoutInput> = {}) =>
+  slugs({ equipmentProfile: fullHomeGym, workingLevels: [], assessment, ...more });
+
+const isOneSidedLift = (slug: string) => {
+  const { unilateral, patterns } = exerciseBySlug(slug)!;
+  return unilateral && patterns.some(({ pattern }) => pattern === "squat" || pattern === "hinge");
+};
 
 describe("planWorkout", () => {
   describe("the Weekly Budget", () => {
@@ -83,8 +112,8 @@ describe("planWorkout", () => {
     });
 
     it("goes by the days per week", () => {
-      // 12 at 2 days is met; 20 at 6 days isn't
-      expect(first({ daysPerWeek: 2 })).toBe("dumbbell-lateral-raise");
+      // 14 at 3 days is met; 20 at 6 days isn't
+      expect(first({ daysPerWeek: 3 })).toBe("dumbbell-lateral-raise");
       expect(first({ daysPerWeek: 6 })).not.toBe("dumbbell-lateral-raise");
     });
   });
@@ -356,6 +385,195 @@ describe("planWorkout", () => {
       const chosen = slugs({ equipmentProfile: barbell, workingLevels: [kg("back-squat", 15), kg("deadlift", 60)] });
       expect(chosen).toContain("deadlift");
       expect(chosen).not.toContain("back-squat");
+    });
+  });
+
+  describe("a bodyweight Exercise at the 20-rep cap", () => {
+    const withLevels = (...more: WorkingLevel[]) =>
+      slugs({ workingLevels: [...levels.filter(({ slug }) => slug !== "push-up"), ...more] });
+
+    it("gives way to its progression", () => {
+      const chosen = withLevels(reps("push-up", 20), reps("decline-push-up", 12));
+      expect(chosen).toContain("decline-push-up");
+      expect(chosen).not.toContain("push-up");
+    });
+
+    it("stays below the cap", () => {
+      expect(withLevels(reps("push-up", 19), reps("decline-push-up", 12))).toContain("push-up");
+    });
+
+    it("stays when its progression can't be done", () => {
+      // Goblet squat needs a weight this profile doesn't have
+      const workingLevels = [reps("bodyweight-squat", 20), kg("goblet-squat", 20)];
+      const chosen = slugs({ workingLevels, equipmentProfile: { tags: [], loads: {} } });
+      expect(chosen).toContain("bodyweight-squat");
+    });
+
+    it("stays when its progression conflicts with an injury", () => {
+      const workingLevels = [reps("bodyweight-squat", 20), kg("goblet-squat", 20)];
+      expect(slugs({ workingLevels, injuries: ["knee"] })).toContain("bodyweight-squat");
+    });
+
+    it("goes up the ladder past a progression at the cap too", () => {
+      const chosen = withLevels(reps("push-up", 20), reps("decline-push-up", 20), reps("archer-push-up", 8));
+      expect(chosen).toContain("archer-push-up");
+      expect(chosen).not.toContain("push-up");
+      expect(chosen).not.toContain("decline-push-up");
+    });
+  });
+
+  describe("an Exercise's Workouts in a week", () => {
+    const workoutsWith = (count: number) =>
+      Array.from({ length: count }, (_, index) => logged(`w${index}`, "goblet-squat", 3));
+
+    it.each([
+      [2, 1],
+      [3, 2],
+      [4, 2],
+      [5, 3],
+      [6, 3],
+    ])("stop at half of %i days per week, rounded up", (daysPerWeek, cap) => {
+      expect(slugs({ daysPerWeek, workouts: workoutsWith(cap - 1) })).toContain("goblet-squat");
+      expect(slugs({ daysPerWeek, workouts: workoutsWith(cap) })).not.toContain("goblet-squat");
+    });
+
+    it("count a Workout once however often it's passed", () => {
+      const twice = [logged("w1", "goblet-squat", 3), logged("w1", "goblet-squat", 3)];
+      expect(slugs({ workouts: twice })).toContain("goblet-squat");
+    });
+
+    it("count one Workout once however many times the Exercise is in it", () => {
+      const twiceInOne = [
+        {
+          ...week({}),
+          workoutExercises: [
+            ...logged("w1", "goblet-squat", 3).workoutExercises,
+            ...logged("w1", "goblet-squat", 3).workoutExercises,
+          ],
+        },
+      ];
+      expect(slugs({ workouts: twiceInOne })).toContain("goblet-squat");
+    });
+
+    it("don't count last week's", () => {
+      const lastWeek = [
+        { ...logged("w1", "goblet-squat", 3), startedAt: "2026-10-29T18:00:00.000Z" },
+        { ...logged("w2", "goblet-squat", 3), startedAt: "2026-10-30T18:00:00.000Z" },
+      ];
+      expect(slugs({ workouts: lastWeek })).toContain("goblet-squat");
+    });
+
+    it("give way when nothing else is left, so a user who trains anyway still gets a Workout", () => {
+      const everything = week(Object.fromEntries(EXERCISES.map(({ slug }) => [slug, 1])));
+      expect(slugs({ workouts: [everything], daysPerWeek: 2 }).length).toBeGreaterThan(0);
+    });
+  });
+
+  describe("from week to week", () => {
+    // Identical Muscles and Load Type, so identical scores; library order alone would pick split squat
+    const workingLevels = [reps("split-squat", 10), reps("reverse-lunge", 10)];
+    const firstWith = (startedAt: string, timeZone = "America/New_York") =>
+      slugs({ workingLevels, timeZone, workouts: [{ ...logged("w1", "reverse-lunge", 3), startedAt }] })[0];
+
+    it("gives a tie to last week's Exercise", () => {
+      expect(slugs({ workingLevels })[0]).toBe("split-squat");
+      expect(firstWith("2026-10-29T18:00:00.000Z")).toBe("reverse-lunge");
+    });
+
+    it("gives a tie by library order when the Exercise was trained before last week", () => {
+      expect(firstWith("2026-10-22T18:00:00.000Z")).toBe("split-squat");
+    });
+
+    it("goes by the user's timezone for what last week was", () => {
+      // Monday 03:00 UTC is still Sunday in New York, the week before last
+      expect(firstWith("2026-10-26T03:00:00.000Z", "UTC")).toBe("reverse-lunge");
+      expect(firstWith("2026-10-26T03:00:00.000Z")).toBe("split-squat");
+    });
+
+    it("keeps the same Exercises when the week after starts from nothing", () => {
+      const planned = plan({ workingLevels: withBench }).plannedExercises;
+      const done = week(Object.fromEntries(planned.map(({ slug, sets }) => [slug, sets])));
+      const nextWeek = plan({ workingLevels: withBench, workouts: [done], now: new Date("2026-11-11T12:00:00Z") });
+      expect(nextWeek.plannedExercises).toEqual(planned);
+    });
+  });
+
+  describe("the Goal", () => {
+    it("gives lose_fat different Exercises to build_muscle, with the same inputs", () => {
+      // The barbell bench takes 150 s a Set and the floor press 105 s
+      expect(onFullGym({ goal: "build_muscle" })).toContain("barbell-bench-press");
+      expect(onFullGym({ goal: "lose_fat" })).toContain("dumbbell-floor-press");
+      expect(onFullGym({ goal: "lose_fat" })).not.toContain("barbell-bench-press");
+    });
+
+    it("gives athletic Ballistic Exercises that build_muscle doesn't get, with the same inputs", () => {
+      const onKettlebells = { equipmentProfile: kettlebells, workingLevels: [], assessment };
+      expect(slugs({ ...onKettlebells, goal: "athletic" })).toContain("single-arm-kettlebell-swing");
+      expect(slugs({ ...onKettlebells, goal: "build_muscle" })).not.toContain("single-arm-kettlebell-swing");
+    });
+
+    // They share a Goal factor. recomp's smaller Weekly Budget can still tip a close pick on a big Equipment Profile
+    it("gives build_muscle and recomp the same Exercises", () => {
+      const chosen = (goal: Goal) => slugs({ goal, workingLevels: withBench }).sort();
+      expect(chosen("recomp")).toEqual(chosen("build_muscle"));
+    });
+
+    it.each(["build_muscle", "recomp", "lose_fat", "athletic"] as const)(
+      "prefers loaded Exercises over bodyweight ones on a Full gym-style profile for %s",
+      (goal) => {
+        const chosen = plan({ goal, equipmentProfile: fullHomeGym, workingLevels: [], assessment }).plannedExercises;
+        const setsOf = (loaded: boolean) =>
+          chosen
+            .filter(({ slug }) => (exerciseBySlug(slug)!.loadType === "external") === loaded)
+            .reduce((total, { sets }) => total + sets, 0);
+        expect(setsOf(true)).toBeGreaterThan(setsOf(false));
+        expect(chosen.map(({ slug }) => slug)).not.toContain("bodyweight-squat");
+      },
+    );
+  });
+
+  describe("the cue", () => {
+    it("tells an athletic user to lift fast", () => {
+      expect(plan({ goal: "athletic" }).cue).toBe("Lift as fast as you can on the way up");
+    });
+
+    it.each(["build_muscle", "recomp", "lose_fat"] as const)("isn't given for %s", (goal) => {
+      expect(plan({ goal }).cue).toBeUndefined();
+    });
+  });
+
+  describe("an athletic user's one-sided squat or hinge Exercise", () => {
+    const athletic = (more: Partial<PlanWorkoutInput> = {}) => onFullGym({ goal: "athletic", ...more });
+
+    it("comes first in the plan until it's done, so a short Workout keeps it", () => {
+      const chosen = athletic();
+      expect(chosen.filter(isOneSidedLift)).toEqual(["dumbbell-bulgarian-split-squat"]);
+      expect(chosen[0]).toBe("dumbbell-bulgarian-split-squat");
+    });
+
+    it("isn't given to another Goal", () => {
+      expect(onFullGym({ goal: "build_muscle" }).filter(isOneSidedLift)).toEqual([]);
+    });
+
+    it("is needed once a week", () => {
+      const workouts = [logged("w1", "dumbbell-reverse-lunge", 3)];
+      expect(athletic({ workouts }).filter(isOneSidedLift)).toEqual([]);
+    });
+
+    it("is needed again the week after", () => {
+      const workouts = [{ ...logged("w1", "dumbbell-reverse-lunge", 3), startedAt: "2026-10-29T18:00:00.000Z" }];
+      expect(athletic({ workouts }).filter(isOneSidedLift).length).toBe(1);
+    });
+
+    it("isn't met by another one-sided Exercise", () => {
+      const workouts = [logged("w1", "one-arm-dumbbell-row", 3)];
+      expect(athletic({ workouts }).filter(isOneSidedLift).length).toBe(1);
+    });
+
+    it("is left out when none is available", () => {
+      const chosen = slugs({ goal: "athletic" });
+      expect(chosen.filter(isOneSidedLift)).toEqual([]);
+      expect(chosen).toContain("goblet-squat");
     });
   });
 

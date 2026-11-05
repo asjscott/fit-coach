@@ -11,6 +11,7 @@ import { exerciseName, libraryExercise } from "@/features/workouts/library";
 import { spacing } from "@/theme";
 
 type PlannedWorkoutSectionProps = {
+  cue?: string;
   plannedExercises: PlannedExercise[];
   estimatedSeconds: number;
   workoutLength: WorkoutLength;
@@ -24,6 +25,7 @@ type PlannedWorkoutSectionProps = {
 // Today's Planned Workout, cut to the Workout Length: its Exercises in order, each with its Set count and target, its
 // estimated time, the Length to change for this Workout, and Start, with a Manual Workout as the smaller choice below
 export function PlannedWorkoutSection({
+  cue,
   plannedExercises,
   estimatedSeconds,
   workoutLength,
@@ -38,6 +40,11 @@ export function PlannedWorkoutSection({
     <View style={{ gap: spacing[3] }}>
       <View style={{ gap: spacing[2] }}>
         <SectionLabel>Planned Workout</SectionLabel>
+        {cue ? (
+          <Text size="sm" color="muted">
+            {cue}
+          </Text>
+        ) : null}
         <Text size="sm" color="muted">
           {estimatedTimeLabel(estimatedSeconds)}
         </Text>

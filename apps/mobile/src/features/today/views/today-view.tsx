@@ -122,6 +122,7 @@ export default function TodayView() {
       {today ? (
         <View style={{ marginTop: spacing[5] }}>
           <PlannedWorkoutSection
+            cue={plannedWorkout?.cue}
             plannedExercises={today.plannedExercises}
             estimatedSeconds={today.estimatedSeconds}
             workoutLength={today.workoutLength}

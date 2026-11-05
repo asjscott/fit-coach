@@ -17,8 +17,8 @@ type PlannedWorkoutDoc = Omit<PlannedWorkout, "createdAt"> & {
 export const plannedWorkouts = db.collection<PlannedWorkoutDoc>("plannedWorkouts");
 
 const DAY_MS = 24 * 60 * 60 * 1000;
-// Reaches the Monday of this week in any timezone; the Week Ledger keeps what's actually in the week
-const WEEK_LEDGER_LOOKBACK_MS = 8 * DAY_MS;
+// Reaches the Monday of last week in any timezone; the planner keeps what's actually in each week
+const PLAN_LOOKBACK_MS = 15 * DAY_MS;
 
 export async function ensurePlannedWorkoutIndexes() {
   await plannedWorkouts.createIndex({ clerkUserId: 1, id: 1 }, { unique: true });
@@ -47,7 +47,7 @@ async function rebuildPlannedWorkout(clerkUserId: string, user: OnboardedUser) {
   if (!latest || !equipmentProfile) return;
 
   const now = new Date();
-  const recent = await findWorkoutsSince(clerkUserId, new Date(now.getTime() - WEEK_LEDGER_LOOKBACK_MS));
+  const recent = await findWorkoutsSince(clerkUserId, new Date(now.getTime() - PLAN_LOOKBACK_MS));
   const plan = planWorkout({
     workouts: recent.map(toWorkout),
     now,
@@ -115,6 +115,6 @@ export async function rebuildAfterUpload(
   await rebuildPlannedWorkout(clerkUserId, user);
 }
 
-function toPlannedWorkout({ id, status, weekStart, createdAt, plannedExercises }: WithId<PlannedWorkoutDoc>) {
-  return PlannedWorkout.parse({ id, status, weekStart, createdAt: createdAt.toISOString(), plannedExercises });
+function toPlannedWorkout({ id, status, weekStart, createdAt, plannedExercises, cue }: WithId<PlannedWorkoutDoc>) {
+  return PlannedWorkout.parse({ id, status, weekStart, createdAt: createdAt.toISOString(), plannedExercises, cue });
 }
