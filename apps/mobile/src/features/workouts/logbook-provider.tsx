@@ -14,6 +14,8 @@ type LogbookContextValue = {
   start: () => Promise<void>;
   // Starts Assessment Workout A or B with its tests already added
   startAssessment: (options: AssessmentOptions) => Promise<void>;
+  // Starts a Planned Workout with its Exercises already added, linked to it
+  startPlannedWorkout: (plannedWorkout: PlannedWorkoutToStart) => Promise<void>;
   // For a test Exercise of an Assessment Workout: the suggested next load, or done
   protocolState: Logbook["protocolState"];
   // For an Assessment Workout: its next test, and whether every test is done
@@ -47,6 +49,7 @@ type LogbookContextValue = {
 };
 
 export type AssessmentOptions = Parameters<Logbook["startAssessment"]>[0];
+export type PlannedWorkoutToStart = Parameters<Logbook["startPlannedWorkout"]>[0];
 
 // uploaded settles once the upload attempt does: true when the server has this Workout,
 // false when it stays on the phone as a Pending Workout for the next try
@@ -130,6 +133,11 @@ export function LogbookProvider({ children }: { children: ReactNode }) {
     [logbook, run],
   );
 
+  const startPlannedWorkout = useCallback(
+    (plannedWorkout: PlannedWorkoutToStart) => run(() => logbook.startPlannedWorkout(plannedWorkout, new Date())),
+    [logbook, run],
+  );
+
   const addWorkoutExercise = useCallback(
     (exercise: Pick<Exercise, "slug" | "loadType">) => run(() => logbook.addWorkoutExercise(exercise)),
     [logbook, run],
@@ -198,6 +206,7 @@ export function LogbookProvider({ children }: { children: ReactNode }) {
         isLoaded,
         start,
         startAssessment,
+        startPlannedWorkout,
         protocolState: logbook.protocolState,
         testProgress: logbook.testProgress,
         addWorkoutExercise,
