@@ -6,9 +6,10 @@ import {
   type InjuryTag,
   OnboardingProfile,
   User,
-  type UserProfile,
+  UserProfile,
   type UserUpdate,
 } from "@fit/shared";
+import type { z } from "zod";
 import { db } from "./db";
 
 // The shape of a user document in MongoDB
@@ -44,7 +45,11 @@ export type OnboardedUser = {
   equipmentProfiles: EquipmentProfile[];
   injuries: InjuryTag[];
   timeZone: string;
-};
+} & TrainingPlanProfile;
+
+// What a Weekly Budget is set by. Onboarding requires these too
+const TrainingPlanProfile = UserProfile.pick({ goal: true, daysPerWeek: true });
+type TrainingPlanProfile = z.infer<typeof TrainingPlanProfile>;
 
 // The user once onboarded, or null before. UTC stands in until the phone first sends its timezone
 export async function findOnboardedUser(clerkUserId: string): Promise<OnboardedUser | null> {
@@ -52,6 +57,7 @@ export async function findOnboardedUser(clerkUserId: string): Promise<OnboardedU
   if (!user?.onboardedAt) return null;
   return {
     bodyProfile: BodyProfile.parse(user.profile),
+    ...TrainingPlanProfile.parse(user.profile),
     equipmentProfiles: user.equipmentProfiles,
     injuries: user.profile.injuries ?? [],
     timeZone: user.timeZone ?? "UTC",
