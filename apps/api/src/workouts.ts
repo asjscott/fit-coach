@@ -83,12 +83,20 @@ export async function deleteWorkout(clerkUserId: string, id: string) {
 }
 
 // Convert a database document into the shape the app expects
-export function toWorkout({ id, startedAt, endedAt, assessment, workoutExercises }: WithId<WorkoutDoc>): Workout {
+export function toWorkout({
+  id,
+  startedAt,
+  endedAt,
+  assessment,
+  plannedWorkoutId,
+  workoutExercises,
+}: WithId<WorkoutDoc>): Workout {
   return Workout.parse({
     id,
     startedAt: startedAt.toISOString(),
     endedAt: endedAt.toISOString(),
     ...(assessment && { assessment }),
+    ...(plannedWorkoutId && { plannedWorkoutId }),
     workoutExercises,
   });
 }

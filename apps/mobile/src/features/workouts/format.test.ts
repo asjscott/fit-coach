@@ -11,6 +11,8 @@ import {
   timeLabel,
   timeStat,
   weekDatesLabel,
+  plannedSetsLabel,
+  setTargetLabel,
   workoutExerciseSummary,
   workoutTimesLabel,
   workoutWhenLabel,
@@ -151,6 +153,44 @@ describe("workoutExerciseSummary", () => {
     const previous = [lifted(18, 10), lifted(18, 10), lifted(18, 8)];
     expect(workoutExerciseSummary([], previous)).toBe("Last: 18 kg × 10, 10, 8");
     expect(workoutExerciseSummary([lifted(20, 6)], previous)).toBe("1 set · 20 kg × 6");
+  });
+});
+
+describe("workoutExerciseSummary in a Workout started from a plan", () => {
+  const planned = { sets: 3, target: { unit: "kg", kg: 20, reps: 8 } } as const;
+
+  it("shows the target Sets until something is logged, ahead of the Previous Sets", () => {
+    expect(workoutExerciseSummary([], [lifted(18, 10)], planned)).toBe("3 sets · 20 kg × 8");
+    expect(workoutExerciseSummary([lifted(20, 6)], [lifted(18, 10)], planned)).toBe("1 set · 20 kg × 6");
+  });
+});
+
+describe("setTargetLabel", () => {
+  it.each([
+    ["a load", { unit: "kg", kg: 22.5, reps: 8 }, "22.5 kg × 8"],
+    ["reps", { unit: "reps", reps: 12 }, "12 reps"],
+    ["seconds", { unit: "seconds", seconds: 40 }, "40 s"],
+    ["a band level", { unit: "band", level: "medium", reps: 12 }, "Medium band × 12"],
+    ["a two-word band level", { unit: "band", level: "extra_heavy", reps: 12 }, "Extra heavy band × 12"],
+  ] as const)("reads %s the way a Set does", (_name, target, label) => {
+    expect(setTargetLabel(target)).toBe(label);
+  });
+
+  it("keeps a load the profile has to a tenth of a kg, however it's stored", () => {
+    expect(setTargetLabel({ unit: "kg", kg: 11.34, reps: 8 })).toBe("11.3 kg × 8");
+  });
+});
+
+describe("plannedSetsLabel", () => {
+  const planned = { sets: 3, target: { unit: "kg", kg: 20, reps: 8 } } as const;
+
+  it("counts the Sets before the target", () => {
+    expect(plannedSetsLabel(planned)).toBe("3 sets · 20 kg × 8");
+    expect(plannedSetsLabel({ ...planned, sets: 1 })).toBe("1 set · 20 kg × 8");
+  });
+
+  it("says the target is per side for a one-sided Exercise", () => {
+    expect(plannedSetsLabel(planned, true)).toBe("3 sets · 20 kg × 8 per side");
   });
 });
 

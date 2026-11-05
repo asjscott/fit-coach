@@ -69,6 +69,11 @@ async function rebuildPlannedWorkout(clerkUserId: string, user: OnboardedUser) {
   );
 }
 
+// Only a current plan can finish: one already replaced stays replaced, and a retried upload changes nothing
+export async function finishPlannedWorkout(clerkUserId: string, id: string) {
+  await plannedWorkouts.updateOne({ clerkUserId, id, status: "current" }, { $set: { status: "finished" } });
+}
+
 // For every uploaded Workout. A retry (not created) rebuilds only if its first attempt failed before the plan did:
 // a plan newer than the Workout has counted it already, so retries don't pile up replaced plans
 export async function rebuildAfterUpload(
