@@ -5,6 +5,7 @@
   "private": true,
   "main": "src/index.ts",
   "scripts": {
+    "simulate": "tsx scripts/simulate-plans.ts",
     "test": "vitest run",
     "typecheck": "tsc --noEmit"
   },
