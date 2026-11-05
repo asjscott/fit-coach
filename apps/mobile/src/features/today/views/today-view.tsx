@@ -38,13 +38,14 @@ export default function TodayView() {
   const { workouts, error } = useHistory();
   const daysPerWeek = useCurrentUser().user?.profile.daysPerWeek;
   const { latest: latestAssessment } = useLatestAssessment();
-  const latestPlan = usePlannedWorkout();
+  const { plannedWorkout: latestPlan, stale: planIsStale } = usePlannedWorkout();
   const { dismissed, dismiss } = useDismissedOffer();
   const tests = useChosenTests();
   useRefreshHistory();
 
-  // A Workout under way is what's on offer, so Resume stands alone until it's finished or discarded
-  const plannedWorkout = isLoaded && !logbook.workout ? latestPlan : null;
+  // A Workout under way is what's on offer, so Resume stands alone until it's finished or discarded. A stale plan is
+  // never shown (ADR 0003)
+  const plannedWorkout = isLoaded && !logbook.workout && !planIsStale ? latestPlan : null;
   const { today, clearChoices } = useDaysWorkout(plannedWorkout);
 
   // A forgotten Workout must be finished or discarded before the user carries on
@@ -105,6 +106,11 @@ export default function TodayView() {
         {status ? (
           <Text size="sm" color="muted">
             {status}
+          </Text>
+        ) : null}
+        {planIsStale && !logbook.workout ? (
+          <Text size="sm" color="muted">
+            Connect to plan your next Workout
           </Text>
         ) : null}
       </View>

@@ -1,13 +1,18 @@
 import { randomUUID } from "node:crypto";
 import type { WithId } from "mongodb";
-import { planWorkout } from "@fit/engines";
+import { planInputsKey, planIsDue, planWorkout } from "@fit/engines";
 import { PlannedWorkout } from "@fit/shared";
 import { findLatestAssessment } from "./assessments";
 import { client, db } from "./db";
 import { findOnboardedUser, type OnboardedUser } from "./users";
 import { findWorkoutsSince, toWorkout } from "./workouts";
 
-type PlannedWorkoutDoc = Omit<PlannedWorkout, "createdAt"> & { clerkUserId: string; createdAt: Date };
+// builtFrom is absent on a plan from before it existed, which counts as due for a rebuild
+type PlannedWorkoutDoc = Omit<PlannedWorkout, "createdAt"> & {
+  clerkUserId: string;
+  createdAt: Date;
+  builtFrom?: string;
+};
 
 export const plannedWorkouts = db.collection<PlannedWorkoutDoc>("plannedWorkouts");
 
@@ -32,11 +37,13 @@ export async function findCurrentPlannedWorkout(clerkUserId: string) {
   return doc && toPlannedWorkout(doc);
 }
 
+const primaryProfile = ({ equipmentProfiles }: OnboardedUser) => equipmentProfiles.find(({ isPrimary }) => isPrimary);
+
 // Replaces the current plan with one built from the user's data as it stands now, keeping the old one. Does nothing
 // before the first Assessment, since the Coach has no Working Levels to prescribe from
 async function rebuildPlannedWorkout(clerkUserId: string, user: OnboardedUser) {
   const latest = await findLatestAssessment(clerkUserId);
-  const equipmentProfile = user.equipmentProfiles.find(({ isPrimary }) => isPrimary);
+  const equipmentProfile = primaryProfile(user);
   if (!latest || !equipmentProfile) return;
 
   const now = new Date();
@@ -62,17 +69,31 @@ async function rebuildPlannedWorkout(clerkUserId: string, user: OnboardedUser) {
       );
       if (!plan.plannedExercises.length) return;
       await plannedWorkouts.insertOne(
-        { ...plan, id: randomUUID(), status: "current", clerkUserId, createdAt: new Date() },
+        {
+          ...plan,
+          id: randomUUID(),
+          status: "current",
+          clerkUserId,
+          createdAt: new Date(),
+          builtFrom: planInputsKey({ ...user, equipmentProfile }),
+        },
         { session },
       );
     }),
   );
 }
 
-// For a Profile change that shapes the plan. Before onboarding there's nothing to plan from
-export async function rebuildAfterProfileChange(clerkUserId: string) {
+// Rebuilds the plan if one is due (planIsDue), and gives the plan to train next, or null when there can't be one.
+// Before onboarding there's nothing to plan from
+export async function currentOrRebuiltPlannedWorkout(clerkUserId: string) {
   const user = await findOnboardedUser(clerkUserId);
-  if (user) await rebuildPlannedWorkout(clerkUserId, user);
+  const equipmentProfile = user && primaryProfile(user);
+  if (!user || !equipmentProfile) return null;
+  const inputs = { ...user, equipmentProfile };
+  if (planIsDue(await findCurrent(clerkUserId), inputs, new Date(), user.timeZone)) {
+    await rebuildPlannedWorkout(clerkUserId, user);
+  }
+  return findCurrentPlannedWorkout(clerkUserId);
 }
 
 // Only a current plan can finish: one already replaced stays replaced, and a retried upload changes nothing

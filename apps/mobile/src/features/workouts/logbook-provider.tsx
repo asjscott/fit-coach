@@ -1,5 +1,18 @@
-import { createLogbook, type FinishResult, type Logbook, type WorkoutTimes } from "@fit/engines";
-import { PreviousSets, type Exercise, type InProgressWorkout, type SetValues, type Workout } from "@fit/shared";
+import {
+  createLogbook,
+  type FinishResult,
+  type Logbook,
+  type PlannedWorkoutCopy,
+  type WorkoutTimes,
+} from "@fit/engines";
+import {
+  PlannedWorkout,
+  PreviousSets,
+  type Exercise,
+  type InProgressWorkout,
+  type SetValues,
+  type Workout,
+} from "@fit/shared";
 import * as Crypto from "expo-crypto";
 import { createContext, use, useCallback, useEffect, useState, type ReactNode } from "react";
 import { useApi } from "@/api";
@@ -14,6 +27,10 @@ type LogbookContextValue = {
   start: () => Promise<void>;
   // Starts Assessment Workout A or B with its tests already added
   startAssessment: (options: AssessmentOptions) => Promise<void>;
+  // The latest Planned Workout on the phone, read from it, and whether it's known to be out of date
+  plannedWorkoutCopy: PlannedWorkoutCopy;
+  // Asks the server for the latest; with no answer the copy stays as it is
+  refreshPlannedWorkout: () => Promise<void>;
   // Starts a Planned Workout with its Exercises already added, linked to it
   startPlannedWorkout: (plannedWorkout: PlannedWorkoutToStart) => Promise<void>;
   // For a test Exercise of an Assessment Workout: the suggested next load, or done
@@ -44,7 +61,7 @@ type LogbookContextValue = {
   pendingCount: () => Promise<number>;
   // Removes a Pending Workout so it never uploads; works offline
   deletePending: (workoutId: string) => Promise<void>;
-  // For signing out: removes the in-progress and Pending Workouts from the phone
+  // For signing out: removes the in-progress and Pending Workouts and the Planned Workout from the phone
   clear: () => Promise<void>;
 };
 
@@ -86,14 +103,34 @@ export function LogbookProvider({ children }: { children: ReactNode }) {
           }
         },
       },
+      plannedWorkouts: {
+        current: async () =>
+          PlannedWorkout.nullable().parse(await api("/planned-workouts/current", { method: "POST" })),
+      },
       newId: Crypto.randomUUID,
     }),
   );
   const [workout, setWorkout] = useState<InProgressWorkout | null>(null);
   const [pending, setPending] = useState<Workout[]>([]);
+  const [plannedWorkoutCopy, setPlannedWorkoutCopy] = useState<PlannedWorkoutCopy>({
+    plannedWorkout: null,
+    stale: false,
+  });
   const [isLoaded, setIsLoaded] = useState(false);
 
-  const refreshPending = useCallback(async () => setPending(await logbook.pending()), [logbook]);
+  // The Planned Workout goes stale by Pending Workouts, so the two are shown together
+  const refreshPending = useCallback(async () => {
+    setPending(await logbook.pending());
+    setPlannedWorkoutCopy(await logbook.plannedWorkout());
+  }, [logbook]);
+
+  const refreshPlannedWorkout = useCallback(async () => {
+    try {
+      setPlannedWorkoutCopy(await logbook.refreshPlannedWorkout());
+    } catch {
+      // Keep the copy: Today's own status line already says when there's no connection
+    }
+  }, [logbook]);
 
   // Runs a Logbook call, then shows what it left on the phone
   const run = useCallback(
@@ -108,11 +145,13 @@ export function LogbookProvider({ children }: { children: ReactNode }) {
     [logbook, refreshPending],
   );
 
-  // Uploads what it can; anything that fails stays pending for the next try
+  // Uploads what it can; anything that fails stays pending for the next try. Then asks for the plan an upload rebuilt,
+  // or a new week's on returning to the app, without holding up whoever is waiting on the upload
   const sync = useCallback(async () => {
     await logbook.sync().catch(() => {});
     await refreshPending();
-  }, [logbook, refreshPending]);
+    refreshPlannedWorkout();
+  }, [logbook, refreshPending, refreshPlannedWorkout]);
 
   // Also uploads anything left pending last time the app ran
   useEffect(() => {
@@ -204,6 +243,8 @@ export function LogbookProvider({ children }: { children: ReactNode }) {
       value={{
         workout,
         isLoaded,
+        plannedWorkoutCopy,
+        refreshPlannedWorkout,
         start,
         startAssessment,
         startPlannedWorkout,

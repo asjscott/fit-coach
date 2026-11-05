@@ -253,6 +253,26 @@ describe("planWorkout", () => {
     });
   });
 
+  describe("a new week", () => {
+    const nextMonday = new Date("2026-11-09T12:00:00Z");
+
+    it("is built for the new week, with last week's Sets counting for nothing", () => {
+      const lastWeek = [logged("last-week", "goblet-squat", 20)];
+
+      const planned = plan({ workouts: lastWeek, now: nextMonday });
+
+      expect(planned.weekStart).toBe("2026-11-09");
+      expect(planned.plannedExercises[0].slug).toBe(plan({ now: nextMonday }).plannedExercises[0].slug);
+      expect(planned.plannedExercises.some(({ slug }) => slug === "goblet-squat")).toBe(true);
+    });
+
+    it("carries no unused budget over from a missed week", () => {
+      const twoWeeksOn = new Date("2026-11-16T12:00:00Z");
+
+      expect(slugs({ now: twoWeeksOn })).toEqual(slugs({ now: nextMonday }));
+    });
+  });
+
   describe("a missing Working Level", () => {
     const rack: ProfileWithLoads = {
       tags: ["barbell", "plates", "power_rack"],

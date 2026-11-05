@@ -1,23 +1,17 @@
-import { PlannedWorkout } from "@fit/shared";
-import { useCallback, useState } from "react";
-import { useApi } from "@/api";
-import { useReloadOnVisit } from "@/features/workouts/hooks/use-reload-on-visit";
+import { useFocusEffect } from "expo-router";
+import { useCallback } from "react";
+import { useLogbook } from "@/features/workouts/logbook-provider";
 
-// The Planned Workout from GET /planned-workouts/current: null when there's none, such as before the first Assessment,
-// and until it arrives. An upload is what rebuilds it, so it reloads with History
+// The phone's copy of the Planned Workout, whether or not it has signal, asking the server for the latest on every
+// visit. The server builds one if it's due, so this also covers a new week and a user with no plan yet
 export function usePlannedWorkout() {
-  const api = useApi();
-  const [plannedWorkout, setPlannedWorkout] = useState<PlannedWorkout | null>(null);
+  const { plannedWorkoutCopy, refreshPlannedWorkout } = useLogbook();
 
-  const refresh = useCallback(async () => {
-    try {
-      setPlannedWorkout(PlannedWorkout.nullable().parse(await api("/planned-workouts/current")));
-    } catch {
-      // Keep what's showing: Today's own status line already says when there's no connection
-    }
-  }, [api]);
+  useFocusEffect(
+    useCallback(() => {
+      refreshPlannedWorkout();
+    }, [refreshPlannedWorkout]),
+  );
 
-  useReloadOnVisit(refresh);
-
-  return plannedWorkout;
+  return plannedWorkoutCopy;
 }
