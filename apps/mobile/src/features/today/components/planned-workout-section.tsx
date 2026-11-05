@@ -29,6 +29,11 @@ export function PlannedWorkoutSection({
     <View style={{ gap: spacing[3] }}>
       <View style={{ gap: spacing[2] }}>
         <SectionLabel>Planned Workout</SectionLabel>
+        {plannedWorkout.cue ? (
+          <Text size="sm" color="muted">
+            {plannedWorkout.cue}
+          </Text>
+        ) : null}
         {plannedWorkout.plannedExercises.map(({ slug, sets, target }) => (
           <View key={slug}>
             <Text>{exerciseName(slug)}</Text>

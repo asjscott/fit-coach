@@ -32,5 +32,7 @@ export const PlannedWorkout = z.object({
   weekStart: z.iso.date(),
   createdAt: z.iso.datetime(),
   plannedExercises: z.array(PlannedExercise).min(1),
+  // A cue for the whole Workout, for the user's Goal
+  cue: z.string().optional(),
 });
 export type PlannedWorkout = z.infer<typeof PlannedWorkout>;
