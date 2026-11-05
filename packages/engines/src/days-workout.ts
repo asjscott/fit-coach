@@ -1,5 +1,6 @@
 import type { Goal, PlannedExercise, PlannedWorkout, WorkoutLength } from "@fit/shared";
 import { exerciseBySlug } from "./data/exercises";
+import { SETS_PER_PICK } from "./weekly-budget";
 import { secondsForSets, WARM_UP_SECONDS } from "./workout-length";
 
 // The library's median, for an Exercise this app version doesn't know yet
@@ -20,19 +21,27 @@ const secondsPerSet = (slug: string) => exerciseBySlug(slug)?.secondsPerSet ?? T
 const secondsOf = (plannedExercises: readonly PlannedExercise[]) =>
   plannedExercises.reduce((seconds, { slug, sets }) => seconds + sets * secondsPerSet(slug), 0);
 
-// Takes the plan in priority order and stops at the first Exercise that doesn't wholly fit, keeping the Sets of it
-// that do: nothing lower priority may take the place of higher priority work
+// Every Exercise's first Sets, then the 4th Sets the planner adds last: stored with their Exercise, they're still its
+// lowest priority work
+const setsInPriorityOrder = (plannedExercises: readonly PlannedExercise[]): PlannedExercise[] => [
+  ...plannedExercises.flatMap((exercise) => Array(Math.min(exercise.sets, SETS_PER_PICK)).fill(exercise)),
+  ...plannedExercises.flatMap((exercise) => Array(Math.max(exercise.sets - SETS_PER_PICK, 0)).fill(exercise)),
+];
+
+// Keeps Sets in priority order and stops at the first that doesn't fit: nothing lower priority may take the place of
+// higher priority work
 function cutToSeconds(plannedExercises: readonly PlannedExercise[], seconds: number) {
-  const kept: PlannedExercise[] = [];
+  const keptSets = new Map<PlannedExercise, number>();
   let secondsLeft = seconds;
-  for (const plannedExercise of plannedExercises) {
-    const perSet = secondsPerSet(plannedExercise.slug);
-    const sets = Math.min(plannedExercise.sets, Math.floor(secondsLeft / perSet));
-    if (sets) kept.push({ ...plannedExercise, sets });
-    if (sets < plannedExercise.sets) break;
-    secondsLeft -= sets * perSet;
+  for (const plannedExercise of setsInPriorityOrder(plannedExercises)) {
+    secondsLeft -= secondsPerSet(plannedExercise.slug);
+    if (secondsLeft < 0) break;
+    keptSets.set(plannedExercise, (keptSets.get(plannedExercise) ?? 0) + 1);
   }
-  return kept;
+  return plannedExercises.flatMap((plannedExercise) => {
+    const sets = keptSets.get(plannedExercise);
+    return sets ? [{ ...plannedExercise, sets }] : [];
+  });
 }
 
 // Lower goes first

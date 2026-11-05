@@ -26,6 +26,7 @@ import {
   MAX_SETS_PER_EXERCISE,
   MIN_WORKOUTS_PER_MUSCLE,
   MUSCLE_CAP_PER_WORKOUT,
+  SETS_PER_PICK,
   weeklyBudget,
   type WeeklyBudget,
 } from "./weekly-budget";
@@ -33,7 +34,6 @@ import { asDone } from "./working-level-sections";
 import { seedWorkingLevels, WORKING_LEVEL_REPS } from "./working-levels";
 import { secondsForSets } from "./workout-length";
 
-const SETS_PER_PICK = 3;
 // Always the Long version: the day's Workout cuts it to length (daysWorkout)
 const WORKOUT_SECONDS = secondsForSets("long");
 

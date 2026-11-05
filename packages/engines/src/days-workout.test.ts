@@ -56,6 +56,47 @@ describe("daysWorkout", () => {
       ]);
     });
 
+    describe("4th Sets", () => {
+      const inPriorityOrder = (...lastExercises: PlannedExercise[]) => ({
+        plannedExercises: [
+          planned("goblet-squat", 4), // 120 s: 360 for the first three
+          planned("plank"), // 75 s: 585
+          planned("dumbbell-lateral-raise"), // 60 s: 765
+          planned("push-up", 4), // 90 s: 1035
+          planned("kettlebell-swing"), // 90 s: 1305
+          ...lastExercises,
+        ],
+      });
+      const setsAtShort = (plan: ReturnType<typeof inPriorityOrder>) =>
+        Object.fromEntries(
+          daysWorkout(plan, { workoutLength: "short" }).plannedExercises.map(({ slug, sets }) => [slug, sets]),
+        );
+
+      it("are cut before a later Exercise's first three Sets", () => {
+        // 1500 s at Short: the deadlift's first Set goes ahead of the 4th goblet squat, and the 75 s left takes
+        // neither a second deadlift Set nor a 4th Set
+        expect(setsAtShort(inPriorityOrder(planned("dumbbell-romanian-deadlift")))).toEqual({
+          "goblet-squat": 3,
+          plank: 3,
+          "dumbbell-lateral-raise": 3,
+          "push-up": 3,
+          "kettlebell-swing": 3,
+          "dumbbell-romanian-deadlift": 1,
+        });
+      });
+
+      it("come back in priority order once every Exercise's first three fit", () => {
+        // The 195 s left after the first three take the 4th goblet squat at 120 s, and 75 s can't take the 4th push-up
+        expect(setsAtShort(inPriorityOrder())).toEqual({
+          "goblet-squat": 4,
+          plank: 3,
+          "dumbbell-lateral-raise": 3,
+          "push-up": 3,
+          "kettlebell-swing": 3,
+        });
+      });
+    });
+
     it("keeps a plan shorter than the Length as it is", () => {
       const plan = { plannedExercises: [planned("goblet-squat"), planned("push-up", 2)] };
       expect(daysWorkout(plan, { workoutLength: "long" }).plannedExercises).toEqual(plan.plannedExercises);
@@ -142,12 +183,13 @@ describe("daysWorkout", () => {
       // swing to the front doesn't let it push out the work ahead of it in priority order
       const short = {
         plannedExercises: [
-          planned("plank", 4), // 300 s
-          planned("goblet-squat", 4), // 780 s
-          planned("dumbbell-lateral-raise", 4), // 1020 s
-          planned("push-up", 4), // 1380 s
-          planned("kettlebell-swing", 4), // Only one 90 s Set fits
-          planned("dumbbell-romanian-deadlift"),
+          planned("plank"), // 225 s
+          planned("goblet-squat"), // 585 s
+          planned("dumbbell-lateral-raise"), // 765 s
+          planned("push-up"), // 1035 s
+          planned("dumbbell-romanian-deadlift"), // 1395 s
+          planned("kettlebell-swing"), // Only one 90 s Set fits
+          planned("dumbbell-overhead-press"),
         ],
       };
       expect(
@@ -157,10 +199,11 @@ describe("daysWorkout", () => {
         ]),
       ).toEqual([
         ["kettlebell-swing", 1],
-        ["goblet-squat", 4],
-        ["push-up", 4],
-        ["plank", 4],
-        ["dumbbell-lateral-raise", 4],
+        ["goblet-squat", 3],
+        ["push-up", 3],
+        ["dumbbell-romanian-deadlift", 3],
+        ["plank", 3],
+        ["dumbbell-lateral-raise", 3],
       ]);
     });
 

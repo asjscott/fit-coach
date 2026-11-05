@@ -18,6 +18,7 @@ const DOSES: Record<Goal, { main: Dose; last: Dose }> = {
 };
 const DAYS_SCALE: Record<number, number> = { 2: 0.75, 3: 0.875, 4: 1, 5: 1.125, 6: 1.25 };
 const FLOOR = 4;
+export const SETS_PER_PICK = 3;
 export const MAX_SETS_PER_EXERCISE = 4;
 // Soft limits: credited Sets a Muscle takes from one Workout, and the fewest Workouts its budget is spread over
 export const MUSCLE_CAP_PER_WORKOUT = 10;
