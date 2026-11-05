@@ -48,6 +48,9 @@ async function rebuildPlannedWorkout(clerkUserId: string, user: OnboardedUser) {
     equipmentProfile,
     injuries: user.injuries,
     workingLevels: latest.workingLevels,
+    assessment: latest.assessment,
+    goal: user.goal,
+    daysPerWeek: user.daysPerWeek,
   });
 
   await client.withSession((session) =>
