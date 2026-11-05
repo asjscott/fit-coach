@@ -42,6 +42,9 @@ const statLabel = ({ value, unit }: { value: string; unit: string }) => `${value
 // A length of time as a Stat's value and unit, to the nearest minute
 export const timeStat = (ms: number) => minutesStat(Math.round(ms / 60_000));
 
+// How long a Workout should take: "About 44 min"
+export const estimatedTimeLabel = (seconds: number) => `About ${statLabel(timeStat(seconds * 1000))}`;
+
 export const durationLabel = ({ startedAt, endedAt }: WorkoutTimes) =>
   statLabel(timeStat(Date.parse(endedAt) - Date.parse(startedAt)));
 

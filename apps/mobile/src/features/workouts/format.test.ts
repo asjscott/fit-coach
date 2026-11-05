@@ -9,6 +9,7 @@ import {
   setParts,
   setsSummary,
   timeLabel,
+  estimatedTimeLabel,
   timeStat,
   weekDatesLabel,
   plannedSetsLabel,
@@ -197,6 +198,13 @@ describe("plannedSetsLabel", () => {
 describe("previousSetsLabel", () => {
   it("reads like the Sets summary, after Last", () => {
     expect(previousSetsLabel([lifted(18, 10), lifted(18, 10), lifted(18, 8)])).toBe("Last: 18 kg × 10, 10, 8");
+  });
+});
+
+describe("estimatedTimeLabel", () => {
+  it("gives the time to the nearest minute", () => {
+    expect(estimatedTimeLabel(2640)).toBe("About 44 min");
+    expect(estimatedTimeLabel(1725)).toBe("About 29 min");
   });
 });
 

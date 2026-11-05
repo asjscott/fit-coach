@@ -4,7 +4,7 @@ import { planWorkout } from "@fit/engines";
 import { PlannedWorkout } from "@fit/shared";
 import { findLatestAssessment } from "./assessments";
 import { client, db } from "./db";
-import type { OnboardedUser } from "./users";
+import { findOnboardedUser, type OnboardedUser } from "./users";
 import { findWorkoutsSince, toWorkout } from "./workouts";
 
 type PlannedWorkoutDoc = Omit<PlannedWorkout, "createdAt"> & { clerkUserId: string; createdAt: Date };
@@ -67,6 +67,12 @@ async function rebuildPlannedWorkout(clerkUserId: string, user: OnboardedUser) {
       );
     }),
   );
+}
+
+// For a Profile change that shapes the plan. Before onboarding there's nothing to plan from
+export async function rebuildAfterProfileChange(clerkUserId: string) {
+  const user = await findOnboardedUser(clerkUserId);
+  if (user) await rebuildPlannedWorkout(clerkUserId, user);
 }
 
 // Only a current plan can finish: one already replaced stays replaced, and a retried upload changes nothing

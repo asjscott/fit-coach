@@ -1,24 +1,35 @@
-import type { PlannedWorkout } from "@fit/shared";
+import type { PlannedExercise, WorkoutLength } from "@fit/shared";
 import { View } from "react-native";
+import { Chip } from "@/components/chip";
 import { LoadingButton } from "@/components/loading-button";
 import { SectionLabel } from "@/components/section-label";
+import { HStack } from "@/components/stack";
 import { Text } from "@/components/text";
-import { plannedSetsLabel } from "@/features/workouts/format";
+import { workoutLengthOptions } from "@/features/user/components/form/fields/user-workout-length-field";
+import { estimatedTimeLabel, plannedSetsLabel } from "@/features/workouts/format";
 import { exerciseName, libraryExercise } from "@/features/workouts/library";
 import { spacing } from "@/theme";
 
 type PlannedWorkoutSectionProps = {
-  plannedWorkout: PlannedWorkout;
+  cue?: string;
+  plannedExercises: PlannedExercise[];
+  estimatedSeconds: number;
+  workoutLength: WorkoutLength;
+  onChooseLength: (workoutLength: WorkoutLength) => void;
   startingPlan: boolean;
   startingManual: boolean;
   onStart: () => void;
   onStartManual: () => void;
 };
 
-// Today's Planned Workout: its Exercises in order, each with its Set count and target, and Start, with a Manual
-// Workout as the smaller choice below
+// Today's Planned Workout, cut to the Workout Length: its Exercises in order, each with its Set count and target, its
+// estimated time, the Length to change for this Workout, and Start, with a Manual Workout as the smaller choice below
 export function PlannedWorkoutSection({
-  plannedWorkout,
+  cue,
+  plannedExercises,
+  estimatedSeconds,
+  workoutLength,
+  onChooseLength,
   startingPlan,
   startingManual,
   onStart,
@@ -29,12 +40,26 @@ export function PlannedWorkoutSection({
     <View style={{ gap: spacing[3] }}>
       <View style={{ gap: spacing[2] }}>
         <SectionLabel>Planned Workout</SectionLabel>
-        {plannedWorkout.cue ? (
+        {cue ? (
           <Text size="sm" color="muted">
-            {plannedWorkout.cue}
+            {cue}
           </Text>
         ) : null}
-        {plannedWorkout.plannedExercises.map(({ slug, sets, target }) => (
+        <Text size="sm" color="muted">
+          {estimatedTimeLabel(estimatedSeconds)}
+        </Text>
+        <HStack spacing={2}>
+          {workoutLengthOptions.map(({ value, label }) => (
+            <Chip
+              key={value}
+              label={label}
+              selected={value === workoutLength}
+              disabled={starting}
+              onPress={() => onChooseLength(value)}
+            />
+          ))}
+        </HStack>
+        {plannedExercises.map(({ slug, sets, target }) => (
           <View key={slug}>
             <Text>{exerciseName(slug)}</Text>
             <Text size="sm" color="muted">

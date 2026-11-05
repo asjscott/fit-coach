@@ -323,9 +323,10 @@ describe("planWorkout", () => {
       expect(new Set(chosen).size).toBe(chosen.length);
     });
 
-    it("fills 45 minutes without going over", () => {
-      // Nine Exercises at 120 s a Set, and shorter core Exercises to use what's left
+    it("builds the Long version, filling 55 minutes of Sets without going over", () => {
+      // Ten Exercises at 120 s a Set, so a tenth pick would reach 60 minutes
       const workingLevels = [
+        "single-arm-overhead-press",
         "goblet-squat",
         "dumbbell-romanian-deadlift",
         "dumbbell-overhead-press",
@@ -340,8 +341,8 @@ describe("planWorkout", () => {
         (total, { slug, sets }) => total + exerciseBySlug(slug)!.secondsPerSet * sets,
         0,
       );
-      expect(seconds).toBeLessThanOrEqual(45 * 60);
-      expect(seconds).toBeGreaterThanOrEqual(43 * 60);
+      expect(seconds).toBeLessThanOrEqual(55 * 60);
+      expect(seconds).toBeGreaterThanOrEqual(53 * 60);
     });
   });
 

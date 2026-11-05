@@ -32,9 +32,11 @@ import {
 } from "./weekly-budget";
 import { asDone } from "./working-level-sections";
 import { MAX_REPS, seedWorkingLevels, WORKING_LEVEL_REPS } from "./working-levels";
+import { secondsForSets } from "./workout-length";
 
 const SETS_PER_PICK = 3;
-const WORKOUT_SECONDS = 45 * 60;
+// Always the Long version: the day's Workout cuts it to length (daysWorkout)
+const WORKOUT_SECONDS = secondsForSets("long");
 // The part of power training that survives 8-rep Sets
 const ATHLETIC_CUE = "Lift as fast as you can on the way up";
 
