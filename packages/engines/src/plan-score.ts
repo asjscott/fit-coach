@@ -8,6 +8,8 @@ const clamp = (value: number, min: number, max: number) => Math.min(max, Math.ma
 // Every tilt, in one place. All are judgement, the evidence gives only their direction: see
 // docs/research/exercise-selection-by-goal.md. All else equal, loaded work is what a user with the equipment came for
 const EXTERNAL_LOAD_FACTOR = 1.15;
+// Just enough to break ties with dumbbell work, so a gym week has real barbell Sets: see docs/research/planner-simulation.md
+const BARBELL_FACTOR = 1.02;
 const GOAL_FACTORS: Record<Goal, (exercise: Exercise) => number> = {
   build_muscle: () => 1,
   recomp: () => 1,
@@ -15,6 +17,8 @@ const GOAL_FACTORS: Record<Goal, (exercise: Exercise) => number> = {
   lose_fat: ({ secondsPerSet }) => clamp(Math.sqrt(TYPICAL_SECONDS_PER_SET / secondsPerSet), 0.9, 1.1),
   athletic: ({ ballistic }) => (ballistic ? 1.25 : 1),
 };
+
+const needsBarbell = ({ equipmentOptions }: Exercise) => equipmentOptions.every((tags) => tags.includes("barbell"));
 
 // Where the week stands, Exercises already picked for this plan included
 export type WeekSoFar = { goal: Goal; budget: WeeklyBudget; ledger: MuscleCredits };
@@ -27,5 +31,6 @@ export function scoreExercise(exercise: Exercise, { goal, budget, ledger }: Week
     if (budgeted) score += (credit * Math.max(0, budgeted - (ledger[muscle] ?? 0))) / budgeted;
   }
   const loadFactor = exercise.loadType === "external" ? EXTERNAL_LOAD_FACTOR : 1;
-  return score * loadFactor * GOAL_FACTORS[goal](exercise);
+  const barbellFactor = needsBarbell(exercise) ? BARBELL_FACTOR : 1;
+  return score * loadFactor * barbellFactor * GOAL_FACTORS[goal](exercise);
 }

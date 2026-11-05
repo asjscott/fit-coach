@@ -44,6 +44,16 @@ describe("scoreExercise", () => {
     expect(scoreExercise(exercise("goblet-squat"), nothingDone)).toBeCloseTo(2.875);
   });
 
+  it("prefers an Exercise that needs a barbell by 1.02", () => {
+    // Back squat: quads 1, glutes 1, abs 0.5, then × 1.15 × 1.02
+    expect(scoreExercise(exercise("back-squat"), nothingDone)).toBeCloseTo(2.9325);
+  });
+
+  it("breaks the tie between back squat and goblet squat", () => {
+    const backSquat = scoreExercise(exercise("back-squat"), nothingDone);
+    expect(backSquat).toBeGreaterThan(scoreExercise(exercise("goblet-squat"), nothingDone));
+  });
+
   it("is 0 for an Exercise training no budgeted Muscle", () => {
     const score = scoreExercise(exercise("goblet-squat"), {
       ...nothingDone,
