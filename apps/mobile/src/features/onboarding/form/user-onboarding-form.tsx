@@ -17,6 +17,7 @@ import { UserHeightField } from "@/features/user/components/form/fields/user-hei
 import { UserInjuriesField } from "@/features/user/components/form/fields/user-injuries-field";
 import { UserGenderField } from "@/features/user/components/form/fields/user-gender-field";
 import { UserWeightField } from "@/features/user/components/form/fields/user-weight-field";
+import { UserWorkoutLengthField } from "@/features/user/components/form/fields/user-workout-length-field";
 import { useUserOnboarding, type OnboardingValues } from "../hooks/use-user-onboarding";
 import { CompleteStage, FormStage, StagedForm } from "./staged-form";
 
@@ -70,12 +71,19 @@ export function UserOnboardingForm({ exit }: { exit: { label: string; onPress: (
             </HStack>
           </FormStage>
           <FormStage<OnboardingValues>
-            fields={["goal", "daysPerWeek"]}
+            fields={["goal"]}
             title="Your goal"
             message="Pick what matters most right now. You can change it later."
           >
             <UserGoalField />
+          </FormStage>
+          <FormStage<OnboardingValues>
+            fields={["daysPerWeek", "workoutLength"]}
+            title="Your training time"
+            message="We'll fit your plan around these. You can change them later."
+          >
             <UserDaysPerWeekField />
+            <UserWorkoutLengthField />
           </FormStage>
           <FormStage<OnboardingValues>
             fields={["trainingSetup"]}

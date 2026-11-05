@@ -7,6 +7,11 @@ export type Goal = z.infer<typeof Goal>;
 export const InjuryTag = z.enum(["neck", "shoulder", "elbow", "wrist", "lower_back", "hip", "knee", "ankle"]);
 export type InjuryTag = z.infer<typeof InjuryTag>;
 
+export const WorkoutLength = z.enum(["short", "standard", "long"]);
+export type WorkoutLength = z.infer<typeof WorkoutLength>;
+
+export const WORKOUT_LENGTH_MINUTES: Record<WorkoutLength, number> = { short: 30, standard: 45, long: 60 };
+
 export const UserProfile = z.object({
   gender: z.enum(["male", "female"], { error: "Choose one" }),
   birthYear: z
@@ -18,6 +23,7 @@ export const UserProfile = z.object({
   weightKg: z.number({ error: "Enter your weight" }).min(35).max(250),
   goal: Goal,
   daysPerWeek: z.number().int().min(2).max(6),
+  workoutLength: WorkoutLength,
   injuries: z.array(InjuryTag, { error: "Choose any that apply, or None" }),
 });
 

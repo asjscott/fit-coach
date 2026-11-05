@@ -14,5 +14,6 @@ export * from "./plan-workout";
 export * from "./training-summaries";
 export * from "./week-ledger";
 export * from "./weekly-budget";
+export * from "./workout-length";
 export * from "./working-level-sections";
 export { WORKING_LEVEL_REPS } from "./working-levels";
