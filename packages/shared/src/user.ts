@@ -37,11 +37,23 @@ export const User = z.object({
   // Set by the server once OnboardingProfile is complete; read-only for clients
   onboardedAt: z.iso.datetime().nullable(),
   equipmentProfiles: z.array(EquipmentProfile),
+  // The phone's IANA timezone, so the server's weeks match Today's (ADR 0003); absent until the phone first sends it
+  timeZone: z.string().optional(),
 });
 export type User = z.infer<typeof User>;
 
+function isTimeZone(timeZone: string) {
+  try {
+    new Intl.DateTimeFormat("en-US", { timeZone });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 // Body for PATCH /user; profile fields are merged into the stored profile
 export const UserUpdate = z.strictObject({
-  profile: UserProfile.partial(),
+  profile: UserProfile.partial().optional(),
+  timeZone: z.string().refine(isTimeZone, { error: "Unknown timezone" }).optional(),
 });
 export type UserUpdate = z.infer<typeof UserUpdate>;
