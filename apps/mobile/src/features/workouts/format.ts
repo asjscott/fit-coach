@@ -1,13 +1,6 @@
-import type {
-  BandLevel,
-  BuiltInEquipment,
-  InProgressWorkoutExercise,
-  Set,
-  SetTarget,
-  SetValues,
-  Workout,
-} from "@fit/shared";
+import type { BuiltInEquipment, InProgressWorkoutExercise, Set, SetTarget, SetValues, Workout } from "@fit/shared";
 import { getCalendars } from "expo-localization";
+import { bandLevelLabels } from "../equipment/loads";
 
 // How Workouts and Sets read on screen
 
@@ -157,24 +150,18 @@ export function setsSummary(sets: readonly Set[]) {
 // Previous Sets as a reference while logging: "Last: 18 kg × 10, 10, 8"
 export const previousSetsLabel = (sets: readonly Set[]) => `Last: ${setsSummary(sets)}`;
 
-const BAND_LEVEL_LABELS: Record<BandLevel, string> = {
-  light: "Light",
-  medium: "Medium",
-  heavy: "Heavy",
-  extra_heavy: "Extra heavy",
-};
-
-// A Set's target as a Set reads: "20 kg × 8", "12 reps", "40 s", "Medium band × 12"
+// A Set's target as a Set reads: "20 kg × 8", "12 reps", "40 s", "Medium band × 12". A profile's loads are summed, so a
+// kg can carry floating-point noise, unlike a logged Set's
 export function setTargetLabel(target: SetTarget) {
   switch (target.unit) {
     case "kg":
-      return `${weightLabel(target.kg)} × ${target.reps}`;
+      return describeSet({ kind: "external", kg: Math.round(target.kg * 100) / 100, reps: target.reps });
     case "reps":
-      return `${target.reps} reps`;
+      return describeSet({ kind: "bodyweight", reps: target.reps });
     case "seconds":
-      return `${target.seconds} s`;
+      return describeSet({ kind: "timed", seconds: target.seconds });
     case "band":
-      return `${BAND_LEVEL_LABELS[target.level]} band × ${target.reps}`;
+      return `${bandLevelLabels[target.level]} band × ${target.reps}`;
   }
 }
 
@@ -184,11 +171,14 @@ type PlannedSets = NonNullable<InProgressWorkoutExercise["planned"]>;
 export const plannedSetsLabel = ({ sets, target }: PlannedSets, unilateral = false) =>
   `${setsLabel(sets)} · ${setTargetLabel(target)}${unilateral ? " per side" : ""}`;
 
-const EQUIPMENT_NOUN: Record<BuiltInEquipment, string> = { full_gym: "full gym", bodyweight_only: "bodyweight" };
+export const builtInEquipmentLabels: Record<BuiltInEquipment, string> = {
+  full_gym: "Full gym",
+  bodyweight_only: "Bodyweight only",
+};
 
-// Why the Workout is shorter on a built-in choice: "No bodyweight option for lat pulldown"
+// Why the Workout is shorter on a built-in choice: "No Bodyweight only option for lat pulldown"
 export const noAlternativeLabel = (equipment: BuiltInEquipment, name: string) =>
-  `No ${EQUIPMENT_NOUN[equipment]} option for ${name.toLowerCase()}`;
+  `No ${builtInEquipmentLabels[equipment]} option for ${name.toLowerCase()}`;
 
 // A collapsed Workout Exercise's line: "3 sets · 18 kg × 10, 10, 8", else its target Sets, else its Previous Sets,
 // else "Not started"

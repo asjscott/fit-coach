@@ -7,11 +7,14 @@ import { SectionLabel } from "@/components/section-label";
 import { HStack } from "@/components/stack";
 import { Text } from "@/components/text";
 import { workoutLengthOptions } from "@/features/user/components/form/fields/user-workout-length-field";
-import { estimatedTimeLabel, noAlternativeLabel, plannedSetsLabel } from "@/features/workouts/format";
+import {
+  builtInEquipmentLabels,
+  estimatedTimeLabel,
+  noAlternativeLabel,
+  plannedSetsLabel,
+} from "@/features/workouts/format";
 import { exerciseName, libraryExercise } from "@/features/workouts/library";
 import { spacing } from "@/theme";
-
-const EQUIPMENT_LABELS: Record<BuiltInEquipment, string> = { full_gym: "Full gym", bodyweight_only: "Bodyweight only" };
 
 type PlannedWorkoutSectionProps = {
   cue?: string;
@@ -30,9 +33,7 @@ type PlannedWorkoutSectionProps = {
   onStartManual: () => void;
 };
 
-// Today's Planned Workout, cut to the Workout Length: its Exercises in order, each with its Set count and target, its
-// estimated time, the Length and equipment to change for this Workout, what replaced or dropped out on that equipment,
-// and Start, with a Manual Workout as the smaller choice below
+// The Day's Workout, with the choices that shape it, and a Manual Workout as the smaller Start
 export function PlannedWorkoutSection({
   cue,
   plannedExercises,
@@ -84,7 +85,7 @@ export function PlannedWorkoutSection({
             {equipmentChoices.map((choice) => (
               <Chip
                 key={choice}
-                label={EQUIPMENT_LABELS[choice]}
+                label={builtInEquipmentLabels[choice]}
                 selected={choice === equipment}
                 disabled={starting}
                 onPress={() => onChooseEquipment(choice)}

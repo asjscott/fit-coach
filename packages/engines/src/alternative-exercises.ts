@@ -1,11 +1,13 @@
+import { MAX_ALTERNATIVE_OPTIONS } from "@fit/shared";
 import type { BuiltInEquipment, Exercise, PlannedExercise, SetTarget } from "@fit/shared";
 import { exerciseBySlug } from "./data/exercises";
 
 // An Exercise the user can be given, with its target on the equipment it was worked out for
 export type Candidate = { exercise: Exercise; target: SetTarget };
 
-// The best and up to 2 others
-const MAX_OPTIONS = 3;
+// One built-in choice's Exercises. possible decides what stays; pickable, what's left of it after the plan's guards, is
+// what can stand in, as the guards are about what the Coach gives next and not what the equipment allows
+export type ChoiceCandidates = { possible: readonly Candidate[]; pickable: readonly Candidate[] };
 
 const sharedPrimaryMuscles = (a: Exercise, b: Exercise) =>
   a.muscles.primary.filter((muscle) => b.muscles.primary.includes(muscle)).length;
@@ -20,19 +22,19 @@ export function alternativeOptions(exercise: Exercise, candidates: readonly Cand
   const samePattern = sharing.filter((candidate) => sharesPattern(exercise, candidate.exercise));
   return [...(samePattern.length ? samePattern : sharing)]
     .sort((a, b) => sharedPrimaryMuscles(exercise, b.exercise) - sharedPrimaryMuscles(exercise, a.exercise))
-    .slice(0, MAX_OPTIONS);
+    .slice(0, MAX_ALTERNATIVE_OPTIONS);
 }
 
 const asOption = ({ exercise, target }: Candidate) => ({ slug: exercise.slug, target });
 
 // What each planned Exercise becomes on one built-in choice: just itself if it's still possible, else its options,
 // which leave out what stays, since an Exercise can't be done twice. Empty when it drops out
-function optionsOn(plannedExercises: readonly PlannedExercise[], candidates: readonly Candidate[]) {
-  const possible = new Map(candidates.map((candidate) => [candidate.exercise.slug, candidate]));
-  const stays = new Set(plannedExercises.flatMap(({ slug }) => (possible.has(slug) ? [slug] : [])));
-  const free = candidates.filter(({ exercise }) => !stays.has(exercise.slug));
+function optionsOn(plannedExercises: readonly PlannedExercise[], { possible, pickable }: ChoiceCandidates) {
+  const possibleBySlug = new Map(possible.map((candidate) => [candidate.exercise.slug, candidate]));
+  const stays = new Set(plannedExercises.flatMap(({ slug }) => (possibleBySlug.has(slug) ? [slug] : [])));
+  const free = pickable.filter(({ exercise }) => !stays.has(exercise.slug));
   return (slug: string) => {
-    const itself = possible.get(slug);
+    const itself = possibleBySlug.get(slug);
     if (itself) return [asOption(itself)];
     const exercise = exerciseBySlug(slug);
     return exercise ? alternativeOptions(exercise, free).map(asOption) : [];
@@ -42,7 +44,7 @@ function optionsOn(plannedExercises: readonly PlannedExercise[], candidates: rea
 // The candidates are per choice, so a choice left out isn't offered on the card
 export function withAlternatives(
   plannedExercises: readonly PlannedExercise[],
-  candidates: Partial<Record<BuiltInEquipment, readonly Candidate[]>>,
+  candidates: Partial<Record<BuiltInEquipment, ChoiceCandidates>>,
 ): PlannedExercise[] {
   const options = Object.entries(candidates).map(
     ([choice, onChoice]) => [choice, optionsOn(plannedExercises, onChoice)] as const,

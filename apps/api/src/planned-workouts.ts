@@ -37,14 +37,18 @@ export async function findCurrentPlannedWorkout(clerkUserId: string) {
   return doc && toPlannedWorkout(doc);
 }
 
-const primaryProfile = ({ equipmentProfiles }: OnboardedUser) => equipmentProfiles.find(({ isPrimary }) => isPrimary);
+// What a plan is built from, or null without a primary Equipment Profile
+function planInputs(user: OnboardedUser) {
+  const equipmentProfile = user.equipmentProfiles.find(({ isPrimary }) => isPrimary);
+  return equipmentProfile ? { ...user, equipmentProfile } : null;
+}
 
 // Replaces the current plan with one built from the user's data as it stands now, keeping the old one. Does nothing
 // before the first Assessment, since the Coach has no Working Levels to prescribe from
 async function rebuildPlannedWorkout(clerkUserId: string, user: OnboardedUser) {
   const latest = await findLatestAssessment(clerkUserId);
-  const equipmentProfile = primaryProfile(user);
-  if (!latest || !equipmentProfile) return;
+  const inputs = planInputs(user);
+  if (!latest || !inputs) return;
 
   const now = new Date();
   const recent = await findWorkoutsSince(clerkUserId, new Date(now.getTime() - PLAN_LOOKBACK_MS));
@@ -52,7 +56,7 @@ async function rebuildPlannedWorkout(clerkUserId: string, user: OnboardedUser) {
     workouts: recent.map(toWorkout),
     now,
     timeZone: user.timeZone,
-    equipmentProfile,
+    equipmentProfile: inputs.equipmentProfile,
     injuries: user.injuries,
     workingLevels: latest.workingLevels,
     assessment: latest.assessment,
@@ -75,7 +79,7 @@ async function rebuildPlannedWorkout(clerkUserId: string, user: OnboardedUser) {
           status: "current",
           clerkUserId,
           createdAt: new Date(),
-          builtFrom: planInputsKey({ ...user, equipmentProfile }),
+          builtFrom: planInputsKey(inputs),
         },
         { session },
       );
@@ -87,9 +91,8 @@ async function rebuildPlannedWorkout(clerkUserId: string, user: OnboardedUser) {
 // Before onboarding there's nothing to plan from
 export async function currentOrRebuiltPlannedWorkout(clerkUserId: string) {
   const user = await findOnboardedUser(clerkUserId);
-  const equipmentProfile = user && primaryProfile(user);
-  if (!user || !equipmentProfile) return null;
-  const inputs = { ...user, equipmentProfile };
+  const inputs = user && planInputs(user);
+  if (!user || !inputs) return null;
   if (planIsDue(await findCurrent(clerkUserId), inputs, new Date(), user.timeZone)) {
     await rebuildPlannedWorkout(clerkUserId, user);
   }

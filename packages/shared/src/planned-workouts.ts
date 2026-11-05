@@ -13,6 +13,9 @@ export const SetTarget = z.discriminatedUnion("unit", [
 ]);
 export type SetTarget = z.infer<typeof SetTarget>;
 
+// The best Alternative Exercise and up to 2 others
+export const MAX_ALTERNATIVE_OPTIONS = 3;
+
 // An Exercise and what to aim for on the equipment it's listed under, with the same Sets as the one it stands in for
 export const AlternativeExercise = z.object({
   slug: z.string().regex(/^[a-z0-9-]+$/),
@@ -22,9 +25,12 @@ export type AlternativeExercise = z.infer<typeof AlternativeExercise>;
 
 export const PlannedExercise = AlternativeExercise.extend({
   sets: z.number().int().positive(),
+  // How many of the plan's Exercises come ahead of this one's 4th Set, which the planner can add before a later Exercise.
+  // Absent with no 4th Set, and on a plan stored before it, whose 4th Sets count as the lowest priority
+  fourthSetAfter: z.number().int().positive().optional(),
   // On each built-in choice the primary doesn't already match: the Exercise itself if it stays, else its Alternative
   // Exercises best first, else nothing as it drops out. Plans stored before Alternative Exercises don't have it
-  alternatives: z.partialRecord(BuiltInEquipment, z.array(AlternativeExercise).max(3)).optional(),
+  alternatives: z.partialRecord(BuiltInEquipment, z.array(AlternativeExercise).max(MAX_ALTERNATIVE_OPTIONS)).optional(),
 });
 export type PlannedExercise = z.infer<typeof PlannedExercise>;
 

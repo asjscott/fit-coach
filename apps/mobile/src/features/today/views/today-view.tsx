@@ -1,4 +1,4 @@
-import { assessmentOffer, lastWorkout, offerKey, restDay, thisWeek, withPending } from "@fit/engines";
+import { assessmentOffer, lastWorkout, offerKey, thisWeek, withPending } from "@fit/engines";
 import { router } from "expo-router";
 import { useEffect } from "react";
 import { View } from "react-native";
@@ -21,7 +21,7 @@ import { LastWorkoutSection } from "../components/last-workout-section";
 import { PlannedWorkoutSection } from "../components/planned-workout-section";
 import { RestDaySection } from "../components/rest-day-section";
 import { ThisWeekSection } from "../components/this-week-section";
-import { todayState, todayStatus } from "../today-status";
+import { todayPlan, todayRestDay, todayState, todayStatus } from "../today-status";
 import { AssessmentSection } from "../components/assessment-section";
 import { useDaysWorkout } from "../hooks/use-days-workout";
 import { useDismissedOffer } from "../hooks/use-dismissed-offer";
@@ -43,9 +43,13 @@ export default function TodayView() {
   const tests = useChosenTests();
   useRefreshHistory();
 
-  // A Workout under way is what's on offer, so Resume stands alone until it's finished or discarded. A stale plan is
-  // never shown (ADR 0003)
-  const plannedWorkout = isLoaded && !logbook.workout && !planIsStale ? latestPlan : null;
+  const plan = todayPlan({
+    isLoaded,
+    workoutInProgress: !!logbook.workout,
+    hasPlan: !!latestPlan,
+    stale: planIsStale,
+  });
+  const plannedWorkout = plan === "planned" ? latestPlan : null;
   const { today, clearChoices } = useDaysWorkout(plannedWorkout);
 
   // A forgotten Workout must be finished or discarded before the user carries on
@@ -72,7 +76,7 @@ export default function TodayView() {
   const last = lastWorkout(all);
   const state = todayState({ historyLoaded: workouts !== null, failed: !!error, workoutCount: all.length });
   const status = todayStatus({ state, workoutCount: week.workoutCount, target: week.target });
-  const restDayReason = plannedWorkout && !logbook.workout ? restDay(all, now, daysPerWeek) : null;
+  const restDayReason = todayRestDay(plan, all, now, daysPerWeek);
   const offer =
     dismissed === undefined
       ? null
@@ -108,16 +112,16 @@ export default function TodayView() {
             {status}
           </Text>
         ) : null}
-        {planIsStale && !logbook.workout ? (
-          <Text size="sm" color="muted">
-            Connect to plan your next Workout
-          </Text>
-        ) : null}
       </View>
       {restDayReason ? (
         <View style={{ marginTop: spacing[5] }}>
           <RestDaySection reason={restDayReason} />
         </View>
+      ) : null}
+      {plan === "connect" ? (
+        <Text size="sm" color="muted" style={{ marginTop: spacing[2] }}>
+          Connect to plan your next Workout
+        </Text>
       ) : null}
       {today ? (
         <View style={{ marginTop: spacing[5] }}>

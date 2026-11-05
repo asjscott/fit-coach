@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { todayState, todayStatus } from "./today-status";
+import { todayPlan, todayRestDay, todayState, todayStatus } from "./today-status";
 
 describe("todayStatus", () => {
   it("numbers the next Workout against days per week", () => {
@@ -46,5 +46,50 @@ describe("todayState", () => {
 
   it("is loaded once History arrives with Workouts, Pending ones included", () => {
     expect(todayState({ historyLoaded: true, failed: false, workoutCount: 1 })).toBe("loaded");
+  });
+});
+
+describe("todayPlan", () => {
+  const settled = { isLoaded: true, workoutInProgress: false, hasPlan: true, stale: false };
+
+  it("shows a plan the phone has no reason to doubt", () => {
+    expect(todayPlan(settled)).toBe("planned");
+  });
+
+  it("asks for a connection in place of a stale plan", () => {
+    expect(todayPlan({ ...settled, stale: true })).toBe("connect");
+  });
+
+  it("offers nothing during a Workout, stale or not", () => {
+    expect(todayPlan({ ...settled, workoutInProgress: true })).toBe("none");
+    expect(todayPlan({ ...settled, workoutInProgress: true, stale: true })).toBe("none");
+  });
+
+  it("offers nothing until the Logbook has loaded, or without a plan", () => {
+    expect(todayPlan({ ...settled, isLoaded: false })).toBe("none");
+    expect(todayPlan({ ...settled, hasPlan: false })).toBe("none");
+  });
+});
+
+describe("todayRestDay", () => {
+  const now = new Date(2026, 10, 4, 18);
+  const finishedOffline = [
+    {
+      startedAt: new Date(2026, 10, 4, 7).toISOString(),
+      endedAt: new Date(2026, 10, 4, 8).toISOString(),
+      workoutExercises: [],
+    },
+  ];
+
+  it("recommends a Rest Day after a Workout finished offline, above the line asking for a connection", () => {
+    expect(todayRestDay("connect", finishedOffline, now, 4)).toBe("trained-today");
+  });
+
+  it("recommends a Rest Day above the Planned Workout", () => {
+    expect(todayRestDay("planned", finishedOffline, now, 4)).toBe("trained-today");
+  });
+
+  it("stays quiet with nothing on offer to sit above", () => {
+    expect(todayRestDay("none", finishedOffline, now, 4)).toBeNull();
   });
 });

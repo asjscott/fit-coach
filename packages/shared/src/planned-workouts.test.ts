@@ -25,6 +25,13 @@ describe("SetTarget", () => {
 });
 
 describe("PlannedWorkout", () => {
+  it("keeps where a 4th Set fell among the picks, so the phone's copy cuts the same", () => {
+    const [goblet] = plannedWorkout.plannedExercises;
+    const fourthSet = { ...goblet, sets: 4, fourthSetAfter: 2 };
+    const parsed = PlannedWorkout.parse({ ...plannedWorkout, plannedExercises: [fourthSet] });
+    expect(parsed.plannedExercises[0].fourthSetAfter).toBe(2);
+  });
+
   it.each(["current", "finished", "replaced"])("parses a plan that is %s", (status) => {
     expect(PlannedWorkout.safeParse({ ...plannedWorkout, status }).success).toBe(true);
   });
