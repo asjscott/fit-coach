@@ -1,3 +1,4 @@
+export * from "./alternative-exercises";
 export * from "./assess";
 export * from "./assessment-offer";
 export * from "./assessment-pairing";

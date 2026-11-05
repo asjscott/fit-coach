@@ -1,4 +1,4 @@
-import type { WorkingLevel } from "@fit/shared";
+import { EquipmentTag, type WorkingLevel } from "@fit/shared";
 import { describe, expect, it } from "vitest";
 import { exerciseBySlug } from "./data/exercises";
 import type { ProfileWithLoads } from "./equipment";
@@ -395,5 +395,69 @@ describe("planWorkout", () => {
     // Identical Muscles and Load Type, so identical scores
     const workingLevels = [reps("split-squat", 10), reps("reverse-lunge", 10)];
     expect(slugs({ workingLevels })).toEqual(slugs({ workingLevels: [...workingLevels].reverse() }));
+  });
+
+  describe("Alternative Exercises", () => {
+    // Enough for every Pattern, so the plan fills up as a real one does
+    const assessment = {
+      bodyWeightKg: 75,
+      patterns: {
+        squat: strength(100),
+        hinge: strength(120),
+        push: strength(70),
+        pull: strength(70),
+        core: strength(60),
+      },
+    };
+    const dumbbellsAndBench: ProfileWithLoads = { ...dumbbells, tags: ["dumbbells", "flat_bench"] };
+
+    const planned = (slug: string, more: Partial<PlanWorkoutInput> = {}) =>
+      plan({ equipmentProfile: dumbbellsAndBench, workingLevels: [], assessment, ...more }).plannedExercises.find(
+        (plannedExercise) => plannedExercise.slug === slug,
+      );
+
+    it("saves both choices on each Exercise, each with its target", () => {
+      const squat = planned("goblet-squat", {
+        workingLevels: [kg("goblet-squat", 20.3), reps("bodyweight-squat", 18)],
+      });
+      expect(squat?.alternatives?.full_gym).toEqual([
+        { slug: "goblet-squat", target: { unit: "kg", kg: 20, reps: 8 } },
+      ]);
+      expect(squat?.alternatives?.bodyweight_only?.[0]).toEqual({
+        slug: "bodyweight-squat",
+        target: { unit: "reps", reps: 18 },
+      });
+    });
+
+    it("gives Full gym's loads, not the primary's, to an Exercise that stays", () => {
+      const fixed: ProfileWithLoads = {
+        ...dumbbellsAndBench,
+        loads: { dumbbells: { kind: "fixed", weightsKg: [16, 24] } },
+      };
+      const squat = planned("goblet-squat", { equipmentProfile: fixed, workingLevels: [kg("goblet-squat", 20.3)] });
+      expect(squat?.target).toEqual({ unit: "kg", kg: 24, reps: 8 });
+      expect(squat?.alternatives?.full_gym?.[0].target).toEqual({ unit: "kg", kg: 20, reps: 8 });
+    });
+
+    it("works out a target the Assessment didn't store", () => {
+      const [best] = planned("goblet-squat")?.alternatives?.bodyweight_only ?? [];
+      expect(best).toMatchObject({ slug: "bodyweight-squat", target: { unit: "reps" } });
+    });
+
+    it("respects the user's injuries", () => {
+      // The bench press itself is fine with a wrist injury, but every bodyweight push avoids it, and the press's
+      // Muscles have nothing else
+      const press = "dumbbell-bench-press";
+      expect(planned(press)?.alternatives?.bodyweight_only?.length).toBeGreaterThan(0);
+      expect(planned(press, { injuries: ["wrist"] })?.alternatives?.bodyweight_only).toEqual([]);
+    });
+
+    it("saves no option the primary already matches", () => {
+      const primary = (equipmentProfile: PlanWorkoutInput["equipmentProfile"]) =>
+        plan({ equipmentProfile, workingLevels: [reps("push-up", 12)] }).plannedExercises[0].alternatives ?? {};
+
+      expect(Object.keys(primary({ tags: [], loads: {} }))).toEqual(["full_gym"]);
+      expect(Object.keys(primary({ tags: EquipmentTag.options, loads: {} }))).toEqual(["bodyweight_only"]);
+    });
   });
 });

@@ -12,6 +12,7 @@ import {
   estimatedTimeLabel,
   timeStat,
   weekDatesLabel,
+  noAlternativeLabel,
   plannedSetsLabel,
   setTargetLabel,
   workoutExerciseSummary,
@@ -179,6 +180,13 @@ describe("setTargetLabel", () => {
 
   it("keeps a load the profile has to a tenth of a kg, however it's stored", () => {
     expect(setTargetLabel({ unit: "kg", kg: 11.34, reps: 8 })).toBe("11.3 kg × 8");
+  });
+});
+
+describe("noAlternativeLabel", () => {
+  it("names the equipment and the Exercise that dropped out", () => {
+    expect(noAlternativeLabel("bodyweight_only", "Lat pulldown")).toBe("No bodyweight option for lat pulldown");
+    expect(noAlternativeLabel("full_gym", "Chin-up")).toBe("No full gym option for chin-up");
   });
 });
 

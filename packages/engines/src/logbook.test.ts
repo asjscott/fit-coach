@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import { EXERCISES } from "./data/exercises";
 import { daysWorkout } from "./days-workout";
 import { createLogbook, LogbookError, type DeviceStorage, type PreviousSetsSource } from "./logbook";
+import { mondayOf, weekLedger } from "./week-ledger";
 
 const exercise = (slug: string) => {
   const found = EXERCISES.find((e) => e.slug === slug);
@@ -1106,6 +1107,45 @@ describe("Logbook: Planned Workouts", () => {
     await logbook.finishAtLastSet();
 
     expect((await logbook.pending())[0].plannedWorkoutId).toBe(PLAN_ID);
+  });
+
+  describe("on an equipment choice", () => {
+    const row: PlannedExercise = {
+      slug: "one-arm-dumbbell-row",
+      sets: 3,
+      target: { unit: "kg", kg: 18, reps: 8 },
+      alternatives: { bodyweight_only: [{ slug: "prone-ytw", target: { unit: "reps", reps: 15 } }] },
+    };
+
+    it("starts the Alternative Exercise, linked to the plan, and leaves the plan as it was", async () => {
+      const { logbook } = setup();
+      const stored = plan(row);
+      const { plannedExercises } = daysWorkout(stored, { workoutLength: "long", equipment: "bodyweight_only" });
+
+      const workout = await logbook.startPlannedWorkout({ id: PLAN_ID, plannedExercises }, at("09:00"));
+
+      expect(workout.plannedWorkoutId).toBe(PLAN_ID);
+      expect(workout.workoutExercises.map(({ slug, loadType, planned }) => [slug, loadType, planned])).toEqual([
+        ["prone-ytw", "bodyweight", { sets: 3, target: { unit: "reps", reps: 15 } }],
+      ]);
+      expect(stored).toEqual(plan(row));
+    });
+
+    it("counts done Sets in the Week Ledger under the Exercise actually done", async () => {
+      const { logbook, uploader } = setup();
+      const { plannedExercises } = daysWorkout(plan(row), { workoutLength: "long", equipment: "bodyweight_only" });
+      const { workoutExercises } = await logbook.startPlannedWorkout({ id: PLAN_ID, plannedExercises }, at("09:00"));
+      await logbook.logSet(workoutExercises[0].id, { kind: "bodyweight", reps: 15 }, at("09:05"));
+      await logbook.finish({ startedAt: at("09:00"), endedAt: at("09:30"), now: at("09:30") });
+      await logbook.sync();
+
+      const [workout] = uploader.uploaded;
+      expect(workout.plannedWorkoutId).toBe(PLAN_ID);
+      // prone-ytw's primary Muscles, each with one Set. The row it replaced would have credited lats instead
+      const ledger = weekLedger([workout], { monday: mondayOf(new Date(workout.startedAt), "UTC"), timeZone: "UTC" });
+      expect(ledger).toMatchObject({ rear_delts: 1, upper_back: 1 });
+      expect(ledger).not.toHaveProperty("lats");
+    });
   });
 
   it("uploads what was logged, not what was planned", async () => {

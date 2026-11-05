@@ -118,8 +118,13 @@ export default function TodayView() {
           <PlannedWorkoutSection
             plannedExercises={today.plannedExercises}
             estimatedSeconds={today.estimatedSeconds}
+            dropped={today.dropped}
             workoutLength={today.workoutLength}
             onChooseLength={today.chooseLength}
+            equipment={today.equipment}
+            equipmentChoices={today.equipmentChoices}
+            onChooseEquipment={today.chooseEquipment}
+            onPickAlternative={today.pickAlternative}
             startingPlan={startingPlan}
             startingManual={starting}
             onStart={handleStartPlan}

@@ -1,16 +1,18 @@
-import type {
-  Assessment,
-  Exercise,
-  Goal,
-  InjuryTag,
-  Muscle,
-  PlannedExercise,
-  PlannedWorkout,
-  SetTarget,
-  WorkingLevel,
+import {
+  BuiltInEquipment,
+  type Assessment,
+  type Exercise,
+  type Goal,
+  type InjuryTag,
+  type Muscle,
+  type PlannedExercise,
+  type PlannedWorkout,
+  type SetTarget,
+  type WorkingLevel,
 } from "@fit/shared";
+import { withAlternatives, type Candidate } from "./alternative-exercises";
 import { EXERCISES } from "./data/exercises";
-import { isAvailable, isSafeFor, type ProfileWithLoads } from "./equipment";
+import { BUILT_IN_EQUIPMENT, isAvailable, isSafeFor, matchesBuiltIn, type ProfileWithLoads } from "./equipment";
 import { scoreExercise, type WeekSoFar } from "./plan-score";
 import {
   addCredits,
@@ -54,8 +56,6 @@ export type PlanWorkoutInput = {
 
 // What the planner decides; the API gives it an id and a status when it saves it
 export type WorkoutPlan = Pick<PlannedWorkout, "weekStart" | "plannedExercises">;
-
-type Candidate = { exercise: Exercise; target: SetTarget };
 
 // A Set's target from a stored Working Level, or null when it can't be prescribed on this equipment
 function setTarget(
@@ -107,6 +107,15 @@ function candidateExercises(input: PlanWorkoutInput): Candidate[] {
     const target = setTarget(level, exercise, equipmentProfile);
     return target ? [{ exercise, target }] : [];
   });
+}
+
+// What the user could be given on each built-in choice the primary doesn't already match, under the same rules as the
+// plan itself. It goes in the saved plan, as the phone may have no signal when the user chooses
+function builtInCandidates(input: PlanWorkoutInput) {
+  const choices = BuiltInEquipment.options.filter((choice) => !matchesBuiltIn(input.equipmentProfile, choice));
+  return Object.fromEntries(
+    choices.map((choice) => [choice, candidateExercises({ ...input, equipmentProfile: BUILT_IN_EQUIPMENT[choice] })]),
+  );
 }
 
 // The most credited Sets a Muscle should take from this Workout: half its budget while another Workout is left this
@@ -205,5 +214,6 @@ export function planWorkout(input: PlanWorkoutInput): WorkoutPlan {
     budget,
     limitOf: muscleLimits(budget, Math.max(1, daysPerWeek - workoutsInWeek(workouts, week).length)),
   };
-  return { weekStart: monday, plannedExercises: selectExercises(selection, weekLedger(workouts, week)) };
+  const plannedExercises = selectExercises(selection, weekLedger(workouts, week));
+  return { weekStart: monday, plannedExercises: withAlternatives(plannedExercises, builtInCandidates(input)) };
 }
