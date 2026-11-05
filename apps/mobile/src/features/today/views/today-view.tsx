@@ -1,4 +1,4 @@
-import { assessmentOffer, lastWorkout, offerKey, thisWeek, withPending } from "@fit/engines";
+import { assessmentOffer, lastWorkout, offerKey, restDay, thisWeek, withPending } from "@fit/engines";
 import { router } from "expo-router";
 import { useEffect } from "react";
 import { View } from "react-native";
@@ -19,6 +19,7 @@ import { useLogbook } from "@/features/workouts/logbook-provider";
 import { spacing } from "@/theme";
 import { LastWorkoutSection } from "../components/last-workout-section";
 import { PlannedWorkoutSection } from "../components/planned-workout-section";
+import { RestDaySection } from "../components/rest-day-section";
 import { ThisWeekSection } from "../components/this-week-section";
 import { todayState, todayStatus } from "../today-status";
 import { AssessmentSection } from "../components/assessment-section";
@@ -57,6 +58,7 @@ export default function TodayView() {
   const last = lastWorkout(all);
   const state = todayState({ historyLoaded: workouts !== null, failed: !!error, workoutCount: all.length });
   const status = todayStatus({ state, workoutCount: week.workoutCount, target: week.target });
+  const restDayReason = plannedWorkout && !logbook.workout ? restDay(all, now, daysPerWeek) : null;
   const offer =
     dismissed === undefined
       ? null
@@ -91,6 +93,11 @@ export default function TodayView() {
           </Text>
         ) : null}
       </View>
+      {restDayReason ? (
+        <View style={{ marginTop: spacing[5] }}>
+          <RestDaySection reason={restDayReason} />
+        </View>
+      ) : null}
       {plannedWorkout ? (
         <View style={{ marginTop: spacing[5] }}>
           <PlannedWorkoutSection plannedWorkout={plannedWorkout} />
