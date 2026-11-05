@@ -13,7 +13,7 @@ import { useToast } from "@/contexts/toast-context";
 import { usePrimaryEquipmentProfile } from "@/features/user/current-user-provider";
 import { fonts, radii, spacing, useTheme } from "@/theme";
 import { errorMessage } from "@/utils/error-message";
-import { previousSetsLabel } from "../format";
+import { plannedSetsLabel, previousSetsLabel } from "../format";
 import { exerciseName, libraryExercise } from "../library";
 import { useLogbook } from "../logbook-provider";
 import { protocolNote } from "../protocol-note";
@@ -32,7 +32,7 @@ export type CurrentExerciseBoxProps = {
   onNextTest?: () => void;
 };
 
-// The Workout Exercise being logged: its name, Previous Sets, the Sets so far (each with a ⋯ to edit or delete it) and
+// The Workout Exercise being logged: its name, target, Previous Sets, the Sets so far (each with a ⋯ to edit or delete it) and
 // steppers for the next Set, which starts from the previous one. A test that's done takes no more Sets
 export function CurrentExerciseBox({ workoutExercise, position, count, onNextTest }: CurrentExerciseBoxProps) {
   const { colors } = useTheme();
@@ -44,7 +44,7 @@ export function CurrentExerciseBox({ workoutExercise, position, count, onNextTes
   // The Set whose row shows Edit and Delete, and the Set waiting for its delete to be confirmed
   const [actionsIndex, setActionsIndex] = useState<number | null>(null);
   const [deletingIndex, setDeletingIndex] = useState<number | null>(null);
-  const { id, slug, loadType, sets, previousSets } = workoutExercise;
+  const { id, slug, loadType, sets, previousSets, planned } = workoutExercise;
   const unilateral = libraryExercise(slug)?.unilateral ?? false;
   const editingSet = editingIndex === null ? undefined : sets[editingIndex];
   const nextNumber = sets.length + 1;
@@ -70,6 +70,11 @@ export function CurrentExerciseBox({ workoutExercise, position, count, onNextTes
         </Stack>
         <WorkoutExerciseMenu workoutExercise={workoutExercise} />
       </HStack>
+      {planned ? (
+        <Text size="sm" color="muted" style={styles.note}>
+          {`Target: ${plannedSetsLabel(planned, unilateral)}`}
+        </Text>
+      ) : null}
       {previousSets ? (
         <Text size="sm" color="subtle" style={styles.note}>
           {previousSetsLabel(previousSets.sets)}

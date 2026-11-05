@@ -1,4 +1,4 @@
-import type { Set, SetValues, Workout } from "@fit/shared";
+import type { BandLevel, InProgressWorkoutExercise, Set, SetTarget, SetValues, Workout } from "@fit/shared";
 import { getCalendars } from "expo-localization";
 
 // How Workouts and Sets read on screen
@@ -146,9 +146,38 @@ export function setsSummary(sets: readonly Set[]) {
 // Previous Sets as a reference while logging: "Last: 18 kg × 10, 10, 8"
 export const previousSetsLabel = (sets: readonly Set[]) => `Last: ${setsSummary(sets)}`;
 
-// A collapsed Workout Exercise's line: "3 sets · 18 kg × 10, 10, 8", else its Previous Sets, else "Not started"
-export function workoutExerciseSummary(sets: readonly Set[], previous?: readonly Set[]) {
+const BAND_LEVEL_LABELS: Record<BandLevel, string> = {
+  light: "Light",
+  medium: "Medium",
+  heavy: "Heavy",
+  extra_heavy: "Extra heavy",
+};
+
+// A Set's target as a Set reads: "20 kg × 8", "12 reps", "40 s", "Medium band × 12"
+export function setTargetLabel(target: SetTarget) {
+  switch (target.unit) {
+    case "kg":
+      return `${weightLabel(target.kg)} × ${target.reps}`;
+    case "reps":
+      return `${target.reps} reps`;
+    case "seconds":
+      return `${target.seconds} s`;
+    case "band":
+      return `${BAND_LEVEL_LABELS[target.level]} band × ${target.reps}`;
+  }
+}
+
+type PlannedSets = NonNullable<InProgressWorkoutExercise["planned"]>;
+
+// What the plan sets for an Exercise: "3 sets · 20 kg × 8", with " per side" for a one-sided Exercise
+export const plannedSetsLabel = ({ sets, target }: PlannedSets, unilateral = false) =>
+  `${setsLabel(sets)} · ${setTargetLabel(target)}${unilateral ? " per side" : ""}`;
+
+// A collapsed Workout Exercise's line: "3 sets · 18 kg × 10, 10, 8", else its target Sets, else its Previous Sets,
+// else "Not started"
+export function workoutExerciseSummary(sets: readonly Set[], previous?: readonly Set[], planned?: PlannedSets) {
   if (sets.length) return `${setsLabel(sets.length)} · ${setsSummary(sets)}`;
+  if (planned) return plannedSetsLabel(planned);
   return previous?.length ? previousSetsLabel(previous) : "Not started";
 }
 

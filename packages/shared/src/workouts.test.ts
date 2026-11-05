@@ -77,6 +77,19 @@ describe("Workout", () => {
     expect(Workout.parse({ ...workout([gobletSquat]), assessment: "A" }).assessment).toBe("A");
   });
 
+  it("keeps the Planned Workout it was started from", () => {
+    const linked = { ...workout([gobletSquat]), plannedWorkoutId: "7c9e6679-7425-40de-944b-e07fc1f90ae7" };
+    expect(Workout.parse(linked).plannedWorkoutId).toBe("7c9e6679-7425-40de-944b-e07fc1f90ae7");
+  });
+
+  it("doesn't need a Planned Workout", () => {
+    expect(Workout.parse(workout([gobletSquat]))).not.toHaveProperty("plannedWorkoutId");
+  });
+
+  it("rejects a link that isn't an id", () => {
+    expect(Workout.safeParse({ ...workout([gobletSquat]), plannedWorkoutId: "plan-1" }).success).toBe(false);
+  });
+
   it("rejects an Assessment Workout other than A or B", () => {
     expect(Workout.safeParse({ ...workout([gobletSquat]), assessment: "C" }).success).toBe(false);
   });
@@ -93,6 +106,20 @@ describe("InProgressWorkout", () => {
     id: "3b241101-e2bb-4255-8caf-4136c566a962",
     startedAt: "2026-10-24T09:00:00.000Z",
     workoutExercises: [{ id: "phone-id", ...workoutExercise }],
+  });
+
+  it("keeps the Planned Workout it started from", () => {
+    const linked = {
+      ...inProgress({ ...gobletSquat, sets: [] }),
+      plannedWorkoutId: "7c9e6679-7425-40de-944b-e07fc1f90ae7",
+    };
+    expect(InProgressWorkout.parse(linked).plannedWorkoutId).toBe("7c9e6679-7425-40de-944b-e07fc1f90ae7");
+  });
+
+  it("keeps what the plan set for a Workout Exercise", () => {
+    const planned = { sets: 3, target: { unit: "kg", kg: 22.5, reps: 8 } };
+    const parsed = InProgressWorkout.parse(inProgress({ ...gobletSquat, sets: [], planned }));
+    expect(parsed.workoutExercises[0].planned).toEqual(planned);
   });
 
   it("keeps Previous Sets saved with a Workout Exercise", () => {

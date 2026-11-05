@@ -17,7 +17,7 @@ export function todayState({
   return failed ? "offline" : "loading";
 }
 
-// The one line under Start/Resume workout, e.g. "Workout 3 of 4 this week"
+// The one line under Resume workout or a Manual Workout's Start, and above the Planned Workout, e.g. "Workout 3 of 4 this week"
 export function todayStatus({
   state,
   workoutCount,

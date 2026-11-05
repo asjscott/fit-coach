@@ -13,7 +13,7 @@ import { useLatestAssessment } from "@/features/assessment/hooks/use-latest-asse
 import { useCurrentUser } from "@/features/user/current-user-provider";
 import { ForgottenWorkoutModal } from "@/features/workouts/components/forgotten-workout-modal";
 import { useHistory } from "@/features/workouts/history-provider";
-import { useResumeWorkout, useStartWorkout } from "@/features/workouts/hooks/use-open-workout";
+import { useResumeWorkout, useStartPlannedWorkout, useStartWorkout } from "@/features/workouts/hooks/use-open-workout";
 import { useRefreshHistory } from "@/features/workouts/hooks/use-refresh-history";
 import { useLogbook } from "@/features/workouts/logbook-provider";
 import { spacing } from "@/theme";
@@ -26,20 +26,24 @@ import { AssessmentSection } from "../components/assessment-section";
 import { useDismissedOffer } from "../hooks/use-dismissed-offer";
 import { usePlannedWorkout } from "../hooks/use-planned-workout";
 
-// The training hub: Start or Resume, the Planned Workout once there is one, this week against the user's days per
-// week, and the last Workout
+// The training hub: Resume, the Planned Workout to start once there is one, else a Manual Workout to start, then this
+// week against the user's days per week, and the last Workout
 export default function TodayView() {
   const logbook = useLogbook();
   const { startWorkout, starting } = useStartWorkout();
+  const { startPlannedWorkout, startingPlan } = useStartPlannedWorkout();
   const { resumeWorkout, forgotten, setForgotten } = useResumeWorkout();
   const { isLoaded, isStale, pending } = logbook;
   const { workouts, error } = useHistory();
   const daysPerWeek = useCurrentUser().user?.profile.daysPerWeek;
   const { latest: latestAssessment } = useLatestAssessment();
-  const plannedWorkout = usePlannedWorkout();
+  const latestPlan = usePlannedWorkout();
   const { dismissed, dismiss } = useDismissedOffer();
   const tests = useChosenTests();
   useRefreshHistory();
+
+  // A Workout under way is what's on offer, so Resume stands alone until it's finished or discarded
+  const plannedWorkout = isLoaded && !logbook.workout ? latestPlan : null;
 
   // A forgotten Workout must be finished or discarded before the user carries on
   useEffect(() => {
@@ -49,6 +53,10 @@ export default function TodayView() {
   const handleWorkout = async () => {
     if (logbook.workout) await resumeWorkout();
     else if (await startWorkout()) router.push("/workout");
+  };
+
+  const handleStartPlan = async () => {
+    if (plannedWorkout && (await startPlannedWorkout(plannedWorkout))) router.push("/workout");
   };
 
   // The same Workouts as History: Pending ones, then those loaded from the server (none offline, ADR 0001)
@@ -80,13 +88,15 @@ export default function TodayView() {
         <Heading size="2xl">Today</Heading>
       </View>
       <View style={{ marginTop: spacing[5], gap: spacing[2] }}>
-        <LoadingButton
-          label={logbook.workout ? "Resume workout" : "Start workout"}
-          icon="dumbbell"
-          fullWidth
-          loading={!logbook.isLoaded || starting}
-          onPress={handleWorkout}
-        />
+        {plannedWorkout ? null : (
+          <LoadingButton
+            label={logbook.workout ? "Resume workout" : "Start workout"}
+            icon="dumbbell"
+            fullWidth
+            loading={!logbook.isLoaded || starting}
+            onPress={handleWorkout}
+          />
+        )}
         {status ? (
           <Text size="sm" color="muted">
             {status}
@@ -100,7 +110,13 @@ export default function TodayView() {
       ) : null}
       {plannedWorkout ? (
         <View style={{ marginTop: spacing[5] }}>
-          <PlannedWorkoutSection plannedWorkout={plannedWorkout} />
+          <PlannedWorkoutSection
+            plannedWorkout={plannedWorkout}
+            startingPlan={startingPlan}
+            startingManual={starting}
+            onStart={handleStartPlan}
+            onStartManual={handleWorkout}
+          />
         </View>
       ) : null}
       {offer ? (
