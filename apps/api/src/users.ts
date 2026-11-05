@@ -3,6 +3,7 @@ import {
   BodyProfile,
   EquipmentProfile,
   type EquipmentProfileInput,
+  type InjuryTag,
   OnboardingProfile,
   User,
   type UserProfile,
@@ -17,6 +18,8 @@ type UserDoc = {
   profile: Partial<UserProfile>;
   onboardedAt: Date | null;
   equipmentProfiles: EquipmentProfile[];
+  // Absent until the phone first sends it
+  timeZone?: string;
 };
 
 export const users = db.collection<UserDoc>("users");
@@ -35,14 +38,24 @@ export function findUser(clerkUserId: string) {
   return users.findOne({ clerkUserId });
 }
 
-// What logging needs from a user. Onboarding requires weight and gender, and they can't be removed after
-export type OnboardedUser = { bodyProfile: BodyProfile; equipmentProfiles: EquipmentProfile[] };
+// What logging and planning need from a user. Onboarding requires weight and gender, and they can't be removed after
+export type OnboardedUser = {
+  bodyProfile: BodyProfile;
+  equipmentProfiles: EquipmentProfile[];
+  injuries: InjuryTag[];
+  timeZone: string;
+};
 
-// The user once onboarded, or null before
+// The user once onboarded, or null before. UTC stands in until the phone first sends its timezone
 export async function findOnboardedUser(clerkUserId: string): Promise<OnboardedUser | null> {
   const user = await findUser(clerkUserId);
   if (!user?.onboardedAt) return null;
-  return { bodyProfile: BodyProfile.parse(user.profile), equipmentProfiles: user.equipmentProfiles };
+  return {
+    bodyProfile: BodyProfile.parse(user.profile),
+    equipmentProfiles: user.equipmentProfiles,
+    injuries: user.profile.injuries ?? [],
+    timeZone: user.timeZone ?? "UTC",
+  };
 }
 
 // Idempotent: returns the existing document if this Clerk user already has one
@@ -56,12 +69,19 @@ export async function createUser(clerkUserId: string) {
   return { user: result.value, created: !result.lastErrorObject?.updatedExisting };
 }
 
-// Merges profile fields into the stored profile; null if the user doesn't exist
-export async function updateUser(clerkUserId: string, { profile }: UserUpdate) {
+// Merges profile fields into the stored profile and sets the timezone when given; null if the user doesn't exist
+export async function updateUser(clerkUserId: string, { profile = {}, timeZone }: UserUpdate) {
   // $literal stops string values beginning with "$" being read as field paths
   const user = await users.findOneAndUpdate(
     { clerkUserId },
-    [{ $set: { profile: { $mergeObjects: ["$profile", { $literal: profile }] } } }],
+    [
+      {
+        $set: {
+          profile: { $mergeObjects: ["$profile", { $literal: profile }] },
+          ...(timeZone && { timeZone: { $literal: timeZone } }),
+        },
+      },
+    ],
     { returnDocument: "after" },
   );
   return user && markOnboardedIfComplete(user);
@@ -157,5 +177,6 @@ export function toUser(user: WithId<UserDoc>): User {
     profile: user.profile,
     onboardedAt: user.onboardedAt?.toISOString() ?? null,
     equipmentProfiles: user.equipmentProfiles ?? [],
+    ...(user.timeZone && { timeZone: user.timeZone }),
   });
 }

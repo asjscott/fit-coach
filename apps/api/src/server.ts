@@ -4,11 +4,13 @@ import { serializerCompiler, validatorCompiler } from "fastify-type-provider-zod
 import { ensureAssessmentIndexes } from "./assessments";
 import { assessmentRoutes } from "./routes/assessments";
 import { exerciseRoutes } from "./routes/exercises";
+import { plannedWorkoutRoutes } from "./routes/planned-workouts";
 import { userRoutes } from "./routes/users";
 import { workoutRoutes } from "./routes/workouts";
 import { HealthResponse } from "@fit/shared";
 import { registerAuth } from "./auth";
 import { pingDb } from "./db";
+import { ensurePlannedWorkoutIndexes } from "./planned-workouts";
 import { ensureUserIndexes, migrateUsers } from "./users";
 import { ensureWorkoutIndexes } from "./workouts";
 
@@ -34,12 +36,15 @@ await ensureWorkoutIndexes().catch((err) => app.log.error(err, "Failed to create
 
 await ensureAssessmentIndexes().catch((err) => app.log.error(err, "Failed to create assessment indexes"));
 
+await ensurePlannedWorkoutIndexes().catch((err) => app.log.error(err, "Failed to create planned workout indexes"));
+
 await migrateUsers().catch((err) => app.log.error(err, "Failed to migrate users"));
 
 await app.register(userRoutes);
 await app.register(exerciseRoutes);
 await app.register(workoutRoutes);
 await app.register(assessmentRoutes);
+await app.register(plannedWorkoutRoutes);
 
 app.get("/health", async () => {
   return HealthResponse.parse({

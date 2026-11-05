@@ -18,12 +18,15 @@ import { useRefreshHistory } from "@/features/workouts/hooks/use-refresh-history
 import { useLogbook } from "@/features/workouts/logbook-provider";
 import { spacing } from "@/theme";
 import { LastWorkoutSection } from "../components/last-workout-section";
+import { PlannedWorkoutSection } from "../components/planned-workout-section";
 import { ThisWeekSection } from "../components/this-week-section";
 import { todayState, todayStatus } from "../today-status";
 import { AssessmentSection } from "../components/assessment-section";
 import { useDismissedOffer } from "../hooks/use-dismissed-offer";
+import { usePlannedWorkout } from "../hooks/use-planned-workout";
 
-// The training hub: Start or Resume, this week against the user's days per week, and the last Workout
+// The training hub: Start or Resume, the Planned Workout once there is one, this week against the user's days per
+// week, and the last Workout
 export default function TodayView() {
   const logbook = useLogbook();
   const { startWorkout, starting } = useStartWorkout();
@@ -32,6 +35,7 @@ export default function TodayView() {
   const { workouts, error } = useHistory();
   const daysPerWeek = useCurrentUser().user?.profile.daysPerWeek;
   const { latest: latestAssessment } = useLatestAssessment();
+  const plannedWorkout = usePlannedWorkout();
   const { dismissed, dismiss } = useDismissedOffer();
   const tests = useChosenTests();
   useRefreshHistory();
@@ -87,6 +91,11 @@ export default function TodayView() {
           </Text>
         ) : null}
       </View>
+      {plannedWorkout ? (
+        <View style={{ marginTop: spacing[5] }}>
+          <PlannedWorkoutSection plannedWorkout={plannedWorkout} />
+        </View>
+      ) : null}
       {offer ? (
         <View style={{ marginTop: spacing[5] }}>
           <AssessmentSection offer={offer} onDismiss={() => dismiss(offerKey(offer))} />
