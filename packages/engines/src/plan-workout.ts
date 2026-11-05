@@ -6,9 +6,11 @@ import { addCredits, creditsPerSet, mondayOf, weekLedger, type LedgerWorkout } f
 import { weeklyBudget } from "./weekly-budget";
 import { asDone } from "./working-level-sections";
 import { WORKING_LEVEL_REPS } from "./working-levels";
+import { secondsForSets } from "./workout-length";
 
 const SETS_PER_PICK = 3;
-const WORKOUT_SECONDS = 45 * 60;
+// Always the Long version: the day's Workout cuts it to length (daysWorkout)
+const WORKOUT_SECONDS = secondsForSets("long");
 
 // Everything a plan depends on, so the same inputs give the same plan
 export type PlanWorkoutInput = {

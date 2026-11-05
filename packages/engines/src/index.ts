@@ -5,6 +5,7 @@ export * from "./assessment-pairing";
 export { isRatedTest, takesNoMoreSets, TEST_REPS, type ProtocolState, type TestProgress } from "./assessment-protocol";
 export * from "./assessment-tests";
 export * from "./data/exercises";
+export * from "./days-workout";
 export * from "./e1rm";
 export * from "./equipment";
 export * from "./logbook";

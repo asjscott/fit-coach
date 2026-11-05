@@ -73,9 +73,10 @@ describe("planWorkout", () => {
       expect(new Set(chosen).size).toBe(chosen.length);
     });
 
-    it("stops at 45 minutes", () => {
-      // Nine Exercises at 120 s a Set, so 6 minutes a pick: 7 fit and an eighth would reach 48 minutes
+    it("builds the Long version, stopping at 55 minutes of Sets", () => {
+      // Ten Exercises at 120 s a Set, so 6 minutes a pick: 9 fit and a tenth would reach 60 minutes
       const workingLevels = [
+        "single-arm-overhead-press",
         "goblet-squat",
         "dumbbell-romanian-deadlift",
         "dumbbell-overhead-press",
@@ -86,7 +87,7 @@ describe("planWorkout", () => {
         "renegade-row",
         "farmers-carry",
       ].map((slug) => kg(slug, 20));
-      expect(slugs({ workingLevels })).toHaveLength(7);
+      expect(slugs({ workingLevels })).toHaveLength(9);
     });
   });
 

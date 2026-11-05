@@ -21,6 +21,13 @@ describe("exercise library", () => {
     expect(broken).toEqual([]);
   });
 
+  it("marks only the two kettlebell swings as Ballistic Exercises", () => {
+    expect(EXERCISES.filter((e) => e.ballistic).map((e) => e.slug)).toEqual([
+      "kettlebell-swing",
+      "single-arm-kettlebell-swing",
+    ]);
+  });
+
   it.each(EXERCISES.map((e) => [e.slug, e] as const))("%s passes Exercise.parse", (_slug, exercise) => {
     expect(() => Exercise.parse(exercise)).not.toThrow();
   });
