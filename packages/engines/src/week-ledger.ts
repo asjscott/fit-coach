@@ -40,16 +40,17 @@ export function mondayOf(date: Date, timeZone: string): string {
   return monday.toISOString().slice(0, 10);
 }
 
-// The Week Ledger, always recalculated from the Sets logged. A Workout belongs to the week it started in, as on
-// Today, and counts once by id however often it's passed. An Exercise this library doesn't know credits nothing
-export function weekLedger(workouts: readonly LedgerWorkout[], { monday, timeZone }: LedgerWeek): MuscleCredits {
-  const inWeek = new Map(
-    workouts
-      .filter((workout) => mondayOf(new Date(workout.startedAt), timeZone) === monday)
-      .map((workout) => [workout.id, workout]),
-  );
+// The week's Workouts, each once by id however often it's passed. A Workout belongs to the week it started in, as on
+// Today
+export function workoutsInWeek(workouts: readonly LedgerWorkout[], { monday, timeZone }: LedgerWeek): LedgerWorkout[] {
+  const inWeek = workouts.filter((workout) => mondayOf(new Date(workout.startedAt), timeZone) === monday);
+  return [...new Map(inWeek.map((workout) => [workout.id, workout])).values()];
+}
+
+// The Week Ledger, always recalculated from the Sets logged. An Exercise this library doesn't know credits nothing
+export function weekLedger(workouts: readonly LedgerWorkout[], week: LedgerWeek): MuscleCredits {
   let ledger: MuscleCredits = {};
-  for (const { workoutExercises } of inWeek.values()) {
+  for (const { workoutExercises } of workoutsInWeek(workouts, week)) {
     for (const { slug, sets } of workoutExercises) {
       const exercise = exerciseBySlug(slug);
       if (exercise) ledger = addCredits(ledger, creditsPerSet(exercise), sets.length);

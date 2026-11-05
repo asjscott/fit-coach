@@ -1,5 +1,6 @@
 import type { WorkingLevel } from "@fit/shared";
 import { describe, expect, it } from "vitest";
+import { exerciseBySlug } from "./data/exercises";
 import type { ProfileWithLoads } from "./equipment";
 import { planWorkout, type PlanWorkoutInput } from "./plan-workout";
 
@@ -29,6 +30,9 @@ const plan = (more: Partial<PlanWorkoutInput> = {}) =>
     equipmentProfile: dumbbells,
     injuries: [],
     workingLevels: levels,
+    assessment: { bodyWeightKg: 75, patterns: {} },
+    goal: "build_muscle",
+    daysPerWeek: 4,
     ...more,
   });
 
@@ -41,16 +45,233 @@ const logged = (id: string, slug: string, sets: number) => ({
   workoutExercises: [{ slug, sets: Array.from({ length: sets }, () => ({})) }],
 });
 
+// One Workout this week, with this many Sets of each Exercise
+const week = (sets: Record<string, number>) => ({
+  id: "this-week",
+  startedAt: "2026-11-03T18:00:00.000Z",
+  workoutExercises: Object.entries(sets).map(([slug, count]) => ({
+    slug,
+    sets: Array.from({ length: count }, () => ({})),
+  })),
+});
+
+const earlierWorkouts = (count: number) =>
+  Array.from({ length: count }, (_, index) => logged(`earlier-${index}`, "dumbbell-lateral-raise", 1));
+
+const strength = (referenceStrength: number) => ({ referenceStrength, estimated: true as const });
+
+const withBench = [...levels, kg("dumbbell-floor-press", 20)];
+
 describe("planWorkout", () => {
+  describe("the Weekly Budget", () => {
+    // Quads, hamstrings, chest, lats and upper_back at 14, glutes at 28, side_delts at 6, abs at 7
+    const workouts = [
+      week({
+        "goblet-squat": 14,
+        "dumbbell-romanian-deadlift": 14,
+        "one-arm-dumbbell-row": 14,
+        "dumbbell-floor-press": 14,
+        "dumbbell-lateral-raise": 6,
+      }),
+    ];
+    const first = (more: Partial<PlanWorkoutInput>) => slugs({ workouts, workingLevels: withBench, ...more })[0];
+
+    it("goes by the Goal", () => {
+      // build_muscle is 2 short of 16 on the bigger Muscles; recomp's 14 is met, so its next Muscle is side_delts
+      expect(first({ goal: "build_muscle" })).not.toBe("dumbbell-lateral-raise");
+      expect(first({ goal: "recomp" })).toBe("dumbbell-lateral-raise");
+    });
+
+    it("goes by the days per week", () => {
+      // 12 at 2 days is met; 20 at 6 days isn't
+      expect(first({ daysPerWeek: 2 })).toBe("dumbbell-lateral-raise");
+      expect(first({ daysPerWeek: 6 })).not.toBe("dumbbell-lateral-raise");
+    });
+  });
+
+  describe("when time can't fit the Weekly Budget", () => {
+    it("takes every Muscle to 4 first", () => {
+      // All but side_delts have 4. Lateral raise scores 1.15, less than goblet squat's 1.67
+      const workouts = [
+        week({
+          "goblet-squat": 4,
+          "dumbbell-romanian-deadlift": 4,
+          "one-arm-dumbbell-row": 4,
+          "dumbbell-floor-press": 4,
+          plank: 4,
+        }),
+      ];
+      expect(slugs({ workouts, workingLevels: withBench })[0]).toBe("dumbbell-lateral-raise");
+    });
+
+    it("then takes every Muscle to its min", () => {
+      // side_delts have 5 of a min of 6, so lateral raise scores 0.575, less than goblet squat's 0.72
+      const workouts = [
+        week({
+          "goblet-squat": 12,
+          "dumbbell-romanian-deadlift": 12,
+          "one-arm-dumbbell-row": 12,
+          "dumbbell-floor-press": 12,
+          "dumbbell-lateral-raise": 5,
+        }),
+      ];
+      expect(slugs({ workouts, workingLevels: withBench })[0]).toBe("dumbbell-lateral-raise");
+    });
+
+    it("then moves towards the budget, side_delts and abs last", () => {
+      // Lateral raise scores 0.46 at 6 of 10, more than row's 0.29 at 14 of 16, but the bigger Muscles go first
+      const workouts = [
+        week({
+          "goblet-squat": 14,
+          "dumbbell-romanian-deadlift": 14,
+          "one-arm-dumbbell-row": 14,
+          "dumbbell-floor-press": 14,
+          "dumbbell-lateral-raise": 6,
+        }),
+      ];
+      const workingLevels = [kg("one-arm-dumbbell-row", 18), kg("dumbbell-lateral-raise", 6)];
+      expect(slugs({ workouts, workingLevels }).indexOf("one-arm-dumbbell-row")).toBe(0);
+    });
+
+    it("doesn't chase a Muscle the Equipment Profile can't train", () => {
+      // Bodyweight only: nothing trains lats, whose 0 of 4 mustn't keep the plan from the other Muscles' mins
+      const equipmentProfile: ProfileWithLoads = { tags: [], loads: {} };
+      const workouts = [
+        week({
+          "bulgarian-split-squat": 8,
+          "single-leg-glute-bridge": 8,
+          "push-up": 4,
+          "prone-ytw": 8,
+          "pike-push-up": 8,
+          plank: 4,
+        }),
+      ];
+      const workingLevels = [reps("push-up", 12), reps("bodyweight-squat", 20), reps("prone-ytw", 12)];
+      const chosen = slugs({ equipmentProfile, workouts, workingLevels });
+      // Chest's 4 of 10 is the furthest behind its min
+      expect(chosen[0]).toBe("push-up");
+      expect(chosen.some((slug) => exerciseBySlug(slug)?.muscles.primary.includes("lats"))).toBe(false);
+    });
+  });
+
+  describe("limits", () => {
+    const quadExercises = ["goblet-squat", "dumbbell-reverse-lunge", "dumbbell-bulgarian-split-squat", "split-squat"];
+    const quadLevels = [
+      kg("goblet-squat", 10),
+      kg("dumbbell-reverse-lunge", 10),
+      kg("dumbbell-bulgarian-split-squat", 10),
+      reps("split-squat", 10),
+    ];
+    const workingLevels = [
+      ...quadLevels,
+      kg("one-arm-dumbbell-row", 18),
+      kg("dumbbell-floor-press", 20),
+      kg("dumbbell-romanian-deadlift", 20),
+      kg("dumbbell-lateral-raise", 6),
+    ];
+    // Where each pick for quads falls among the Exercises
+    const quadPicks = (chosen: string[]) => chosen.filter((slug) => quadExercises.includes(slug));
+
+    it("leaves half a Muscle's budget for another Workout", () => {
+      // Quads get 8 of 16 here: a third pick would make 9, so it waits until every other Muscle has what it can take
+      const chosen = slugs({ workingLevels });
+      expect(chosen.indexOf(quadPicks(chosen)[2]!)).toBeGreaterThan(chosen.indexOf("dumbbell-lateral-raise"));
+    });
+
+    it("has no second Workout to leave for in the week's last one", () => {
+      // Three of 4 days done, so the third pick for quads makes 9 of 16 and doesn't wait
+      const chosen = slugs({ workingLevels, workouts: earlierWorkouts(3) });
+      expect(chosen.indexOf(quadPicks(chosen)[2]!)).toBeLessThan(chosen.indexOf("dumbbell-lateral-raise"));
+    });
+
+    it("keeps a Muscle to 10 credited Sets a Workout while anything else helps", () => {
+      // The last of 6 days, budget 20: a fourth pick for quads makes 12, so it waits for lateral raise's lower score.
+      // Few enough Exercises that all of them fit
+      const fewer = [...quadLevels, kg("dumbbell-lateral-raise", 6)];
+      const chosen = slugs({ workingLevels: fewer, workouts: earlierWorkouts(5), daysPerWeek: 6 });
+      expect(chosen.indexOf(quadPicks(chosen)[3]!)).toBeGreaterThan(chosen.indexOf("dumbbell-lateral-raise"));
+    });
+
+    it("gives 3 Sets, and a 4th only when no new Exercise helps, and never a 5th", () => {
+      // Row is the only Exercise for lats, which need a 4th Set to reach 4. Four Exercises train quads
+      const chosen = plan({ workingLevels }).plannedExercises;
+      expect(chosen.find(({ slug }) => slug === "one-arm-dumbbell-row")?.sets).toBe(4);
+      expect(chosen.find(({ slug }) => slug === "goblet-squat")?.sets).toBe(3);
+      const few = plan({ workingLevels: [kg("goblet-squat", 20)] }).plannedExercises;
+      expect(Math.max(...few.map(({ sets }) => sets))).toBe(4);
+    });
+  });
+
+  describe("a Weekly Budget already met", () => {
+    const met = {
+      "goblet-squat": 20,
+      "dumbbell-romanian-deadlift": 20,
+      "one-arm-dumbbell-row": 20,
+      "dumbbell-floor-press": 20,
+    };
+
+    it("still gives a Workout, as a new week would", () => {
+      const workouts = [week({ ...met, "dumbbell-lateral-raise": 20 })];
+      const planned = plan({ workouts, workingLevels: withBench }).plannedExercises;
+      expect(planned).toEqual(plan({ workingLevels: withBench }).plannedExercises);
+      expect(planned.length).toBeGreaterThan(0);
+    });
+
+    it("uses the rest of the time once what's left of the budget is planned", () => {
+      const chosen = slugs({ workouts: [week(met)], workingLevels: withBench });
+      expect(chosen[0]).toBe("dumbbell-lateral-raise");
+      expect(chosen.length).toBeGreaterThan(1);
+    });
+  });
+
+  describe("a missing Working Level", () => {
+    const rack: ProfileWithLoads = {
+      tags: ["barbell", "plates", "power_rack"],
+      loads: { barbell: { barKg: 20, platesKg: [1.25, 2.5, 5, 10, 20] } },
+    };
+    const assessment = { bodyWeightKg: 75, patterns: { squat: strength(100), hinge: strength(120) } };
+    const planned = (slug: string, more: Partial<PlanWorkoutInput>) =>
+      plan({ assessment, ...more }).plannedExercises.find((exercise) => exercise.slug === slug);
+
+    it("is worked out from the Reference Strengths, for a profile added after the Assessment", () => {
+      // Back squat's maximum is the Reference Strength, and 100 ÷ (1 + 10/30) is 75 kg for 8 reps
+      expect(planned("back-squat", { equipmentProfile: rack, workingLevels: [] })?.target).toEqual({
+        unit: "kg",
+        kg: 75,
+        reps: 8,
+      });
+    });
+
+    it("gives way to a stored Working Level", () => {
+      const workingLevels = [kg("back-squat", 60)];
+      expect(planned("back-squat", { equipmentProfile: rack, workingLevels })?.target).toMatchObject({ kg: 60 });
+    });
+
+    it("replaces a stored Working Level this profile can't do that way", () => {
+      // Stored in kg from a dumbbell profile; with only bands, a lateral raise is prescribed by band
+      const equipmentProfile: ProfileWithLoads = { tags: ["loop_bands"], loads: { loop_bands: { levels: ["heavy"] } } };
+      const workingLevels = [kg("dumbbell-lateral-raise", 6)];
+      expect(planned("dumbbell-lateral-raise", { equipmentProfile, workingLevels })?.target).toEqual({
+        unit: "band",
+        level: "heavy",
+        reps: 12,
+      });
+    });
+
+    it("stays out of the plan when its Pattern has no Reference Strength", () => {
+      expect(slugs({ workingLevels: [kg("goblet-squat", 20)] })).not.toContain("dumbbell-romanian-deadlift");
+    });
+  });
+
   describe("choosing Exercises", () => {
     it("picks the highest score again and again, counting each pick towards the budget", () => {
       // Scores (credit × remaining ÷ budget, × 1.15 for external load), budgets 16 and 10 for side_delts and abs:
-      // goblet squat 2.875; row, RDL 2.3; push-up, plank 1.5; lateral raise 1.15. Then, after each pick:
-      // goblet squat: RDL 2.084 (glutes 13/16), push-up 1.425, plank 1.256
+      // goblet squat 2.875; row, RDL 2.3; push-up, plank, bird dog 1.5; lateral raise 1.15. Then, after each pick:
+      // goblet squat: row 2.3, RDL 2.084 (glutes 13/16), push-up 1.425, plank, bird dog 1.256
       // row: unchanged
       // RDL: push-up 1.425, lateral raise 1.15, plank 1.163 (glutes 10/16)
-      // push-up: lateral raise 1.15, plank 1.0125 (abs 7/10)
-      expect(slugs()).toEqual([
+      // push-up: lateral raise 1.15, plank 1.0125 (abs 7/10). Abs still at 3, plank next
+      expect(slugs().slice(0, 6)).toEqual([
         "goblet-squat",
         "one-arm-dumbbell-row",
         "dumbbell-romanian-deadlift",
@@ -61,11 +282,11 @@ describe("planWorkout", () => {
     });
 
     it("plans around the Sets logged this week", () => {
-      // 16 Sets of goblet squat fill quads and glutes, so what's left of its score is abs: 0.5 × 0.2 × 1.15
+      // 16 Sets of goblet squat fill quads and glutes, so it's no longer first
       const workouts = [logged("w1", "goblet-squat", 16)];
       const chosen = slugs({ workouts });
       expect(chosen[0]).toBe("one-arm-dumbbell-row");
-      expect(chosen.at(-1)).toBe("goblet-squat");
+      expect(chosen.indexOf("goblet-squat")).toBeGreaterThan(chosen.indexOf("push-up"));
     });
 
     it("gives each Exercise once", () => {
@@ -73,8 +294,8 @@ describe("planWorkout", () => {
       expect(new Set(chosen).size).toBe(chosen.length);
     });
 
-    it("builds the Long version, stopping at 55 minutes of Sets", () => {
-      // Ten Exercises at 120 s a Set, so 6 minutes a pick: 9 fit and a tenth would reach 60 minutes
+    it("builds the Long version, filling 55 minutes of Sets without going over", () => {
+      // Ten Exercises at 120 s a Set, so a tenth pick would reach 60 minutes
       const workingLevels = [
         "single-arm-overhead-press",
         "goblet-squat",
@@ -87,21 +308,24 @@ describe("planWorkout", () => {
         "renegade-row",
         "farmers-carry",
       ].map((slug) => kg(slug, 20));
-      expect(slugs({ workingLevels })).toHaveLength(9);
+      const seconds = plan({ workingLevels }).plannedExercises.reduce(
+        (total, { slug, sets }) => total + exerciseBySlug(slug)!.secondsPerSet * sets,
+        0,
+      );
+      expect(seconds).toBeLessThanOrEqual(55 * 60);
+      expect(seconds).toBeGreaterThanOrEqual(53 * 60);
     });
   });
 
   describe("equipment and injuries", () => {
     it("leaves out an Exercise the Equipment Profile can't do", () => {
-      expect(slugs({ workingLevels: [kg("back-squat", 60), kg("goblet-squat", 20)] })).toEqual(["goblet-squat"]);
+      const chosen = slugs({ workingLevels: [kg("back-squat", 60), kg("goblet-squat", 20)] });
+      expect(chosen).toContain("goblet-squat");
+      expect(chosen).not.toContain("back-squat");
     });
 
     it("leaves out an Exercise that conflicts with an injury", () => {
       expect(slugs({ injuries: ["knee"] })).not.toContain("goblet-squat");
-    });
-
-    it("leaves out an Exercise with no stored Working Level", () => {
-      expect(slugs({ workingLevels: [kg("goblet-squat", 20)] })).toEqual(["goblet-squat"]);
     });
 
     it("leaves out a barbell Exercise whose Working Level is lighter than the bar", () => {
@@ -110,21 +334,14 @@ describe("planWorkout", () => {
         loads: { barbell: { barKg: 20, platesKg: [2.5, 5, 10] } },
       };
       const chosen = slugs({ equipmentProfile: barbell, workingLevels: [kg("back-squat", 15), kg("deadlift", 60)] });
-      expect(chosen).toEqual(["deadlift"]);
-    });
-
-    it("has no Exercises when nothing can be prescribed", () => {
-      expect(slugs({ workingLevels: [] })).toEqual([]);
+      expect(chosen).toContain("deadlift");
+      expect(chosen).not.toContain("back-squat");
     });
   });
 
   describe("Set targets", () => {
     const planned = (slug: string, more?: Parameters<typeof plan>[0]) =>
       plan(more).plannedExercises.find((exercise) => exercise.slug === slug);
-
-    it("gives every Exercise 3 Sets", () => {
-      expect(plan().plannedExercises.map(({ sets }) => sets)).toEqual([3, 3, 3, 3, 3, 3]);
-    });
 
     it("prescribes a weighted Exercise's Working Level at the nearest load the profile has, for 8 reps", () => {
       expect(planned("goblet-squat")?.target).toEqual({ unit: "kg", kg: 20, reps: 8 });
