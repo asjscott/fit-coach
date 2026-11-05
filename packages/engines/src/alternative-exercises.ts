@@ -14,7 +14,7 @@ const sharesPattern = (a: Exercise, b: Exercise) =>
   a.patterns.some(({ pattern }) => b.patterns.some((other) => other.pattern === pattern));
 
 // The best stand-ins for an Exercise, best first: the same Pattern if any share a primary Muscle, else any Pattern.
-// The sort is stable, so library order settles a tie
+// The sort is stable, so the candidates' own order settles a tie
 export function alternativeOptions(exercise: Exercise, candidates: readonly Candidate[]) {
   const sharing = candidates.filter((candidate) => sharedPrimaryMuscles(exercise, candidate.exercise) > 0);
   const samePattern = sharing.filter((candidate) => sharesPattern(exercise, candidate.exercise));

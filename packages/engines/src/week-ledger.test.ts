@@ -1,6 +1,6 @@
 import type { Workout } from "@fit/shared";
 import { describe, expect, it } from "vitest";
-import { mondayOf, weekLedger } from "./week-ledger";
+import { mondayBefore, mondayOf, weekLedger } from "./week-ledger";
 
 type Part = Workout["assessment"];
 
@@ -95,5 +95,20 @@ describe("weekLedger", () => {
 
   it("ignores an Exercise the library doesn't know", () => {
     expect(weekLedger([workout("w1", tuesday, "not-in-this-library", 3)], week)).toEqual({});
+  });
+});
+
+describe("mondayBefore", () => {
+  it("is the Monday of the week before", () => {
+    expect(mondayBefore("2026-11-02")).toBe("2026-10-26");
+  });
+
+  it("crosses a year", () => {
+    expect(mondayBefore("2026-01-05")).toBe("2025-12-29");
+  });
+
+  it("is 7 calendar days across a clock change", () => {
+    // New York's clocks go forward on 8 March 2026
+    expect(mondayBefore("2026-03-09")).toBe("2026-03-02");
   });
 });

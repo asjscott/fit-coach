@@ -40,6 +40,13 @@ export function mondayOf(date: Date, timeZone: string): string {
   return monday.toISOString().slice(0, 10);
 }
 
+// The Monday of the week before, on the calendar for the same reason
+export function mondayBefore(monday: string): string {
+  const date = new Date(`${monday}T00:00:00Z`);
+  date.setUTCDate(date.getUTCDate() - 7);
+  return date.toISOString().slice(0, 10);
+}
+
 // The week's Workouts, each once by id however often it's passed. A Workout belongs to the week it started in, as on
 // Today
 export function workoutsInWeek(workouts: readonly LedgerWorkout[], { monday, timeZone }: LedgerWeek): LedgerWorkout[] {

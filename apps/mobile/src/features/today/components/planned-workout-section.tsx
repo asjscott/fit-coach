@@ -14,6 +14,7 @@ import { spacing } from "@/theme";
 const EQUIPMENT_LABELS: Record<BuiltInEquipment, string> = { full_gym: "Full gym", bodyweight_only: "Bodyweight only" };
 
 type PlannedWorkoutSectionProps = {
+  cue?: string;
   plannedExercises: DayExercise[];
   estimatedSeconds: number;
   dropped: string[];
@@ -33,6 +34,7 @@ type PlannedWorkoutSectionProps = {
 // estimated time, the Length and equipment to change for this Workout, what replaced or dropped out on that equipment,
 // and Start, with a Manual Workout as the smaller choice below
 export function PlannedWorkoutSection({
+  cue,
   plannedExercises,
   estimatedSeconds,
   dropped,
@@ -52,6 +54,11 @@ export function PlannedWorkoutSection({
     <View style={{ gap: spacing[3] }}>
       <View style={{ gap: spacing[2] }}>
         <SectionLabel>Planned Workout</SectionLabel>
+        {cue ? (
+          <Text size="sm" color="muted">
+            {cue}
+          </Text>
+        ) : null}
         <Text size="sm" color="muted">
           {estimatedTimeLabel(estimatedSeconds)}
         </Text>
