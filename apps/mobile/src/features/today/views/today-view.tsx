@@ -23,6 +23,7 @@ import { RestDaySection } from "../components/rest-day-section";
 import { ThisWeekSection } from "../components/this-week-section";
 import { todayState, todayStatus } from "../today-status";
 import { AssessmentSection } from "../components/assessment-section";
+import { useDaysWorkout } from "../hooks/use-days-workout";
 import { useDismissedOffer } from "../hooks/use-dismissed-offer";
 import { usePlannedWorkout } from "../hooks/use-planned-workout";
 
@@ -44,6 +45,7 @@ export default function TodayView() {
 
   // A Workout under way is what's on offer, so Resume stands alone until it's finished or discarded
   const plannedWorkout = isLoaded && !logbook.workout ? latestPlan : null;
+  const { today, clearChoices } = useDaysWorkout(plannedWorkout);
 
   // A forgotten Workout must be finished or discarded before the user carries on
   useEffect(() => {
@@ -56,7 +58,10 @@ export default function TodayView() {
   };
 
   const handleStartPlan = async () => {
-    if (plannedWorkout && (await startPlannedWorkout(plannedWorkout))) router.push("/workout");
+    if (today && (await startPlannedWorkout(today))) {
+      clearChoices();
+      router.push("/workout");
+    }
   };
 
   // The same Workouts as History: Pending ones, then those loaded from the server (none offline, ADR 0001)
@@ -108,10 +113,13 @@ export default function TodayView() {
           <RestDaySection reason={restDayReason} />
         </View>
       ) : null}
-      {plannedWorkout ? (
+      {today ? (
         <View style={{ marginTop: spacing[5] }}>
           <PlannedWorkoutSection
-            plannedWorkout={plannedWorkout}
+            plannedExercises={today.plannedExercises}
+            estimatedSeconds={today.estimatedSeconds}
+            workoutLength={today.workoutLength}
+            onChooseLength={today.chooseLength}
             startingPlan={startingPlan}
             startingManual={starting}
             onStart={handleStartPlan}

@@ -1,6 +1,7 @@
 import type { BodyProfile, EquipmentProfile, PlannedExercise, PreviousSets, UserProfile, Workout } from "@fit/shared";
 import { describe, expect, it } from "vitest";
 import { EXERCISES } from "./data/exercises";
+import { daysWorkout } from "./days-workout";
 import { createLogbook, LogbookError, type DeviceStorage, type PreviousSetsSource } from "./logbook";
 
 const exercise = (slug: string) => {
@@ -1031,6 +1032,28 @@ describe("Logbook: Planned Workouts", () => {
       ],
     });
     expect(await logbook.inProgress()).toEqual(workout);
+  });
+
+  it("starts the day's Workout at the chosen Workout Length, linked to the whole plan", async () => {
+    const { logbook } = setup();
+    // 1500 s at Short: 480 s of goblet squat, 300 s of plank and 360 s of push-up leave 360 s, so 3 overhead press Sets
+    const stored = plan(
+      { ...gobletSquat, sets: 4 },
+      { ...plank, sets: 4 },
+      { ...pushUp, sets: 4 },
+      { ...pushUp, slug: "dumbbell-overhead-press", sets: 4 },
+    );
+    const { plannedExercises } = daysWorkout(stored, { workoutLength: "short" });
+
+    const workout = await logbook.startPlannedWorkout({ id: PLAN_ID, plannedExercises }, at("09:00"));
+
+    expect(workout.plannedWorkoutId).toBe(PLAN_ID);
+    expect(workout.workoutExercises.map(({ slug, planned }) => [slug, planned?.sets])).toEqual([
+      ["goblet-squat", 4],
+      ["push-up", 4],
+      ["dumbbell-overhead-press", 3],
+      ["plank", 4],
+    ]);
   });
 
   it("refuses to start while a Workout is in progress", async () => {

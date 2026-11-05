@@ -1,7 +1,9 @@
 import type { FastifyPluginAsyncZod } from "fastify-type-provider-zod";
+import { usualWorkoutLength } from "@fit/engines";
 import { EquipmentProfileInput, ErrorResponse, User, UserUpdate } from "@fit/shared";
 import { z } from "zod";
 import { requireAuth, userIdOf } from "../auth";
+import { rebuildAfterProfileChange } from "../planned-workouts";
 import { createEquipmentProfile, createUser, findUser, toUser, updateEquipmentProfile, updateUser } from "../users";
 
 // /user is the signed-in user's own record; /users is the collection it is created in
@@ -26,13 +28,18 @@ export const userRoutes: FastifyPluginAsyncZod = async (app) => {
   });
 
   // Sets onboardedAt as a side effect once the required profile fields are complete
-  // and the user has an equipment profile
+  // and the user has an equipment profile. A new usual Workout Length rebuilds the Planned Workout
   app.patch(
     "/user",
     { schema: { body: UserUpdate, response: { 200: User, 404: ErrorResponse } } },
     async (req, reply) => {
-      const user = await updateUser(userIdOf(req)!, req.body);
-      if (!user) return reply.code(404).send({ error: "user not found" });
+      const clerkUserId = userIdOf(req)!;
+      const before = await findUser(clerkUserId);
+      const user = await updateUser(clerkUserId, req.body);
+      if (!before || !user) return reply.code(404).send({ error: "user not found" });
+      if (usualWorkoutLength(before.profile) !== usualWorkoutLength(user.profile)) {
+        await rebuildAfterProfileChange(clerkUserId);
+      }
       return toUser(user);
     },
   );
