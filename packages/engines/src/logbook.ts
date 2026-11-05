@@ -6,7 +6,11 @@ import {
   type EquipmentProfile,
   type Exercise,
   type InProgressWorkoutExercise,
+  type LoadType,
+  type PlannedExercise,
+  type PlannedWorkout,
   type PreviousSets,
+  type SetTarget,
   type SetValues,
   type UserProfile,
 } from "@fit/shared";
@@ -21,6 +25,7 @@ import {
   type TestProgress,
 } from "./assessment-protocol";
 import { canAssess, chooseTests, partTests } from "./assessment-tests";
+import { exerciseBySlug } from "./data/exercises";
 import { exerciseLoadsKg, stepLoadKg, type ProfileWithLoads, type StepDirection } from "./equipment";
 import { previousSets } from "./training-summaries";
 
@@ -63,6 +68,28 @@ const STALE_AFTER_MS = 3 * 60 * 60 * 1000;
 function lastSetAt(workout: InProgressWorkout): Date | null {
   const times = workout.workoutExercises.flatMap((we) => we.sets.map((set) => Date.parse(set.loggedAt)));
   return times.length === 0 ? null : new Date(Math.max(...times));
+}
+
+// For an Exercise the server's library has and the phone's doesn't yet, which can still be logged
+const LOAD_TYPE_OF_TARGET: Record<SetTarget["unit"], LoadType> = {
+  kg: "external",
+  band: "external",
+  reps: "bodyweight",
+  seconds: "timed",
+};
+
+const plannedLoadType = ({ slug, target }: PlannedExercise) =>
+  exerciseBySlug(slug)?.loadType ?? LOAD_TYPE_OF_TARGET[target.unit];
+
+// A Set's values from its target, or null when the target can't fill them, like a band level where kg is logged. A
+// target's kg is only as round as the profile's loads, and a Set's must be in 0.25 kg steps
+function targetDraft(loadType: LoadType, target: SetTarget): SetValues | null {
+  if (loadType === "external" && target.unit === "kg") {
+    return { kind: "external", kg: Math.round(target.kg * 4) / 4, reps: target.reps };
+  }
+  if (loadType === "bodyweight" && "reps" in target) return { kind: "bodyweight", reps: target.reps };
+  if (loadType === "timed" && target.unit === "seconds") return { kind: "timed", seconds: target.seconds };
+  return null;
 }
 
 const IN_PROGRESS_KEY = "logbook:in-progress";
@@ -155,7 +182,7 @@ export function createLogbook({
   }
 
   async function finishAs(
-    { id, assessment, workoutExercises }: InProgressWorkout,
+    { id, assessment, plannedWorkoutId, workoutExercises }: InProgressWorkout,
     { startedAt, endedAt, now }: WorkoutTimes & { now: Date },
   ): Promise<FinishResult> {
     const withSets = workoutExercises.filter(({ sets }) => sets.length > 0);
@@ -166,6 +193,7 @@ export function createLogbook({
       startedAt: startedAt.toISOString(),
       endedAt: endedAt.toISOString(),
       ...(assessment && { assessment }),
+      ...(plannedWorkoutId && { plannedWorkoutId }),
       workoutExercises: withSets.map(({ slug, loadType, sets }) => ({ slug, loadType, sets })),
     });
     await writePending([...(await readPending()), workout]);
@@ -249,6 +277,33 @@ export function createLogbook({
       });
     },
 
+    // Starts a Planned Workout with its Exercises added and nothing logged: only what the user does counts, and
+    // the targets start each Exercise's first Set. Works with no signal, and later edits never touch the link
+    startPlannedWorkout: async (
+      { id: plannedWorkoutId, plannedExercises }: Pick<PlannedWorkout, "id" | "plannedExercises">,
+      now: Date,
+    ) => {
+      const fromServer = await Promise.all(
+        plannedExercises.map(({ slug }) => previousSetsSource.forExercise(slug).catch(() => null)),
+      );
+      return serially(async () => {
+        if (await read()) throw new LogbookError("A Workout is already in progress");
+        const pending = await readPending();
+        const workout: InProgressWorkout = {
+          id: newId(),
+          startedAt: now.toISOString(),
+          plannedWorkoutId,
+          workoutExercises: plannedExercises.map((plannedExercise, i) => {
+            const { slug, sets, target } = plannedExercise;
+            const exercise = { slug, loadType: plannedLoadType(plannedExercise) };
+            return { ...newWorkoutExercise(exercise, fromServer[i], pending), planned: { sets, target } };
+          }),
+        };
+        await write(workout);
+        return workout;
+      });
+    },
+
     removeWorkoutExercise: (workoutExerciseId: string) =>
       serially(async () => {
         const workout = await readOrThrow();
@@ -305,13 +360,16 @@ export function createLogbook({
       }),
 
     // The values to pre-fill the next Set with: a test's suggested load, else the last Set's (not its RPE: each Set is
-    // rated on its own), or null for the first Set
+    // rated on its own), else the plan's target, or null for the first Set
     nextSetDraft: (workoutExercise: InProgressWorkoutExercise, protocol?: ProtocolState): SetValues | null => {
       if (protocol && "suggestedKg" in protocol && protocol.suggestedKg !== null) {
         return { kind: "external", kg: protocol.suggestedKg, reps: TEST_REPS };
       }
       const last = workoutExercise.sets.at(-1);
-      if (!last) return null;
+      if (!last) {
+        const { loadType, planned } = workoutExercise;
+        return planned ? targetDraft(loadType, planned.target) : null;
+      }
       return Object.fromEntries(
         Object.entries(last).filter(([key]) => key !== "loggedAt" && key !== "rpe"),
       ) as SetValues;
