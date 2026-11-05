@@ -10,5 +10,6 @@ export * from "./equipment";
 export * from "./logbook";
 export * from "./picker";
 export * from "./training-summaries";
+export * from "./workout-length";
 export * from "./working-level-sections";
 export { WORKING_LEVEL_REPS } from "./working-levels";
