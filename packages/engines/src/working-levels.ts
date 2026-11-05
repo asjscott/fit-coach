@@ -18,7 +18,7 @@ export const WORKING_LEVEL_REPS = 8;
 const REPS_IN_RESERVE = 2;
 const WORKING_LEVEL_E1RM_REPS = WORKING_LEVEL_REPS + REPS_IN_RESERVE;
 const MIN_REPS = 3;
-const MAX_REPS = 20;
+export const MAX_REPS = 20;
 const CORE_REPS = 10;
 const BAND_REPS = 12;
 
