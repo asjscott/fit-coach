@@ -165,6 +165,10 @@ describe("workoutExerciseSummary in a Workout started from a plan", () => {
     expect(workoutExerciseSummary([], [lifted(18, 10)], planned)).toBe("3 sets · 20 kg × 8");
     expect(workoutExerciseSummary([lifted(20, 6)], [lifted(18, 10)], planned)).toBe("1 set · 20 kg × 6");
   });
+
+  it("says the target is per side for a one-sided Exercise, as Today does", () => {
+    expect(workoutExerciseSummary([], undefined, planned, true)).toBe("3 sets · 20 kg × 8 per side");
+  });
 });
 
 describe("setTargetLabel", () => {
