@@ -36,6 +36,7 @@ export const Exercise = z.object({
   equipmentOptions: z.array(z.array(EquipmentTag)).min(1), // any one option works; [[]] = no equipment
   loadType: LoadType,
   unilateral: z.boolean(),
+  ballistic: z.boolean(), // can't be told from the other fields, and jumps will need it too
   secondsPerSet: z.number().int().positive(), // including rest
   regression: z.string().nullable(), // slug of the easier variant
   progression: z.string().nullable(), // slug of the harder variant

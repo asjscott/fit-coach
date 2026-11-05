@@ -10,6 +10,7 @@ import { workoutRoutes } from "./routes/workouts";
 import { HealthResponse } from "@fit/shared";
 import { registerAuth } from "./auth";
 import { pingDb } from "./db";
+import { migrateExercises } from "./exercises";
 import { ensurePlannedWorkoutIndexes } from "./planned-workouts";
 import { ensureUserIndexes, migrateUsers } from "./users";
 import { ensureWorkoutIndexes } from "./workouts";
@@ -39,6 +40,8 @@ await ensureAssessmentIndexes().catch((err) => app.log.error(err, "Failed to cre
 await ensurePlannedWorkoutIndexes().catch((err) => app.log.error(err, "Failed to create planned workout indexes"));
 
 await migrateUsers().catch((err) => app.log.error(err, "Failed to migrate users"));
+
+await migrateExercises().catch((err) => app.log.error(err, "Failed to migrate exercises"));
 
 await app.register(userRoutes);
 await app.register(exerciseRoutes);

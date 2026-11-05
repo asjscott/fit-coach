@@ -25,6 +25,13 @@ describe("exercise library", () => {
     expect(() => Exercise.parse(exercise)).not.toThrow();
   });
 
+  it("has the two kettlebell swings as its only Ballistic Exercises", () => {
+    expect(EXERCISES.filter((e) => e.ballistic).map((e) => e.slug)).toEqual([
+      "kettlebell-swing",
+      "single-arm-kettlebell-swing",
+    ]);
+  });
+
   // Stops us shipping a library where, say, a bodyweight-only user has no way to train pull
   it.each(PRESETS)("gives the $name preset an exercise for every pattern except carry", (preset) => {
     const missing = Pattern.options
