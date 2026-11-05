@@ -1,16 +1,18 @@
-import type {
-  Assessment,
-  Exercise,
-  Goal,
-  InjuryTag,
-  Muscle,
-  PlannedExercise,
-  PlannedWorkout,
-  SetTarget,
-  WorkingLevel,
+import {
+  BuiltInEquipment,
+  type Assessment,
+  type Exercise,
+  type Goal,
+  type InjuryTag,
+  type Muscle,
+  type PlannedExercise,
+  type PlannedWorkout,
+  type SetTarget,
+  type WorkingLevel,
 } from "@fit/shared";
+import { withAlternatives, type Candidate } from "./alternative-exercises";
 import { exerciseBySlug, EXERCISES } from "./data/exercises";
-import { isAvailable, isSafeFor, type ProfileWithLoads } from "./equipment";
+import { BUILT_IN_EQUIPMENT, isAvailable, isSafeFor, matchesBuiltIn, type ProfileWithLoads } from "./equipment";
 import { scoreExercise, type WeekSoFar } from "./plan-score";
 import {
   addCredits,
@@ -27,6 +29,7 @@ import {
   MAX_SETS_PER_EXERCISE,
   MIN_WORKOUTS_PER_MUSCLE,
   MUSCLE_CAP_PER_WORKOUT,
+  SETS_PER_PICK,
   weeklyBudget,
   type WeeklyBudget,
 } from "./weekly-budget";
@@ -34,7 +37,6 @@ import { asDone } from "./working-level-sections";
 import { MAX_REPS, seedWorkingLevels, WORKING_LEVEL_REPS } from "./working-levels";
 import { secondsForSets } from "./workout-length";
 
-const SETS_PER_PICK = 3;
 // Always the Long version: the day's Workout cuts it to length (daysWorkout)
 const WORKOUT_SECONDS = secondsForSets("long");
 // The part of power training that survives 8-rep Sets
@@ -57,8 +59,6 @@ export type PlanWorkoutInput = {
 
 // What the planner decides; the API gives it an id and a status when it saves it
 export type WorkoutPlan = Pick<PlannedWorkout, "weekStart" | "plannedExercises" | "cue">;
-
-type Candidate = { exercise: Exercise; target: SetTarget };
 
 // A Set's target from a stored Working Level, or null when it can't be prescribed on this equipment
 function setTarget(
@@ -142,6 +142,22 @@ function candidateExercises(
   const trainedLastWeek = new Set(lastWeek.flatMap(({ workoutExercises }) => workoutExercises.map(({ slug }) => slug)));
   const isLastWeeks = ({ exercise }: Candidate) => trainedLastWeek.has(exercise.slug);
   return [...varied.filter(isLastWeeks), ...varied.filter((candidate) => !isLastWeeks(candidate))];
+}
+
+// What the user could be given on each built-in choice the primary doesn't already match, under the same rules as the
+// plan itself. It goes in the saved plan, as the phone may have no signal when the user chooses
+function builtInCandidates(
+  input: PlanWorkoutInput,
+  thisWeek: readonly LedgerWorkout[],
+  lastWeek: readonly LedgerWorkout[],
+) {
+  const choices = BuiltInEquipment.options.filter((choice) => !matchesBuiltIn(input.equipmentProfile, choice));
+  return Object.fromEntries(
+    choices.map((choice) => [
+      choice,
+      candidateExercises({ ...input, equipmentProfile: BUILT_IN_EQUIPMENT[choice] }, thisWeek, lastWeek),
+    ]),
+  );
 }
 
 // The most credited Sets a Muscle should take from this Workout: half its budget while another Workout is left this
@@ -268,7 +284,10 @@ export function planWorkout(input: PlanWorkoutInput): WorkoutPlan {
   };
   return {
     weekStart: monday,
-    plannedExercises: selectExercises(selection, ledger),
+    plannedExercises: withAlternatives(
+      selectExercises(selection, ledger),
+      builtInCandidates(input, thisWeek, lastWeek),
+    ),
     ...(goal === "athletic" && { cue: ATHLETIC_CUE }),
   };
 }

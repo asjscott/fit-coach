@@ -1,4 +1,12 @@
-import type { BandLevel, InProgressWorkoutExercise, Set, SetTarget, SetValues, Workout } from "@fit/shared";
+import type {
+  BandLevel,
+  BuiltInEquipment,
+  InProgressWorkoutExercise,
+  Set,
+  SetTarget,
+  SetValues,
+  Workout,
+} from "@fit/shared";
 import { getCalendars } from "expo-localization";
 
 // How Workouts and Sets read on screen
@@ -175,6 +183,12 @@ type PlannedSets = NonNullable<InProgressWorkoutExercise["planned"]>;
 // What the plan sets for an Exercise: "3 sets · 20 kg × 8", with " per side" for a one-sided Exercise
 export const plannedSetsLabel = ({ sets, target }: PlannedSets, unilateral = false) =>
   `${setsLabel(sets)} · ${setTargetLabel(target)}${unilateral ? " per side" : ""}`;
+
+const EQUIPMENT_NOUN: Record<BuiltInEquipment, string> = { full_gym: "full gym", bodyweight_only: "bodyweight" };
+
+// Why the Workout is shorter on a built-in choice: "No bodyweight option for lat pulldown"
+export const noAlternativeLabel = (equipment: BuiltInEquipment, name: string) =>
+  `No ${EQUIPMENT_NOUN[equipment]} option for ${name.toLowerCase()}`;
 
 // A collapsed Workout Exercise's line: "3 sets · 18 kg × 10, 10, 8", else its target Sets, else its Previous Sets,
 // else "Not started"

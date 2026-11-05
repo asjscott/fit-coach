@@ -1,6 +1,6 @@
-import type { Goal, PlannedExercise, WorkoutLength } from "@fit/shared";
+import type { BuiltInEquipment, Goal, PlannedExercise, WorkoutLength } from "@fit/shared";
 import { describe, expect, it } from "vitest";
-import { dayChoices, daysWorkout } from "./days-workout";
+import { dayChoices, daysWorkout, equipmentChoices, withChoice, type DayChoices } from "./days-workout";
 
 const planned = (slug: string, sets = 3): PlannedExercise => ({ slug, sets, target: { unit: "reps", reps: 10 } });
 
@@ -56,6 +56,47 @@ describe("daysWorkout", () => {
       ]);
     });
 
+    describe("4th Sets", () => {
+      const inPriorityOrder = (...lastExercises: PlannedExercise[]) => ({
+        plannedExercises: [
+          planned("goblet-squat", 4), // 120 s: 360 for the first three
+          planned("plank"), // 75 s: 585
+          planned("dumbbell-lateral-raise"), // 60 s: 765
+          planned("push-up", 4), // 90 s: 1035
+          planned("kettlebell-swing"), // 90 s: 1305
+          ...lastExercises,
+        ],
+      });
+      const setsAtShort = (plan: ReturnType<typeof inPriorityOrder>) =>
+        Object.fromEntries(
+          daysWorkout(plan, { workoutLength: "short" }).plannedExercises.map(({ slug, sets }) => [slug, sets]),
+        );
+
+      it("are cut before a later Exercise's first three Sets", () => {
+        // 1500 s at Short: the deadlift's first Set goes ahead of the 4th goblet squat, and the 75 s left takes
+        // neither a second deadlift Set nor a 4th Set
+        expect(setsAtShort(inPriorityOrder(planned("dumbbell-romanian-deadlift")))).toEqual({
+          "goblet-squat": 3,
+          plank: 3,
+          "dumbbell-lateral-raise": 3,
+          "push-up": 3,
+          "kettlebell-swing": 3,
+          "dumbbell-romanian-deadlift": 1,
+        });
+      });
+
+      it("come back in priority order once every Exercise's first three fit", () => {
+        // The 195 s left after the first three take the 4th goblet squat at 120 s, and 75 s can't take the 4th push-up
+        expect(setsAtShort(inPriorityOrder())).toEqual({
+          "goblet-squat": 4,
+          plank: 3,
+          "dumbbell-lateral-raise": 3,
+          "push-up": 3,
+          "kettlebell-swing": 3,
+        });
+      });
+    });
+
     it("keeps a plan shorter than the Length as it is", () => {
       const plan = { plannedExercises: [planned("goblet-squat"), planned("push-up", 2)] };
       expect(daysWorkout(plan, { workoutLength: "long" }).plannedExercises).toEqual(plan.plannedExercises);
@@ -103,6 +144,238 @@ describe("daysWorkout", () => {
     });
   });
 
+  describe("equipment for one Workout", () => {
+    const kg: PlannedExercise["target"] = { unit: "kg", kg: 20, reps: 8 };
+    const reps = (count: number): PlannedExercise["target"] => ({ unit: "reps", reps: count });
+    const option = (slug: string, count = 10) => ({ slug, target: reps(count) });
+
+    // A dumbbell plan: the row and press have Alternative Exercises on Bodyweight only, the push-up stays, and the
+    // lateral raise has none. All stay on Full gym, the row at Full gym's load
+    const stored = {
+      plannedExercises: [
+        {
+          slug: "one-arm-dumbbell-row",
+          sets: 4,
+          target: kg,
+          alternatives: {
+            full_gym: [{ slug: "one-arm-dumbbell-row", target: { unit: "kg", kg: 22.5, reps: 8 } }],
+            bodyweight_only: [option("prone-ytw")],
+          },
+        },
+        {
+          slug: "dumbbell-overhead-press",
+          sets: 3,
+          target: kg,
+          alternatives: {
+            full_gym: [{ slug: "dumbbell-overhead-press", target: kg }],
+            bodyweight_only: [option("pike-push-up", 8), option("incline-push-up"), option("decline-push-up")],
+          },
+        },
+        {
+          slug: "push-up",
+          sets: 3,
+          target: reps(12),
+          alternatives: { full_gym: [option("push-up", 12)], bodyweight_only: [option("push-up", 12)] },
+        },
+        {
+          slug: "dumbbell-lateral-raise",
+          sets: 3,
+          target: kg,
+          alternatives: { full_gym: [{ slug: "dumbbell-lateral-raise", target: kg }], bodyweight_only: [] },
+        },
+      ],
+    } satisfies { plannedExercises: PlannedExercise[] };
+
+    const on = (equipment: BuiltInEquipment, more: Partial<DayChoices> = {}) =>
+      daysWorkout(stored, { workoutLength: "long", equipment, ...more });
+
+    it("replaces what isn't possible with its best Alternative Exercise, with the same Sets", () => {
+      const row = on("bodyweight_only").plannedExercises.find(({ slug }) => slug === "prone-ytw");
+      expect(row).toMatchObject({ sets: 4, target: reps(10), replaces: "one-arm-dumbbell-row" });
+    });
+
+    it("keeps an Exercise still possible, in place and with nothing to choose", () => {
+      const pushUp = on("bodyweight_only").plannedExercises.find(({ slug }) => slug === "push-up");
+      expect(pushUp).toEqual({ slug: "push-up", sets: 3, target: reps(12) });
+    });
+
+    it("uses the target for the equipment on an Exercise that stays", () => {
+      expect(on("full_gym").plannedExercises.find(({ slug }) => slug === "one-arm-dumbbell-row")?.target).toEqual({
+        unit: "kg",
+        kg: 22.5,
+        reps: 8,
+      });
+    });
+
+    it("offers the other options for a replaced Exercise", () => {
+      const press = on("bodyweight_only").plannedExercises.find(
+        ({ replaces }) => replaces === "dumbbell-overhead-press",
+      );
+      expect(press?.slug).toBe("pike-push-up");
+      expect(press?.otherOptions).toEqual([option("incline-push-up"), option("decline-push-up")]);
+    });
+
+    it("says which Exercises dropped out", () => {
+      expect(on("bodyweight_only").dropped).toEqual(["dumbbell-lateral-raise"]);
+      expect(on("full_gym").dropped).toEqual([]);
+    });
+
+    it("times the Workout from the Exercises actually in it", () => {
+      // Warm-up 300 s, then prone-ytw 4 × 60, pike push-up 3 × 90 and push-up 3 × 90
+      expect(on("bodyweight_only").estimatedSeconds).toBe(1080);
+    });
+
+    it("gives a picked option its place, and offers the best one in exchange", () => {
+      const alternativePicks = { "dumbbell-overhead-press": "decline-push-up" };
+      const press = on("bodyweight_only", { alternativePicks }).plannedExercises.find(
+        ({ replaces }) => replaces === "dumbbell-overhead-press",
+      );
+      expect(press).toMatchObject({ slug: "decline-push-up", sets: 3 });
+      expect(press?.otherOptions).toEqual([option("pike-push-up", 8), option("incline-push-up")]);
+    });
+
+    it("ignores a pick that isn't an option on this equipment", () => {
+      const alternativePicks = { "dumbbell-overhead-press": "decline-push-up" };
+      expect(on("full_gym", { alternativePicks })).toEqual(on("full_gym"));
+    });
+
+    describe("two Exercises with the same best option", () => {
+      const shared = (slug: string, ...options: string[]): PlannedExercise => ({
+        slug,
+        sets: 3,
+        target: kg,
+        alternatives: { bodyweight_only: options.map((other) => option(other)) },
+      });
+      const slugs = (plannedExercises: PlannedExercise[], more: Partial<DayChoices> = {}) => {
+        const today = daysWorkout(
+          { plannedExercises },
+          { workoutLength: "long", equipment: "bodyweight_only", ...more },
+        );
+        return { slugs: today.plannedExercises.map(({ slug }) => slug), dropped: today.dropped };
+      };
+
+      it("gives the lower priority one its next option", () => {
+        const plan = [
+          shared("goblet-squat", "split-squat", "reverse-lunge"),
+          shared("back-squat", "split-squat", "pistol-squat"),
+        ];
+        expect(slugs(plan).slugs).toEqual(["split-squat", "pistol-squat"]);
+      });
+
+      it("drops the lower priority one when its options run out, so no Exercise is in the Workout twice", () => {
+        const plan = [shared("one-arm-dumbbell-row", "prone-ytw"), shared("seated-cable-row", "prone-ytw")];
+        expect(slugs(plan)).toEqual({ slugs: ["prone-ytw"], dropped: ["seated-cable-row"] });
+      });
+
+      it("keeps the one the user picked", () => {
+        const plan = [
+          shared("goblet-squat", "split-squat", "reverse-lunge"),
+          shared("back-squat", "split-squat", "pistol-squat"),
+        ];
+        expect(slugs(plan, { alternativePicks: { "back-squat": "split-squat" } }).slugs).toEqual([
+          "reverse-lunge",
+          "split-squat",
+        ]);
+      });
+
+      it("doesn't offer an option another Exercise is using", () => {
+        const plan = [
+          shared("goblet-squat", "split-squat", "reverse-lunge"),
+          shared("back-squat", "split-squat", "reverse-lunge", "pistol-squat"),
+        ];
+        const today = daysWorkout({ plannedExercises: plan }, { workoutLength: "long", equipment: "bodyweight_only" });
+        expect(today.plannedExercises.map(({ otherOptions }) => otherOptions?.map(({ slug }) => slug))).toEqual([
+          [],
+          ["pistol-squat"],
+        ]);
+      });
+    });
+
+    it("combines with the Workout Length, cutting what's left after the equipment", () => {
+      // At Short the press gets one Set. Without the goblet squat's 360 s, all 3 of its Sets fit in the 1305 s left
+      const [squat, ...others] = longPlan.plannedExercises.slice(0, 5);
+      const plan = { plannedExercises: [{ ...squat, alternatives: { bodyweight_only: [] } }, ...others] };
+      const setsOfPress = (choices: DayChoices) =>
+        daysWorkout(plan, choices).plannedExercises.find(({ slug }) => slug === "dumbbell-overhead-press")?.sets;
+
+      expect(setsOfPress({ workoutLength: "short" })).toBe(1);
+      expect(setsOfPress({ workoutLength: "short", equipment: "bodyweight_only" })).toBe(3);
+    });
+
+    it("cuts a replacement's 4th Set like any other", () => {
+      // 1500 s at Short. prone-ytw's three 60 s Sets and the other four Exercises take 1485 s, so its 4th can't fit
+      const plan = { plannedExercises: [stored.plannedExercises[0], ...longPlan.plannedExercises.slice(2, 6)] };
+      const today = daysWorkout(plan, { workoutLength: "short", equipment: "bodyweight_only" });
+      expect(today.plannedExercises.find(({ slug }) => slug === "prone-ytw")?.sets).toBe(3);
+      expect(today.plannedExercises.find(({ slug }) => slug === "single-leg-romanian-deadlift")?.sets).toBe(3);
+    });
+
+    it("restores the plan exactly on going back", () => {
+      const untouched = structuredClone(stored);
+      const usual = daysWorkout(stored, { workoutLength: "standard" });
+
+      daysWorkout(stored, { workoutLength: "standard", equipment: "bodyweight_only" });
+      daysWorkout(stored, { workoutLength: "short", equipment: "full_gym" });
+
+      expect(daysWorkout(stored, { workoutLength: "standard" })).toEqual(usual);
+      expect(usual.plannedExercises.map(({ slug, sets, target }) => [slug, sets, target])).toEqual(
+        stored.plannedExercises.map(({ slug, sets, target }) => [slug, sets, target]),
+      );
+      expect(usual.dropped).toEqual([]);
+      expect(stored).toEqual(untouched);
+    });
+
+    it("ignores picks on the primary Equipment Profile", () => {
+      const alternativePicks = { "dumbbell-overhead-press": "decline-push-up" };
+      expect(daysWorkout(stored, { workoutLength: "long", alternativePicks })).toEqual(
+        daysWorkout(stored, { workoutLength: "long" }),
+      );
+    });
+
+    describe("the choices on offer", () => {
+      it("are those the plan saved", () => {
+        expect(equipmentChoices(stored)).toEqual(["full_gym", "bodyweight_only"]);
+      });
+
+      it("hide one the primary matches, which the plan didn't save", () => {
+        const plan = { plannedExercises: [{ ...planned("push-up"), alternatives: { full_gym: [option("push-up")] } }] };
+        expect(equipmentChoices(plan)).toEqual(["full_gym"]);
+      });
+
+      it("are none on a plan stored before Alternative Exercises", () => {
+        expect(equipmentChoices(longPlan)).toEqual([]);
+      });
+    });
+
+    it("leaves a plan stored before Alternative Exercises as it is", () => {
+      const today = daysWorkout(longPlan, { workoutLength: "long", equipment: "bodyweight_only" });
+      expect(today).toEqual(daysWorkout(longPlan, { workoutLength: "long" }));
+    });
+
+    describe("choosing", () => {
+      const usual = { workoutLength: "standard" } as const;
+
+      it("adds to what's already chosen, so Length and equipment combine", () => {
+        const length = withChoice(null, "plan-1", { workoutLength: "short" });
+        const both = withChoice(length, "plan-1", { equipment: "bodyweight_only" });
+        expect(dayChoices("plan-1", usual, both)).toEqual({ workoutLength: "short", equipment: "bodyweight_only" });
+      });
+
+      it("goes back to the primary Equipment Profile and keeps the Length", () => {
+        const made = withChoice(null, "plan-1", { workoutLength: "short", equipment: "full_gym" });
+        const back = withChoice(made, "plan-1", { equipment: undefined });
+        expect(dayChoices("plan-1", usual, back).equipment).toBeUndefined();
+        expect(dayChoices("plan-1", usual, back).workoutLength).toBe("short");
+      });
+
+      it("doesn't carry over to the next plan", () => {
+        const made = withChoice(null, "plan-1", { equipment: "bodyweight_only" });
+        expect(dayChoices("plan-2", usual, made)).toEqual(usual);
+        expect(withChoice(made, "plan-2", { workoutLength: "short" }).choices).toEqual({ workoutLength: "short" });
+      });
+    });
+  });
+
   describe("the order of the Workout", () => {
     // Priority order: two single-Muscle Exercises, then multi-Muscle ones with a swing among them
     const plan = {
@@ -142,12 +415,13 @@ describe("daysWorkout", () => {
       // swing to the front doesn't let it push out the work ahead of it in priority order
       const short = {
         plannedExercises: [
-          planned("plank", 4), // 300 s
-          planned("goblet-squat", 4), // 780 s
-          planned("dumbbell-lateral-raise", 4), // 1020 s
-          planned("push-up", 4), // 1380 s
-          planned("kettlebell-swing", 4), // Only one 90 s Set fits
-          planned("dumbbell-romanian-deadlift"),
+          planned("plank"), // 225 s
+          planned("goblet-squat"), // 585 s
+          planned("dumbbell-lateral-raise"), // 765 s
+          planned("push-up"), // 1035 s
+          planned("dumbbell-romanian-deadlift"), // 1395 s
+          planned("kettlebell-swing"), // Only one 90 s Set fits
+          planned("dumbbell-overhead-press"),
         ],
       };
       expect(
@@ -157,10 +431,11 @@ describe("daysWorkout", () => {
         ]),
       ).toEqual([
         ["kettlebell-swing", 1],
-        ["goblet-squat", 4],
-        ["push-up", 4],
-        ["plank", 4],
-        ["dumbbell-lateral-raise", 4],
+        ["goblet-squat", 3],
+        ["push-up", 3],
+        ["dumbbell-romanian-deadlift", 3],
+        ["plank", 3],
+        ["dumbbell-lateral-raise", 3],
       ]);
     });
 

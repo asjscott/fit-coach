@@ -33,6 +33,23 @@ describe("PlannedWorkout", () => {
     expect(PlannedWorkout.safeParse({ ...plannedWorkout, weekStart: "2026-W45" }).success).toBe(false);
   });
 
+  it("parses a plan stored before Alternative Exercises, and one with them", () => {
+    expect(PlannedWorkout.parse(plannedWorkout).plannedExercises[0]).not.toHaveProperty("alternatives");
+
+    const [squat] = plannedWorkout.plannedExercises;
+    const alternatives = { bodyweight_only: [{ slug: "bodyweight-squat", target: { unit: "reps", reps: 15 } }] };
+    const withAlternatives = { ...plannedWorkout, plannedExercises: [{ ...squat, alternatives }] };
+    expect(PlannedWorkout.parse(withAlternatives).plannedExercises[0].alternatives).toEqual(alternatives);
+  });
+
+  it("refuses more than 3 Alternative Exercises", () => {
+    const option = { slug: "push-up", target: { unit: "reps", reps: 12 } };
+    const [squat] = plannedWorkout.plannedExercises;
+    const alternatives = { full_gym: [option, option, option, option] };
+    const plan = { ...plannedWorkout, plannedExercises: [{ ...squat, alternatives }] };
+    expect(PlannedWorkout.safeParse(plan).success).toBe(false);
+  });
+
   it("refuses a plan with no Exercises", () => {
     expect(PlannedWorkout.safeParse({ ...plannedWorkout, plannedExercises: [] }).success).toBe(false);
   });

@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { BandLevel } from "./equipment";
+import { BandLevel, BuiltInEquipment } from "./equipment";
 
 const reps = z.number().int().positive();
 
@@ -13,10 +13,18 @@ export const SetTarget = z.discriminatedUnion("unit", [
 ]);
 export type SetTarget = z.infer<typeof SetTarget>;
 
-export const PlannedExercise = z.object({
+// An Exercise and what to aim for on the equipment it's listed under, with the same Sets as the one it stands in for
+export const AlternativeExercise = z.object({
   slug: z.string().regex(/^[a-z0-9-]+$/),
-  sets: z.number().int().positive(),
   target: SetTarget,
+});
+export type AlternativeExercise = z.infer<typeof AlternativeExercise>;
+
+export const PlannedExercise = AlternativeExercise.extend({
+  sets: z.number().int().positive(),
+  // On each built-in choice the primary doesn't already match: the Exercise itself if it stays, else its Alternative
+  // Exercises best first, else nothing as it drops out. Plans stored before Alternative Exercises don't have it
+  alternatives: z.partialRecord(BuiltInEquipment, z.array(AlternativeExercise).max(3)).optional(),
 });
 export type PlannedExercise = z.infer<typeof PlannedExercise>;
 
