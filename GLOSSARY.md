@@ -18,6 +18,10 @@ _Avoid_: Movement, lift
 The kind of movement an Exercise trains: squat, hinge, push, pull, carry or core.
 _Avoid_: Movement pattern, category
 
+**Ballistic Exercise**:
+An Exercise where the load or the body is accelerated through the end of the movement, such as a swing or a jump.
+_Avoid_: Explosive exercise, power exercise
+
 **Workout**:
 One occasion when the user trained, from start to finish, made up of the exercises they did in the order they did them.
 _Avoid_: Session, training session
@@ -65,6 +69,36 @@ _Avoid_: Plan, objective, program
 **Manual Workout**:
 A Workout whose exercises the user chose themselves, rather than having them prescribed by the coach.
 _Avoid_: Custom workout, freestyle workout
+
+### Planning
+
+**Planned Workout**:
+What the Coach prescribes for the user's next training day, built for their primary Equipment Profile: the Exercises and their Sets, not yet started. There is one at a time, and starting it begins a Workout linked to it.
+_Avoid_: Session, planned session, program
+
+**Weekly Budget**:
+How many Sets each Muscle should get in a week, set by the user's Goal and days per week.
+_Avoid_: Weekly target, quota, weekly volume
+
+**Week Ledger**:
+The Sets each Muscle has had so far this week, counted from the Sets the user logged and read against the Weekly Budget.
+_Avoid_: Tally, weekly progress
+
+**Equipment Profile**:
+A named set of equipment the user trains with, and the loads it makes. One is primary. Full gym and Bodyweight only always exist, without the user creating them, for a day when the usual equipment isn't available.
+_Avoid_: Gym setup, kit, mode
+
+**Alternative Exercise**:
+An Exercise the Coach suggests in place of a planned one when the user trains without their primary Equipment Profile for a Workout.
+_Avoid_: Substitute, swap, replacement
+
+**Workout Length**:
+How long the user wants a Workout to take: Short (30 minutes), Standard (45) or Long (60). They choose one during onboarding, and can change it for a single Workout.
+_Avoid_: Mode, session type
+
+**Rest Day**:
+A day the Coach recommends not training.
+_Avoid_: Off day, recovery day
 
 ### Assessment
 
