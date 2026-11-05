@@ -3,6 +3,7 @@ import { User, type EquipmentProfileInput, type UserUpdate } from "@fit/shared";
 import { createContext, use, useCallback, useEffect, useState, type ReactNode } from "react";
 import { ApiError, useApi } from "@/api";
 import { errorMessage } from "@/utils/error-message";
+import { useSendTimeZone } from "./hooks/use-send-time-zone";
 
 type CurrentUserContextValue = {
   // null until loaded, and while signed out
@@ -69,6 +70,8 @@ export function CurrentUserProvider({ children }: { children: ReactNode }) {
     },
     [api],
   );
+
+  useSendTimeZone(user, updateUser);
 
   return (
     <CurrentUserContext value={{ user, error, refresh, updateUser, saveEquipmentProfile }}>
