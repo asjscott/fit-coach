@@ -10,6 +10,7 @@ export * from "./e1rm";
 export * from "./equipment";
 export * from "./logbook";
 export * from "./picker";
+export * from "./plan-rebuild";
 export * from "./plan-score";
 export * from "./plan-workout";
 export * from "./rest-day";

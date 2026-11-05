@@ -1,5 +1,6 @@
 import {
   InProgressWorkout,
+  PlannedWorkout,
   Workout,
   type AssessmentPart,
   type BodyProfile,
@@ -8,13 +9,12 @@ import {
   type InProgressWorkoutExercise,
   type LoadType,
   type PlannedExercise,
-  type PlannedWorkout,
   type PreviousSets,
   type SetTarget,
   type SetValues,
   type UserProfile,
 } from "@fit/shared";
-import type { z } from "zod";
+import { z } from "zod";
 import {
   hasTestResult,
   isRatedTest,
@@ -46,6 +46,16 @@ export type WorkoutUploader = {
 export type PreviousSetsSource = {
   forExercise(slug: string): Promise<PreviousSets | null>;
 };
+
+// The plan the server says to train next, building one if it's due: null when it can't, such as before the first
+// Assessment; rejects on any failure, such as no signal
+export type PlannedWorkoutSource = {
+  current(): Promise<PlannedWorkout | null>;
+};
+
+// The latest Planned Workout the phone has (ADR 0003). Stale from a Workout finishing until the plan that counts it
+// arrives, so Today never shows a plan the phone knows is out of date
+export type PlannedWorkoutCopy = { plannedWorkout: PlannedWorkout | null; stale: boolean };
 
 // When a Workout started and ended, as the user confirms them on finishing
 export type WorkoutTimes = { startedAt: Date; endedAt: Date };
@@ -94,19 +104,26 @@ function targetDraft(loadType: LoadType, target: SetTarget): SetValues | null {
 
 const IN_PROGRESS_KEY = "logbook:in-progress";
 const PENDING_KEY = "logbook:pending";
+const PLANNED_WORKOUT_KEY = "logbook:planned-workout";
 
-// Owns the Workout being logged and the Pending Workouts waiting to upload. Every change
-// is written to device storage before the call returns, so a Logbook rebuilt over the
-// same storage carries on where it was
+// awaitingNextPlan: a Workout has uploaded since this plan was built, so the server has a newer one for the phone
+const StoredPlannedWorkout = z.object({ plannedWorkout: PlannedWorkout, awaitingNextPlan: z.boolean() });
+type StoredPlannedWorkout = z.infer<typeof StoredPlannedWorkout>;
+
+// Owns the Workout being logged, the Pending Workouts waiting to upload and the copy of the Planned Workout. Every
+// change is written to device storage before the call returns, so a Logbook rebuilt over the same storage carries on
+// where it was
 export function createLogbook({
   storage,
   uploader,
   previousSets: previousSetsSource,
+  plannedWorkouts,
   newId,
 }: {
   storage: DeviceStorage;
   uploader: WorkoutUploader;
   previousSets: PreviousSetsSource;
+  plannedWorkouts: PlannedWorkoutSource;
   newId: () => string;
 }) {
   // Calls run one at a time, so two quick taps can't both read the same Workout
@@ -138,8 +155,27 @@ export function createLogbook({
 
   const writePending = (workouts: Workout[]) => storage.setItem(PENDING_KEY, JSON.stringify(workouts));
 
+  // A copy an older version of the app wrote can fail to parse: that's no plan, and the phone asks for one
+  async function readPlannedWorkout() {
+    const json = await storage.getItem(PLANNED_WORKOUT_KEY);
+    return json === null ? null : (StoredPlannedWorkout.safeParse(JSON.parse(json)).data ?? null);
+  }
+
+  const writePlannedWorkout = (stored: StoredPlannedWorkout) =>
+    storage.setItem(PLANNED_WORKOUT_KEY, JSON.stringify(stored));
+
+  async function plannedWorkoutCopy(): Promise<PlannedWorkoutCopy> {
+    const stored = await readPlannedWorkout();
+    if (!stored) return { plannedWorkout: null, stale: false };
+    const { plannedWorkout, awaitingNextPlan } = stored;
+    return { plannedWorkout, stale: awaitingNextPlan || (await readPending()).length > 0 };
+  }
+
   // Shared by overlapping sync() calls, so no Workout is uploaded twice at once
   let syncing: Promise<void> | null = null;
+
+  // Tells a plan built after the last upload from an answer that may have left the server before it
+  let uploadCount = 0;
 
   // A Workout Exercise with its Previous Sets snapshot: the server's or a Pending Workout's, whichever is newer
   function newWorkoutExercise(
@@ -419,12 +455,31 @@ export function createLogbook({
     deletePending: (workoutId: string) =>
       serially(async () => writePending((await readPending()).filter((p) => p.id !== workoutId))),
 
-    // For signing out: removes the in-progress and Pending Workouts from the phone, so
+    // The copy of the latest Planned Workout. Starting one takes a snapshot of it, so nothing here can touch a Workout
+    // under way, and discarding that Workout shows this copy again
+    plannedWorkout: () => serially(plannedWorkoutCopy),
+
+    // Asks the server, outside the queue, and keeps its answer for offline. A failure rejects and keeps the copy
+    refreshPlannedWorkout: async () => {
+      const uploadCountWhenAsked = uploadCount;
+      const plannedWorkout = await plannedWorkouts.current();
+      return serially(async () => {
+        if (plannedWorkout) {
+          await writePlannedWorkout({ plannedWorkout, awaitingNextPlan: uploadCount !== uploadCountWhenAsked });
+        } else {
+          await storage.removeItem(PLANNED_WORKOUT_KEY);
+        }
+        return plannedWorkoutCopy();
+      });
+    },
+
+    // For signing out: removes the in-progress and Pending Workouts and the Planned Workout from the phone, so
     // the next person can't see them. A Workout already uploading may still reach the server
     clear: () =>
       serially(async () => {
         await storage.removeItem(IN_PROGRESS_KEY);
         await storage.removeItem(PENDING_KEY);
+        await storage.removeItem(PLANNED_WORKOUT_KEY);
       }),
 
     // Uploads each Pending Workout, removing it from the phone only once the server has it.
@@ -446,8 +501,13 @@ export function createLogbook({
               failures.push(err);
               continue;
             }
+            uploadCount += 1;
             const { id } = workout;
-            await serially(async () => writePending((await readPending()).filter((p) => p.id !== id)));
+            await serially(async () => {
+              await writePending((await readPending()).filter((p) => p.id !== id));
+              const stored = await readPlannedWorkout();
+              if (stored) await writePlannedWorkout({ ...stored, awaitingNextPlan: true });
+            });
           }
         } finally {
           syncing = null;

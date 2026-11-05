@@ -1,8 +1,22 @@
-import type { BodyProfile, EquipmentProfile, PlannedExercise, PreviousSets, UserProfile, Workout } from "@fit/shared";
+import type {
+  BodyProfile,
+  EquipmentProfile,
+  PlannedExercise,
+  PlannedWorkout,
+  PreviousSets,
+  UserProfile,
+  Workout,
+} from "@fit/shared";
 import { describe, expect, it } from "vitest";
 import { EXERCISES } from "./data/exercises";
 import { daysWorkout } from "./days-workout";
-import { createLogbook, LogbookError, type DeviceStorage, type PreviousSetsSource } from "./logbook";
+import {
+  createLogbook,
+  LogbookError,
+  type DeviceStorage,
+  type PlannedWorkoutSource,
+  type PreviousSetsSource,
+} from "./logbook";
 
 const exercise = (slug: string) => {
   const found = EXERCISES.find((e) => e.slug === slug);
@@ -37,9 +51,13 @@ const offline: PreviousSetsSource = {
   },
 };
 
-function setup(storage = memoryStorage(), previousSets = fakePreviousSets()) {
+function setup(
+  storage = memoryStorage(),
+  previousSets = fakePreviousSets(),
+  plannedWorkouts: PlannedWorkoutSource = { current: async () => null },
+) {
   const uploader = fakeUploader();
-  const logbook = createLogbook({ storage, uploader, previousSets, newId: () => crypto.randomUUID() });
+  const logbook = createLogbook({ storage, uploader, previousSets, plannedWorkouts, newId: () => crypto.randomUUID() });
   return { logbook, uploader, storage };
 }
 
@@ -1258,5 +1276,210 @@ describe("Logbook: the next load for the kg stepper", () => {
     expect(logbook.nextLoadKg("goblet-squat", 12.5, 1, bodyweightOnly)).toBe(14.5);
     expect(logbook.nextLoadKg("goblet-squat", 12.5, -1, undefined)).toBe(10.5);
     expect(logbook.nextLoadKg("not-in-the-library", 1, -1, home)).toBe(0);
+  });
+});
+
+describe("the Planned Workout on the phone", () => {
+  const FIRST = "3b241101-e2bb-4255-8caf-4136c566a962";
+  const NEXT = "9c858901-8a57-4791-81fe-4c455b099bc9";
+
+  const squatPlan = (id: string, more: Partial<PlannedWorkout> = {}): PlannedWorkout => ({
+    id,
+    status: "current",
+    weekStart: "2026-10-19",
+    createdAt: "2026-10-24T08:00:00.000Z",
+    plannedExercises: [{ slug: "goblet-squat", sets: 3, target: { unit: "kg", kg: 20, reps: 8 } }],
+    ...more,
+  });
+
+  // The server's current plan, which a test can change between asks
+  const fakeServer = (plannedWorkout: PlannedWorkout | null = null) => ({
+    plannedWorkout,
+    async current() {
+      return this.plannedWorkout;
+    },
+  });
+
+  const noSignal: PlannedWorkoutSource = {
+    current: async () => {
+      throw new Error("Network request failed");
+    },
+  };
+
+  // A Logbook over the storage a plan arrived in, on a phone that has since lost its signal
+  async function offlineWithPlan(storage = memoryStorage()) {
+    await setup(storage, fakePreviousSets(), fakeServer(squatPlan(FIRST))).logbook.refreshPlannedWorkout();
+    return setup(storage, offline, noSignal);
+  }
+
+  it("has nothing until a plan arrives", async () => {
+    expect(await setup().logbook.plannedWorkout()).toEqual({ plannedWorkout: null, stale: false });
+  });
+
+  it("keeps the latest plan for a Logbook rebuilt with no signal", async () => {
+    const { logbook } = await offlineWithPlan();
+
+    expect(await logbook.plannedWorkout()).toEqual({ plannedWorkout: squatPlan(FIRST), stale: false });
+  });
+
+  it("keeps its copy when asking for a plan fails", async () => {
+    const { logbook } = await offlineWithPlan();
+
+    await expect(logbook.refreshPlannedWorkout()).rejects.toThrow("Network request failed");
+
+    expect((await logbook.plannedWorkout()).plannedWorkout?.id).toBe(FIRST);
+  });
+
+  it("drops its copy when the server has no plan", async () => {
+    const server = fakeServer(squatPlan(FIRST));
+    const { logbook } = setup(memoryStorage(), fakePreviousSets(), server);
+    await logbook.refreshPlannedWorkout();
+
+    server.plannedWorkout = null;
+
+    expect(await logbook.refreshPlannedWorkout()).toEqual({ plannedWorkout: null, stale: false });
+  });
+
+  it("treats a copy this version of the app can't read as no plan, so the phone asks again", async () => {
+    const storage = memoryStorage();
+    await storage.setItem("logbook:planned-workout", JSON.stringify({ plannedWorkout: { id: "older-shape" } }));
+
+    expect(await setup(storage).logbook.plannedWorkout()).toEqual({ plannedWorkout: null, stale: false });
+  });
+
+  it("starts the kept plan with no signal, linked to it", async () => {
+    const { logbook } = await offlineWithPlan();
+    const { plannedWorkout } = await logbook.plannedWorkout();
+
+    const workout = await logbook.startPlannedWorkout(plannedWorkout!, at("09:00"));
+
+    expect(workout.plannedWorkoutId).toBe(FIRST);
+    expect(workout.workoutExercises.map(({ slug }) => slug)).toEqual(["goblet-squat"]);
+  });
+
+  it("is stale once a Workout finished offline is Pending", async () => {
+    const { logbook } = await offlineWithPlan();
+
+    await finishPlank(logbook, "09:00");
+
+    expect(await logbook.plannedWorkout()).toMatchObject({ plannedWorkout: { id: FIRST }, stale: true });
+  });
+
+  it("isn't stale over a Workout still in progress", async () => {
+    const { logbook } = await offlineWithPlan();
+
+    await logbook.start(at("09:00"));
+
+    expect((await logbook.plannedWorkout()).stale).toBe(false);
+  });
+
+  it("has nothing to be stale without a plan", async () => {
+    const { logbook } = setup(memoryStorage(), offline);
+
+    await finishPlank(logbook, "09:00");
+
+    expect(await logbook.plannedWorkout()).toEqual({ plannedWorkout: null, stale: false });
+  });
+
+  it("stays stale after the upload until the next plan arrives", async () => {
+    const server = fakeServer(squatPlan(FIRST));
+    const { logbook } = setup(memoryStorage(), fakePreviousSets(), server);
+    await logbook.refreshPlannedWorkout();
+    await finishPlank(logbook, "09:00");
+
+    await logbook.sync();
+    expect((await logbook.plannedWorkout()).stale).toBe(true);
+
+    server.plannedWorkout = squatPlan(NEXT);
+    expect(await logbook.refreshPlannedWorkout()).toEqual({ plannedWorkout: squatPlan(NEXT), stale: false });
+  });
+
+  it("stays stale across a restart between the upload and the next plan", async () => {
+    const storage = memoryStorage();
+    const { logbook } = setup(storage, fakePreviousSets(), fakeServer(squatPlan(FIRST)));
+    await logbook.refreshPlannedWorkout();
+    await finishPlank(logbook, "09:00");
+    await logbook.sync();
+
+    const { logbook: restarted } = setup(storage, offline, noSignal);
+
+    expect((await restarted.plannedWorkout()).stale).toBe(true);
+  });
+
+  it("stays stale when a plan arrives while a Workout is still Pending", async () => {
+    const { logbook } = setup(memoryStorage(), fakePreviousSets(), fakeServer(squatPlan(FIRST)));
+    await finishPlank(logbook, "09:00");
+
+    expect(await logbook.refreshPlannedWorkout()).toMatchObject({ plannedWorkout: { id: FIRST }, stale: true });
+  });
+
+  it("doesn't take an answer from before the upload for the next plan", async () => {
+    let answer: (plan: PlannedWorkout) => void = () => {};
+    const slowServer: PlannedWorkoutSource = { current: () => new Promise((resolve) => (answer = resolve)) };
+    const { logbook } = setup(memoryStorage(), fakePreviousSets(), slowServer);
+    await finishPlank(logbook, "09:00");
+
+    const asked = logbook.refreshPlannedWorkout();
+    await logbook.sync();
+    answer(squatPlan(FIRST));
+
+    expect((await asked).stale).toBe(true);
+  });
+
+  it("isn't stale once the only Pending Workout is deleted", async () => {
+    const { logbook } = await offlineWithPlan();
+    const workout = await finishPlank(logbook, "09:00");
+
+    await logbook.deletePending(workout.id);
+
+    expect((await logbook.plannedWorkout()).stale).toBe(false);
+  });
+
+  it("brings back the same plan when a Workout started from it is discarded", async () => {
+    const { logbook } = await offlineWithPlan();
+    await logbook.startPlannedWorkout(squatPlan(FIRST), at("09:00"));
+
+    await logbook.discard();
+
+    expect(await logbook.plannedWorkout()).toEqual({ plannedWorkout: squatPlan(FIRST), stale: false });
+  });
+
+  it("leaves a started Workout alone when the plan is rebuilt, and shows the new plan after a discard", async () => {
+    const server = fakeServer(squatPlan(FIRST));
+    const { logbook } = setup(memoryStorage(), fakePreviousSets(), server);
+    await logbook.refreshPlannedWorkout();
+    const started = await logbook.startPlannedWorkout(squatPlan(FIRST), at("09:00"));
+
+    server.plannedWorkout = squatPlan(NEXT, {
+      plannedExercises: [{ slug: "plank", sets: 2, target: { unit: "seconds", seconds: 40 } }],
+    });
+    await logbook.refreshPlannedWorkout();
+
+    expect(await logbook.inProgress()).toEqual(started);
+    await logbook.discard();
+    expect((await logbook.plannedWorkout()).plannedWorkout?.id).toBe(NEXT);
+  });
+
+  it("keeps the link to a plan replaced while its Workout ran", async () => {
+    const server = fakeServer(squatPlan(FIRST));
+    const { logbook, uploader } = setup(memoryStorage(), fakePreviousSets(), server);
+    await logbook.refreshPlannedWorkout();
+    const { workoutExercises } = await logbook.startPlannedWorkout(squatPlan(FIRST), at("09:00"));
+    server.plannedWorkout = squatPlan(NEXT);
+    await logbook.refreshPlannedWorkout();
+    await logbook.logSet(workoutExercises[0].id, { kind: "external", kg: 20, reps: 8 }, at("09:05"));
+
+    await logbook.finish({ startedAt: at("09:00"), endedAt: at("09:30"), now: at("09:30") });
+    await logbook.sync();
+
+    expect(uploader.uploaded[0].plannedWorkoutId).toBe(FIRST);
+  });
+
+  it("forgets the plan on sign-out", async () => {
+    const { logbook } = await offlineWithPlan();
+
+    await logbook.clear();
+
+    expect(await logbook.plannedWorkout()).toEqual({ plannedWorkout: null, stale: false });
   });
 });

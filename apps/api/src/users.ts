@@ -1,4 +1,5 @@
 import { ObjectId, type WithId } from "mongodb";
+import { usualWorkoutLength } from "@fit/engines";
 import {
   BodyProfile,
   EquipmentProfile,
@@ -8,6 +9,7 @@ import {
   User,
   UserProfile,
   type UserUpdate,
+  type WorkoutLength,
 } from "@fit/shared";
 import type { z } from "zod";
 import { db } from "./db";
@@ -44,6 +46,7 @@ export type OnboardedUser = {
   bodyProfile: BodyProfile;
   equipmentProfiles: EquipmentProfile[];
   injuries: InjuryTag[];
+  workoutLength: WorkoutLength;
   timeZone: string;
 } & TrainingPlanProfile;
 
@@ -60,6 +63,7 @@ export async function findOnboardedUser(clerkUserId: string): Promise<OnboardedU
     ...TrainingPlanProfile.parse(user.profile),
     equipmentProfiles: user.equipmentProfiles,
     injuries: user.profile.injuries ?? [],
+    workoutLength: usualWorkoutLength(user.profile),
     timeZone: user.timeZone ?? "UTC",
   };
 }

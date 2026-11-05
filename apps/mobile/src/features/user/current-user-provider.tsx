@@ -2,8 +2,10 @@ import { useAuth } from "@clerk/expo";
 import { User, type EquipmentProfileInput, type UserUpdate } from "@fit/shared";
 import { createContext, use, useCallback, useEffect, useState, type ReactNode } from "react";
 import { ApiError, useApi } from "@/api";
+import { deviceStorage } from "@/features/workouts/device-storage";
 import { errorMessage } from "@/utils/error-message";
 import { useSendTimeZone } from "./hooks/use-send-time-zone";
+import { createStoredUser } from "./stored-user";
 
 type CurrentUserContextValue = {
   // null until loaded, and while signed out
@@ -17,12 +19,20 @@ type CurrentUserContextValue = {
 
 const CurrentUserContext = createContext<CurrentUserContextValue | null>(null);
 
-// Loads the signed-in user's record once and shares it with every screen
+const storedUser = createStoredUser(deviceStorage);
+
+// Loads the signed-in user's record once and shares it with every screen, starting from the copy on the phone so the
+// app opens with no signal
 export function CurrentUserProvider({ children }: { children: ReactNode }) {
   const { isSignedIn } = useAuth();
   const api = useApi();
-  const [user, setUser] = useState<User | null>(null);
+  const [user, setUserOnly] = useState<User | null>(null);
   const [error, setError] = useState<string | null>(null);
+
+  const setUser = useCallback((loaded: User) => {
+    setUserOnly(loaded);
+    storedUser.keep(loaded).catch(() => {});
+  }, []);
 
   // First sign-in has no record yet, so create it
   const fetchOrCreateUser = useCallback(async () => {
@@ -41,14 +51,21 @@ export function CurrentUserProvider({ children }: { children: ReactNode }) {
     } catch (err) {
       setError(errorMessage(err));
     }
-  }, [fetchOrCreateUser]);
+  }, [fetchOrCreateUser, setUser]);
 
   useEffect(() => {
     if (isSignedIn) {
+      // The server's answer can get here first, and wins
+      storedUser.read().then(
+        (stored) => setUserOnly((loaded) => loaded ?? stored),
+        () => {},
+      );
       refresh();
     } else {
-      setUser(null);
+      setUserOnly(null);
       setError(null);
+      // Undefined is Clerk still loading, when the user may yet turn out to be signed in
+      if (isSignedIn === false) storedUser.forget().catch(() => {});
     }
   }, [isSignedIn, refresh]);
 
@@ -58,7 +75,7 @@ export function CurrentUserProvider({ children }: { children: ReactNode }) {
       setUser(updated);
       return updated;
     },
-    [api],
+    [api, setUser],
   );
 
   const saveEquipmentProfile = useCallback(
@@ -68,7 +85,7 @@ export function CurrentUserProvider({ children }: { children: ReactNode }) {
       setUser(updated);
       return updated;
     },
-    [api],
+    [api, setUser],
   );
 
   useSendTimeZone(user, updateUser);
