@@ -73,15 +73,19 @@ _Avoid_: Custom workout, freestyle workout
 ### Planning
 
 **Planned Workout**:
-What the Coach prescribes for the user's next training day, built for their primary Equipment Profile: the Exercises and their Sets, not yet started. There is one at a time, and starting it begins a Workout linked to it.
+What the Coach prescribes for the user's next training day, built for their primary Equipment Profile: the Exercises in priority order, their Sets and targets, at Long, with the Alternative Exercises for Full gym and Bodyweight only. There is one current at a time. It's rebuilt after an upload, in a new week, after an Assessment and after a change to the Profile fields it depends on. The old one is kept, marked finished or replaced. Starting it begins a Workout linked to it.
 _Avoid_: Session, planned session, program
 
+**Day's Workout**:
+The Workout on offer today: the Planned Workout on the Workout Length and equipment chosen for it, cut to fit, with its estimated time and any Exercise with no alternative left out. Choices stay on the phone, last for one Workout and never change the Planned Workout.
+_Avoid_: Today's session, adjusted plan
+
 **Weekly Budget**:
-How many Sets each Muscle should get in a week, set by the user's Goal and days per week.
+How many credited Sets each of the eight budgeted Muscles should get in a week, set by the user's Goal and days per week. Workout Length decides how much of it is delivered, not the budget itself. Other Muscles aren't budgeted.
 _Avoid_: Weekly target, quota, weekly volume
 
 **Week Ledger**:
-The Sets each Muscle has had so far this week, counted from the Sets the user logged and read against the Weekly Budget.
+The credited Sets each Muscle has had so far this week, counted from the Sets the user logged and read against the Weekly Budget. A Set credits 1 to each primary Muscle and 0.5 to each secondary, and a one-sided Set counts once. Weeks run Monday to Sunday in the user's timezone.
 _Avoid_: Tally, weekly progress
 
 **Equipment Profile**:
@@ -89,15 +93,15 @@ A named set of equipment the user trains with, and the loads it makes. One is pr
 _Avoid_: Gym setup, kit, mode
 
 **Alternative Exercise**:
-An Exercise the Coach suggests in place of a planned one when the user trains without their primary Equipment Profile for a Workout.
+An Exercise the Coach suggests in place of a planned one that can't be done on Full gym or Bodyweight only, for one Workout. An Exercise that's still possible stays. Each has up to 3 options, the first chosen by default, with the same Sets and its own target.
 _Avoid_: Substitute, swap, replacement
 
 **Workout Length**:
-How long the user wants a Workout to take: Short (30 minutes), Standard (45) or Long (60). They choose one during onboarding, and can change it for a single Workout.
+How long the user wants a Workout to take, 5 minutes of warm-up included: Short (30 minutes), Standard (45) or Long (60). They choose their usual one during onboarding, can change it in Profile, and can change it for a single Workout. A user with none stored counts as Standard.
 _Avoid_: Mode, session type
 
 **Rest Day**:
-A day the Coach recommends not training.
+A day the Coach recommends not training: the user has trained today, or reached their days per week, or trained yesterday and the week's other Workouts still fit. It's advice, shown above the Planned Workout.
 _Avoid_: Off day, recovery day
 
 ### Assessment
