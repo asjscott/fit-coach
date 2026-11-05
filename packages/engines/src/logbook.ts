@@ -36,6 +36,13 @@ export type DeviceStorage = {
   removeItem(key: string): Promise<void>;
 };
 
+// What's stored under a key, or null with nothing there. A copy an older version of the app wrote can fail to parse,
+// which counts as nothing
+export async function readStoredCopy<T>(storage: DeviceStorage, key: string, schema: z.ZodType<T>): Promise<T | null> {
+  const json = await storage.getItem(key);
+  return json === null ? null : (schema.safeParse(JSON.parse(json)).data ?? null);
+}
+
 // Resolves once the server has the Workout; rejects on any failure
 export type WorkoutUploader = {
   upload(workout: Workout): Promise<void>;
@@ -155,11 +162,8 @@ export function createLogbook({
 
   const writePending = (workouts: Workout[]) => storage.setItem(PENDING_KEY, JSON.stringify(workouts));
 
-  // A copy an older version of the app wrote can fail to parse: that's no plan, and the phone asks for one
-  async function readPlannedWorkout() {
-    const json = await storage.getItem(PLANNED_WORKOUT_KEY);
-    return json === null ? null : (StoredPlannedWorkout.safeParse(JSON.parse(json)).data ?? null);
-  }
+  // With no copy, the phone asks for a plan
+  const readPlannedWorkout = () => readStoredCopy(storage, PLANNED_WORKOUT_KEY, StoredPlannedWorkout);
 
   const writePlannedWorkout = (stored: StoredPlannedWorkout) =>
     storage.setItem(PLANNED_WORKOUT_KEY, JSON.stringify(stored));

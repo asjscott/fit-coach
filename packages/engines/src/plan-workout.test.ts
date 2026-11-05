@@ -1,7 +1,8 @@
 import { EquipmentTag, type Goal, type WorkingLevel } from "@fit/shared";
 import { describe, expect, it } from "vitest";
 import { exerciseBySlug, EXERCISES } from "./data/exercises";
-import type { ProfileWithLoads } from "./equipment";
+import { BUILT_IN_EQUIPMENT, type ProfileWithLoads } from "./equipment";
+import { daysWorkout } from "./days-workout";
 import { planWorkout, type PlanWorkoutInput } from "./plan-workout";
 
 const dumbbells: ProfileWithLoads = {
@@ -86,9 +87,9 @@ const assessment = {
 const onFullGym = (more: Partial<PlanWorkoutInput> = {}) =>
   slugs({ equipmentProfile: fullHomeGym, workingLevels: [], assessment, ...more });
 
-const isOneSidedLift = (slug: string) => {
-  const { unilateral, patterns } = exerciseBySlug(slug)!;
-  return unilateral && patterns.some(({ pattern }) => pattern === "squat" || pattern === "hinge");
+const isOneSidedLegExercise = (slug: string) => {
+  const { unilateral, ballistic, patterns } = exerciseBySlug(slug)!;
+  return unilateral && !ballistic && patterns.some(({ pattern }) => pattern === "squat" || pattern === "hinge");
 };
 
 describe("planWorkout", () => {
@@ -228,6 +229,30 @@ describe("planWorkout", () => {
       expect(chosen.find(({ slug }) => slug === "goblet-squat")?.sets).toBe(3);
       const few = plan({ workingLevels: [kg("goblet-squat", 20)] }).plannedExercises;
       expect(Math.max(...few.map(({ sets }) => sets))).toBe(4);
+    });
+  });
+
+  describe("a 4th Set picked ahead of a later Exercise", () => {
+    // Lateral raise is the 5th Exercise picked, its 4th Set comes after the 6th, and band row is picked after that
+    const { plannedExercises } = plan({
+      equipmentProfile: BUILT_IN_EQUIPMENT.full_gym,
+      workingLevels: [],
+      assessment,
+      goal: "lose_fat",
+      daysPerWeek: 3,
+    });
+    const raise = plannedExercises.find(({ slug }) => slug === "dumbbell-lateral-raise");
+
+    it("records its place among the picks", () => {
+      expect(raise).toMatchObject({ sets: 4, fourthSetAfter: 6 });
+      expect(plannedExercises.map(({ slug }) => slug).indexOf("band-row")).toBeGreaterThanOrEqual(6);
+    });
+
+    it("outlasts that Exercise in the cut to Standard", () => {
+      const today = daysWorkout({ plannedExercises }, { workoutLength: "standard" }, "lose_fat");
+      const setsOf = (slug: string) => today.plannedExercises.find((exercise) => exercise.slug === slug)?.sets;
+      expect(setsOf("dumbbell-lateral-raise")).toBe(4);
+      expect(setsOf("band-row")).toBe(1);
     });
   });
 
@@ -506,10 +531,13 @@ describe("planWorkout", () => {
       expect(onFullGym({ goal: "lose_fat" })).not.toContain("barbell-bench-press");
     });
 
-    it("gives athletic Ballistic Exercises that build_muscle doesn't get, with the same inputs", () => {
+    it("ranks a Ballistic Exercise higher for athletic than for build_muscle, with the same inputs", () => {
       const onKettlebells = { equipmentProfile: kettlebells, workingLevels: [], assessment };
-      expect(slugs({ ...onKettlebells, goal: "athletic" })).toContain("single-arm-kettlebell-swing");
-      expect(slugs({ ...onKettlebells, goal: "build_muscle" })).not.toContain("single-arm-kettlebell-swing");
+      expect(slugs({ ...onKettlebells, goal: "athletic" }).slice(1, 3)).toEqual(["kettlebell-swing", "renegade-row"]);
+      expect(slugs({ ...onKettlebells, goal: "build_muscle" }).slice(1, 3)).toEqual([
+        "renegade-row",
+        "kettlebell-swing",
+      ]);
     });
 
     // They share a Goal factor. recomp's smaller Weekly Budget can still tip a close pick on a big Equipment Profile
@@ -547,32 +575,42 @@ describe("planWorkout", () => {
 
     it("comes first in the plan until it's done, so a short Workout keeps it", () => {
       const chosen = athletic();
-      expect(chosen.filter(isOneSidedLift)).toEqual(["dumbbell-bulgarian-split-squat"]);
+      expect(chosen.filter(isOneSidedLegExercise)).toEqual(["dumbbell-bulgarian-split-squat"]);
       expect(chosen[0]).toBe("dumbbell-bulgarian-split-squat");
     });
 
     it("isn't given to another Goal", () => {
-      expect(onFullGym({ goal: "build_muscle" }).filter(isOneSidedLift)).toEqual([]);
+      expect(onFullGym({ goal: "build_muscle" }).filter(isOneSidedLegExercise)).toEqual([]);
     });
 
     it("is needed once a week", () => {
       const workouts = [logged("w1", "dumbbell-reverse-lunge", 3)];
-      expect(athletic({ workouts }).filter(isOneSidedLift)).toEqual([]);
+      expect(athletic({ workouts }).filter(isOneSidedLegExercise)).toEqual([]);
     });
 
     it("is needed again the week after", () => {
       const workouts = [{ ...logged("w1", "dumbbell-reverse-lunge", 3), startedAt: "2026-10-29T18:00:00.000Z" }];
-      expect(athletic({ workouts }).filter(isOneSidedLift).length).toBe(1);
+      expect(athletic({ workouts }).filter(isOneSidedLegExercise).length).toBe(1);
     });
 
     it("isn't met by another one-sided Exercise", () => {
       const workouts = [logged("w1", "one-arm-dumbbell-row", 3)];
-      expect(athletic({ workouts }).filter(isOneSidedLift).length).toBe(1);
+      expect(athletic({ workouts }).filter(isOneSidedLegExercise).length).toBe(1);
+    });
+
+    it("isn't met by a one-sided swing, which doesn't train each leg on its own", () => {
+      const workouts = [logged("w1", "single-arm-kettlebell-swing", 3)];
+      expect(athletic({ workouts })[0]).toBe("dumbbell-bulgarian-split-squat");
+    });
+
+    it("isn't a one-sided swing, even when nothing else is available", () => {
+      const workingLevels = [kg("kettlebell-swing", 16), kg("single-arm-kettlebell-swing", 16), kg("goblet-squat", 16)];
+      expect(slugs({ goal: "athletic", equipmentProfile: kettlebells, workingLevels })[0]).toBe("kettlebell-swing");
     });
 
     it("is left out when none is available", () => {
       const chosen = slugs({ goal: "athletic" });
-      expect(chosen.filter(isOneSidedLift)).toEqual([]);
+      expect(chosen.filter(isOneSidedLegExercise)).toEqual([]);
       expect(chosen).toContain("goblet-squat");
     });
   });
@@ -675,6 +713,17 @@ describe("planWorkout", () => {
       const squat = planned("goblet-squat", { equipmentProfile: fixed, workingLevels: [kg("goblet-squat", 20.3)] });
       expect(squat?.target).toEqual({ unit: "kg", kg: 24, reps: 8 });
       expect(squat?.alternatives?.full_gym?.[0].target).toEqual({ unit: "kg", kg: 20, reps: 8 });
+    });
+
+    it("keeps an Exercise possible on the equipment even when a guard would stop the Coach picking it there", () => {
+      // Rep-capped: bodyweight squat's progression, goblet squat, needs a weight the primary lacks, so the plan keeps it
+      // at 20 reps. Full gym has the weight, but the Exercise is still possible there, so it stays
+      const squat = planned("bodyweight-squat", {
+        equipmentProfile: { tags: [], loads: {} },
+        workingLevels: [reps("bodyweight-squat", 20), kg("goblet-squat", 20)],
+        assessment: { bodyWeightKg: 75, patterns: {} },
+      });
+      expect(squat?.alternatives?.full_gym).toEqual([{ slug: "bodyweight-squat", target: { unit: "reps", reps: 20 } }]);
     });
 
     it("works out a target the Assessment didn't store", () => {

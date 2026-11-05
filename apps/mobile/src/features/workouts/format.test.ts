@@ -182,15 +182,16 @@ describe("setTargetLabel", () => {
     expect(setTargetLabel(target)).toBe(label);
   });
 
-  it("keeps a load the profile has to a tenth of a kg, however it's stored", () => {
-    expect(setTargetLabel({ unit: "kg", kg: 11.34, reps: 8 })).toBe("11.3 kg × 8");
+  it("shows a load the profile has as it is, without floating-point noise", () => {
+    expect(setTargetLabel({ unit: "kg", kg: 6.25, reps: 8 })).toBe("6.25 kg × 8");
+    expect(setTargetLabel({ unit: "kg", kg: 2.5 + 0.1 + 0.2, reps: 8 })).toBe("2.8 kg × 8");
   });
 });
 
 describe("noAlternativeLabel", () => {
   it("names the equipment and the Exercise that dropped out", () => {
-    expect(noAlternativeLabel("bodyweight_only", "Lat pulldown")).toBe("No bodyweight option for lat pulldown");
-    expect(noAlternativeLabel("full_gym", "Chin-up")).toBe("No full gym option for chin-up");
+    expect(noAlternativeLabel("bodyweight_only", "Lat pulldown")).toBe("No Bodyweight only option for lat pulldown");
+    expect(noAlternativeLabel("full_gym", "Chin-up")).toBe("No Full gym option for chin-up");
   });
 });
 

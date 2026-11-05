@@ -131,13 +131,14 @@ signal. Simulation of the real planner: `docs/research/planner-simulation.md` (`
 ```text
 planWorkout (packages/engines/src/plan-workout.ts): pure, only the server calls it. Gives weekStart, plannedExercises
   in priority order, and cue
-  ├─ candidateExercises: primary Equipment Profile, injuries, a target it can be prescribed at, then the rep cap and
-  │  variety cap guards. Their order settles a tie: last week's first, then the library's
+  ├─ possibleExercises: primary Equipment Profile, injuries, a target it can be prescribed at. Then pickableExercises:
+  │  the rep cap and variety cap guards. Their order settles a tie: last week's first, then the library's
   ├─ Week Ledger (week-ledger.ts): weekLedger, recalculated from logged Sets; mondayOf is the server's week
   ├─ Weekly Budget (weekly-budget.ts): DOSES, DAYS_SCALE and the limits, weeklyBudget, fillOrder
   ├─ scoreExercise (plan-score.ts): every tilt, in one place
   └─ withAlternatives (alternative-exercises.ts): each Exercise's options for Full gym and Bodyweight only, saved in
-     the plan. Both built-ins are BUILT_IN_EQUIPMENT in equipment.ts
+     the plan. What's possible stays; only what's pickable stands in. Both built-ins are BUILT_IN_EQUIPMENT in
+     equipment.ts
 API (apps/api/src/planned-workouts.ts, routes/planned-workouts.ts): the current plan, built if planIsDue
   (plan-rebuild.ts), and rebuilt after every upload (routes/workouts.ts) and Profile change (routes/users.ts)
 Phone
@@ -145,7 +146,7 @@ Phone
   ├─ usePlannedWorkout (features/today/hooks): the copy, asking the server on every Today visit
   ├─ useDaysWorkout: the user's choices over daysWorkout (days-workout.ts), held in memory until Start
   ├─ Today (features/today/views/today-view.tsx): planned-workout-section.tsx, and rest-day-section.tsx from restDay
-  │  (rest-day.ts), which needs a plan on the card and no In-progress Workout
+  │  (rest-day.ts). todayPlan (today-status.ts) gates both: a plan, stale or not, and no In-progress Workout
   ├─ CurrentUserProvider: starts from stored-user.ts, so Goal and usual Length survive a cold start offline
   └─ useSendTimeZone: keeps User.timeZone in step, for the server's weeks
 Schemas: packages/shared/src/planned-workouts.ts
@@ -154,7 +155,8 @@ Schemas: packages/shared/src/planned-workouts.ts
 ### Gotchas
 
 - **The stored plan is always the Long version.** `daysWorkout` applies equipment first, so the cut times what's really
-  done, then cuts, then orders. 4th Sets go first in a cut, as the planner adds them last. A lone Set can remain.
+  done, then cuts, then orders. The cut follows the order the planner added Sets: a 4th Set carries `fourthSetAfter`,
+  its place among the picks, and goes last on a plan stored without it. A lone Set can remain.
 - **The phone asks, the server decides.** POST `/planned-workouts/current` runs on every Today visit and after every
   sync. It's idempotent, as `planIsDue` compares `builtFrom` (`planInputsKey`) and `weekStart`, so a failed rebuild is
   just still due and logs rather than fails the request. A new plan input goes in `PlanInputs`.

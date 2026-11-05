@@ -1,12 +1,15 @@
 // Runs weeks of Workouts through the real planner: docs/research/planner-simulation.md records the results.
 // pnpm --filter @fit/engines simulate
-import type { Goal, WorkoutLength } from "@fit/shared";
+import type { Goal, Muscle, WorkoutLength } from "@fit/shared";
 import {
+  addCredits,
   BUILT_IN_EQUIPMENT,
+  creditsPerSet,
   daysWorkout,
   exerciseBySlug,
   planWorkout,
   weeklyBudget,
+  type MuscleCredits,
   type ProfileWithLoads,
 } from "../src";
 
@@ -99,16 +102,14 @@ function summary(run: Run) {
   const allSets = setsOf(() => true);
   const isExternal = (slug: string) => exerciseBySlug(slug)?.loadType === "external";
 
-  const credited: Record<string, number> = {};
-  for (const { slug, sets } of picks) {
-    const { primary, secondary } = exerciseBySlug(slug)!.muscles;
-    for (const muscle of primary) credited[muscle] = (credited[muscle] ?? 0) + sets;
-    for (const muscle of secondary) credited[muscle] = (credited[muscle] ?? 0) + sets / 2;
-  }
+  const credited = picks.reduce<MuscleCredits>(
+    (credits, { slug, sets }) => addCredits(credits, creditsPerSet(exerciseBySlug(slug)!), sets),
+    {},
+  );
   const delivered = Object.entries(weeklyBudget(run.goal, run.days)).map(([muscle, budget]) => ({
     muscle,
     budget: budget!,
-    credited: perWeek(credited[muscle] ?? 0),
+    credited: perWeek(credited[muscle as Muscle] ?? 0),
   }));
   const ofBudget = delivered.map(({ credited, budget }) => credited / budget);
 

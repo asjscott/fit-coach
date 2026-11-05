@@ -1,4 +1,4 @@
-import type { BuiltInEquipment, Goal, PlannedExercise, WorkoutLength } from "@fit/shared";
+import type { BuiltInEquipment, Goal, PlannedExercise, PlannedWorkout, WorkoutLength } from "@fit/shared";
 import { describe, expect, it } from "vitest";
 import { dayChoices, daysWorkout, equipmentChoices, withChoice, type DayChoices } from "./days-workout";
 
@@ -67,12 +67,65 @@ describe("daysWorkout", () => {
           ...lastExercises,
         ],
       });
-      const setsAtShort = (plan: ReturnType<typeof inPriorityOrder>) =>
+      const setsAtShort = (plan: Pick<PlannedWorkout, "plannedExercises">) =>
         Object.fromEntries(
           daysWorkout(plan, { workoutLength: "short" }).plannedExercises.map(({ slug, sets }) => [slug, sets]),
         );
 
-      it("are cut before a later Exercise's first three Sets", () => {
+      describe("placed by the planner", () => {
+        const placedPlan = {
+          plannedExercises: [
+            planned("goblet-squat"), // 120 s: 360
+            { ...planned("dumbbell-lateral-raise", 4), fourthSetAfter: 2 }, // 60 s: 600 with its 4th
+            planned("push-up"), // 90 s: 870
+            planned("dumbbell-romanian-deadlift"), // 120 s: 1230
+            planned("kettlebell-swing"), // 90 s: 1500, all of Short
+            planned("plank"), // 75 s
+          ],
+        };
+
+        it("are kept ahead of the Exercises picked after them", () => {
+          expect(setsAtShort(placedPlan)).toEqual({
+            "goblet-squat": 3,
+            "dumbbell-lateral-raise": 4,
+            "push-up": 3,
+            "dumbbell-romanian-deadlift": 3,
+            "kettlebell-swing": 3,
+          });
+        });
+
+        it("keep their place when an Exercise before them drops out", () => {
+          // Without the goblet squat's 360 s the plank's 3 Sets fit, and the 4th raise must stay ahead of them
+          const stored = {
+            plannedExercises: placedPlan.plannedExercises.map((exercise) => ({
+              ...exercise,
+              alternatives: { bodyweight_only: exercise.slug === "goblet-squat" ? [] : [exercise] },
+            })),
+          };
+          const atShort = (extra: PlannedExercise[]) =>
+            daysWorkout(
+              { plannedExercises: [...stored.plannedExercises, ...extra] },
+              { workoutLength: "short", equipment: "bodyweight_only" },
+            );
+          const late = planned("dumbbell-overhead-press", 3);
+          const today = atShort([{ ...late, alternatives: { bodyweight_only: [late] } }]);
+          expect(today.dropped).toEqual(["goblet-squat"]);
+          expect(today.plannedExercises.find(({ slug }) => slug === "dumbbell-lateral-raise")?.sets).toBe(4);
+          expect(today.plannedExercises.find(({ slug }) => slug === "plank")?.sets).toBe(3);
+          expect(today.plannedExercises.find(({ slug }) => slug === "dumbbell-overhead-press")?.sets).toBe(1);
+        });
+
+        it("aren't passed on to the day's Exercises", () => {
+          const { plannedExercises } = daysWorkout(placedPlan, { workoutLength: "long" });
+          expect(plannedExercises.find(({ slug }) => slug === "dumbbell-lateral-raise")).toEqual({
+            slug: "dumbbell-lateral-raise",
+            sets: 4,
+            target: { unit: "reps", reps: 10 },
+          });
+        });
+      });
+
+      it("are cut before a later Exercise's first three Sets on a plan stored without their place", () => {
         // 1500 s at Short: the deadlift's first Set goes ahead of the 4th goblet squat, and the 75 s left takes
         // neither a second deadlift Set nor a 4th Set
         expect(setsAtShort(inPriorityOrder(planned("dumbbell-romanian-deadlift")))).toEqual({

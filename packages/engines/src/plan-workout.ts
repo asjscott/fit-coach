@@ -61,7 +61,7 @@ export type PlanWorkoutInput = {
 export type WorkoutPlan = Pick<PlannedWorkout, "weekStart" | "plannedExercises" | "cue">;
 
 // A Set's target from a stored Working Level, or null when it can't be prescribed on this equipment
-function setTarget(
+function targetFrom(
   workingLevel: WorkingLevel,
   exercise: Exercise,
   equipmentProfile: ProfileWithLoads,
@@ -123,29 +123,34 @@ function withinVarietyCap(candidates: readonly Candidate[], thisWeek: readonly L
   return varied.length ? varied : candidates;
 }
 
-// The Exercises this user can be given. Their order settles a tie: last week's first, so that the same Exercises carry
-// on from week to week, and otherwise the library's
-function candidateExercises(
-  input: PlanWorkoutInput,
-  thisWeek: readonly LedgerWorkout[],
-  lastWeek: readonly LedgerWorkout[],
-): Candidate[] {
-  const { equipmentProfile, injuries, daysPerWeek } = input;
+// What the equipment and injuries allow, with a target to prescribe
+function possibleExercises(input: PlanWorkoutInput): Candidate[] {
+  const { equipmentProfile, injuries } = input;
   const levels = workingLevelsFor(input);
-  const possible = EXERCISES.flatMap((exercise) => {
+  return EXERCISES.flatMap((exercise) => {
     const level = levels.get(exercise.slug);
     if (!level || !isAvailable(exercise, equipmentProfile) || !isSafeFor(exercise, injuries)) return [];
-    const target = setTarget(level, exercise, equipmentProfile);
+    const target = targetFrom(level, exercise, equipmentProfile);
     return target ? [{ exercise, target }] : [];
   });
+}
+
+// The possible Exercises the guards let the Coach pick. Their order settles a tie: last week's first, so that the same
+// Exercises carry on from week to week, and otherwise the library's
+function pickableExercises(
+  possible: readonly Candidate[],
+  thisWeek: readonly LedgerWorkout[],
+  lastWeek: readonly LedgerWorkout[],
+  daysPerWeek: number,
+): Candidate[] {
   const varied = withinVarietyCap(withoutRepCapped(possible), thisWeek, daysPerWeek);
   const trainedLastWeek = new Set(lastWeek.flatMap(({ workoutExercises }) => workoutExercises.map(({ slug }) => slug)));
   const isLastWeeks = ({ exercise }: Candidate) => trainedLastWeek.has(exercise.slug);
   return [...varied.filter(isLastWeeks), ...varied.filter((candidate) => !isLastWeeks(candidate))];
 }
 
-// What the user could be given on each built-in choice the primary doesn't already match, under the same rules as the
-// plan itself. It goes in the saved plan, as the phone may have no signal when the user chooses
+// Each built-in choice the primary doesn't already match. It goes in the saved plan, as the phone may have no signal
+// when the user chooses
 function builtInCandidates(
   input: PlanWorkoutInput,
   thisWeek: readonly LedgerWorkout[],
@@ -153,10 +158,10 @@ function builtInCandidates(
 ) {
   const choices = BuiltInEquipment.options.filter((choice) => !matchesBuiltIn(input.equipmentProfile, choice));
   return Object.fromEntries(
-    choices.map((choice) => [
-      choice,
-      candidateExercises({ ...input, equipmentProfile: BUILT_IN_EQUIPMENT[choice] }, thisWeek, lastWeek),
-    ]),
+    choices.map((choice) => {
+      const possible = possibleExercises({ ...input, equipmentProfile: BUILT_IN_EQUIPMENT[choice] });
+      return [choice, { possible, pickable: pickableExercises(possible, thisWeek, lastWeek, input.daysPerWeek) }];
+    }),
   );
 }
 
@@ -168,7 +173,12 @@ function muscleLimits(budget: WeeklyBudget, workoutsLeft: number) {
 }
 
 // The plan so far. The Map keeps pick order, which is the plan's priority order
-type Draft = { sets: Map<Candidate, number>; credits: MuscleCredits; secondsLeft: number };
+type Draft = {
+  sets: Map<Candidate, number>;
+  fourthSetAfter: Map<Candidate, number>;
+  credits: MuscleCredits;
+  secondsLeft: number;
+};
 
 const setsToAdd = ({ sets }: Draft, candidate: Candidate) =>
   sets.has(candidate) ? MAX_SETS_PER_EXERCISE - sets.get(candidate)! : SETS_PER_PICK;
@@ -189,21 +199,24 @@ function highestScore(candidates: readonly Candidate[], week: WeekSoFar): Candid
   return best?.candidate;
 }
 
-const isOneSidedLift = ({ unilateral, patterns }: Exercise) =>
-  unilateral && patterns.some(({ pattern }) => pattern === "squat" || pattern === "hinge");
+const isOneSidedLegExercise = ({ unilateral, ballistic, patterns }: Exercise) =>
+  unilateral && !ballistic && patterns.some(({ pattern }) => pattern === "squat" || pattern === "hinge");
 
-// Athletic's one a week, for what only one-sided work gives: one-sided strength and jumps. It goes first so that a
-// shorter Workout keeps it. Once done, one-sided Exercises compete on score like any other
+// Athletic's one a week, for what only one-sided work gives: one-sided strength and jumps. A one-armed swing still
+// drives off both legs, so it doesn't count. It goes first so that a shorter Workout keeps it. Once done, one-sided
+// Exercises compete on score like any other
 function requiredPick(candidates: readonly Candidate[], thisWeek: readonly LedgerWorkout[], week: WeekSoFar) {
   const trained = thisWeek
     .flatMap(({ workoutExercises }) => workoutExercises)
     .some(({ slug }) => {
       const exercise = exerciseBySlug(slug);
-      return exercise && isOneSidedLift(exercise);
+      return exercise && isOneSidedLegExercise(exercise);
     });
   if (week.goal !== "athletic" || trained) return undefined;
-  const oneSidedLifts = candidates.filter(({ exercise }) => isOneSidedLift(exercise));
-  return highestScore(oneSidedLifts, week);
+  return highestScore(
+    candidates.filter(({ exercise }) => isOneSidedLegExercise(exercise)),
+    week,
+  );
 }
 
 type Selection = {
@@ -215,9 +228,8 @@ type Selection = {
   required?: Candidate;
 };
 
-// The next pick that fits the time, by fill order and then score. A Muscle no candidate credits never holds up a
-// stage. The limits are soft, so they give way once nothing within them helps. A 4th Set waits for a stage to run out
-// of new Exercises
+// The next pick that fits the time, by fill order and then score. The limits give way once nothing within them helps,
+// and a 4th Set waits for a stage to run out of new Exercises
 function nextPick({ candidates, stages, goal, budget, limitOf }: Selection, draft: Draft, ledger: MuscleCredits) {
   const open = candidates.filter((candidate) => {
     const sets = setsToAdd(draft, candidate);
@@ -243,7 +255,7 @@ function nextPick({ candidates, stages, goal, budget, limitOf }: Selection, draf
 // Picks until the time runs out, each pick counting towards the budget before the next. Once the week's budget is met,
 // the rest is picked as a new week's would be, so a user who trains anyway still gets a balanced Workout
 function selectExercises(selection: Selection, weekSoFar: MuscleCredits): PlannedExercise[] {
-  const draft: Draft = { sets: new Map(), credits: {}, secondsLeft: WORKOUT_SECONDS };
+  const draft: Draft = { sets: new Map(), fourthSetAfter: new Map(), credits: {}, secondsLeft: WORKOUT_SECONDS };
   let ledger = weekSoFar;
   let budgetMet = false;
   for (;;) {
@@ -253,10 +265,17 @@ function selectExercises(selection: Selection, weekSoFar: MuscleCredits): Planne
       ledger = draft.credits;
       pick = nextPick(selection, draft, ledger);
     }
-    if (!pick) return [...draft.sets].map(([{ exercise, target }, sets]) => ({ slug: exercise.slug, sets, target }));
+    if (!pick) {
+      return [...draft.sets].map(([candidate, sets]) => {
+        const { exercise, target } = candidate;
+        const fourthSetAfter = draft.fourthSetAfter.get(candidate);
+        return { slug: exercise.slug, sets, target, ...(fourthSetAfter && { fourthSetAfter }) };
+      });
+    }
 
     const sets = setsToAdd(draft, pick);
     const credits = creditsPerSet(pick.exercise);
+    if (draft.sets.has(pick)) draft.fourthSetAfter.set(pick, draft.sets.size);
     draft.sets.set(pick, (draft.sets.get(pick) ?? 0) + sets);
     draft.credits = addCredits(draft.credits, credits, sets);
     draft.secondsLeft -= pick.exercise.secondsPerSet * sets;
@@ -271,7 +290,7 @@ export function planWorkout(input: PlanWorkoutInput): WorkoutPlan {
   const week = { monday, timeZone };
   const thisWeek = workoutsInWeek(workouts, week);
   const lastWeek = workoutsInWeek(workouts, { monday: mondayBefore(monday), timeZone });
-  const candidates = candidateExercises(input, thisWeek, lastWeek);
+  const candidates = pickableExercises(possibleExercises(input), thisWeek, lastWeek, daysPerWeek);
   const budget = weeklyBudget(goal, daysPerWeek);
   const ledger = weekLedger(workouts, week);
   const selection: Selection = {

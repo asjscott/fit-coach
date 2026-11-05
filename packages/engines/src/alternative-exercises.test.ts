@@ -56,7 +56,9 @@ describe("alternativeOptions", () => {
 
 describe("withAlternatives", () => {
   const onBodyweight = (plannedExercises: PlannedExercise[], injuries?: InjuryTag[]) =>
-    withAlternatives(plannedExercises, { bodyweight_only: bodyweightCandidates(injuries) });
+    withAlternatives(plannedExercises, {
+      bodyweight_only: { possible: bodyweightCandidates(injuries), pickable: bodyweightCandidates(injuries) },
+    });
 
   const slugsOn = (plannedExercise: PlannedExercise | undefined) =>
     plannedExercise?.alternatives?.bodyweight_only?.map(({ slug }) => slug);
@@ -64,6 +66,21 @@ describe("withAlternatives", () => {
   it("gives an Exercise still possible on the equipment itself, and only itself", () => {
     const [pushUp] = onBodyweight([planned("push-up")]);
     expect(pushUp.alternatives).toEqual({ bodyweight_only: [{ slug: "push-up", target }] });
+  });
+
+  it("keeps an Exercise that's possible but that a guard took out of what the Coach can pick", () => {
+    // As for an Exercise at the rep cap, or past the variety cap
+    const possible = bodyweightCandidates();
+    const pickable = possible.filter(({ exercise }) => exercise.slug !== "push-up");
+    const [pushUp] = withAlternatives([planned("push-up")], { bodyweight_only: { possible, pickable } });
+    expect(pushUp.alternatives).toEqual({ bodyweight_only: [{ slug: "push-up", target }] });
+  });
+
+  it("doesn't offer a possible Exercise a guard took out as an option for another", () => {
+    const possible = bodyweightCandidates();
+    const pickable = possible.filter(({ exercise }) => exercise.slug !== "pike-push-up");
+    const [press] = withAlternatives([planned("dumbbell-overhead-press")], { bodyweight_only: { possible, pickable } });
+    expect(slugsOn(press)).not.toContain("pike-push-up");
   });
 
   it("gives a replaced Exercise its options with their targets on that equipment", () => {

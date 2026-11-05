@@ -8,10 +8,7 @@ import {
 } from "@fit/shared";
 import { exerciseBySlug } from "./data/exercises";
 import { SETS_PER_PICK } from "./weekly-budget";
-import { secondsForSets, WARM_UP_SECONDS } from "./workout-length";
-
-// The library's median, for an Exercise this app version doesn't know yet
-const TYPICAL_SECONDS_PER_SET = 105;
+import { secondsForSets, TYPICAL_SECONDS_PER_SET, WARM_UP_SECONDS } from "./workout-length";
 
 // What the user can change for one Workout. Local to the phone: nothing here reaches the stored plan
 export type DayChoices = {
@@ -26,17 +23,17 @@ export type DayChoices = {
 export type MadeChoices = { plannedWorkoutId: string; choices: Partial<DayChoices> };
 
 // The usual choices, with the user's own on top. They don't stick: a new plan goes back to the usual ones
-export const dayChoices = (plannedWorkoutId: string, usual: DayChoices, made: MadeChoices | null): DayChoices =>
-  made?.plannedWorkoutId === plannedWorkoutId ? { ...usual, ...made.choices } : usual;
+export const dayChoices = (plannedWorkoutId: string, usual: DayChoices, madeChoices: MadeChoices | null): DayChoices =>
+  madeChoices?.plannedWorkoutId === plannedWorkoutId ? { ...usual, ...madeChoices.choices } : usual;
 
 // One more choice on top of those already made on this plan
 export const withChoice = (
-  made: MadeChoices | null,
+  madeChoices: MadeChoices | null,
   plannedWorkoutId: string,
   choice: Partial<DayChoices>,
 ): MadeChoices => ({
   plannedWorkoutId,
-  choices: { ...(made?.plannedWorkoutId === plannedWorkoutId && made.choices), ...choice },
+  choices: { ...(madeChoices?.plannedWorkoutId === plannedWorkoutId && madeChoices.choices), ...choice },
 });
 
 // The built-in choices the plan was saved with, which leave out one the primary matches. None on a plan stored before
@@ -46,25 +43,34 @@ export const equipmentChoices = ({ plannedExercises }: Pick<PlannedWorkout, "pla
 
 // An Exercise in today's Workout. replaces and otherOptions are on an Alternative Exercise: the slug of the planned
 // Exercise it stands in for, and what else could
-export type DayExercise = Omit<PlannedExercise, "alternatives"> & {
+export type DayExercise = Omit<PlannedExercise, "alternatives" | "fourthSetAfter"> & {
   replaces?: string;
   otherOptions?: AlternativeExercise[];
 };
+
+// A day's Exercise with what the cut needs: its index in the plan, kept when an earlier Exercise drops out
+type Placed = { exercise: DayExercise; place: number; fourthSetAfter?: number };
 
 const secondsPerSet = (slug: string) => exerciseBySlug(slug)?.secondsPerSet ?? TYPICAL_SECONDS_PER_SET;
 
 const secondsOf = (dayExercises: readonly DayExercise[]) =>
   dayExercises.reduce((seconds, { slug, sets }) => seconds + sets * secondsPerSet(slug), 0);
 
-// Applies the equipment, with the plan's Exercises in their own places. The same Exercise can't be done twice, so
-// what stays comes first, then the user's picks, then each remaining Exercise's first free option in priority order.
-// One with none left drops out
+// Applies the equipment. No Exercise can be done twice, so what stays claims its slot first, then the user's picks,
+// then each remaining Exercise's first free option in priority order
 function onEquipment(
   plannedExercises: readonly PlannedExercise[],
   { equipment, alternativePicks = {} }: DayChoices,
-): { dayExercises: DayExercise[]; dropped: string[] } {
+): { placed: Placed[]; dropped: string[] } {
   if (!equipment) {
-    return { dayExercises: plannedExercises.map(({ slug, sets, target }) => ({ slug, sets, target })), dropped: [] };
+    return {
+      placed: plannedExercises.map(({ slug, sets, target, fourthSetAfter }, place) => ({
+        exercise: { slug, sets, target },
+        place,
+        fourthSetAfter,
+      })),
+      dropped: [],
+    };
   }
 
   const optionsOf = (exercise: PlannedExercise) => exercise.alternatives?.[equipment] ?? [exercise];
@@ -87,36 +93,42 @@ function onEquipment(
   claim((_, options) => options[0]);
 
   return {
-    dayExercises: plannedExercises.flatMap((exercise) => {
+    placed: plannedExercises.flatMap((exercise, place) => {
       const option = chosen.get(exercise);
       if (!option) return [];
       const dayExercise = { slug: option.slug, sets: exercise.sets, target: option.target };
-      if (option.slug === exercise.slug) return [dayExercise];
+      const { fourthSetAfter } = exercise;
+      if (option.slug === exercise.slug) return [{ exercise: dayExercise, place, fourthSetAfter }];
       const otherOptions = optionsOf(exercise).filter(({ slug }) => !taken.has(slug));
-      return [{ ...dayExercise, replaces: exercise.slug, otherOptions }];
+      return [{ exercise: { ...dayExercise, replaces: exercise.slug, otherOptions }, place, fourthSetAfter }];
     }),
     dropped: plannedExercises.filter((exercise) => !chosen.has(exercise)).map(({ slug }) => slug),
   };
 }
 
-// Every Exercise's first Sets, then the 4th Sets the planner adds last: stored with their Exercise, they're still its
-// lowest priority work
-const setsInPriorityOrder = (dayExercises: readonly DayExercise[]): DayExercise[] => [
-  ...dayExercises.flatMap((exercise) => Array(Math.min(exercise.sets, SETS_PER_PICK)).fill(exercise)),
-  ...dayExercises.flatMap((exercise) => Array(Math.max(exercise.sets - SETS_PER_PICK, 0)).fill(exercise)),
-];
+// The order the planner added the Sets: each Exercise's first Sets at its place, and a 4th between the places it fell
+// between, or last on a plan stored without that. Two 4th Sets in one gap keep plan order, as the sort is stable
+function setsInPriorityOrder(placed: readonly Placed[]): DayExercise[] {
+  const sets = placed.flatMap(({ exercise, place, fourthSetAfter = Number.MAX_SAFE_INTEGER }) =>
+    [
+      ...Array<number>(Math.min(exercise.sets, SETS_PER_PICK)).fill(place),
+      ...Array<number>(Math.max(exercise.sets - SETS_PER_PICK, 0)).fill(fourthSetAfter - 0.5),
+    ].map((priority) => ({ exercise, priority })),
+  );
+  return sets.sort((a, b) => a.priority - b.priority).map(({ exercise }) => exercise);
+}
 
 // Keeps Sets in priority order and stops at the first that doesn't fit: nothing lower priority may take the place of
 // higher priority work
-function cutToSeconds(dayExercises: readonly DayExercise[], seconds: number) {
+function cutToSeconds(placed: readonly Placed[], seconds: number) {
   const keptSets = new Map<DayExercise, number>();
   let secondsLeft = seconds;
-  for (const exercise of setsInPriorityOrder(dayExercises)) {
+  for (const exercise of setsInPriorityOrder(placed)) {
     secondsLeft -= secondsPerSet(exercise.slug);
     if (secondsLeft < 0) break;
     keptSets.set(exercise, (keptSets.get(exercise) ?? 0) + 1);
   }
-  return dayExercises.flatMap((exercise) => {
+  return placed.flatMap(({ exercise }) => {
     const sets = keptSets.get(exercise);
     return sets ? [{ ...exercise, sets }] : [];
   });
@@ -133,15 +145,14 @@ function orderRank(slug: string, goal: Goal | undefined) {
 const inWorkoutOrder = (dayExercises: readonly DayExercise[], goal: Goal | undefined) =>
   [...dayExercises].sort((a, b) => orderRank(a.slug, goal) - orderRank(b.slug, goal));
 
-// The Workout for today from a Planned Workout, and the slugs of Exercises with no option on the chosen equipment.
-// Pure, so going back to an earlier choice gives the same Workout. Equipment comes first so the cut times what's
-// actually done, and the order last, as the cut needs priority order. goal is undefined until the user has loaded
+// The Workout for today and the slugs of Exercises with no option on the chosen equipment. Equipment comes first so
+// the cut times what's actually done, the order last as the cut needs priority. goal is undefined until the user loads
 export function daysWorkout(
   { plannedExercises }: Pick<PlannedWorkout, "plannedExercises">,
   choices: DayChoices,
   goal?: Goal,
 ) {
-  const { dayExercises, dropped } = onEquipment(plannedExercises, choices);
-  const kept = cutToSeconds(dayExercises, secondsForSets(choices.workoutLength));
+  const { placed, dropped } = onEquipment(plannedExercises, choices);
+  const kept = cutToSeconds(placed, secondsForSets(choices.workoutLength));
   return { plannedExercises: inWorkoutOrder(kept, goal), estimatedSeconds: WARM_UP_SECONDS + secondsOf(kept), dropped };
 }

@@ -1,5 +1,4 @@
-import { useFocusEffect } from "expo-router";
-import { useCallback } from "react";
+import { useReloadOnVisit } from "@/features/workouts/hooks/use-reload-on-visit";
 import { useLogbook } from "@/features/workouts/logbook-provider";
 
 // The phone's copy of the Planned Workout, whether or not it has signal, asking the server for the latest on every
@@ -7,11 +6,6 @@ import { useLogbook } from "@/features/workouts/logbook-provider";
 export function usePlannedWorkout() {
   const { plannedWorkoutCopy, refreshPlannedWorkout } = useLogbook();
 
-  useFocusEffect(
-    useCallback(() => {
-      refreshPlannedWorkout();
-    }, [refreshPlannedWorkout]),
-  );
-
+  useReloadOnVisit(refreshPlannedWorkout);
   return plannedWorkoutCopy;
 }

@@ -1,6 +1,7 @@
 import type { Exercise, Goal, Muscle } from "@fit/shared";
 import { creditsPerSet, type MuscleCredits } from "./week-ledger";
 import type { WeeklyBudget } from "./weekly-budget";
+import { TYPICAL_SECONDS_PER_SET } from "./workout-length";
 
 const clamp = (value: number, min: number, max: number) => Math.min(max, Math.max(min, value));
 
@@ -11,7 +12,7 @@ const GOAL_FACTORS: Record<Goal, (exercise: Exercise) => number> = {
   build_muscle: () => 1,
   recomp: () => 1,
   // About shorter Workouts: nothing here burns more fat, and no copy may say so
-  lose_fat: ({ secondsPerSet }) => clamp(Math.sqrt(105 / secondsPerSet), 0.9, 1.1),
+  lose_fat: ({ secondsPerSet }) => clamp(Math.sqrt(TYPICAL_SECONDS_PER_SET / secondsPerSet), 0.9, 1.1),
   athletic: ({ ballistic }) => (ballistic ? 1.25 : 1),
 };
 

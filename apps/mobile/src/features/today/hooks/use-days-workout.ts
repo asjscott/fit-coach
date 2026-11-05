@@ -15,14 +15,15 @@ import { useCurrentUser } from "@/features/user/current-user-provider";
 // live here and nowhere else, so they never reach the stored plan and are gone once the Workout starts
 export function useDaysWorkout(plannedWorkout: PlannedWorkout | null) {
   const profile = useCurrentUser().user?.profile;
-  const [made, setMade] = useState<MadeChoices | null>(null);
+  const [madeChoices, setMadeChoices] = useState<MadeChoices | null>(null);
 
-  const clearChoices = useCallback(() => setMade(null), []);
+  const clearChoices = useCallback(() => setMadeChoices(null), []);
   if (!plannedWorkout) return { today: null, clearChoices };
 
   const { id: plannedWorkoutId } = plannedWorkout;
-  const choices = dayChoices(plannedWorkoutId, { workoutLength: usualWorkoutLength(profile ?? {}) }, made);
-  const choose = (choice: Partial<DayChoices>) => setMade((current) => withChoice(current, plannedWorkoutId, choice));
+  const choices = dayChoices(plannedWorkoutId, { workoutLength: usualWorkoutLength(profile ?? {}) }, madeChoices);
+  const choose = (choice: Partial<DayChoices>) =>
+    setMadeChoices((current) => withChoice(current, plannedWorkoutId, choice));
   return {
     today: {
       ...daysWorkout(plannedWorkout, choices, profile?.goal),
