@@ -33,6 +33,10 @@ Result codes: **✅ pass** · **❌ fail** · **⚠️ works but feels off** · 
 - **iOS:** Claude Code's iOS Simulator tool taps, types and takes screenshots, and typing works there. Plain `xcrun simctl` gives screenshots, `openurl` and `ui … appearance` only. Expo Go's gear sits on the header ⋯: drag it out of the way.
 - **Android:** `adb` (in `~/Library/Android/sdk/platform-tools`, not on `PATH`) works for taps, typing, screenshots and `uiautomator dump`. The Clerk custom tab's contents aren't in the uiautomator tree, but `adb forward tcp:9222 localabstract:chrome_devtools_remote` exposes the page over the Chrome DevTools Protocol.
 
+### Before the Planned Workout checks (#77)
+
+- **Run `pnpm --filter @fit/api seed:exercises` once, from a checkout with `apps/api/.env`.** It stores `ballistic` on the Exercises in the real database. Until then `/exercises` reports the two swings as not Ballistic. Nothing reads it there today: the planner uses the library built into the code.
+
 ## Suggested order
 
 The Assessment checks need several fresh accounts or Equipment Profiles. A run order that avoids redoing work:
@@ -261,6 +265,70 @@ Not run last time.
   - iOS: Result: ✅ · Android: Result: ✅ · Notes: iOS: Today, logging, banners and Results. Android: logging, Today and banners.
 
 **Assessment unavailable:** reachable now that Inverted row needs a bar or table: No equipment with a wrist injury leaves B with no test. Not run by hand; `canAssess` and `assessmentOffer` unit tests cover it.
+
+---
+
+## Part 4: Planned Workouts (#77)
+
+#87 walked all of this on the web build at phone size, with a stand-in for Clerk and the local API. These are what that couldn't show: a real sign-in, the real API and database, real native storage, real offline, and how it feels on a phone.
+
+Run on a physical phone where you can: airplane mode is the point of 4.3.
+
+### 4.1 Real account, real API
+
+- [ ] **P1** A fresh account signs in through Clerk, onboards and reaches Today against the real API, with no 401s.
+  - iOS: Result: · Android: Result: · Notes:
+- [ ] **P2** After Assessment B, a Planned Workout appears without leaving Today or pulling to refresh.
+  - iOS: Result: · Android: Result: · Notes:
+- [ ] **P3** An account from before M5 isn't sent back through onboarding. Profile shows Standard, and Today gets a plan once it has an Assessment.
+  - iOS: Result: · Android: Result: · Notes:
+- [ ] **P4** Start, log and finish a Workout against the real API. The next plan appears, and History shows the Workout.
+  - iOS: Result: · Android: Result: · Notes:
+- [ ] **P5** Your phone's timezone reaches the server: near midnight on Sunday, the plan's week and This Week agree on the Monday.
+  - iOS: Result: · Android: Result: · Notes:
+
+### 4.2 Onboarding and the card on a phone
+
+- [ ] **P6** "Your training time" fits one screen on your smallest phone, with no scrolling and Next visible. It fitted at 375×667 on web, but that isn't a real keyboardless safe area.
+  - iOS: Result: · Android: Result: · Notes:
+- [ ] **P7** The Today card reads well: Exercises, Set counts, targets, estimated time, and the two rows of chips. Do chips wrap sensibly?
+  - iOS: Result: · Android: Result: · Notes:
+- [ ] **P8** Bodyweight only on a dumbbell or barbell profile: Alternative chips are easy to tell apart from the Length and equipment chips, and tapping one is easy.
+  - iOS: Result: · Android: Result: · Notes:
+- [ ] **P9** The estimated time is honest: run a full Standard Workout with a timer. The 5-minute warm-up is a spec assumption "unless it proves wrong on a phone".
+  - iOS: Result: · Android: Result: · Notes:
+- [ ] **P10** Light and dark both read well on the card and the Rest Day recommendation.
+  - iOS: Result: · Android: Result: · Notes:
+
+### 4.3 Real offline (airplane mode)
+
+- [ ] **P11** **Clerk on a cold start with no signal.** Have a plan on Today, turn on airplane mode, force-quit, reopen. Today and the card should appear. If the app stays blank, Clerk's `isLoaded` stayed false: `(app)/_layout.tsx` renders nothing until then, and nothing else can pass. The stand-in couldn't show this. A likely fix is `__experimental_resourceCache` from `@clerk/expo/resource-cache`.
+  - iOS: Result: · Android: Result: · Notes:
+- [ ] **P12** Still in airplane mode: change the Length and equipment. The card follows, with your usual Length still selected first.
+  - iOS: Result: · Android: Result: · Notes:
+- [ ] **P13** Start, log and finish. Start isn't held up by the Previous Sets request for long (each has a 4 s timeout). Today says "Connect to plan your next Workout".
+  - iOS: Result: · Android: Result: · Notes:
+- [ ] **P14** Force-quit and reopen, still offline: the Pending Workout, the message and native storage all hold.
+  - iOS: Result: · Android: Result: · Notes:
+- [ ] **P15** Turn signal back on, without touching the app, then with the app in the background. The upload and next plan arrive.
+  - iOS: Result: · Android: Result: · Notes:
+
+### 4.4 Over time
+
+- [ ] **P16** A new week: open the app on Monday. The plan is built for the new week, with nothing carried over. The walk couldn't show this, as it can't move the server's clock, so wait for a real Monday.
+  - iOS: Result: · Android: Result: · Notes:
+- [ ] **P17** Week after week, do the same Exercises carry on, and do Previous Sets stay useful?
+  - iOS: Result: · Android: Result: · Notes:
+- [ ] **P18** Sign out: the plan and the stored User are gone from the phone, and the next account doesn't see them.
+  - iOS: Result: · Android: Result: · Notes:
+
+### 4.5 Your call
+
+Not bugs, but they need your judgement. Details in `docs/research/planner-simulation.md`.
+
+- Back squat and barbell bench are nearly absent on a Full gym at Standard. Does the proposed barbell tilt look right?
+- Do Workouts that fill their Length, at up to 236% of budget, feel like too much?
+- Does a Workout on Full gym feel pointless when nothing changes, as for a user with no equipment?
 
 ---
 

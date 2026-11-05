@@ -5,7 +5,7 @@ import { Pressable } from "@/components/pressable";
 import { Text } from "@/components/text";
 import { fonts, spacing, useTheme } from "@/theme";
 import { workoutExerciseSummary } from "../format";
-import { exerciseName } from "../library";
+import { exerciseName, libraryExercise } from "../library";
 import { WorkoutExerciseMenu } from "./workout-exercise-menu";
 
 export type WorkoutExerciseRowProps = {
@@ -22,7 +22,12 @@ export function WorkoutExerciseRow({ workoutExercise, position, onPress }: Worko
   const { colors } = useTheme();
   const name = exerciseName(workoutExercise.slug);
   const { sets, previousSets, planned } = workoutExercise;
-  const summary = workoutExerciseSummary(sets, previousSets?.sets, planned);
+  const summary = workoutExerciseSummary(
+    sets,
+    previousSets?.sets,
+    planned,
+    libraryExercise(workoutExercise.slug)?.unilateral,
+  );
   const done = sets.length > 0;
 
   return (

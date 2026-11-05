@@ -192,9 +192,14 @@ export const noAlternativeLabel = (equipment: BuiltInEquipment, name: string) =>
 
 // A collapsed Workout Exercise's line: "3 sets · 18 kg × 10, 10, 8", else its target Sets, else its Previous Sets,
 // else "Not started"
-export function workoutExerciseSummary(sets: readonly Set[], previous?: readonly Set[], planned?: PlannedSets) {
+export function workoutExerciseSummary(
+  sets: readonly Set[],
+  previous?: readonly Set[],
+  planned?: PlannedSets,
+  unilateral?: boolean,
+) {
   if (sets.length) return `${setsLabel(sets.length)} · ${setsSummary(sets)}`;
-  if (planned) return plannedSetsLabel(planned);
+  if (planned) return plannedSetsLabel(planned, unilateral);
   return previous?.length ? previousSetsLabel(previous) : "Not started";
 }
 
