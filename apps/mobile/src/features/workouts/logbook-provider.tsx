@@ -31,6 +31,8 @@ type LogbookContextValue = {
   plannedWorkoutCopy: PlannedWorkoutCopy;
   // Asks the server for the latest; with no answer the copy stays as it is
   refreshPlannedWorkout: () => Promise<void>;
+  // Whether an upload, or an answer about the plan, is on its way
+  syncing: boolean;
   // Starts a Planned Workout with its Exercises already added, linked to it
   startPlannedWorkout: (plannedWorkout: PlannedWorkoutToStart) => Promise<void>;
   // For a test Exercise of an Assessment Workout: the suggested next load, or done
@@ -117,6 +119,8 @@ export function LogbookProvider({ children }: { children: ReactNode }) {
     stale: false,
   });
   const [isLoaded, setIsLoaded] = useState(false);
+  // Counted, as a sync and a finish can overlap
+  const [syncsUnderWay, setSyncsUnderWay] = useState(0);
 
   // The Planned Workout goes stale by Pending Workouts, so the two are shown together
   const refreshPending = useCallback(async () => {
@@ -125,10 +129,13 @@ export function LogbookProvider({ children }: { children: ReactNode }) {
   }, [logbook]);
 
   const refreshPlannedWorkout = useCallback(async () => {
+    setSyncsUnderWay((count) => count + 1);
     try {
       setPlannedWorkoutCopy(await logbook.refreshPlannedWorkout());
     } catch {
       // Keep the copy: Today's own status line already says when there's no connection
+    } finally {
+      setSyncsUnderWay((count) => count - 1);
     }
   }, [logbook]);
 
@@ -148,9 +155,11 @@ export function LogbookProvider({ children }: { children: ReactNode }) {
   // Uploads what it can; anything that fails stays pending for the next try. Then asks for the plan an upload rebuilt,
   // or a new week's on returning to the app, without holding up whoever is waiting on the upload
   const sync = useCallback(async () => {
+    setSyncsUnderWay((count) => count + 1);
     await logbook.sync().catch(() => {});
     await refreshPending();
     refreshPlannedWorkout();
+    setSyncsUnderWay((count) => count - 1);
   }, [logbook, refreshPending, refreshPlannedWorkout]);
 
   // Also uploads anything left pending last time the app ran
@@ -209,13 +218,19 @@ export function LogbookProvider({ children }: { children: ReactNode }) {
   const uploadFinished = useCallback(
     async (finishing: () => Promise<FinishResult>): Promise<FinishOutcome> => {
       let result: FinishResult | undefined;
-      await run(async () => {
-        result = await finishing();
-      });
-      if (!result || result.status === "nothing-to-save") return { status: "nothing-to-save" };
-      const { id } = result.workout;
-      const uploaded = sync().then(async () => !(await logbook.pending()).some((p) => p.id === id));
-      return { status: "pending", uploaded };
+      // From before the Workout turns Pending, so Today doesn't read its plan as stale before the sync below starts
+      setSyncsUnderWay((count) => count + 1);
+      try {
+        await run(async () => {
+          result = await finishing();
+        });
+        if (!result || result.status === "nothing-to-save") return { status: "nothing-to-save" };
+        const { id } = result.workout;
+        const uploaded = sync().then(async () => !(await logbook.pending()).some((p) => p.id === id));
+        return { status: "pending", uploaded };
+      } finally {
+        setSyncsUnderWay((count) => count - 1);
+      }
     },
     [logbook, run, sync],
   );
@@ -245,6 +260,7 @@ export function LogbookProvider({ children }: { children: ReactNode }) {
         isLoaded,
         plannedWorkoutCopy,
         refreshPlannedWorkout,
+        syncing: syncsUnderWay > 0,
         start,
         startAssessment,
         startPlannedWorkout,

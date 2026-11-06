@@ -465,11 +465,16 @@ export function createLogbook({
 
     // Asks the server, outside the queue, and keeps its answer for offline. A failure rejects and keeps the copy
     refreshPlannedWorkout: async () => {
-      const uploadCountWhenAsked = uploadCount;
-      const plannedWorkout = await plannedWorkouts.current();
+      let uploadCountWhenAsked: number;
+      let plannedWorkout: PlannedWorkout | null;
+      // An upload during the ask makes the answer out of date, so ask again rather than keep it
+      do {
+        uploadCountWhenAsked = uploadCount;
+        plannedWorkout = await plannedWorkouts.current();
+      } while (uploadCount !== uploadCountWhenAsked);
       return serially(async () => {
         if (plannedWorkout) {
-          await writePlannedWorkout({ plannedWorkout, awaitingNextPlan: uploadCount !== uploadCountWhenAsked });
+          await writePlannedWorkout({ plannedWorkout, awaitingNextPlan: false });
         } else {
           await storage.removeItem(PLANNED_WORKOUT_KEY);
         }

@@ -36,10 +36,14 @@ export const withChoice = (
   choices: { ...(madeChoices?.plannedWorkoutId === plannedWorkoutId && madeChoices.choices), ...choice },
 });
 
-// The built-in choices the plan was saved with, which leave out one the primary matches. None on a plan stored before
-// Alternative Exercises, whose Exercises would have nothing to change to
+// The built-in choices worth offering: saved with the plan, which leaves out one the primary matches, and changing at
+// least one Exercise. None on a plan stored before Alternative Exercises, whose Exercises have nothing to change to
 export const equipmentChoices = ({ plannedExercises }: Pick<PlannedWorkout, "plannedExercises">) =>
-  BuiltInEquipment.options.filter((choice) => plannedExercises.every(({ alternatives }) => alternatives?.[choice]));
+  BuiltInEquipment.options.filter(
+    (choice) =>
+      plannedExercises.every(({ alternatives }) => alternatives?.[choice]) &&
+      plannedExercises.some(({ slug, alternatives }) => alternatives?.[choice]?.[0]?.slug !== slug),
+  );
 
 // An Exercise in today's Workout. replaces and otherOptions are on an Alternative Exercise: the slug of the planned
 // Exercise it stands in for, and what else could

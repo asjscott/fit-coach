@@ -386,13 +386,31 @@ describe("daysWorkout", () => {
     });
 
     describe("the choices on offer", () => {
-      it("are those the plan saved", () => {
-        expect(equipmentChoices(stored)).toEqual(["full_gym", "bodyweight_only"]);
+      it("leave out one that only changes a load, as every Exercise stays", () => {
+        expect(equipmentChoices(stored)).toEqual(["bodyweight_only"]);
       });
 
       it("hide one the primary matches, which the plan didn't save", () => {
-        const plan = { plannedExercises: [{ ...planned("push-up"), alternatives: { full_gym: [option("push-up")] } }] };
+        const alternatives = { full_gym: [option("decline-push-up")] };
+        const plan = { plannedExercises: [{ ...planned("push-up"), alternatives }] };
         expect(equipmentChoices(plan)).toEqual(["full_gym"]);
+      });
+
+      it("hide one that changes no Exercise", () => {
+        const plan = {
+          plannedExercises: [
+            {
+              ...planned("push-up"),
+              alternatives: { full_gym: [option("push-up")], bodyweight_only: [option("decline-push-up")] },
+            },
+          ],
+        };
+        expect(equipmentChoices(plan)).toEqual(["bodyweight_only"]);
+      });
+
+      it("offer one that only drops an Exercise", () => {
+        const plan = { plannedExercises: [{ ...planned("push-up"), alternatives: { bodyweight_only: [] } }] };
+        expect(equipmentChoices(plan)).toEqual(["bodyweight_only"]);
       });
 
       it("are none on a plan stored before Alternative Exercises", () => {

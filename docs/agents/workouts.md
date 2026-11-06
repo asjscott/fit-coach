@@ -145,7 +145,7 @@ Phone
   ├─ Logbook: plannedWorkout, refreshPlannedWorkout, startPlannedWorkout; key logbook:planned-workout
   ├─ usePlannedWorkout (features/today/hooks): the copy, asking the server on every Today visit
   ├─ useDaysWorkout: the user's choices over daysWorkout (days-workout.ts), held in memory until Start
-  ├─ Today (features/today/views/today-view.tsx): planned-workout-section.tsx, and rest-day-section.tsx from restDay
+  ├─ Today (features/today/views/today-view.tsx): one card for the day (`todayCard` in today-status.ts, drawn by today-card.tsx), and planned-workout-sheet.tsx with the Exercises, targets, Length and equipment
   │  (rest-day.ts). todayPlan (today-status.ts) gates both: a plan, stale or not, and no In-progress Workout
   ├─ CurrentUserProvider: starts from stored-user.ts, so Goal and usual Length survive a cold start offline
   └─ useSendTimeZone: keeps User.timeZone in step, for the server's weeks
@@ -161,8 +161,7 @@ Schemas: packages/shared/src/planned-workouts.ts
   sync. It's idempotent, as `planIsDue` compares `builtFrom` (`planInputsKey`) and `weekStart`, so a failed rebuild is
   just still due and logs rather than fails the request. A new plan input goes in `PlanInputs`.
 - **A stale plan is never shown** (`PlannedWorkoutCopy.stale`). It goes stale while a Pending Workout exists and from an
-  upload until the next answer (`awaitingNextPlan`). Today then says "Connect to plan your next Workout". Online, that
-  shows for a moment after Finish, until the upload and the next plan come back.
+  upload until the next answer (`awaitingNextPlan`). Today then says "Connect to plan your next Workout", but only once nothing is on its way (`syncing` on the Logbook provider), so an online finish never shows it. An answer that an upload overtakes is asked for again, not kept.
 - **Starting takes a snapshot.** Exercises are copied in with `planned: {sets, target}`, dropped at Finish, so a rebuild
   can't touch a Workout under way. Discarding it shows the copy again. No Sets are logged at Start. `nextSetDraft` goes
   test load, then last Set, then target.

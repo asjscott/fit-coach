@@ -314,7 +314,7 @@ if (cmd === "tour") {
       }
       // With a Workout running, the Resume pill sits at the foot of the side rail
       await wide.go("/");
-      await wide.button("Start workout").click();
+      await wide.button(/^Start (manual )?workout$/).click();
       await wide.page.waitForURL(/\/workout$/);
       await wide.button("Leave workout").click();
       await wide.tab("Exercises").click();

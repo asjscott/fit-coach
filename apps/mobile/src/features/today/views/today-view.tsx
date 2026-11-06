@@ -1,9 +1,9 @@
-import { assessmentOffer, lastWorkout, offerKey, thisWeek, withPending } from "@fit/engines";
+import { assessmentOffer, finishedToday, lastWorkout, offerKey, thisWeek, withPending } from "@fit/engines";
+import type { RestDayReason } from "@fit/engines";
 import { router } from "expo-router";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { View } from "react-native";
 import { Divider } from "@/components/divider";
-import { Heading } from "@/components/heading";
 import { LoadingButton } from "@/components/loading-button";
 import { Screen } from "@/components/screen";
 import { Spinner } from "@/components/spinner";
@@ -12,35 +12,43 @@ import { useChosenTests } from "@/features/assessment/hooks/use-chosen-tests";
 import { useLatestAssessment } from "@/features/assessment/hooks/use-latest-assessment";
 import { useCurrentUser } from "@/features/user/current-user-provider";
 import { ForgottenWorkoutModal } from "@/features/workouts/components/forgotten-workout-modal";
+import { elapsedLabel, estimatedTimeLabel } from "@/features/workouts/format";
 import { useHistory } from "@/features/workouts/history-provider";
 import { useResumeWorkout, useStartPlannedWorkout, useStartWorkout } from "@/features/workouts/hooks/use-open-workout";
 import { useRefreshHistory } from "@/features/workouts/hooks/use-refresh-history";
 import { useLogbook } from "@/features/workouts/logbook-provider";
 import { spacing } from "@/theme";
+import { AssessmentCard, AssessmentSection } from "../components/assessment-section";
 import { LastWorkoutSection } from "../components/last-workout-section";
-import { PlannedWorkoutSection } from "../components/planned-workout-section";
-import { RestDaySection } from "../components/rest-day-section";
+import { PlannedWorkoutSheet } from "../components/planned-workout-sheet";
 import { ThisWeekSection } from "../components/this-week-section";
-import { todayPlan, todayRestDay, todayState, todayStatus } from "../today-status";
-import { AssessmentSection } from "../components/assessment-section";
+import { TodayCard, TodayCardLink } from "../components/today-card";
 import { useDaysWorkout } from "../hooks/use-days-workout";
 import { useDismissedOffer } from "../hooks/use-dismissed-offer";
 import { usePlannedWorkout } from "../hooks/use-planned-workout";
+import { todayCard, todayLoggedLine, todayPlan, todayPlanLine, todayRestDay, todayState } from "../today-status";
 
-// The training hub: Resume, the Planned Workout to start once there is one, else a Manual Workout to start, then this
-// week against the user's days per week, and the last Workout
+const WHY_REST: Record<RestDayReason, string> = {
+  "days-per-week-reached": "You've reached your days per week.",
+  "trained-today": "You've trained today.",
+  "trained-yesterday": "You trained yesterday, and this week's Workouts still fit.",
+};
+
+// The training hub: one card for what the day calls for, then this week against the user's days per week, and the last
+// Workout. Everything about the next Workout itself is a tap away in its sheet
 export default function TodayView() {
   const logbook = useLogbook();
   const { startWorkout, starting } = useStartWorkout();
   const { startPlannedWorkout, startingPlan } = useStartPlannedWorkout();
   const { resumeWorkout, forgotten, setForgotten } = useResumeWorkout();
-  const { isLoaded, isStale, pending } = logbook;
+  const { isLoaded, isStale, pending, syncing } = logbook;
   const { workouts, error } = useHistory();
   const daysPerWeek = useCurrentUser().user?.profile.daysPerWeek;
   const { latest: latestAssessment } = useLatestAssessment();
   const { plannedWorkout: latestPlan, stale: planIsStale } = usePlannedWorkout();
   const { dismissed, dismiss } = useDismissedOffer();
   const tests = useChosenTests();
+  const [sheetIsOpen, setSheetIsOpen] = useState(false);
   useRefreshHistory();
 
   const plan = todayPlan({
@@ -48,6 +56,7 @@ export default function TodayView() {
     workoutInProgress: !!logbook.workout,
     hasPlan: !!latestPlan,
     stale: planIsStale,
+    syncing,
   });
   const plannedWorkout = plan === "planned" ? latestPlan : null;
   const { today, clearChoices } = useDaysWorkout(plannedWorkout);
@@ -57,9 +66,8 @@ export default function TodayView() {
     if (isLoaded) isStale().then(setForgotten, () => {});
   }, [isLoaded, isStale, setForgotten]);
 
-  const handleWorkout = async () => {
-    if (logbook.workout) await resumeWorkout();
-    else if (await startWorkout()) router.push("/workout");
+  const handleManual = async () => {
+    if (await startWorkout()) router.push("/workout");
   };
 
   const handleStartPlan = async () => {
@@ -75,8 +83,8 @@ export default function TodayView() {
   const week = thisWeek(all, now, daysPerWeek);
   const last = lastWorkout(all);
   const state = todayState({ historyLoaded: workouts !== null, failed: !!error, workoutCount: all.length });
-  const status = todayStatus({ state, workoutCount: week.workoutCount, target: week.target });
   const restDayReason = todayRestDay(plan, all, now, daysPerWeek);
+  const finished = finishedToday(all, now);
   const offer =
     dismissed === undefined
       ? null
@@ -88,76 +96,144 @@ export default function TodayView() {
           tests,
           dismissed,
         });
+  const leadingOffer = offer?.kind === "start" && plan === "none" && !logbook.workout ? offer : null;
+  const card = todayCard({
+    isLoaded,
+    state,
+    plan,
+    workoutInProgress: !!logbook.workout,
+    assessmentFirst: !!leadingOffer,
+    finishedToday: finished.length > 0,
+    restDay: restDayReason,
+  });
+  const nextWorkout = (action: string) =>
+    today ? `Next Workout: ${estimatedTimeLabel(today.estimatedSeconds)} · ${action}` : "";
+  const openSheet = () => setSheetIsOpen(true);
+  const connectNote = plan === "connect" ? "Connect to plan your next Workout" : null;
 
   return (
     <Screen scroll="screen" edges={["top"]}>
-      <View style={{ gap: spacing[1] }}>
-        <Text size="sm" weight="semiBold" color="muted">
-          {now.toLocaleDateString([], { weekday: "long", day: "numeric", month: "long" })}
-        </Text>
-        <Heading size="2xl">Today</Heading>
-      </View>
-      <View style={{ marginTop: spacing[5], gap: spacing[2] }}>
-        {plannedWorkout ? null : (
+      <Text size="sm" weight="semiBold" color="muted" style={{ marginBottom: spacing[3] }}>
+        {now.toLocaleDateString([], { weekday: "long", day: "numeric", month: "long" })}
+      </Text>
+      {card === "loading" ? <Spinner /> : null}
+      {card === "resume" && logbook.workout ? (
+        <TodayCard
+          tone="accent"
+          headline="Keep going."
+          line={`Started ${elapsedLabel(now.getTime() - Date.parse(logbook.workout.startedAt))} ago`}
+        >
+          <LoadingButton label="Resume workout" icon="dumbbell" action="inverse" fullWidth onPress={resumeWorkout} />
+        </TodayCard>
+      ) : null}
+      {card === "assessment" && leadingOffer ? (
+        <AssessmentCard offer={leadingOffer} onDismiss={() => dismiss(offerKey(leadingOffer))} />
+      ) : null}
+      {card === "done" ? (
+        <TodayCard tone="success" headline="Done for today." line={todayLoggedLine(finished)}>
+          {today ? <TodayCardLink label={nextWorkout("Train again")} color="accent" onPress={openSheet} /> : null}
+          {connectNote ? <Text color="muted">{connectNote}</Text> : null}
+        </TodayCard>
+      ) : null}
+      {card === "rest" && restDayReason ? (
+        <TodayCard
+          tone="quiet"
+          headline="Rest today."
+          line={`${WHY_REST[restDayReason]} You can still train if you want to.`}
+        >
+          {today ? <TodayCardLink label={nextWorkout("Train anyway")} color="text" onPress={openSheet} /> : null}
+          {connectNote ? <Text color="muted">{connectNote}</Text> : null}
+        </TodayCard>
+      ) : null}
+      {card === "ready" && today ? (
+        <TodayCard
+          tone="accent"
+          headline="Time to train."
+          line={todayPlanLine(today.plannedExercises, today.estimatedSeconds)}
+        >
+          {plannedWorkout?.cue ? <Text color="onAccent">{plannedWorkout.cue}</Text> : null}
           <LoadingButton
-            label={logbook.workout ? "Resume workout" : "Start workout"}
+            label="Start workout"
             icon="dumbbell"
+            action="inverse"
             fullWidth
-            loading={!logbook.isLoaded || starting}
-            onPress={handleWorkout}
+            loading={startingPlan}
+            disabled={starting || !today.plannedExercises.length}
+            onPress={handleStartPlan}
           />
-        )}
-        {status ? (
-          <Text size="sm" color="muted">
-            {status}
-          </Text>
-        ) : null}
-      </View>
-      {restDayReason ? (
-        <View style={{ marginTop: spacing[5] }}>
-          <RestDaySection reason={restDayReason} />
-        </View>
+          <TodayCardLink label="See or change this Workout" color="onAccent" size="sm" onPress={openSheet} />
+        </TodayCard>
       ) : null}
-      {plan === "connect" ? (
+      {card === "connect" ? (
+        <TodayCard
+          tone="quiet"
+          headline={plan === "planning" ? "Planning your next Workout." : "Connect to plan your next Workout."}
+        />
+      ) : null}
+      {card === "manual" ? (
+        <TodayCard tone="accent" headline="Time to train." line="Add Exercises as you go.">
+          <LoadingButton
+            label="Start manual workout"
+            icon="dumbbell"
+            action="inverse"
+            fullWidth
+            loading={starting}
+            onPress={handleManual}
+          />
+        </TodayCard>
+      ) : null}
+      {state === "offline" ? (
         <Text size="sm" color="muted" style={{ marginTop: spacing[2] }}>
-          Connect to plan your next Workout
+          No connection. Workouts save on this phone until there is.
         </Text>
       ) : null}
-      {today ? (
-        <View style={{ marginTop: spacing[5] }}>
-          <PlannedWorkoutSection
-            cue={plannedWorkout?.cue}
-            plannedExercises={today.plannedExercises}
-            estimatedSeconds={today.estimatedSeconds}
-            dropped={today.dropped}
-            workoutLength={today.workoutLength}
-            onChooseLength={today.chooseLength}
-            equipment={today.equipment}
-            equipmentChoices={today.equipmentChoices}
-            onChooseEquipment={today.chooseEquipment}
-            onPickAlternative={today.pickAlternative}
-            startingPlan={startingPlan}
-            startingManual={starting}
-            onStart={handleStartPlan}
-            onStartManual={handleWorkout}
+      {state === "loading" ? null : (
+        <View style={{ marginTop: spacing[3] }}>
+          <ThisWeekSection week={week} state={state} now={now} />
+        </View>
+      )}
+      {card === "loading" || card === "resume" || card === "manual" ? null : (
+        <View style={{ marginTop: spacing[4] }}>
+          <LoadingButton
+            label="Start manual workout"
+            size="md"
+            action="secondary"
+            variant="link"
+            fullWidth
+            loading={starting}
+            disabled={startingPlan}
+            onPress={handleManual}
           />
         </View>
-      ) : null}
-      {offer ? (
+      )}
+      {offer && !leadingOffer ? (
         <View style={{ marginTop: spacing[5] }}>
           <AssessmentSection offer={offer} onDismiss={() => dismiss(offerKey(offer))} />
         </View>
       ) : null}
-      <Divider spacing={6} />
-      {state === "loading" ? (
-        <Spinner />
-      ) : (
+      {state === "loading" ? null : (
         <>
-          <ThisWeekSection week={week} state={state} now={now} />
           <Divider spacing={6} />
           <LastWorkoutSection workout={last} isOffline={state === "offline"} now={now} />
         </>
       )}
+      {today ? (
+        <PlannedWorkoutSheet
+          isOpen={sheetIsOpen}
+          onClose={() => setSheetIsOpen(false)}
+          cue={plannedWorkout?.cue}
+          plannedExercises={today.plannedExercises}
+          estimatedSeconds={today.estimatedSeconds}
+          dropped={today.dropped}
+          workoutLength={today.workoutLength}
+          onChooseLength={today.chooseLength}
+          equipment={today.equipment}
+          equipmentChoices={today.equipmentChoices}
+          onChooseEquipment={today.chooseEquipment}
+          onPickAlternative={today.pickAlternative}
+          onStart={handleStartPlan}
+        />
+      ) : null}
       <ForgottenWorkoutModal isOpen={forgotten} onDone={() => setForgotten(false)} />
     </Screen>
   );

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { restDay } from "./rest-day";
+import { finishedToday, restDay } from "./rest-day";
 import { withPending } from "./training-summaries";
 
 // Worked weeks run Monday 19 to Sunday 25 October 2026; these tests run on Los Angeles time (UTC-7 that week)
@@ -100,5 +100,13 @@ describe("restDay", () => {
   it("needs days per week to say whether the rest of the week fits", () => {
     const thursday = new Date("2026-10-22T18:00:00-07:00");
     expect(restDay([finished("2026-10-21T08:00:00-07:00")], thursday, undefined)).toBeNull();
+  });
+});
+
+describe("finishedToday", () => {
+  it("keeps the Workouts finished on the phone's local day", () => {
+    const wednesday = new Date("2026-10-21T18:00:00-07:00");
+    const today = finished("2026-10-21T08:00:00-07:00");
+    expect(finishedToday([today, finished("2026-10-20T22:30:00-07:00")], wednesday)).toEqual([today]);
   });
 });

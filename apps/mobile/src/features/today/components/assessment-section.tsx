@@ -12,6 +12,7 @@ import { useStartAssessment } from "@/features/assessment/hooks/use-start-assess
 import { patternLabels } from "@/features/exercises/labels";
 import { useLogbook } from "@/features/workouts/logbook-provider";
 import { spacing } from "@/theme";
+import { TodayCard, TodayCardLink } from "./today-card";
 
 // "squat, hinge and core"
 function patternsInWords(patterns: TestedPattern[]) {
@@ -23,6 +24,49 @@ const WHAT_IT_TESTS: Record<AssessmentPart, string> = {
   A: `Tests your ${patternsInWords(ASSESSMENT_PATTERNS.A)}, so the Coach knows your starting strength.`,
   B: `Tests your ${patternsInWords(ASSESSMENT_PATTERNS.B)}, and finishes your Assessment.`,
 };
+
+const HEADLINES: Record<AssessmentPart, string> = {
+  A: "Let's find your starting strength.",
+  B: "One more test to go.",
+};
+
+const untestedNote = (untested: TestedPattern[]) =>
+  `No test suits your injuries and equipment for ${patternsInWords(untested)}, so ${untested.length > 1 ? "they're" : "it's"} estimated from your other results.`;
+
+// The same offer as Today's main card, for a user who has no plan until the Assessment is done
+export function AssessmentCard({
+  offer,
+  onDismiss,
+}: {
+  offer: Extract<AssessmentOffer, { kind: "start" }>;
+  onDismiss: () => void;
+}) {
+  const { start, starting } = useStartAssessment();
+  const { part, untested } = offer;
+
+  return (
+    <TodayCard tone="accent" headline={HEADLINES[part]} line={WHAT_IT_TESTS[part]}>
+      {untested.length > 0 ? <Text color="onAccent">{untestedNote(untested)}</Text> : null}
+      <LoadingButton
+        label={`Start assessment ${part}`}
+        action="inverse"
+        fullWidth
+        loading={starting === part}
+        disabled={starting !== null}
+        onPress={() => start(part)}
+      />
+      {part === "B" && offer.redoA ? (
+        <>
+          <Text color="onAccent">
+            Your Assessment A was over 2 weeks ago. Redo it if your strength may have changed.
+          </Text>
+          <TodayCardLink label="Redo assessment A" color="onAccent" onPress={() => start("A")} />
+        </>
+      ) : null}
+      <TodayCardLink label="Not now" color="onAccent" size="sm" onPress={onDismiss} />
+    </TodayCard>
+  );
+}
 
 // Today's Assessment offer: start A or B (and redo a stale A), why it's unavailable, "Results once synced", or open
 // the Results. Every offer can be dismissed. Starting needs no Workout in progress
@@ -75,7 +119,7 @@ export function AssessmentSection({ offer, onDismiss }: { offer: AssessmentOffer
           </Text>
           {offer.untested.length > 0 ? (
             <Text size="sm" color="muted">
-              {`No test suits your injuries and equipment for ${patternsInWords(offer.untested)}, so ${offer.untested.length > 1 ? "they're" : "it's"} estimated from your other results.`}
+              {untestedNote(offer.untested)}
             </Text>
           ) : null}
           {startButton(offer.part, `Start assessment ${offer.part}`)}

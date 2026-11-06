@@ -7,7 +7,7 @@ import type {
   UserProfile,
   Workout,
 } from "@fit/shared";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { EXERCISES } from "./data/exercises";
 import { daysWorkout, equipmentChoices } from "./days-workout";
 import {
@@ -1431,7 +1431,7 @@ describe("the Planned Workout on the phone", () => {
       const { logbook } = await offlineWithAthleticPlan();
       const copy = (await logbook.plannedWorkout()).plannedWorkout!;
 
-      expect(equipmentChoices(copy)).toEqual(["full_gym", "bodyweight_only"]);
+      expect(equipmentChoices(copy)).toEqual(["bodyweight_only"]);
 
       const { plannedExercises, dropped } = daysWorkout(copy, { workoutLength: "long", equipment: "bodyweight_only" });
       const workout = await logbook.startPlannedWorkout({ id: copy.id, plannedExercises }, at("09:00"));
@@ -1523,17 +1523,50 @@ describe("the Planned Workout on the phone", () => {
     expect(await logbook.refreshPlannedWorkout()).toMatchObject({ plannedWorkout: { id: FIRST }, stale: true });
   });
 
-  it("doesn't take an answer from before the upload for the next plan", async () => {
-    let answer: (plan: PlannedWorkout) => void = () => {};
-    const slowServer: PlannedWorkoutSource = { current: () => new Promise((resolve) => (answer = resolve)) };
-    const { logbook } = setup(memoryStorage(), fakePreviousSets(), slowServer);
-    await finishPlank(logbook, "09:00");
+  describe("an answer from before an upload", () => {
+    function slowServer() {
+      const answers: ((plan: PlannedWorkout) => void)[] = [];
+      const rejections: ((error: Error) => void)[] = [];
+      const server: PlannedWorkoutSource = {
+        current: () =>
+          new Promise((resolve, reject) => {
+            answers.push(resolve);
+            rejections.push(reject);
+          }),
+      };
+      return { server, answers, rejections };
+    }
+    const asked = (asks: unknown[], count: number) => vi.waitFor(() => expect(asks).toHaveLength(count));
 
-    const asked = logbook.refreshPlannedWorkout();
-    await logbook.sync();
-    answer(squatPlan(FIRST));
+    it("isn't taken for the next plan: the phone asks again", async () => {
+      const { server, answers } = slowServer();
+      const { logbook } = setup(memoryStorage(), fakePreviousSets(), server);
+      await finishPlank(logbook, "09:00");
 
-    expect((await asked).stale).toBe(true);
+      const refreshed = logbook.refreshPlannedWorkout();
+      await logbook.sync();
+      answers[0](squatPlan(FIRST));
+      await asked(answers, 2);
+      answers[1](squatPlan(NEXT));
+
+      expect(await refreshed).toEqual({ plannedWorkout: squatPlan(NEXT), stale: false });
+    });
+
+    it("leaves the phone waiting when asking again fails", async () => {
+      const { server, answers, rejections } = slowServer();
+      const { logbook } = setup(memoryStorage(), fakePreviousSets(), server);
+      await logbook.startPlannedWorkout(squatPlan(FIRST), at("08:00")).catch(() => {});
+      await logbook.discard().catch(() => {});
+      await finishPlank(logbook, "09:00");
+
+      const refreshed = logbook.refreshPlannedWorkout();
+      await logbook.sync();
+      answers[0](squatPlan(FIRST));
+      await asked(rejections, 2);
+      rejections[1](new Error("no signal"));
+
+      await expect(refreshed).rejects.toThrow("no signal");
+    });
   });
 
   it("isn't stale once the only Pending Workout is deleted", async () => {

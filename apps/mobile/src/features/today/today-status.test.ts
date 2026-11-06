@@ -1,35 +1,7 @@
-import { describe, expect, it } from "vitest";
-import { todayPlan, todayRestDay, todayState, todayStatus } from "./today-status";
+import { describe, expect, it, vi } from "vitest";
+import { todayCard, todayLoggedLine, todayPlan, todayPlanLine, todayRestDay, todayState } from "./today-status";
 
-describe("todayStatus", () => {
-  it("numbers the next Workout against days per week", () => {
-    expect(todayStatus({ state: "loaded", workoutCount: 2, target: 4 })).toBe("Workout 3 of 4 this week");
-  });
-
-  it("says when the week's target is already met", () => {
-    expect(todayStatus({ state: "loaded", workoutCount: 4, target: 4 })).toBe("Workout 5 this week · 4 of 4 done");
-  });
-
-  it("numbers the next Workout without a target", () => {
-    expect(todayStatus({ state: "loaded", workoutCount: 1, target: undefined })).toBe("Workout 2 this week");
-  });
-
-  it("welcomes a first Workout", () => {
-    expect(todayStatus({ state: "first-run", workoutCount: 0, target: 4 })).toBe(
-      "Your first Workout. Add Exercises as you go.",
-    );
-  });
-
-  it("doesn't number the Workout offline, when it can't know this week's count", () => {
-    expect(todayStatus({ state: "offline", workoutCount: 1, target: 4 })).toBe(
-      "No connection. Workouts save on this phone until there is.",
-    );
-  });
-
-  it("says nothing while History loads", () => {
-    expect(todayStatus({ state: "loading", workoutCount: 0, target: 4 })).toBeNull();
-  });
-});
+vi.mock("expo-localization", () => ({ getCalendars: () => [{}] }));
 
 describe("todayState", () => {
   it("is loading until History arrives", () => {
@@ -58,6 +30,14 @@ describe("todayPlan", () => {
 
   it("asks for a connection in place of a stale plan", () => {
     expect(todayPlan({ ...settled, stale: true })).toBe("connect");
+  });
+
+  it("doesn't ask for a connection while an upload or the next plan is on its way", () => {
+    expect(todayPlan({ ...settled, stale: true, syncing: true })).toBe("planning");
+  });
+
+  it("shows a plan that isn't stale whatever is syncing", () => {
+    expect(todayPlan({ ...settled, syncing: true })).toBe("planned");
   });
 
   it("offers nothing during a Workout, stale or not", () => {
@@ -91,5 +71,93 @@ describe("todayRestDay", () => {
 
   it("stays quiet with nothing on offer to sit above", () => {
     expect(todayRestDay("none", finishedOffline, now, 4)).toBeNull();
+  });
+});
+
+describe("todayCard", () => {
+  const ready = {
+    isLoaded: true,
+    state: "loaded",
+    plan: "planned",
+    workoutInProgress: false,
+    assessmentFirst: false,
+    finishedToday: false,
+    restDay: null,
+  } as const;
+
+  it("offers the plan on an ordinary day", () => {
+    expect(todayCard(ready)).toBe("ready");
+  });
+
+  it("waits for the phone and History, so a finished day doesn't flash as ready", () => {
+    expect(todayCard({ ...ready, isLoaded: false })).toBe("loading");
+    expect(todayCard({ ...ready, state: "loading" })).toBe("loading");
+  });
+
+  it("puts a Workout under way first", () => {
+    expect(todayCard({ ...ready, workoutInProgress: true, finishedToday: true })).toBe("resume");
+  });
+
+  it("is done for today once a Workout is finished, whatever else a Rest Day says", () => {
+    expect(todayCard({ ...ready, finishedToday: true, restDay: "days-per-week-reached" })).toBe("done");
+  });
+
+  it("is done for today with no plan to offer next", () => {
+    expect(todayCard({ ...ready, plan: "connect", finishedToday: true })).toBe("done");
+  });
+
+  it("leads with the Assessment when the user hasn't one", () => {
+    expect(todayCard({ ...ready, plan: "none", assessmentFirst: true })).toBe("assessment");
+  });
+
+  it("recommends rest without a Workout finished today", () => {
+    expect(todayCard({ ...ready, restDay: "trained-yesterday" })).toBe("rest");
+  });
+
+  it("stands in for a stale plan", () => {
+    expect(todayCard({ ...ready, plan: "connect" })).toBe("connect");
+    expect(todayCard({ ...ready, plan: "planning" })).toBe("connect");
+  });
+
+  it("offers a Manual Workout with nothing else to show", () => {
+    expect(todayCard({ ...ready, plan: "none" })).toBe("manual");
+  });
+});
+
+describe("todayLoggedLine", () => {
+  const workout = (startedAt: string, endedAt: string, kg: number) => ({
+    startedAt,
+    endedAt,
+    workoutExercises: [
+      { slug: "goblet-squat", sets: [{ kind: "external" as const, kg, reps: 10, loggedAt: startedAt }] },
+    ],
+  });
+
+  it("sums the day's Workouts", () => {
+    const morning = workout("2026-10-21T08:00:00Z", "2026-10-21T08:30:00Z", 20);
+    const evening = workout("2026-10-21T18:00:00Z", "2026-10-21T18:14:00Z", 10);
+    expect(todayLoggedLine([morning, evening])).toBe("2 Sets · 44 min · 300 kg");
+  });
+
+  it("leaves out Volume with none, as on a bodyweight day", () => {
+    const pushUps = {
+      startedAt: "2026-10-21T08:00:00Z",
+      endedAt: "2026-10-21T08:10:00Z",
+      workoutExercises: [
+        { slug: "push-up", sets: [{ kind: "bodyweight" as const, reps: 10, loggedAt: "2026-10-21T08:05:00Z" }] },
+      ],
+    };
+    expect(todayLoggedLine([pushUps])).toBe("1 Set · 10 min");
+  });
+});
+
+describe("todayPlanLine", () => {
+  it("counts the Exercises and Sets, with the time", () => {
+    const plannedExercises = [{ sets: 3 }, { sets: 4 }];
+    expect(todayPlanLine(plannedExercises, 2640)).toBe("2 Exercises · 7 Sets · About 44 min");
+  });
+
+  it("uses the singular for one", () => {
+    expect(todayPlanLine([{ sets: 1 }], 600)).toBe("1 Exercise · 1 Set · About 10 min");
   });
 });

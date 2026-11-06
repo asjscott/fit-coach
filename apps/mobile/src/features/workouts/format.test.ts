@@ -219,6 +219,11 @@ describe("estimatedTimeLabel", () => {
     expect(estimatedTimeLabel(2640)).toBe("About 44 min");
     expect(estimatedTimeLabel(1725)).toBe("About 29 min");
   });
+
+  it("stays in minutes over an hour, to match the Workout Length", () => {
+    expect(estimatedTimeLabel(3600)).toBe("About 60 min");
+    expect(estimatedTimeLabel(4500)).toBe("About 75 min");
+  });
 });
 
 describe("timeStat", () => {
