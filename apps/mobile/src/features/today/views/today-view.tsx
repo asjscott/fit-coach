@@ -198,7 +198,7 @@ export default function TodayView() {
             label="Start manual workout"
             size="md"
             action="secondary"
-            variant="link"
+            variant="outline"
             fullWidth
             loading={starting}
             disabled={startingPlan}

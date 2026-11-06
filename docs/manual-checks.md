@@ -59,18 +59,18 @@ Result codes: **✅ pass** · **❌ fail** · **⚠️ works but feels off** · 
 
 The web walk covered each card below in light mode, and the plan card in dark. These check how they feel on a phone.
 
-- [ ] **P21** Before an Assessment, the coloured card leads with Start assessment A, and "Start manual workout" is the smaller option.
-  - iOS: Result: · Android: Result: · Notes:
-- [ ] **P22** On a day to train, the card, the week tiles and the day circles all fit on the first screen, and "Time to train." reads clearly.
-  - iOS: Result: · Android: Result: · Notes:
-- [ ] **P23** "See or change this Workout" opens the sheet: Exercises, targets, Length, equipment and Alternative Exercises. Start stays in reach on a long list, and starting from the sheet opens the Workout.
-  - iOS: Result: · Android: Result: · Notes:
-- [ ] **P24** After finishing a Workout, Today says "Done for today." with its Sets, time and Volume, and "Train again" opens the sheet. No "Connect to plan your next Workout" flashes.
-  - iOS: Result: · Android: Result: · Notes:
-- [ ] **P25** The day after training, with the week's Workouts still fitting, Today says "Rest today." and "Train anyway" opens the sheet. Check it in light and dark.
-  - iOS: Result: · Android: Result: · Notes:
-- [ ] **P26** With a user whose Exercises all stay, Full gym isn't offered. It's still offered when it would change an Exercise.
-  - iOS: Result: · Android: Result: · Notes:
+- [x] **P21** Before an Assessment, the coloured card leads with Start assessment A, and "Start manual workout" is the smaller option.
+  - iOS: Result: Pass· Android: Result: · Notes: start manual workout doesn;t look like a button, it's just plain text
+- [x] **P22** On a day to train, the card, the week tiles and the day circles all fit on the first screen, and "Time to train." reads clearly.
+  - iOS: Result: PAss· Android: Result: · Notes:
+- [x] **P23** "See or change this Workout" opens the sheet: Exercises, targets, Length, equipment and Alternative Exercises. Start stays in reach on a long list, and starting from the sheet opens the Workout.
+  - iOS: Result:Pass · Android: Result: · Notes:
+- [x] **P24** After finishing a Workout, Today says "Done for today." with its Sets, time and Volume, and "Train again" opens the sheet. No "Connect to plan your next Workout" flashes.
+  - iOS: Result:Pass · Android: Result: · Notes: Too much padding at the top of the cards, they don't all have to be the same size. So Done for today can go smaller. Too much padding at the top on all cards.
+- [x] **P25** The day after training, with the week's Workouts still fitting, Today says "Rest today." and "Train anyway" opens the sheet. Check it in light and dark.
+  - iOS: Result: Pass· Android: Result: · Notes:
+- [x] **P26** With a user whose Exercises all stay, Full gym isn't offered. It's still offered when it would change an Exercise.
+  - iOS: Result: Pass · Android: Result: · Notes:
 
 ## Real offline (airplane mode)
 
