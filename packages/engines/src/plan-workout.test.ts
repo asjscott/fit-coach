@@ -344,14 +344,14 @@ describe("planWorkout", () => {
       // goblet squat: row 2.3, RDL 2.084 (glutes 13/16), push-up 1.425, plank, bird dog 1.256
       // row: unchanged
       // RDL: push-up 1.425, lateral raise 1.15, plank 1.163 (glutes 10/16)
-      // push-up: lateral raise 1.15, plank 1.0125 (abs 7/10). Abs still at 3, plank next
+      // push-up: lateral raise 1.15, then plank and bird dog tie at 1.0125 (abs 7/10), and bird dog's Sets are longer
       expect(slugs().slice(0, 6)).toEqual([
         "goblet-squat",
         "one-arm-dumbbell-row",
         "dumbbell-romanian-deadlift",
         "push-up",
         "dumbbell-lateral-raise",
-        "plank",
+        "bird-dog",
       ]);
     });
 
@@ -495,24 +495,24 @@ describe("planWorkout", () => {
   });
 
   describe("from week to week", () => {
-    // Identical Muscles and Load Type, so identical scores; library order alone would pick split squat
+    // Identical Muscles, Load Type and Set time, so identical scores; the tie order alone would pick reverse lunge
     const workingLevels = [reps("split-squat", 10), reps("reverse-lunge", 10)];
     const firstWith = (startedAt: string, timeZone = "America/New_York") =>
-      slugs({ workingLevels, timeZone, workouts: [{ ...logged("w1", "reverse-lunge", 3), startedAt }] })[0];
+      slugs({ workingLevels, timeZone, workouts: [{ ...logged("w1", "split-squat", 3), startedAt }] })[0];
 
     it("gives a tie to last week's Exercise", () => {
-      expect(slugs({ workingLevels })[0]).toBe("split-squat");
-      expect(firstWith("2026-10-29T18:00:00.000Z")).toBe("reverse-lunge");
+      expect(slugs({ workingLevels })[0]).toBe("reverse-lunge");
+      expect(firstWith("2026-10-29T18:00:00.000Z")).toBe("split-squat");
     });
 
-    it("gives a tie by library order when the Exercise was trained before last week", () => {
-      expect(firstWith("2026-10-22T18:00:00.000Z")).toBe("split-squat");
+    it("gives a tie by the tie order when the Exercise was trained before last week", () => {
+      expect(firstWith("2026-10-22T18:00:00.000Z")).toBe("reverse-lunge");
     });
 
     it("goes by the user's timezone for what last week was", () => {
       // Monday 03:00 UTC is still Sunday in New York, the week before last
-      expect(firstWith("2026-10-26T03:00:00.000Z", "UTC")).toBe("reverse-lunge");
-      expect(firstWith("2026-10-26T03:00:00.000Z")).toBe("split-squat");
+      expect(firstWith("2026-10-26T03:00:00.000Z", "UTC")).toBe("split-squat");
+      expect(firstWith("2026-10-26T03:00:00.000Z")).toBe("reverse-lunge");
     });
 
     it("keeps the same Exercises when the week after starts from nothing", () => {
@@ -533,10 +533,13 @@ describe("planWorkout", () => {
 
     it("ranks a Ballistic Exercise higher for athletic than for build_muscle, with the same inputs", () => {
       const onKettlebells = { equipmentProfile: kettlebells, workingLevels: [], assessment };
-      expect(slugs({ ...onKettlebells, goal: "athletic" }).slice(1, 3)).toEqual(["kettlebell-swing", "renegade-row"]);
+      expect(slugs({ ...onKettlebells, goal: "athletic" }).slice(1, 3)).toEqual([
+        "single-arm-kettlebell-swing",
+        "renegade-row",
+      ]);
       expect(slugs({ ...onKettlebells, goal: "build_muscle" }).slice(1, 3)).toEqual([
         "renegade-row",
-        "kettlebell-swing",
+        "single-arm-kettlebell-swing",
       ]);
     });
 
@@ -604,8 +607,12 @@ describe("planWorkout", () => {
     });
 
     it("isn't a one-sided swing, even when nothing else is available", () => {
-      const workingLevels = [kg("kettlebell-swing", 16), kg("single-arm-kettlebell-swing", 16), kg("goblet-squat", 16)];
-      expect(slugs({ goal: "athletic", equipmentProfile: kettlebells, workingLevels })[0]).toBe("kettlebell-swing");
+      // 16 Sets of RDL fill hamstrings and glutes, so goblet squat outscores the swing unless a rule forces the swing
+      const workouts = [logged("w1", "dumbbell-romanian-deadlift", 16)];
+      const workingLevels = [kg("single-arm-kettlebell-swing", 16), kg("goblet-squat", 16)];
+      expect(slugs({ goal: "athletic", equipmentProfile: kettlebells, workingLevels, workouts })[0]).toBe(
+        "goblet-squat",
+      );
     });
 
     it("is left out when none is available", () => {
@@ -693,14 +700,14 @@ describe("planWorkout", () => {
       );
 
     it("saves both choices on each Exercise, each with its target", () => {
-      const squat = planned("goblet-squat", {
-        workingLevels: [kg("goblet-squat", 20.3), reps("bodyweight-squat", 18)],
+      const squat = planned("dumbbell-bulgarian-split-squat", {
+        workingLevels: [kg("dumbbell-bulgarian-split-squat", 20.3), reps("bulgarian-split-squat", 18)],
       });
       expect(squat?.alternatives?.full_gym).toEqual([
-        { slug: "goblet-squat", target: { unit: "kg", kg: 20, reps: 8 } },
+        { slug: "dumbbell-bulgarian-split-squat", target: { unit: "kg", kg: 20, reps: 8 } },
       ]);
       expect(squat?.alternatives?.bodyweight_only?.[0]).toEqual({
-        slug: "bodyweight-squat",
+        slug: "bulgarian-split-squat",
         target: { unit: "reps", reps: 18 },
       });
     });
@@ -710,7 +717,10 @@ describe("planWorkout", () => {
         ...dumbbellsAndBench,
         loads: { dumbbells: { kind: "fixed", weightsKg: [16, 24] } },
       };
-      const squat = planned("goblet-squat", { equipmentProfile: fixed, workingLevels: [kg("goblet-squat", 20.3)] });
+      const squat = planned("dumbbell-bulgarian-split-squat", {
+        equipmentProfile: fixed,
+        workingLevels: [kg("dumbbell-bulgarian-split-squat", 20.3)],
+      });
       expect(squat?.target).toEqual({ unit: "kg", kg: 24, reps: 8 });
       expect(squat?.alternatives?.full_gym?.[0].target).toEqual({ unit: "kg", kg: 20, reps: 8 });
     });
@@ -727,8 +737,8 @@ describe("planWorkout", () => {
     });
 
     it("works out a target the Assessment didn't store", () => {
-      const [best] = planned("goblet-squat")?.alternatives?.bodyweight_only ?? [];
-      expect(best).toMatchObject({ slug: "bodyweight-squat", target: { unit: "reps" } });
+      const [best] = planned("dumbbell-bulgarian-split-squat")?.alternatives?.bodyweight_only ?? [];
+      expect(best).toMatchObject({ slug: "pistol-squat", target: { unit: "reps" } });
     });
 
     it("respects the user's injuries", () => {

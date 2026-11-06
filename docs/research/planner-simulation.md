@@ -2,6 +2,8 @@
 
 The rerun asked for by spec #77 and ticket #87. The percentages in `exercise-selection-by-goal.md` came from a throwaway greedy planner and assumed the hamstring tags were removed. These numbers come from `planWorkout()` and `daysWorkout()`, with the tags kept. Written 2026-11-04.
 
+**Update, 2026-11-06:** ties no longer fall to library order, so every table here moved slightly, such as build_muscle at 4 days Standard going from 70 Sets to 68. Back squat and bench Sets at that row held. Library order could still decide outcomes before this: reversing it took recomp's bench to 0. Rerun the command below for current numbers, and `plan-outcomes.test.ts` pins the outcomes that matter.
+
 To reproduce: `pnpm --filter @fit/engines simulate` (`packages/engines/scripts/simulate-plans.ts`) prints every table.
 
 ## Result

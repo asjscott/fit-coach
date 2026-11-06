@@ -16,6 +16,7 @@ The agent path is the web build at iPhone 13 size, driven by [driver.mjs](driver
   until curl -sf -o /dev/null http://localhost:8081; do sleep 1; done
   ```
 
+- **No Clerk account or `.env` to hand?** Run `pnpm web:signed-in` instead of both of these, and use port 8187.
 - **The API** (`apps/api`, `pnpm dev`) at the `EXPO_PUBLIC_API_URL` in `.env`. Without it, signed-in screens show "Couldn't load your account".
 - **Playwright's Chromium.** It was already in `~/Library/Caches/ms-playwright` when this skill was written. A missing browser should be fixed by `pnpm exec playwright install chromium`, but that command hasn't been tested here.
 

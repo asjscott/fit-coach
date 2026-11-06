@@ -14,6 +14,14 @@ Issues and specs for this repo live as GitHub issues. Use the `gh` CLI for all o
 
 Infer the repo from `git remote -v`; `gh` does this automatically when run inside a clone.
 
+## Merging when green
+
+Auto-merge and branch protection aren't available on this repo, and a status read once can be stale. Tie the merge to the watch, so a failed or unfinished check stops it:
+
+```bash
+gh pr checks <number> --watch && gh pr merge <number> --merge
+```
+
 ## Pull requests as a triage surface
 
 **PRs as a request surface: no.** _(Set to `yes` if this repo treats external PRs as feature requests; `/triage` reads this flag.)_
