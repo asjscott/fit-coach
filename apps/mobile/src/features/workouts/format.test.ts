@@ -9,8 +9,12 @@ import {
   setParts,
   setsSummary,
   timeLabel,
+  estimatedTimeLabel,
   timeStat,
   weekDatesLabel,
+  noAlternativeLabel,
+  plannedSetsLabel,
+  setTargetLabel,
   workoutExerciseSummary,
   workoutTimesLabel,
   workoutWhenLabel,
@@ -154,9 +158,71 @@ describe("workoutExerciseSummary", () => {
   });
 });
 
+describe("workoutExerciseSummary in a Workout started from a plan", () => {
+  const planned = { sets: 3, target: { unit: "kg", kg: 20, reps: 8 } } as const;
+
+  it("shows the target Sets until something is logged, ahead of the Previous Sets", () => {
+    expect(workoutExerciseSummary([], [lifted(18, 10)], planned)).toBe("3 sets · 20 kg × 8");
+    expect(workoutExerciseSummary([lifted(20, 6)], [lifted(18, 10)], planned)).toBe("1 set · 20 kg × 6");
+  });
+
+  it("says the target is per side for a one-sided Exercise, as Today does", () => {
+    expect(workoutExerciseSummary([], undefined, planned, true)).toBe("3 sets · 20 kg × 8 per side");
+  });
+});
+
+describe("setTargetLabel", () => {
+  it.each([
+    ["a load", { unit: "kg", kg: 22.5, reps: 8 }, "22.5 kg × 8"],
+    ["reps", { unit: "reps", reps: 12 }, "12 reps"],
+    ["seconds", { unit: "seconds", seconds: 40 }, "40 s"],
+    ["a band level", { unit: "band", level: "medium", reps: 12 }, "Medium band × 12"],
+    ["a two-word band level", { unit: "band", level: "extra_heavy", reps: 12 }, "Extra heavy band × 12"],
+  ] as const)("reads %s the way a Set does", (_name, target, label) => {
+    expect(setTargetLabel(target)).toBe(label);
+  });
+
+  it("shows a load the profile has as it is, without floating-point noise", () => {
+    expect(setTargetLabel({ unit: "kg", kg: 6.25, reps: 8 })).toBe("6.25 kg × 8");
+    expect(setTargetLabel({ unit: "kg", kg: 2.5 + 0.1 + 0.2, reps: 8 })).toBe("2.8 kg × 8");
+  });
+});
+
+describe("noAlternativeLabel", () => {
+  it("names the equipment and the Exercise that dropped out", () => {
+    expect(noAlternativeLabel("bodyweight_only", "Lat pulldown")).toBe("No Bodyweight only option for lat pulldown");
+    expect(noAlternativeLabel("full_gym", "Chin-up")).toBe("No Full gym option for chin-up");
+  });
+});
+
+describe("plannedSetsLabel", () => {
+  const planned = { sets: 3, target: { unit: "kg", kg: 20, reps: 8 } } as const;
+
+  it("counts the Sets before the target", () => {
+    expect(plannedSetsLabel(planned)).toBe("3 sets · 20 kg × 8");
+    expect(plannedSetsLabel({ ...planned, sets: 1 })).toBe("1 set · 20 kg × 8");
+  });
+
+  it("says the target is per side for a one-sided Exercise", () => {
+    expect(plannedSetsLabel(planned, true)).toBe("3 sets · 20 kg × 8 per side");
+  });
+});
+
 describe("previousSetsLabel", () => {
   it("reads like the Sets summary, after Last", () => {
     expect(previousSetsLabel([lifted(18, 10), lifted(18, 10), lifted(18, 8)])).toBe("Last: 18 kg × 10, 10, 8");
+  });
+});
+
+describe("estimatedTimeLabel", () => {
+  it("gives the time to the nearest minute", () => {
+    expect(estimatedTimeLabel(2640)).toBe("About 44 min");
+    expect(estimatedTimeLabel(1725)).toBe("About 29 min");
+  });
+
+  it("stays in minutes over an hour, to match the Workout Length", () => {
+    expect(estimatedTimeLabel(3600)).toBe("About 60 min");
+    expect(estimatedTimeLabel(4500)).toBe("About 75 min");
   });
 });
 

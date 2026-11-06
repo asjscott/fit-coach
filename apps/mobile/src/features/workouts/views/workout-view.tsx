@@ -20,7 +20,7 @@ import { fonts, spacing, useTheme } from "@/theme";
 import { errorMessage } from "@/utils/error-message";
 import { CurrentExerciseBox } from "../components/current-exercise-box";
 import { WorkoutExerciseRow } from "../components/workout-exercise-row";
-import { useCurrentWorkoutExercise } from "../current-workout-exercise";
+import { nextPlannedExercise, useCurrentWorkoutExercise } from "../current-workout-exercise";
 import { elapsedClockLabel, kgLabel, timeLabel } from "../format";
 import { useHasEnded } from "../hooks/use-has-ended";
 import { useLeaveWorkout } from "../hooks/use-leave-workout";
@@ -49,9 +49,10 @@ function InProgress({ workout }: { workout: InProgressWorkout }) {
   const [confirmingDiscard, setConfirmingDiscard] = useState(false);
   const { workoutExercises } = workout;
   const tests = workout.assessment && primaryEquipment ? testProgress(workout, primaryEquipment) : undefined;
+  const nextPlanned = nextPlannedExercise(workoutExercises);
   const [currentId, choose] = useCurrentWorkoutExercise(
     workoutExercises.map((we) => we.id),
-    tests?.nextTestId,
+    tests?.nextTestId ?? nextPlanned,
   );
   const nextTestId = tests?.nextTestId;
 

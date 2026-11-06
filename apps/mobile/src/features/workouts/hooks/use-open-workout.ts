@@ -1,18 +1,17 @@
 import { router } from "expo-router";
 import { useState } from "react";
 import { useToast } from "@/contexts/toast-context";
-import { useLogbook } from "../logbook-provider";
+import { useLogbook, type PlannedWorkoutToStart } from "../logbook-provider";
 
 // Starting a Workout saves it on the phone first; false, after a toast, when that fails
-export function useStartWorkout() {
-  const { start } = useLogbook();
+function useStarting<Args extends unknown[]>(start: (...args: Args) => Promise<void>) {
   const { showToast } = useToast();
   const [starting, setStarting] = useState(false);
 
-  const startWorkout = async () => {
+  const startWorkout = async (...args: Args) => {
     setStarting(true);
     try {
-      await start();
+      await start(...args);
       return true;
     } catch (err) {
       showToast("Couldn't start a Workout", { error: err });
@@ -23,6 +22,13 @@ export function useStartWorkout() {
   };
 
   return { startWorkout, starting };
+}
+
+export const useStartWorkout = () => useStarting(useLogbook().start);
+
+export function useStartPlannedWorkout() {
+  const { startWorkout, starting } = useStarting<[PlannedWorkoutToStart]>(useLogbook().startPlannedWorkout);
+  return { startPlannedWorkout: startWorkout, startingPlan: starting };
 }
 
 // Resuming opens the In-progress Workout, unless it was forgotten: then `forgotten` asks for the

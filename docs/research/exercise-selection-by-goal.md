@@ -344,7 +344,7 @@ The rep-cap guard depends on the user's Working Levels, so it isn't in those num
   - Each pick adds 3 Sets, each Exercise appears once a Workout, 5 minutes of warm-up, 10 credited Sets per Muscle per day, and no injuries.
   - Target budgets at 4 days.
   - Block sizes of 1 to 4 changed details but not the conclusions. The 3-Set results are the ones shown.
-  - Rerun the tests on the real planner before relying on the percentages.
+  - Rerun the tests on the real planner before relying on the percentages. Done: see [planner-simulation.md](planner-simulation.md).
 - **Credit is a proxy.** It rests on tags, and tags drive picks (the `abs` tag on push-ups, for instance). The 0.5 was validated on a different classification, as the existing file notes.
 - **`secondsPerSet` may understate one-sided work.** A one-sided Set is per side, yet one-sided squat-pattern Exercises average 116 seconds against 125 for two-sided, and hinges 105 against 107. If lower-body one-sided Sets really take longer, the one-sided boost costs more time than shown.
 - **Energy numbers are rough.** Oxygen measures understate anaerobic work [18], samples are small and mostly young men, and my kcal estimates are arithmetic on single studies. The conclusion is safe only because the gap to diet is so large.

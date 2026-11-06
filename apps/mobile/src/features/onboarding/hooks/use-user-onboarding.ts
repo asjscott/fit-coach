@@ -1,4 +1,5 @@
 import { zodResolver } from "@hookform/resolvers/zod";
+import { usualWorkoutLength } from "@fit/engines";
 import { UserProfile } from "@fit/shared";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
@@ -45,6 +46,8 @@ export function useUserOnboarding() {
     defaultValues: {
       ...profile,
       daysPerWeek: profile.daysPerWeek ?? 3,
+      // A new user must choose; an existing user without one edits from Standard
+      workoutLength: isEditing ? usualWorkoutLength(profile) : profile.workoutLength,
       trainingSetup: primaryEquipment && toTrainingSetup(primaryEquipment),
       equipment: groupTags(primaryEquipment?.tags ?? []),
       loads: toLoadsForm(primaryEquipment?.loads),

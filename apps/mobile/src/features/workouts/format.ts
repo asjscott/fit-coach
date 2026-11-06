@@ -1,5 +1,6 @@
-import type { Set, SetValues, Workout } from "@fit/shared";
+import type { BuiltInEquipment, InProgressWorkoutExercise, Set, SetTarget, SetValues, Workout } from "@fit/shared";
 import { getCalendars } from "expo-localization";
+import { bandLevelLabels } from "../equipment/loads";
 
 // How Workouts and Sets read on screen
 
@@ -41,6 +42,9 @@ const statLabel = ({ value, unit }: { value: string; unit: string }) => `${value
 
 // A length of time as a Stat's value and unit, to the nearest minute
 export const timeStat = (ms: number) => minutesStat(Math.round(ms / 60_000));
+
+// How long a Workout should take, in minutes like its Workout Length: "About 44 min"
+export const estimatedTimeLabel = (seconds: number) => `About ${Math.round(seconds / 60)} min`;
 
 export const durationLabel = ({ startedAt, endedAt }: WorkoutTimes) =>
   statLabel(timeStat(Date.parse(endedAt) - Date.parse(startedAt)));
@@ -146,9 +150,46 @@ export function setsSummary(sets: readonly Set[]) {
 // Previous Sets as a reference while logging: "Last: 18 kg × 10, 10, 8"
 export const previousSetsLabel = (sets: readonly Set[]) => `Last: ${setsSummary(sets)}`;
 
-// A collapsed Workout Exercise's line: "3 sets · 18 kg × 10, 10, 8", else its Previous Sets, else "Not started"
-export function workoutExerciseSummary(sets: readonly Set[], previous?: readonly Set[]) {
+// A Set's target as a Set reads: "20 kg × 8", "12 reps", "40 s", "Medium band × 12". A profile's loads are summed, so a
+// kg can carry floating-point noise, unlike a logged Set's
+export function setTargetLabel(target: SetTarget) {
+  switch (target.unit) {
+    case "kg":
+      return describeSet({ kind: "external", kg: Math.round(target.kg * 100) / 100, reps: target.reps });
+    case "reps":
+      return describeSet({ kind: "bodyweight", reps: target.reps });
+    case "seconds":
+      return describeSet({ kind: "timed", seconds: target.seconds });
+    case "band":
+      return `${bandLevelLabels[target.level]} band × ${target.reps}`;
+  }
+}
+
+type PlannedSets = NonNullable<InProgressWorkoutExercise["planned"]>;
+
+// What the plan sets for an Exercise: "3 sets · 20 kg × 8", with " per side" for a one-sided Exercise
+export const plannedSetsLabel = ({ sets, target }: PlannedSets, unilateral = false) =>
+  `${setsLabel(sets)} · ${setTargetLabel(target)}${unilateral ? " per side" : ""}`;
+
+export const builtInEquipmentLabels: Record<BuiltInEquipment, string> = {
+  full_gym: "Full gym",
+  bodyweight_only: "Bodyweight only",
+};
+
+// Why the Workout is shorter on a built-in choice: "No Bodyweight only option for lat pulldown"
+export const noAlternativeLabel = (equipment: BuiltInEquipment, name: string) =>
+  `No ${builtInEquipmentLabels[equipment]} option for ${name.toLowerCase()}`;
+
+// A collapsed Workout Exercise's line: "3 sets · 18 kg × 10, 10, 8", else its target Sets, else its Previous Sets,
+// else "Not started"
+export function workoutExerciseSummary(
+  sets: readonly Set[],
+  previous?: readonly Set[],
+  planned?: PlannedSets,
+  unilateral?: boolean,
+) {
   if (sets.length) return `${setsLabel(sets.length)} · ${setsSummary(sets)}`;
+  if (planned) return plannedSetsLabel(planned, unilateral);
   return previous?.length ? previousSetsLabel(previous) : "Not started";
 }
 

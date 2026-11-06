@@ -1,8 +1,7 @@
 import { LatestAssessment } from "@fit/shared";
-import { useFocusEffect } from "expo-router";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useState } from "react";
 import { useApi } from "@/api";
-import { useLogbook } from "@/features/workouts/logbook-provider";
+import { useReloadOnVisit } from "@/features/workouts/hooks/use-reload-on-visit";
 import { errorMessage } from "@/utils/error-message";
 
 // The newest Assessment and its Working Levels from GET /assessments/latest: undefined until it arrives (or when it
@@ -10,7 +9,6 @@ import { errorMessage } from "@/utils/error-message";
 // uploads, since that may be the B that completes an Assessment
 export function useLatestAssessment() {
   const api = useApi();
-  const { pending } = useLogbook();
   const [latest, setLatest] = useState<LatestAssessment | undefined>(undefined);
   const [error, setError] = useState<string | null>(null);
 
@@ -23,17 +21,7 @@ export function useLatestAssessment() {
     }
   }, [api]);
 
-  useFocusEffect(
-    useCallback(() => {
-      refresh();
-    }, [refresh]),
-  );
-
-  const pendingCount = useRef(pending.length);
-  useEffect(() => {
-    if (pending.length < pendingCount.current) refresh();
-    pendingCount.current = pending.length;
-  }, [pending.length, refresh]);
+  useReloadOnVisit(refresh);
 
   return { latest, error, refresh };
 }

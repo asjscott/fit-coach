@@ -1,7 +1,8 @@
 # Workouts: how the pieces connect
 
-Logging, Pending Workouts, sync and History (spec #2). Why the phone holds only unfinished and Pending Workouts:
-`docs/adr/0001-history-lives-on-the-server.md`.
+Logging, Pending Workouts, sync and History (spec #2), the Assessment (spec #29), and Planned Workouts (spec #77). Why
+the phone holds only unfinished and Pending Workouts: `docs/adr/0001-history-lives-on-the-server.md`. Why the server
+builds plans and the phone keeps a copy: `docs/adr/0003-the-server-builds-planned-workouts.md`.
 
 ## Flow
 
@@ -11,7 +12,8 @@ screens (apps/mobile/src/features/workouts/views)
        ├─ Logbook (packages/engines/src/logbook.ts): every rule with no UI; the main test seam
        │    ├─ DeviceStorage: device-storage.ts (phone, SQLite) / device-storage.web.ts (web, localStorage)
        │    ├─ WorkoutUploader: POST /workouts through useApi
-       │    └─ PreviousSetsSource: GET /workouts/previous-sets?slug= through useApi (4 s timeout)
+       │    ├─ PreviousSetsSource: GET /workouts/previous-sets?slug= through useApi (4 s timeout)
+       │    └─ PlannedWorkoutSource: POST /planned-workouts/current through useApi
        └─ useSyncTriggers: sync() on foreground and on reconnect (expo-network)
 History (history-provider.tsx, hooks/use-history.ts): GET /workouts, held in memory only, paged back far enough to
   cover the 8 weeks of weekly Volume; Pending Workouts merged in
@@ -121,8 +123,77 @@ Schemas: packages/shared/src/assessments.ts; Set.rpe and Workout.assessment in w
 - **Stored Assessments without a field the schema later required** (`referenceStrength`, `maximum`, `bStartedAt`)
   fail to parse in `findLatestAssessment`: dev data only, so drop the collection.
 
+## Planned Workouts (spec #77)
+
+The Coach's next Workout on Today, built by the server from the Weekly Budget, and kept on the phone so it works with no
+signal. Simulation of the real planner: `docs/research/planner-simulation.md` (`pnpm --filter @fit/engines simulate`).
+
+```text
+planWorkout (packages/engines/src/plan-workout.ts): pure, only the server calls it. Gives weekStart, plannedExercises
+  in priority order, and cue
+  ├─ possibleExercises: primary Equipment Profile, injuries, a target it can be prescribed at. Then pickableExercises:
+  │  the rep cap and variety cap guards. Their order settles a tie: last week's first, then the library's
+  ├─ Week Ledger (week-ledger.ts): weekLedger, recalculated from logged Sets; mondayOf is the server's week
+  ├─ Weekly Budget (weekly-budget.ts): DOSES, DAYS_SCALE and the limits, weeklyBudget, fillOrder
+  ├─ scoreExercise (plan-score.ts): every tilt, in one place
+  └─ withAlternatives (alternative-exercises.ts): each Exercise's options for Full gym and Bodyweight only, saved in
+     the plan. What's possible stays; only what's pickable stands in. Both built-ins are BUILT_IN_EQUIPMENT in
+     equipment.ts
+API (apps/api/src/planned-workouts.ts, routes/planned-workouts.ts): the current plan, built if planIsDue
+  (plan-rebuild.ts), and rebuilt after every upload (routes/workouts.ts) and Profile change (routes/users.ts)
+Phone
+  ├─ Logbook: plannedWorkout, refreshPlannedWorkout, startPlannedWorkout; key logbook:planned-workout
+  ├─ usePlannedWorkout (features/today/hooks): the copy, asking the server on every Today visit
+  ├─ useDaysWorkout: the user's choices over daysWorkout (days-workout.ts), held in memory until Start
+  ├─ Today (features/today/views/today-view.tsx): one card for the day (`todayCard` in today-status.ts, drawn by today-card.tsx), and planned-workout-sheet.tsx with the Exercises, targets, Length and equipment
+  │  (rest-day.ts). todayPlan (today-status.ts) gates both: a plan, stale or not, and no In-progress Workout
+  ├─ CurrentUserProvider: starts from stored-user.ts, so Goal and usual Length survive a cold start offline
+  └─ useSendTimeZone: keeps User.timeZone in step, for the server's weeks
+Schemas: packages/shared/src/planned-workouts.ts
+```
+
+### Gotchas
+
+- **The stored plan is always the Long version.** `daysWorkout` applies equipment first, so the cut times what's really
+  done, then cuts, then orders. The cut follows the order the planner added Sets: a 4th Set carries `fourthSetAfter`,
+  its place among the picks, and goes last on a plan stored without it. A lone Set can remain.
+- **The phone asks, the server decides.** POST `/planned-workouts/current` runs on every Today visit and after every
+  sync. It's idempotent, as `planIsDue` compares `builtFrom` (`planInputsKey`) and `weekStart`, so a failed rebuild is
+  just still due and logs rather than fails the request. A new plan input goes in `PlanInputs`.
+- **A stale plan is never shown** (`PlannedWorkoutCopy.stale`). It goes stale while a Pending Workout exists and from an
+  upload until the next answer (`awaitingNextPlan`). Today then says "Connect to plan your next Workout", but only once nothing is on its way (`syncing` on the Logbook provider), so an online finish never shows it. An answer that an upload overtakes is asked for again, not kept.
+- **Starting takes a snapshot.** Exercises are copied in with `planned: {sets, target}`, dropped at Finish, so a rebuild
+  can't touch a Workout under way. Discarding it shows the copy again. No Sets are logged at Start. `nextSetDraft` goes
+  test load, then last Set, then target.
+- **A Workout started from a plan opens on its first Exercise short of its target** (`nextPlannedExercise`), not the
+  last one as a Manual Workout does.
+- **`plannedWorkoutId` survives any edit**, and a finished Workout marks its plan finished only if it's still current.
+  A plan replaced meanwhile stays replaced, and the link still points at a kept plan.
+- **A stored Working Level wins unless it's for a way of doing the Exercise this profile doesn't have.** Otherwise the
+  planner seeds one from the Assessment's Reference Strengths, which covers Full gym, Bodyweight only and profiles added
+  since. A target is rounded to the profile's loads, and an Exercise under the empty bar isn't prescribed.
+- **`target.kg` is a profile load, not forced to 0.25 steps**, while a logged `Set.kg` is: the Logbook rounds the draft.
+- **A Full gym choice changes little for most users.** An Exercise still possible stays, so a user with no equipment
+  gets the same bodyweight Workout, and a Full home gym only sees loads rounded to the built-in table.
+- **`ballistic` needs `pnpm --filter @fit/api seed:exercises`** on the real database (needs `.env`, so it's a human
+  step). `findExercises` parses stored docs, so an older collection reads as not Ballistic rather than failing.
+- **Build and tune with the simulation.** Scores tie often, as many Exercises share budgeted credits. The planner is
+  deterministic, so ties fall to last week's Exercises and then library order.
+
 ## Running things
 
 - API without the real database or Clerk: `pnpm --filter @fit/api dev:local` (in-memory MongoDB replica set; `X-Dev-User` header
   picks the user). `apps/api/.env` points at the real database.
 - Web storage in real browsers: `pnpm --filter @fit/mobile test:web`.
+- The signed-in app without Clerk or `.env` (how #87 walked M5). Keep all of this uncommitted, in a scratch folder:
+  - An untracked `apps/mobile/metro.config.js` whose `resolver.resolveRequest` sends `@clerk/expo` and its subpaths to a
+    stub with `ClerkProvider`, `useAuth` (signed in, `getToken` gives null), `useClerk`, `useHostedAuth` and `tokenCache`.
+    Add the stub's folder to `watchFolders`.
+  - `PORT=3187 CORS_ORIGINS=http://localhost:8187 pnpm --filter @fit/api dev:local`.
+  - `CI=1 EXPO_PUBLIC_API_URL=http://localhost:3187 EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY=pk_test_x pnpm exec expo start --port 8187 --clear`,
+    from `apps/mobile`, with those variables in the process, never a file.
+  - Playwright at phone size, adding `x-dev-user` in `context.route` rather than from the page, since CORS refuses that
+    header. A new `x-dev-user` is a new account.
+  - For offline, abort the API in the same route and override `navigator.onLine`. Don't use `context.setOffline`: in
+    dev, routes load from Metro on demand, so it fails with a red "Failed to fetch" that a phone never shows.
+  - Restart with `--clear` after an edit, or a worktree keeps serving old code.

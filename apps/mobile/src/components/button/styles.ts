@@ -1,7 +1,8 @@
 import { StyleSheet } from "react-native";
 import { radii, spacing, type Colors, type FontSize } from "@/theme";
 
-export type ButtonAction = "primary" | "secondary" | "positive" | "negative" | "default";
+// inverse: the main action on an accent background
+export type ButtonAction = "primary" | "secondary" | "positive" | "negative" | "default" | "inverse";
 export type ButtonVariant = "solid" | "outline" | "link";
 export type ButtonSize = "xs" | "sm" | "md" | "lg" | "xl";
 
@@ -16,7 +17,7 @@ export const buttonSizes: Record<ButtonSize, { height: number; paddingX: number;
 // Foreground colour for text, icons and spinner
 export const buttonForeground = (colors: Colors, action: ButtonAction, variant: ButtonVariant) => {
   if (variant === "solid") {
-    return action === "secondary" || action === "default" ? colors.text : colors.onAccent;
+    return action === "secondary" || action === "default" || action === "inverse" ? colors.text : colors.onAccent;
   }
   return {
     primary: colors.accent,
@@ -24,6 +25,7 @@ export const buttonForeground = (colors: Colors, action: ButtonAction, variant: 
     positive: colors.success,
     negative: colors.danger,
     default: colors.text,
+    inverse: colors.text,
   }[action];
 };
 
@@ -34,6 +36,7 @@ export const buttonBackground = (colors: Colors, action: ButtonAction) =>
     positive: colors.success,
     negative: colors.danger,
     default: "transparent",
+    inverse: colors.bg,
   })[action];
 
 export const buttonBorder = (colors: Colors, action: ButtonAction) =>
@@ -43,6 +46,7 @@ export const buttonBorder = (colors: Colors, action: ButtonAction) =>
     positive: colors.success,
     negative: colors.danger,
     default: colors.inputBorder,
+    inverse: colors.bg,
   })[action];
 
 export const styles = StyleSheet.create({

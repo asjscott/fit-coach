@@ -62,6 +62,10 @@ export function findWorkouts(clerkUserId: string, query: WorkoutsQuery) {
     .toArray();
 }
 
+// The user's Workouts started at or after this moment, for the Week Ledger
+export const findWorkoutsSince = (clerkUserId: string, since: Date) =>
+  workouts.find({ clerkUserId, startedAt: { $gte: since } }).toArray();
+
 // The user's Previous Sets for an Exercise, from their newest Workout that has it, or null when none does
 export async function findPreviousSets(clerkUserId: string, slug: string): Promise<PreviousSets | null> {
   const newest = await workouts.findOne(
@@ -79,12 +83,20 @@ export async function deleteWorkout(clerkUserId: string, id: string) {
 }
 
 // Convert a database document into the shape the app expects
-export function toWorkout({ id, startedAt, endedAt, assessment, workoutExercises }: WithId<WorkoutDoc>): Workout {
+export function toWorkout({
+  id,
+  startedAt,
+  endedAt,
+  assessment,
+  plannedWorkoutId,
+  workoutExercises,
+}: WithId<WorkoutDoc>): Workout {
   return Workout.parse({
     id,
     startedAt: startedAt.toISOString(),
     endedAt: endedAt.toISOString(),
     ...(assessment && { assessment }),
+    ...(plannedWorkoutId && { plannedWorkoutId }),
     workoutExercises,
   });
 }

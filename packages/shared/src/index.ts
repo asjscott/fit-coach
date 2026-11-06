@@ -4,6 +4,7 @@ export * from "./assessments";
 export * from "./exercises";
 export * from "./equipment";
 export * from "./health";
+export * from "./planned-workouts";
 export * from "./user";
 export * from "./workouts";
 

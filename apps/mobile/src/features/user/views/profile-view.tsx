@@ -1,5 +1,5 @@
 import { useAuth } from "@clerk/expo";
-import { canAssess } from "@fit/engines";
+import { canAssess, usualWorkoutLength } from "@fit/engines";
 import { HealthResponse } from "@fit/shared";
 import { useEffect, useState, type ReactNode } from "react";
 import { Divider } from "@/components/divider";
@@ -16,6 +16,7 @@ import { useCurrentUser, usePrimaryEquipmentProfile } from "@/features/user/curr
 import { genderLabel } from "@/features/user/components/form/fields/user-gender-field";
 import { goalLabel } from "@/features/user/components/form/fields/user-goal-field";
 import { injuryLabel } from "@/features/user/components/form/fields/user-injuries-field";
+import { workoutLengthLabel } from "@/features/user/components/form/fields/user-workout-length-field";
 import { SignOutModal, signOutWarning } from "@/features/workouts/components/sign-out-modal";
 import { useLogbook } from "@/features/workouts/logbook-provider";
 import { useApi } from "@/api";
@@ -67,6 +68,7 @@ export default function ProfileView() {
         <Section label="Training">
           <Row label="Goal" value={profile.goal && goalLabel(profile.goal)} />
           <Row label="Days per week" value={profile.daysPerWeek} />
+          <Row label="Workout Length" value={workoutLengthLabel(usualWorkoutLength(profile))} />
           <Row label="Equipment" value={equipmentSummary(equipment)} />
           <Row
             label="Injuries"

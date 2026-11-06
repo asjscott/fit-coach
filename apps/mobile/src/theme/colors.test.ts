@@ -25,6 +25,8 @@ const pairings: [ColorToken, ColorToken, number][] = [
   ["onAccent", "danger", TEXT],
   // Selected chips and cards; success, warning and error badges, alerts and toasts
   ["text", "accentSoft", TEXT],
+  ["text", "successSoft", TEXT],
+  ["accent", "successSoft", TEXT],
   ["accent", "accentSoft", TEXT],
   ["danger", "dangerSoft", TEXT],
   ["success", "successSoft", TEXT],
