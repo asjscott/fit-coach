@@ -2,7 +2,7 @@ import type { ReactNode } from "react";
 import { StyleSheet, View } from "react-native";
 import { Pressable } from "@/components/pressable";
 import { Text } from "@/components/text";
-import { radii, spacing, useTheme, type ColorToken } from "@/theme";
+import { fontSizes, lineHeight, radii, spacing, useTheme, type ColorToken } from "@/theme";
 
 // The colour says the day's state at a glance: accent to act on, success for a finished day, raised to hold off
 export type TodayCardTone = "accent" | "success" | "quiet";
@@ -26,7 +26,7 @@ export function TodayCard({ tone, headline, line, children }: TodayCardProps) {
   const { background, ink } = TONES[tone];
   return (
     <View style={[styles.card, { backgroundColor: colors[background] }]}>
-      <Text size="4xl" weight="extraBold" color={ink} accessibilityRole="header">
+      <Text size="4xl" weight="extraBold" color={ink} accessibilityRole="header" style={styles.headline}>
         {headline}
       </Text>
       {line ? <Text color={ink}>{line}</Text> : null}
@@ -57,11 +57,7 @@ export function TodayCardLink({
 }
 
 const styles = StyleSheet.create({
-  card: {
-    minHeight: 250,
-    justifyContent: "flex-end",
-    gap: spacing[3],
-    padding: spacing[5],
-    borderRadius: radii.lg,
-  },
+  card: { gap: spacing[3], padding: spacing[5], borderRadius: radii.lg },
+  // Tight, so the space above the text matches the card's padding below
+  headline: { lineHeight: lineHeight(fontSizes["4xl"], true) },
 });
