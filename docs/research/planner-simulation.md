@@ -109,7 +109,7 @@ An Exercise that needs a barbell scores × 1.02 (`plan-score.ts`). It only has t
 
 - **Should a Workout stop at the budget?** Parked until a real week of training and the timing check. At 4 days Standard, a Muscle reaches up to 214% of budget for lose_fat, for which the research found no benefit from extra Sets. Letting a Workout end early once the week's budget is met would give shorter Workouts, but spec story 22 and Workout Length both read as "fill the time".
 - **lose_fat is 18 to 31% bands on a Full gym.** The time tilt still favours them at their 75 seconds, as the research warned.
-- **2 days Short** reaches only 25 to 50% of the budget on its worst Muscle. Some Muscles stay under the 4-Set floor, which the spec's known limits didn't expect: see #90.
+- **2 days Short** reaches only 25 to 50% of the budget on its worst Muscle. Three of the 60 combinations stay under the 4-Set floor, all at 2 days Short: build_muscle and athletic on chest (3) and recomp on side delts (2). That's accepted as a known limit (#90). A selection that reaches the floor exists, but scoring the floor stage by credit per second took back squat to 0 for every Goal at 4 days Standard, and the plan can't favour short Sets for Short alone, as it's always built Long.
 
 ## Limits of this model
 
