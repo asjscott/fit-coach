@@ -97,8 +97,16 @@ An Exercise the Coach suggests in place of a planned one that can't be done on F
 _Avoid_: Substitute, swap, replacement
 
 **Workout Length**:
-How long the user wants a Workout to take, 5 minutes of warm-up included: Short (30 minutes), Standard (45) or Long (60). They choose their usual one during onboarding, can change it in Profile, and can change it for a single Workout. A user with none stored counts as Standard.
+How long the user wants a Workout to take, 5 minutes of warm-up included: Short (30 minutes), Standard (45) or Long (60), or Quick (20), which is only for one Workout. They choose their usual one during onboarding, can change it in Profile, and can change it for a single Workout. A user with none stored counts as Standard.
 _Avoid_: Mode, session type
+
+**Recovery Workout**:
+A walk or mobility Workout the user chooses in place of the Day's Workout, for one day. Unlike a Rest Day, it's something they do. It credits no Sets.
+_Avoid_: Recovery day, recovery session
+
+**Block**:
+A run of weeks of training, started by an Assessment, with a set length and a deload week.
+_Avoid_: Program, mesocycle, cycle
 
 **Rest Day**:
 A day the Coach recommends not training: the user has trained today, or reached their days per week, or trained yesterday and the week's other Workouts still fit. It's advice, shown above the Planned Workout.

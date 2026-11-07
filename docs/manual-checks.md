@@ -19,6 +19,22 @@ Result codes: **✅ pass** · **❌ fail** · **⚠️ works but feels off** · 
 
 - **Test accounts** on the Clerk dev instance: a `+clerk_test` email takes the code `424242`.
 
+### A release build, for P11 and P14
+
+Expo Go can't reload offline, and the repo has no EAS setup until M8, so build locally on your Mac. From `apps/mobile`:
+
+```bash
+npx expo run:ios --configuration Release --device
+```
+
+```bash
+npx expo run:android --variant release --device
+```
+
+- The first run generates `ios/` or `android/`, which are gitignored, and asks for an app identifier, as `app.json` has none. Don't commit either.
+- iOS needs a signing team in Xcode. A free Apple ID works, and the app stops opening after 7 days.
+- The build bakes in `EXPO_PUBLIC_API_URL`, so point it at an API running this branch's code, not one deployed from `main`, which has no Planned Workouts.
+
 ### Tooling: driving the simulators
 
 - **iOS:** Claude Code's iOS Simulator tool taps, types and takes screenshots, and typing works there. Plain `xcrun simctl` gives screenshots, `openurl` and `ui … appearance` only. Expo Go's gear sits on the header ⋯: drag it out of the way.
@@ -49,6 +65,8 @@ Expo Go can't reload offline. Load the app, then turn on airplane mode without c
   - iOS: Result: · Android: Result: · Notes:
 
 ## Over time
+
+These two don't hold up `main`: run them once it's merged and you're training.
 
 - [ ] **P16** A new week: open the app on Monday. The plan is built for the new week, with nothing carried over. The walk couldn't show this, as it can't move the server's clock, so wait for a real Monday.
   - iOS: Result: · Android: Result: · Notes:

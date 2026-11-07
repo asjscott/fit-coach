@@ -2,17 +2,17 @@
 
 The rerun asked for by spec #77 and ticket #87. The percentages in `exercise-selection-by-goal.md` came from a throwaway greedy planner and assumed the hamstring tags were removed. These numbers come from `planWorkout()` and `daysWorkout()`, with the tags kept. Written 2026-11-04.
 
-**Update, 2026-11-06:** ties no longer fall to library order, so every table here moved slightly, such as build_muscle at 4 days Standard going from 70 Sets to 68. Back squat and bench Sets at that row held. Library order could still decide outcomes before this: reversing it took recomp's bench to 0. Rerun the command below for current numbers, and `plan-outcomes.test.ts` pins the outcomes that matter.
+**Update, 2026-11-06:** tables rerun after ties stopped falling to library order, which could decide outcomes: reversing it took recomp's bench to 0. `plan-outcomes.test.ts` now pins the outcomes that matter.
 
 To reproduce: `pnpm --filter @fit/engines simulate` (`packages/engines/scripts/simulate-plans.ts`) prints every table.
 
 ## Result
 
 - **Back squat and barbell bench now show up on a Full gym for build_muscle and recomp, after adding a barbell factor of 1.02 to the score.** At 4 days Standard, build_muscle gets 6 Sets of each and recomp gets 3 of back squat and 6 of bench. Neither opens a Standard Workout at 4 days, and at 6 days they sometimes do.
-- **lose_fat and athletic still get little.** At 4 days Standard, lose_fat gets none of either, as its time tilt outweighs 1.02. Athletic gets 3 Sets of bench and no back squat. Its Ballistic and one-sided picks look like the reason, though that wasn't isolated. Athletic gets back squat at 4 days Long (8 Sets) and 6 days Standard (3).
-- **The cost is a smaller week.** Barbell Sets take 180 seconds, so build_muscle at 4 days Standard falls from 81 to 70 Sets in 176 minutes, and side delts fall to 65% of budget.
+- **lose_fat and athletic still get little.** At 4 days Standard, lose_fat gets none of either, as its time tilt outweighs 1.02. That's accepted as a known limit of spec #77. Athletic gets 3 Sets of bench and no back squat, which #100 takes up. Its Ballistic and one-sided picks look like the reason, though that wasn't isolated. Athletic gets back squat at 4 days Long (8 Sets) and 6 days Standard (3).
+- **The cost is a smaller week.** Barbell Sets take 180 seconds, so build_muscle at 4 days Standard falls from 81 to 68 Sets in 175 minutes, and side delts fall to 65% of budget.
 - **The tables alone couldn't do this.** See [Why the tables can't fix it](#why-the-tables-cant-fix-it).
-- **Loaded work is healthy.** 78 to 94% of Sets are loaded on a Full gym at Standard, and 0 to 23% of all Sets are bands, because band Exercises count as external. On a Full home gym at 4 days, lose_fat is 78% loaded against the research's 63%.
+- **Loaded work is healthy.** 78 to 94% of Sets are loaded on a Full gym at Standard, and 0 to 24% of all Sets are bands, because band Exercises count as external. On a Full home gym at 4 days, lose_fat is 78% loaded against the research's 63%.
 - **Workouts fill their Length, so weeks run over budget.** At 4 days Standard on a Full gym, build_muscle gets up to 169% of a Muscle's budget. The research stopped at the budget: 49 Sets in 83 minutes for lose_fat on a Full home gym, where the real planner gives 80 Sets in 175 minutes. This follows the spec (story 22, "a Planned Workout anyway"), but the spec didn't weigh it. See [Open questions](#open-questions).
 
 ## Method
@@ -24,28 +24,28 @@ To reproduce: `pnpm --filter @fit/engines simulate` (`packages/engines/scripts/s
 
 ## Full gym, intermediate
 
-| Goal         | Days | Length   | Sets | Minutes | Loaded % | Bands % | Back squat Sets | Bench Sets | Of budget | Short of budget                                                                                                    |
-| ------------ | ---- | -------- | ---- | ------- | -------- | ------- | --------------- | ---------- | --------- | ------------------------------------------------------------------------------------------------------------------ |
-| build_muscle | 4    | standard | 70   | 176     | 91       | 1       | 6 (0)           | 6 (0)      | 65–169%   | side_delts 6.5/10                                                                                                  |
-| build_muscle | 3    | standard | 53   | 129     | 89       | 6       | 3 (0)           | 3 (0)      | 83–143%   | hamstrings 13/14, chest 12/14, lats 12/14, side_delts 7.5/9                                                        |
-| build_muscle | 4    | long     | 103  | 239     | 83       | 6       | 7 (3)           | 7 (0)      | 120–231%  | none                                                                                                               |
-| build_muscle | 2    | short    | 21   | 57      | 71       | 0       | 3 (0)           | 0 (0)      | 25–75%    | quads 4.5/12, hamstrings 6/12, glutes 9/12, chest 3/12, lats 6/12, upper_back 9/12, side_delts 3/8, abs 6/8        |
-| build_muscle | 6    | standard | 105  | 266     | 88       | 3       | 9 (0)           | 9 (6)      | 105–210%  | none                                                                                                               |
-| recomp       | 4    | standard | 73   | 177     | 84       | 8       | 3 (0)           | 6 (0)      | 107–200%  | none                                                                                                               |
-| recomp       | 3    | standard | 54   | 134     | 94       | 6       | 6 (0)           | 6 (0)      | 100–175%  | none                                                                                                               |
-| recomp       | 4    | long     | 104  | 237     | 85       | 11      | 6 (3)           | 8 (0)      | 144–250%  | none                                                                                                               |
-| recomp       | 2    | short    | 20   | 59      | 85       | 0       | 3 (0)           | 3 (0)      | 27–82%    | quads 4.5/11, hamstrings 6/11, glutes 9/11, chest 3/11, lats 6/11, upper_back 9/11, side_delts 2/6, abs 4.5/6      |
-| recomp       | 6    | standard | 107  | 261     | 86       | 7       | 6 (3)           | 6 (0)      | 110–233%  | none                                                                                                               |
-| lose_fat     | 4    | standard | 89   | 174     | 78       | 18      | 0 (0)           | 0 (0)      | 119–214%  | none                                                                                                               |
-| lose_fat     | 3    | standard | 69   | 133     | 83       | 23      | 0 (0)           | 0 (0)      | 121–217%  | none                                                                                                               |
-| lose_fat     | 4    | long     | 126  | 240     | 79       | 21      | 4 (0)           | 0 (0)      | 150–343%  | none                                                                                                               |
-| lose_fat     | 2    | short    | 29   | 59      | 79       | 31      | 0 (0)           | 0 (0)      | 50–105%   | quads 5.5/11, hamstrings 6.5/11, chest 6/11, lats 6/11, upper_back 10.5/11, side_delts 4/6                         |
-| lose_fat     | 6    | standard | 135  | 265     | 78       | 20      | 3 (0)           | 0 (0)      | 147–297%  | none                                                                                                               |
-| athletic     | 4    | standard | 79   | 176     | 81       | 0       | 0 (0)           | 3 (0)      | 103–169%  | none                                                                                                               |
-| athletic     | 3    | standard | 59   | 133     | 85       | 10      | 0 (0)           | 5 (0)      | 83–150%   | side_delts 7.5/9                                                                                                   |
-| athletic     | 4    | long     | 107  | 238     | 82       | 9       | 8 (0)           | 7 (0)      | 125–241%  | none                                                                                                               |
-| athletic     | 2    | short    | 24   | 59      | 75       | 0       | 0 (0)           | 0 (0)      | 25–88%    | quads 4.5/12, hamstrings 7.5/12, glutes 9/12, chest 3/12, lats 6/12, upper_back 10.5/12, side_delts 4.5/8, abs 6/8 |
-| athletic     | 6    | standard | 113  | 265     | 83       | 3       | 3 (0)           | 9 (3)      | 100–213%  | none                                                                                                               |
+| Goal         | Days | Length   | Sets | Minutes | Loaded % | Bands % | Back squat Sets | Bench Sets | Of budget | Short of budget                                                                                                  |
+| ------------ | ---- | -------- | ---- | ------- | -------- | ------- | --------------- | ---------- | --------- | ---------------------------------------------------------------------------------------------------------------- |
+| build_muscle | 4    | standard | 68   | 175     | 91       | 0       | 6 (0)           | 6 (0)      | 65–169%   | lats 15/16, side_delts 6.5/10                                                                                    |
+| build_muscle | 3    | standard | 53   | 132     | 89       | 0       | 3 (0)           | 3 (0)      | 83–143%   | hamstrings 13/14, chest 12/14, lats 12/14, side_delts 7.5/9                                                      |
+| build_muscle | 4    | long     | 101  | 239     | 82       | 3       | 7 (3)           | 7 (0)      | 125–230%  | none                                                                                                             |
+| build_muscle | 2    | short    | 21   | 57      | 71       | 0       | 3 (0)           | 0 (0)      | 25–75%    | quads 4.5/12, hamstrings 6/12, glutes 9/12, chest 3/12, lats 6/12, upper_back 9/12, side_delts 3/8, abs 6/8      |
+| build_muscle | 6    | standard | 105  | 265     | 88       | 0       | 6 (0)           | 9 (6)      | 105–210%  | none                                                                                                             |
+| recomp       | 4    | standard | 71   | 178     | 87       | 0       | 3 (0)           | 6 (0)      | 106–200%  | none                                                                                                             |
+| recomp       | 3    | standard | 51   | 133     | 94       | 0       | 6 (0)           | 6 (0)      | 71–175%   | side_delts 5/7                                                                                                   |
+| recomp       | 4    | long     | 101  | 239     | 85       | 0       | 6 (3)           | 7 (0)      | 131–250%  | none                                                                                                             |
+| recomp       | 2    | short    | 20   | 59      | 85       | 0       | 3 (0)           | 3 (0)      | 27–82%    | quads 4.5/11, hamstrings 6/11, glutes 9/11, chest 3/11, lats 6/11, upper_back 9/11, side_delts 2/6, abs 4.5/6    |
+| recomp       | 6    | standard | 106  | 265     | 86       | 0       | 6 (3)           | 6 (0)      | 110–239%  | none                                                                                                             |
+| lose_fat     | 4    | standard | 89   | 174     | 78       | 18      | 0 (0)           | 0 (0)      | 119–214%  | none                                                                                                             |
+| lose_fat     | 3    | standard | 68   | 132     | 87       | 24      | 0 (0)           | 0 (0)      | 107–217%  | none                                                                                                             |
+| lose_fat     | 4    | long     | 127  | 239     | 84       | 24      | 4 (0)           | 0 (0)      | 150–350%  | none                                                                                                             |
+| lose_fat     | 2    | short    | 29   | 59      | 79       | 31      | 0 (0)           | 0 (0)      | 50–105%   | quads 5.5/11, hamstrings 6.5/11, chest 6/11, lats 6/11, upper_back 10.5/11, side_delts 4/6                       |
+| lose_fat     | 6    | standard | 136  | 267     | 78       | 22      | 3 (0)           | 0 (0)      | 140–297%  | none                                                                                                             |
+| athletic     | 4    | standard | 79   | 178     | 82       | 0       | 0 (0)           | 3 (0)      | 103–172%  | none                                                                                                             |
+| athletic     | 3    | standard | 55   | 132     | 89       | 0       | 3 (0)           | 3 (0)      | 83–150%   | hamstrings 13.5/14, chest 12/14, lats 13/14, side_delts 7.5/9                                                    |
+| athletic     | 4    | long     | 106  | 239     | 82       | 3       | 8 (0)           | 7 (0)      | 125–234%  | none                                                                                                             |
+| athletic     | 2    | short    | 23   | 57      | 74       | 0       | 0 (0)           | 0 (0)      | 25–83%    | quads 4.5/12, hamstrings 7.5/12, glutes 9/12, chest 3/12, lats 6/12, upper_back 10/12, side_delts 4/8, abs 5.5/8 |
+| athletic     | 6    | standard | 112  | 266     | 82       | 0       | 3 (0)           | 9 (0)      | 100–217%  | none                                                                                                             |
 
 ## At 4 days Standard, the other cases
 
@@ -54,18 +54,16 @@ Back squat Sets, then bench Sets, a week.
 | Goal         | Full gym, novice | Full home gym, intermediate | Full home gym, novice |
 | ------------ | ---------------- | --------------------------- | --------------------- |
 | build_muscle | 6, 4             | 6, 6                        | 6, 4                  |
-| recomp       | 6, 6             | 3, 6                        | 6, 6                  |
+| recomp       | 3, 6             | 3, 6                        | 3, 6                  |
 | lose_fat     | 3, 0             | 0, 1                        | 0, 0                  |
-| athletic     | 0, 5             | 2, 4                        | 0, 4                  |
+| athletic     | 0, 3             | 0, 4                        | 0, 4                  |
 
 A week of build_muscle, intermediate, on a Full gym:
 
 - Deadlift ×3, Renegade row ×3, Back squat ×3, Pull up ×3, Barbell bench press ×3, Dumbbell lateral raise ×1
 - Deadlift ×3, Barbell overhead press ×3, Archer push up ×3, Dumbbell bulgarian split squat ×3, Renegade row ×3, Dumbbell lateral raise ×3
-- Dumbbell bulgarian split squat ×3, Barbell bench press ×3, One arm dumbbell row ×3, Dumbbell reverse lunge ×3, Landmine press ×3, Barbell overhead press ×2
-- Barbell romanian deadlift ×3, Landmine press ×3, One arm dumbbell row ×3, Kettlebell swing ×3, Back squat ×3, Dumbbell bench press ×3, Band row ×1
-
-Band Exercises beat the cable ones the same way: `band-lat-pulldown` ties `lat-pulldown` and comes first in the library.
+- Dumbbell bulgarian split squat ×3, Barbell bench press ×3, Chest supported dumbbell row ×3, Dumbbell reverse lunge ×3, Landmine press ×3, Barbell overhead press ×2
+- Barbell romanian deadlift ×3, Landmine press ×3, Chest supported dumbbell row ×3, Dumbbell romanian deadlift ×3, Back squat ×3, Single arm dumbbell bench press ×2
 
 ## Why the tables can't fix it
 
@@ -104,14 +102,14 @@ An Exercise that needs a barbell scores × 1.02 (`plan-score.ts`). It only has t
 - **What counts:** every Exercise whose equipment always includes a barbell, so landmine press gets the factor too, alongside back squat, deadlift, the Romanian deadlift, bench and overhead press.
 - **Why not reorder the library:** it gives nearly the same result in one line, but array order would then be a hidden tuning dial, and it can't be read or tested as a rule.
 - **Bench stays out of first place at 4 days.** Sets per week are what count, so that's accepted.
-- **Cable and band ties remain.** The same reasoning may want to favour cable over band Exercises: `band-lat-pulldown` still ties `lat-pulldown`.
+- **Cable and band ties now fall to the longer Sets.** `band-lat-pulldown` still ties `lat-pulldown` on score, and the cable one wins at 105 seconds to 75.
 - **Side delts at 65% on build_muscle:** a Lateral raise could go earlier, but that's a separate fill-order question.
 
 ## Open questions
 
-- **Should a Workout stop at the budget?** At 4 days Standard, a Muscle reaches up to 214% of budget for lose_fat, for which the research found no benefit from extra Sets. Letting a Workout end early once the week's budget is met would give shorter Workouts, but spec story 22 and Workout Length both read as "fill the time".
+- **Should a Workout stop at the budget?** Parked until a real week of training and the timing check. At 4 days Standard, a Muscle reaches up to 214% of budget for lose_fat, for which the research found no benefit from extra Sets. Letting a Workout end early once the week's budget is met would give shorter Workouts, but spec story 22 and Workout Length both read as "fill the time".
 - **lose_fat is 18 to 31% bands on a Full gym.** The time tilt still favours them at their 75 seconds, as the research warned.
-- **2 days Short** reaches only 25 to 50% of the budget on its worst Muscle. The spec's known limits expected this.
+- **2 days Short** reaches only 25 to 50% of the budget on its worst Muscle. Some Muscles stay under the 4-Set floor, which the spec's known limits didn't expect: see #90.
 
 ## Limits of this model
 
