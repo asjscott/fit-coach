@@ -10,10 +10,11 @@ Result codes: **✅ pass** · **❌ fail** · **⚠️ works but feels off** · 
 
 ## Session
 
-- Date:
-- Device(s) and OS version:
-- Build (dev build / Expo Go / web, browser):
-- Branch and commit:
+- Date: 2026-11-06
+- Device(s) and OS version: iPhone 17 Pro simulator, iOS 26.4
+- Build (dev build / Expo Go / web, browser): Release simulator build, API on localhost
+- Branch and commit: `dev`, ecdf9a5
+- Simulator run: it has no airplane mode, so "offline" here means the API was down and Clerk stayed online. Ticked boxes passed here on iOS only.
 
 ## Before you start
 
@@ -52,17 +53,17 @@ npx expo run:android --variant release --device
 Expo Go can't reload offline. Load the app, then turn on airplane mode without closing it: that covers P12, P13, P15 and P20. P11 and P14 need a force-quit, so they need a release build on the phone.
 
 - [ ] **P11** **Clerk on a cold start with no signal.** Have a plan on Today, turn on airplane mode, force-quit, reopen. Today and the card should appear. If the app stays blank, Clerk's `isLoaded` stayed false: `(app)/_layout.tsx` renders nothing until then, and nothing else can pass. The stand-in couldn't show this. A likely fix is `__experimental_resourceCache` from `@clerk/expo/resource-cache`.
-  - iOS: Result: · Android: Result: · Notes:
-- [ ] **P12** Still in airplane mode: change the Length and equipment. The card follows, with your usual Length still selected first.
-  - iOS: Result: · Android: Result: · Notes:
-- [ ] **P13** Start, log and finish. Start isn't held up by the Previous Sets request for long (each has a 4 s timeout). Today says "Connect to plan your next Workout".
-  - iOS: Result: · Android: Result: · Notes:
-- [ ] **P20** After that finish, Today shows "Done for today." with "Connect to plan your next Workout" on the card.
-  - iOS: Result: · Android: Result: · Notes:
-- [ ] **P14** Force-quit and reopen, still offline: the Pending Workout, the message and native storage all hold.
-  - iOS: Result: · Android: Result: · Notes:
+  - iOS: Result: ⏭ skipped · Android: Result: · Notes: Needs Clerk unreachable, which the simulator can't do. Still needs a phone.
+- [x] **P12** Still in airplane mode: change the Length and equipment. The card follows, with your usual Length still selected first.
+  - iOS: Result: ✅ simulator, API down · Android: Result: · Notes: Standard was selected first. Short went from 8 Exercises and 23 Sets to 5 and 15; Bodyweight only swapped in alternatives.
+- [x] **P13** Start, log and finish. Start isn't held up by the Previous Sets request for long (each has a 4 s timeout). Today says "Connect to plan your next Workout".
+  - iOS: Result: ✅ simulator, API down · Android: Result: · Notes: With a server that never answers, the five Previous Sets requests ran in parallel and Start took about 4 s. Finish was with connections refused. "Connect to plan your next Workout" showed. Offline, the ring went from 3 of 3 to 1 of 3, as History isn't known.
+- [x] **P20** After that finish, Today shows "Done for today." with "Connect to plan your next Workout" on the card.
+  - iOS: Result: ✅ simulator, API down · Android: Result: · Notes: "Done for today." with "Connect to plan your next Workout" on the card.
+- [x] **P14** Force-quit and reopen, still offline: the Pending Workout, the message and native storage all hold.
+  - iOS: Result: ✅ simulator, API down · Android: Result: · Notes: Force-quit and relaunch: the Pending Workout, the message and all three stored keys held. Clerk was still online, so this doesn't replace P11.
 - [ ] **P15** Turn signal back on, without touching the app, then with the app in the background. The upload and next plan arrive.
-  - iOS: Result: · Android: Result: · Notes:
+  - iOS: Result: ⚠️ half run, simulator · Android: Result: · Notes: Back in the foreground: upload 201, Pending Workout cleared, new plan arrived. Left untouched in the foreground, nothing synced in 20 s, as restarting the API fires no network event, so the reconnect trigger is untested. Today then read "4 of 3 Workouts".
 
 ## Over time
 
@@ -73,7 +74,7 @@ These two don't hold up `main`: run them once it's merged and you're training.
 - [ ] **P17** Week after week, do the same Exercises carry on, and do Previous Sets stay useful?
   - iOS: Result: · Android: Result: · Notes:
 - [ ] **P18** Sign out: the plan and the stored User are gone from the phone, and the next account doesn't see them.
-  - iOS: Result: · Android: Result: · Notes:
+  - iOS: Result: ⚠️ half run, simulator · Android: Result: · Notes: The storage table was empty after sign-out. Deleted bytes stayed in the SQLite file, which the app can't read. The next account wasn't run: it needs another sign-in.
 
 ## Your call
 
