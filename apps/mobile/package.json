@@ -53,6 +53,7 @@
     "android": "sh scripts/with-dev-log.sh expo start --android",
     "ios": "sh scripts/with-dev-log.sh expo start --ios",
     "web": "sh scripts/with-dev-log.sh expo start --web",
+    "web:signed-in": "sh scripts/web-signed-in.sh",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "start:prod-api": "EXPO_PUBLIC_API_URL=https://fit-coach-evn9.onrender.com sh scripts/with-dev-log.sh expo start --clear",

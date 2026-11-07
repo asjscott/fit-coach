@@ -123,6 +123,10 @@ function withinVarietyCap(candidates: readonly Candidate[], thisWeek: readonly L
   return varied.length ? varied : candidates;
 }
 
+// Longest Sets first, as those are the bigger lifts, so a tie never falls to where an Exercise sits in the library
+const byTieOrder = ({ exercise: a }: Candidate, { exercise: b }: Candidate) =>
+  b.secondsPerSet - a.secondsPerSet || a.slug.localeCompare(b.slug);
+
 // What the equipment and injuries allow, with a target to prescribe
 function possibleExercises(input: PlanWorkoutInput): Candidate[] {
   const { equipmentProfile, injuries } = input;
@@ -136,14 +140,14 @@ function possibleExercises(input: PlanWorkoutInput): Candidate[] {
 }
 
 // The possible Exercises the guards let the Coach pick. Their order settles a tie: last week's first, so that the same
-// Exercises carry on from week to week, and otherwise the library's
+// Exercises carry on from week to week, and otherwise byTieOrder
 function pickableExercises(
   possible: readonly Candidate[],
   thisWeek: readonly LedgerWorkout[],
   lastWeek: readonly LedgerWorkout[],
   daysPerWeek: number,
 ): Candidate[] {
-  const varied = withinVarietyCap(withoutRepCapped(possible), thisWeek, daysPerWeek);
+  const varied = [...withinVarietyCap(withoutRepCapped(possible), thisWeek, daysPerWeek)].sort(byTieOrder);
   const trainedLastWeek = new Set(lastWeek.flatMap(({ workoutExercises }) => workoutExercises.map(({ slug }) => slug)));
   const isLastWeeks = ({ exercise }: Candidate) => trainedLastWeek.has(exercise.slug);
   return [...varied.filter(isLastWeeks), ...varied.filter((candidate) => !isLastWeeks(candidate))];

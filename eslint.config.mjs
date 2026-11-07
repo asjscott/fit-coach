@@ -10,6 +10,15 @@ export default defineConfig(
     extends: [js.configs.recommended, tseslint.configs.recommended],
   },
   {
+    // CommonJS, as Metro loads these directly
+    files: ["apps/mobile/metro.config.js", "apps/mobile/scripts/clerk-stub.js"],
+    languageOptions: {
+      sourceType: "commonjs",
+      globals: { require: "readonly", module: "writable", __dirname: "readonly", process: "readonly" },
+    },
+    rules: { "@typescript-eslint/no-require-imports": "off" },
+  },
+  {
     // Typed, because only a string or number condition can leak a text node
     files: ["apps/mobile/**/*.tsx"],
     languageOptions: { parserOptions: { projectService: true, tsconfigRootDir: import.meta.dirname } },

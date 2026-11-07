@@ -132,7 +132,7 @@ signal. Simulation of the real planner: `docs/research/planner-simulation.md` (`
 planWorkout (packages/engines/src/plan-workout.ts): pure, only the server calls it. Gives weekStart, plannedExercises
   in priority order, and cue
   ├─ possibleExercises: primary Equipment Profile, injuries, a target it can be prescribed at. Then pickableExercises:
-  │  the rep cap and variety cap guards. Their order settles a tie: last week's first, then the library's
+  │  the rep cap and variety cap guards. Their order settles a tie: last week's first, then longest Sets, then slug
   ├─ Week Ledger (week-ledger.ts): weekLedger, recalculated from logged Sets; mondayOf is the server's week
   ├─ Weekly Budget (weekly-budget.ts): DOSES, DAYS_SCALE and the limits, weeklyBudget, fillOrder
   ├─ scoreExercise (plan-score.ts): every tilt, in one place
@@ -178,22 +178,19 @@ Schemas: packages/shared/src/planned-workouts.ts
 - **`ballistic` needs `pnpm --filter @fit/api seed:exercises`** on the real database (needs `.env`, so it's a human
   step). `findExercises` parses stored docs, so an older collection reads as not Ballistic rather than failing.
 - **Build and tune with the simulation.** Scores tie often, as many Exercises share budgeted credits. The planner is
-  deterministic, so ties fall to last week's Exercises and then library order.
+  deterministic, so ties fall to last week's Exercises, then the longest Sets, then the slug, never library order.
+  `plan-outcomes.test.ts` pins what a user should see, with the library in either order: run it after any tuning.
 
 ## Running things
 
 - API without the real database or Clerk: `pnpm --filter @fit/api dev:local` (in-memory MongoDB replica set; `X-Dev-User` header
   picks the user). `apps/api/.env` points at the real database.
 - Web storage in real browsers: `pnpm --filter @fit/mobile test:web`.
-- The signed-in app without Clerk or `.env` (how #87 walked M5). Keep all of this uncommitted, in a scratch folder:
-  - An untracked `apps/mobile/metro.config.js` whose `resolver.resolveRequest` sends `@clerk/expo` and its subpaths to a
-    stub with `ClerkProvider`, `useAuth` (signed in, `getToken` gives null), `useClerk`, `useHostedAuth` and `tokenCache`.
-    Add the stub's folder to `watchFolders`.
-  - `PORT=3187 CORS_ORIGINS=http://localhost:8187 pnpm --filter @fit/api dev:local`.
-  - `CI=1 EXPO_PUBLIC_API_URL=http://localhost:3187 EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY=pk_test_x pnpm exec expo start --port 8187 --clear`,
-    from `apps/mobile`, with those variables in the process, never a file.
-  - Playwright at phone size, adding `x-dev-user` in `context.route` rather than from the page, since CORS refuses that
-    header. A new `x-dev-user` is a new account.
+- The signed-in app, with no Clerk account or `.env`: `pnpm --filter @fit/mobile web:signed-in`, then
+  `http://localhost:8187`. It starts the in-memory API on 3187 and swaps `@clerk/expo` for a signed-in stub in Metro, so
+  every run is a new account at onboarding. Use it for any ticket that changes a signed-in screen.
+  - To be several users from Playwright, add `x-dev-user` in `context.route` rather than from the page, since CORS
+    refuses that header. A new `x-dev-user` is a new account.
   - For offline, abort the API in the same route and override `navigator.onLine`. Don't use `context.setOffline`: in
     dev, routes load from Metro on demand, so it fails with a red "Failed to fetch" that a phone never shows.
-  - Restart with `--clear` after an edit, or a worktree keeps serving old code.
+  - It can't show a real sign-in, Clerk with no signal, or native storage. Those stay in `docs/manual-checks.md`.

@@ -2,7 +2,7 @@
 
 ### Issue tracker
 
-Issues live in GitHub Issues for asjscott/fit-coach, via the gh CLI. See `docs/agents/issue-tracker.md`.
+Issues live in GitHub Issues for asjscott/fit-coach, via the gh CLI. See `docs/agents/issue-tracker.md`, which also covers merging a PR when green.
 
 ### Triage labels
 
@@ -17,6 +17,10 @@ Single-context: one `GLOSSARY.md` and `docs/adr/` at the repo root. See `docs/ag
 ### Workouts
 
 Logging, device storage, sync, History and the workouts API: see `docs/agents/workouts.md`.
+
+### Signed-in screens
+
+`pnpm --filter @fit/mobile web:signed-in` runs the signed-in app with no Clerk account or `.env`: see "Running things" in `docs/agents/workouts.md`.
 
 ### Dev server output
 
