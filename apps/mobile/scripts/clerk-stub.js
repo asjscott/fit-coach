@@ -15,4 +15,5 @@ module.exports = {
   useClerk: () => ({ signOut: auth.signOut }),
   useHostedAuth: () => ({ startHostedAuth: async () => {} }),
   tokenCache: {},
+  resourceCache: () => ({}),
 };
