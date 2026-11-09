@@ -16,7 +16,7 @@ The Build plan is a PDF outside the repo, and it still describes the M5 designed
 
 ## Consequences
 
-- The plan's M5 features that the spec dropped without a decision are issues, not lost: #91 to #99. M5 is done when those due before M6 are in, in this order: #95, #98, #92, #93, #94, #91, #96 and #97. Conditioning (#99) waits for M10, as nothing can log it until then.
+- The plan's M5 features that the spec dropped without a decision are issues, not lost: #91 to #99. M5 is done when those due before M6 are in, along with #100 from spec #77's final check, in this order: #95, #98, #92, #93, #100, #94, #91, #96 and #97. Conditioning (#99) waits for M10, as nothing can log it until then. The library gaps, #101 and jumps (#105), start M6.
 - `main` takes M5 only once all of that is done and tested together: it's for a finished milestone, not each spec. Spec #77's phone checks passing doesn't move it.
 
 ## Considered Options
