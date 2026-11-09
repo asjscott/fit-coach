@@ -17,9 +17,9 @@ The Build plan is a PDF outside the repo, and it still describes the M5 designed
 ## Consequences
 
 - The plan's M5 features that the spec dropped without a decision are issues, not lost: #91 to #99. M5 is done when those due before M6 are in, in this order: #95, #98, #92, #93, #94, #91, #96 and #97. Conditioning (#99) waits for M10, as nothing can log it until then.
-- `main` doesn't wait for them: it takes spec #77 once the phone checks pass, so that training can start, and the gaps follow.
+- `main` takes M5 only once all of that is done and tested together: it's for a finished milestone, not each spec. Spec #77's phone checks passing doesn't move it.
 
 ## Considered Options
 
 - **Rewrite the PDF**: it would stay the single plan, but it isn't in the repo and nothing keeps it true.
-- **Build every gap before `main`**: M5 would match the plan at once, but training would wait weeks, each change would reopen the phone checks, and real training helps answer the gaps' open questions.
+- **Build every gap before the phone checks**: M5 would match the plan at once, but the checks would wait weeks, and each change would reopen them. Running them first tested spec #77 on its own.
