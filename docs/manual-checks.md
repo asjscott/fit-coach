@@ -30,7 +30,7 @@ The API deployed on Render runs `main`, which has no Planned Workouts, so the ph
 
 **Once, on the Mac**
 
-1. In Xcode, open **Settings → Accounts**, press **+** and add your Apple ID. A free one works: it shows up as "Your Name (Personal Team)".
+1. In Xcode, open **Settings → Apple Accounts** (**Accounts** in older Xcode), press **+** and add your Apple ID. A free one works: it shows up as "Your Name (Personal Team)".
 
 **Once, on the iPhone**
 
@@ -73,6 +73,17 @@ The API deployed on Render runs `main`, which has no Planned Workouts, so the ph
    - If it asks for a signing team, pick your Personal Team.
    - The first build takes several minutes. It ends by installing the app on the phone.
    - If it fails on signing, open `ios/mobile.xcworkspace` in Xcode, select the **mobile** target, then **Signing & Capabilities**: tick **Automatically manage signing**, pick your team, and run the command again.
+
+   Signing errors you may hit:
+
+   - **"No Accounts"**, together with **"No profiles for '…' were found"**: Xcode isn't signed in to any Apple account. Do step 1, then run the command again.
+   - **"Personal development teams … do not support the Sign In with Apple capability"**: `@clerk/expo` adds Sign in with Apple to the build by default. The app doesn't use it, but a free Apple ID can't sign an app that asks for it. Remove it from the generated project (it isn't committed), then run the command again:
+
+     ```bash
+     /usr/libexec/PlistBuddy -c 'Delete :com.apple.developer.applesignin' ios/mobile/mobile.entitlements
+     ```
+
+     Removing `ios/` brings the setting back, so do this again after step 7.
 
 **First launch**
 
