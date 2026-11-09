@@ -22,19 +22,87 @@ Result codes: **✅ pass** · **❌ fail** · **⚠️ works but feels off** · 
 
 ### A release build, for P11 and P14
 
-Expo Go can't reload offline, and the repo has no EAS setup until M8, so build locally on your Mac. From `apps/mobile`:
+Expo Go can't reload offline, and the repo has no EAS setup until M8, so build locally on your Mac. A Release build carries its JavaScript inside the app, so it opens with no Metro and no signal.
 
-```bash
-npx expo run:ios --configuration Release --device
-```
+#### iPhone, step by step
+
+The API deployed on Render runs `main`, which has no Planned Workouts, so the phone talks to an API on your Mac over Wi-Fi instead.
+
+**Once, on the Mac**
+
+1. In Xcode, open **Settings → Accounts**, press **+** and add your Apple ID. A free one works: it shows up as "Your Name (Personal Team)".
+
+**Once, on the iPhone**
+
+2. Plug the phone into the Mac with a cable, unlock it and tap **Trust** when it asks about this computer.
+3. In Xcode, open **Window → Devices and Simulators** and wait until the phone appears. That makes **Developer Mode** show up on the phone.
+4. On the phone: **Settings → Privacy & Security → Developer Mode**, turn it on, let it restart, then tap **Turn On** after unlocking.
+
+**Each time: start the API**
+
+5. Put the phone and the Mac on the same Wi-Fi. From the repo root, start the API with this branch's code. It reads `apps/api/.env`, so it uses the real database and the Clerk dev instance:
+
+   ```bash
+   pnpm --filter @fit/api dev
+   ```
+
+6. Find the Mac's name on the network:
+
+   ```bash
+   echo "$(scutil --get LocalHostName).local"
+   ```
+
+   In Safari on the phone, open `http://<that name>:3000/health`. You should see `"status":"ok"`. If it doesn't load, the phone can't reach the Mac, and the app won't be able to either: check the Wi-Fi, and that the macOS firewall lets `node` accept connections.
+
+**Build and install**
+
+7. From `apps/mobile`, remove the `ios/` folder if it's there. The simulator run left one with a made-up app identifier:
+
+   ```bash
+   rm -rf ios
+   ```
+
+8. With the phone still plugged in and unlocked, build and install. The `LANG` settings stop CocoaPods failing (the error is easy to miss), and `EXPO_PUBLIC_API_URL` overrides `.env` for this build only:
+
+   ```bash
+   LANG=en_US.UTF-8 LC_ALL=en_US.UTF-8 EXPO_PUBLIC_API_URL="http://$(scutil --get LocalHostName).local:3000" npx expo run:ios --configuration Release --device
+   ```
+
+   - Pick your iPhone from the list.
+   - It asks for an iOS bundle identifier, as `app.json` has none. Enter one only you would use, such as `com.asjscott.fitcoach`. It writes it into `app.json`: don't commit that.
+   - If it asks for a signing team, pick your Personal Team.
+   - The first build takes several minutes. It ends by installing the app on the phone.
+   - If it fails on signing, open `ios/mobile.xcworkspace` in Xcode, select the **mobile** target, then **Signing & Capabilities**: tick **Automatically manage signing**, pick your team, and run the command again.
+
+**First launch**
+
+9. If the phone says "Untrusted Developer": **Settings → General → VPN & Device Management**, tap your Apple ID under Developer App, then **Trust**.
+10. Open the app. When it asks to find devices on your local network, tap **Allow**. Without it the app can't reach the API on your Mac.
+11. Sign in with a test account and finish the Assessment, so Today has a plan. Run P11 from there, then P14, and P12, P13, P15 and P20 while you're in real airplane mode.
+
+**Airplane mode**
+
+- iOS turns Wi-Fi back on in airplane mode if you've done that before. Check in Control Center that Wi-Fi and Bluetooth are both off, or the "offline" checks aren't offline.
+- To force-quit, swipe up from the bottom, pause, then swipe the app's card away.
+
+**Afterwards**
+
+12. From `apps/mobile`, undo the bundle identifier in `app.json`:
+
+    ```bash
+    git checkout app.json
+    ```
+
+    With a free Apple ID the app stops opening after 7 days. Run step 8 again to reinstall.
+
+#### Android
 
 ```bash
 npx expo run:android --variant release --device
 ```
 
-- The first run generates `ios/` or `android/`, which are gitignored, and asks for an app identifier, as `app.json` has none. Don't commit either.
-- iOS needs a signing team in Xcode. A free Apple ID works, and the app stops opening after 7 days.
-- The build bakes in `EXPO_PUBLIC_API_URL`, so point it at an API running this branch's code, not one deployed from `main`, which has no Planned Workouts.
+- The first run generates `android/`, which is gitignored, and asks for a package name, as `app.json` has none. Don't commit either.
+- Same API rule as iOS: build with `EXPO_PUBLIC_API_URL` pointing at the Mac, not Render.
 
 ### Tooling: driving the simulators
 
