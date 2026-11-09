@@ -147,14 +147,14 @@ Expo Go can't reload offline. Load the app, then turn on airplane mode without c
 
 ## Over time
 
-These two don't hold up `main`: run them once it's merged and you're training.
+These need real weeks of training on `dev`, so run them while M5's gaps are built.
 
 - [ ] **P16** A new week: open the app on Monday. The plan is built for the new week, with nothing carried over. The walk couldn't show this, as it can't move the server's clock, so wait for a real Monday.
   - iOS: Result: · Android: Result: · Notes:
 - [ ] **P17** Week after week, do the same Exercises carry on, and do Previous Sets stay useful?
   - iOS: Result: · Android: Result: · Notes:
-- [ ] **P18** Sign out: the plan and the stored User are gone from the phone, and the next account doesn't see them.
-  - iOS: Result: ⚠️ half run, simulator · Android: Result: · Notes: The storage table was empty after sign-out. Deleted bytes stayed in the SQLite file, which the app can't read. The next account wasn't run: it needs another sign-in.
+- [x] **P18** Sign out: the plan and the stored User are gone from the phone, and the next account doesn't see them.
+  - iOS: Result: ✅· Android: Result: · Notes: The storage table was empty after sign-out. Deleted bytes stayed in the SQLite file, which the app can't read. Signed in with second account and all good.
 
 ## Your call
 
