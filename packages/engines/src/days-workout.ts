@@ -7,7 +7,7 @@ import {
   type PlannedExercise,
   type PlannedWorkout,
 } from "@fit/shared";
-import { readinessShare } from "./check-in";
+import { LIGHTEST_SHARE, readinessShare } from "./check-in";
 import { exerciseBySlug } from "./data/exercises";
 import { canPair, pairSeconds, secondsPerSetOf } from "./supersets";
 import { SETS_PER_PICK } from "./weekly-budget";
@@ -181,7 +181,8 @@ function possiblePairs(placed: readonly Placed[]) {
 
 // The Length's cut, then the check-in's share of what's left, both taking the lowest priority Sets first. When the
 // Length would cut a Set, Exercises pair first, one pair at a time in priority order until the Workout fits, and
-// only what still doesn't fit is cut. lighter says whether the check-in took any
+// only what still doesn't fit is cut. lighter says whether the check-in took any, and canBeLighter whether the
+// lowest ratings would (#113)
 function cut(placed: readonly Placed[], { workoutLength, checkIn, fullWorkout, noSupersets }: DayChoices) {
   const sets = setsInPriorityOrder(placed);
   const seconds = secondsForSets(workoutLength);
@@ -201,7 +202,12 @@ function cut(placed: readonly Placed[], { workoutLength, checkIn, fullWorkout, n
     const paired = partner && keptSets.get(partner);
     return [{ ...exercise, sets: count, ...(paired && { supersetWith: partner.slug }) }];
   });
-  return { dayExercises, seconds: secondsOfSets(keptSets, partners), lighter: kept < fitting };
+  return {
+    dayExercises,
+    seconds: secondsOfSets(keptSets, partners),
+    lighter: kept < fitting,
+    canBeLighter: Math.round(fitting * LIGHTEST_SHARE) < fitting,
+  };
 }
 
 // Lower goes first
@@ -225,7 +231,7 @@ function inWorkoutOrder(dayExercises: readonly DayExercise[], goal: Goal | undef
 }
 
 // The Workout for today, the slugs of Exercises with no option on the chosen equipment, whether the check-in made it
-// lighter, and whether any Exercises are paired. Equipment comes first so the cut times what's actually done, the order last as the cut needs priority. goal
+// lighter or could, and whether any Exercises are paired. Equipment comes first so the cut times what's actually done, the order last as the cut needs priority. goal
 // is undefined until the user loads
 export function daysWorkout(
   { plannedExercises }: Pick<PlannedWorkout, "plannedExercises">,
@@ -233,12 +239,13 @@ export function daysWorkout(
   goal?: Goal,
 ) {
   const { placed, dropped } = onEquipment(plannedExercises, choices);
-  const { dayExercises, seconds, lighter } = cut(placed, choices);
+  const { dayExercises, seconds, lighter, canBeLighter } = cut(placed, choices);
   return {
     plannedExercises: inWorkoutOrder(dayExercises, goal),
     estimatedSeconds: WARM_UP_SECONDS + seconds,
     dropped,
     lighter,
+    canBeLighter,
     paired: dayExercises.some(({ supersetWith }) => supersetWith),
   };
 }

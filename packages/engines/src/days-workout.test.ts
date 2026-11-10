@@ -516,6 +516,14 @@ describe("daysWorkout", () => {
       );
     });
 
+    it("says whether a check-in could make it lighter, however it was rated (#113)", () => {
+      expect(daysWorkout(longPlan, { workoutLength: "long", checkIn: allFours }).canBeLighter).toBe(true);
+      expect(daysWorkout(longPlan, { workoutLength: "long", fullWorkout: true }).canBeLighter).toBe(true);
+      // 0.7 of 1 Set still rounds to 1
+      const oneSet = { plannedExercises: [planned("goblet-squat", 1)] };
+      expect(daysWorkout(oneSet, { workoutLength: "long", checkIn: badNight }).canBeLighter).toBe(false);
+    });
+
     it("trims what the Length left, at every Length", () => {
       // Standard keeps 21 Sets, then 15 of them; Short keeps 13, then 9
       expect(setsOf({ workoutLength: "standard", noSupersets: true, checkIn: badNight })).toEqual([
