@@ -183,6 +183,17 @@ Needs the API deployed from this branch, so plans are stored with their reasons.
 - [ ] **W3** Once every Workout of the week is done and you train anyway, the line reads "This week's work is done. This one's extra."
   - iOS: Result: · Android: Result: · Notes:
 
+## Supersets (#96)
+
+A Workout pairs Exercises only when it wouldn't otherwise fit its Length, so choose Quick or Short on a plan of four or more Exercises. The sheet then says "Paired into supersets to fit the time" and shows "Superset with …" under each paired Exercise.
+
+- [ ] **S1** P9's timing check on a paired Workout: start one whose sheet shows at least one superset, note its "About N min", and run it in full with a timer, resting as the timer says and skipping nothing. A pair is timed at Sets × (the longer Exercise's Set + 30 s): does the real time come out within a few minutes of the estimate?
+  - iOS: Result: · Android: Result: · Notes:
+- [ ] **S2** On the logging screen at phone width, the pair is one box, A1 above A2. The Exercise whose turn it is is open with its steppers; the other shows its name, Sets so far and "Up next". Log A1: A2 opens straight away with "No rest: straight to …" and no rest timer. Log A2: the rest timer runs the longer of the two rests, as the box's note says. The Sets show under their own Exercise in History afterwards.
+  - iOS: Result: · Android: Result: · Notes:
+- [ ] **S3** In airplane mode, open the sheet on a paired Workout and choose "No supersets": the pairs go, Sets are cut instead and the time stays within the Length. Tap it again and the pairs come back. Start without changing it, and the started Workout keeps the pairs.
+  - iOS: Result: · Android: Result: · Notes:
+
 ## Over time
 
 These need real weeks of training on `dev`, so run them while M5's gaps are built.

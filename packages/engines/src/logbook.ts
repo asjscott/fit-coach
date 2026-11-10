@@ -245,7 +245,7 @@ export function createLogbook({
 
   // A Workout started with its Exercises and their targets, and nothing logged
   async function startWithTargets(
-    plannedExercises: readonly Pick<PlannedExercise, "slug" | "sets" | "target">[],
+    plannedExercises: readonly (Pick<PlannedExercise, "slug" | "sets" | "target"> & { supersetWith?: string })[],
     now: Date,
     plannedWorkoutId?: string,
   ) {
@@ -255,15 +255,22 @@ export function createLogbook({
     return serially(async () => {
       if (await read()) throw new LogbookError("A Workout is already in progress");
       const pending = await readPending();
+      const workoutExercises = plannedExercises.map((plannedExercise, i): InProgressWorkoutExercise => {
+        const { slug, sets, target } = plannedExercise;
+        const exercise = { slug, loadType: plannedLoadType(plannedExercise) };
+        return { ...newWorkoutExercise(exercise, fromServer[i], pending), planned: { sets, target } };
+      });
+      // A superset names its partner by slug, unique in the day's Workout, and the Workout by Workout Exercise
+      plannedExercises.forEach(({ supersetWith }, i) => {
+        const partner = workoutExercises.find(({ slug }) => slug === supersetWith);
+        const planned = workoutExercises[i]?.planned;
+        if (partner && planned) planned.supersetWith = partner.id;
+      });
       const workout: InProgressWorkout = {
         id: newId(),
         startedAt: now.toISOString(),
         ...(plannedWorkoutId && { plannedWorkoutId }),
-        workoutExercises: plannedExercises.map((plannedExercise, i) => {
-          const { slug, sets, target } = plannedExercise;
-          const exercise = { slug, loadType: plannedLoadType(plannedExercise) };
-          return { ...newWorkoutExercise(exercise, fromServer[i], pending), planned: { sets, target } };
-        }),
+        workoutExercises,
       };
       await write(workout);
       return workout;

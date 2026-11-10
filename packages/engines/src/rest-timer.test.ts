@@ -1,5 +1,6 @@
+import type { Set } from "@fit/shared";
 import { describe, expect, it } from "vitest";
-import { extendRest, restSeconds, restSecondsLeft, startRest } from "./rest-timer";
+import { extendRest, restAfterSet, restSeconds, restSecondsLeft, startRest, type Rest } from "./rest-timer";
 
 const at = (iso: string) => new Date(iso);
 
@@ -21,6 +22,45 @@ describe("startRest", () => {
 
   it("gives an Exercise this app version doesn't know the library's typical rest", () => {
     expect(startRest("not-in-the-library", at("2026-11-09T10:00:00Z")).endsAt).toBe(Date.parse("2026-11-09T10:01:15Z"));
+  });
+});
+
+describe("restAfterSet", () => {
+  const now = at("2026-11-09T10:00:00Z");
+  const set: Set = { kind: "external", kg: 20, reps: 8, loggedAt: now.toISOString() };
+  // A dumbbell bench press (120 s Sets, 90 s rest) paired with an inverted row (90 s Sets, 60 s rest), and a squat
+  const workoutExercise = (id: string, slug: string, logged: number, planned: number, supersetWith?: string) => ({
+    id,
+    slug,
+    loadType: "external" as const,
+    sets: Array<Set>(logged).fill(set),
+    planned: { sets: planned, target: { unit: "reps" as const, reps: 8 }, ...(supersetWith && { supersetWith }) },
+  });
+  const workout = (pressSets: number, rowSets: number, pressPlanned = 3) => ({
+    workoutExercises: [
+      workoutExercise("press", "dumbbell-bench-press", pressSets, pressPlanned, "row"),
+      workoutExercise("row", "inverted-row", rowSets, 3, "press"),
+      workoutExercise("squat", "goblet-squat", 1, 3),
+    ],
+  });
+  const secondsOf = (rest: Rest | null) => rest && (rest.endsAt - now.getTime()) / 1000;
+
+  it("rests as usual after a Set of an Exercise on its own", () => {
+    expect(secondsOf(restAfterSet(workout(0, 0), "squat", now))).toBe(90);
+  });
+
+  it("doesn't rest between the two Exercises of a pair", () => {
+    expect(restAfterSet(workout(1, 0), "press", now)).toBeNull();
+  });
+
+  it("rests the longer of the two rests after the pair's second Set", () => {
+    // The row alone would rest 60 s
+    expect(secondsOf(restAfterSet(workout(1, 1), "row", now))).toBe(90);
+  });
+
+  it("rests as usual once the other Exercise has no Sets left", () => {
+    expect(secondsOf(restAfterSet(workout(4, 3, 4), "press", now))).toBe(90);
+    expect(secondsOf(restAfterSet(workout(3, 4, 3), "row", now))).toBe(60);
   });
 });
 

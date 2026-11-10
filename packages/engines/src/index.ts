@@ -20,6 +20,7 @@ export * from "./plan-workout";
 export * from "./recovery-workout";
 export * from "./rest-day";
 export * from "./rest-timer";
+export { supersetGroups, supersetPartner, supersetTurn } from "./supersets";
 export * from "./training-summaries";
 export * from "./week-ledger";
 export * from "./weekly-budget";

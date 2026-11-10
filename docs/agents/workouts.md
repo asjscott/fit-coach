@@ -191,6 +191,15 @@ Schemas: packages/shared/src/planned-workouts.ts
   gets the same bodyweight Workout, and a Full home gym only sees loads rounded to the built-in table.
 - **`ballistic` needs `pnpm --filter @fit/api seed:exercises`** on the real database (needs `.env`, so it's a human
   step). `findExercises` parses stored docs, so an older collection reads as not Ballistic rather than failing.
+- **Supersets are the phone's, and only to fit the Length** (#96, `supersets.ts`). `daysWorkout` pairs only when the
+  Length would cut a Set: one pair at a time in priority order (`canPair`: main Pattern, never one-sided or
+  Ballistic) until the Workout fits, then cuts what still doesn't. A pair is timed by `pairSeconds`, Sets ×
+  (the longer `secondsPerSet` + 30) for the rounds they share. "No supersets" (`DayChoices.noSupersets`) goes back to
+  cutting. At Start the partner's slug becomes `planned.supersetWith`, the partner's Workout Exercise id both ways,
+  dropped at Finish with `planned`, so sync and History are unchanged. Removing one of the pair unpairs the other.
+  `restAfterSet` (`rest-timer.ts`) gives no rest while the other is behind, and `pairRestSeconds` after the round.
+  The logging screen draws a pair with `SupersetBox` (layout A, Stacked), from `supersetGroups` and `supersetTurn`.
+  An Assessment or Recovery Workout never goes through `daysWorkout`, so is never paired.
 - **A Recovery Workout isn't training** (#97, `recovery-workout.ts`). It's known by its Exercises: every one with Sets
   is a Recovery Exercise (`Exercise.recovery`), so a Workout needs no flag and sync and History are unchanged.
   `trainingWorkouts` leaves it out of This Week, the Rest Day, `finishedToday` and `planWorkout`; `creditsPerSet` gives

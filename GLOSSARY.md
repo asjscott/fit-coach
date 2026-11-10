@@ -26,6 +26,10 @@ _Avoid_: Movement pattern, category
 An Exercise where the load or the body is accelerated through the end of the movement, such as a swing or a jump.
 _Avoid_: Explosive exercise, power exercise
 
+**Superset**:
+Two Exercises of a Workout done in turn, a Set of one then a Set of the other with no rest between, and a rest only after the pair. The phone pairs them only when a Workout wouldn't otherwise fit its Length, by each one's main Pattern: push with pull, squat with core, hinge with push. Each Set is still logged under its own Exercise.
+_Avoid_: Circuit, paired set
+
 **Workout**:
 One occasion when the user trained, from start to finish, made up of the exercises they did in the order they did them.
 _Avoid_: Session, training session

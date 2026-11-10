@@ -90,7 +90,7 @@ export type PreviousSetsQuery = z.infer<typeof PreviousSetsQuery>;
 
 // The Workout being logged, saved on the phone after every change and never uploaded as is.
 // Workout Exercises carry a phone id so the same Exercise can be added twice, and may carry read-only
-// snapshots of their Previous Sets and of what the plan set for them, both dropped at Finish
+// snapshots of their Previous Sets and of what the plan set for them, superset included, both dropped at Finish
 export const InProgressWorkout = z.object({
   id: z.uuid(),
   startedAt: z.iso.datetime(),
@@ -105,7 +105,12 @@ export const InProgressWorkout = z.object({
         ...workoutExerciseFields,
         sets: z.array(Set),
         previousSets: PreviousSets.optional(),
-        planned: PlannedExercise.pick({ sets: true, target: true }).optional(),
+        planned: PlannedExercise.pick({ sets: true, target: true })
+          .extend({
+            // The id of the Workout Exercise it's paired with in a superset (#96), both ways
+            supersetWith: z.string().optional(),
+          })
+          .optional(),
       })
       .refine(setsMatchLoadType, setsMatchLoadTypeError),
   ),

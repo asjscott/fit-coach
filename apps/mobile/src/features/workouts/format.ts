@@ -216,3 +216,6 @@ export const describeSet = (set: Set | SetValues) =>
   setParts(set)
     .map(([value, unit]) => (unit ? `${value} ${unit}` : String(value)))
     .join(" ");
+
+// A superset's letter by its place among the Workout's supersets, from 0: A makes A1 and A2, as gym programmes write them
+export const supersetLetter = (index: number) => String.fromCharCode(65 + index);

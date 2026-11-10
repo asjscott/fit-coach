@@ -1062,7 +1062,7 @@ describe("Logbook: Planned Workouts", () => {
       { ...pushUp, sets: 4 },
       { ...pushUp, slug: "dumbbell-overhead-press", sets: 4 },
     );
-    const { plannedExercises } = daysWorkout(stored, { workoutLength: "short" });
+    const { plannedExercises } = daysWorkout(stored, { workoutLength: "short", noSupersets: true });
 
     const workout = await logbook.startPlannedWorkout({ id: PLAN_ID, plannedExercises }, at("09:00"));
 
@@ -1265,6 +1265,58 @@ describe("Logbook: Planned Workouts", () => {
       const added = await logbook.addWorkoutExercise(exercise("push-up"));
 
       expect(logbook.nextSetDraft(added)).toBeNull();
+    });
+  });
+
+  describe("supersets", () => {
+    const bench: PlannedExercise = { slug: "dumbbell-bench-press", sets: 3, target: { unit: "kg", kg: 20, reps: 8 } };
+    const row: PlannedExercise = { slug: "inverted-row", sets: 3, target: { unit: "reps", reps: 10 } };
+    // At Quick the press and row pair, and the squat goes alone
+    const paired = () => daysWorkout(plan(bench, row, gobletSquat), { workoutLength: "quick" }).plannedExercises;
+
+    it("starts a pair linked both ways by Workout Exercise", async () => {
+      const { logbook } = setup();
+
+      const { workoutExercises } = await logbook.startPlannedWorkout(
+        { id: PLAN_ID, plannedExercises: paired() },
+        at("09:00"),
+      );
+
+      const [press, inverted, squat] = workoutExercises;
+      expect(press?.planned?.supersetWith).toBe(inverted?.id);
+      expect(inverted?.planned?.supersetWith).toBe(press?.id);
+      expect(squat?.planned).not.toHaveProperty("supersetWith");
+    });
+
+    it("logs each Set under its own Exercise, and uploads no sign of the pair", async () => {
+      const { logbook, uploader } = setup();
+      const { workoutExercises } = await logbook.startPlannedWorkout(
+        { id: PLAN_ID, plannedExercises: paired() },
+        at("09:00"),
+      );
+      const [press, inverted] = workoutExercises;
+      await logbook.logSet(press!.id, { kind: "external", kg: 20, reps: 8 }, at("09:05"));
+      await logbook.logSet(inverted!.id, { kind: "bodyweight", reps: 10 }, at("09:06"));
+      await logbook.logSet(press!.id, { kind: "external", kg: 20, reps: 8 }, at("09:08"));
+
+      await logbook.finish({ startedAt: at("09:00"), endedAt: at("09:30"), now: at("09:30") });
+      await logbook.sync();
+
+      expect(uploader.uploaded[0]?.workoutExercises).toEqual([
+        {
+          slug: "dumbbell-bench-press",
+          loadType: "external",
+          sets: [
+            { kind: "external", kg: 20, reps: 8, loggedAt: "2026-10-24T09:05:00.000Z" },
+            { kind: "external", kg: 20, reps: 8, loggedAt: "2026-10-24T09:08:00.000Z" },
+          ],
+        },
+        {
+          slug: "inverted-row",
+          loadType: "bodyweight",
+          sets: [{ kind: "bodyweight", reps: 10, loggedAt: "2026-10-24T09:06:00.000Z" }],
+        },
+      ]);
     });
   });
 });
