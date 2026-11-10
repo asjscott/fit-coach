@@ -23,6 +23,10 @@ export const MAX_SETS_PER_EXERCISE = 4;
 // Soft limits: credited Sets a Muscle takes from one Workout, and the fewest Workouts its budget is spread over
 export const MUSCLE_CAP_PER_WORKOUT = 10;
 export const MIN_WORKOUTS_PER_MUSCLE = 2;
+// The recovery filter: a logged Set's fatigue fades in a straight line to nothing over this many hours, and an
+// Exercise is left out while any of its primary Muscles is over the limit, in credited Sets (fatigue.ts)
+export const FATIGUE_HOURS = 48;
+export const FATIGUE_LIMIT = 4;
 
 const eachMuscle = (muscles: readonly Muscle[], value: number): WeeklyBudget =>
   Object.fromEntries(muscles.map((muscle) => [muscle, value]));

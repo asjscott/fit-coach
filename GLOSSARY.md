@@ -73,7 +73,7 @@ _Avoid_: Custom workout, freestyle workout
 ### Planning
 
 **Planned Workout**:
-What the Coach prescribes for the user's next training day, built for their primary Equipment Profile: the Exercises in priority order, their Sets and targets, at Long, with the Alternative Exercises for Full gym and Bodyweight only. There is one current at a time. It's rebuilt after an upload, in a new week, after an Assessment and after a change to the Profile fields it depends on. The old one is kept, marked finished or replaced. Starting it begins a Workout linked to it.
+What the Coach prescribes for the user's next training day, built for their primary Equipment Profile: the Exercises in priority order, their Sets and targets, at Long, with the Alternative Exercises for Full gym and Bodyweight only. There is one current at a time. It's rebuilt after an upload, on a new day, after an Assessment and after a change to the Profile fields it depends on. A rebuild that gives the same plan keeps it; otherwise the old one is kept, marked finished or replaced. Starting it begins a Workout linked to it.
 _Avoid_: Session, planned session, program
 
 **Day's Workout**:
@@ -87,6 +87,10 @@ _Avoid_: Weekly target, quota, weekly volume
 **Week Ledger**:
 The credited Sets each Muscle has had so far this week, counted from the Sets the user logged and read against the Weekly Budget. A Set credits 1 to each primary Muscle and 0.5 to each secondary, and a one-sided Set counts once. Weeks run Monday to Sunday in the user's timezone.
 _Avoid_: Tally, weekly progress
+
+**Fatigue**:
+How much recent training a Muscle is still carrying: each logged Set credits it as in the Week Ledger, in full when logged and fading in a straight line to nothing after 48 hours. The Coach leaves out an Exercise while any of its primary Muscles is over the limit of 4, unless nothing else helps the Weekly Budget. Those Muscles are held back.
+_Avoid_: Soreness, recovery score, readiness
 
 **Equipment Profile**:
 A named set of equipment the user trains with, and the loads it makes. One is primary. Full gym and Bodyweight only always exist, without the user creating them, for a day when the usual equipment isn't available.

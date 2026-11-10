@@ -135,6 +135,9 @@ planWorkout (packages/engines/src/plan-workout.ts): pure, only the server calls 
   │  the rep cap and variety cap guards. Their order settles a tie: last week's first, then longest Sets, then slug
   ├─ Week Ledger (week-ledger.ts): weekLedger, recalculated from logged Sets; mondayOf is the server's week
   ├─ Weekly Budget (weekly-budget.ts): DOSES, DAYS_SCALE and the limits, weeklyBudget, fillOrder
+  ├─ Recovery filter: muscleFatigue (fatigue.ts) from each logged Set's loggedAt; FATIGUE_HOURS and FATIGUE_LIMIT
+  │  sit with the budget's tables. A tired primary Muscle leaves its Exercises out until nothing else helps the
+  │  budget, and planWorkout returns the Muscles it held back (heldBack, not stored)
   ├─ scoreExercise (plan-score.ts): every tilt, in one place
   └─ withAlternatives (alternative-exercises.ts): each Exercise's options for Full gym and Bodyweight only, saved in
      the plan. What's possible stays; only what's pickable stands in. Both built-ins are BUILT_IN_EQUIPMENT in
@@ -160,6 +163,9 @@ Schemas: packages/shared/src/planned-workouts.ts
 - **The phone asks, the server decides.** POST `/planned-workouts/current` runs on every Today visit and after every
   sync. It's idempotent, as `planIsDue` compares `builtFrom` (`planInputsKey`) and `weekStart`, so a failed rebuild is
   just still due and logs rather than fails the request. A new plan input goes in `PlanInputs`.
+- **A plan is also due on a new day in the user's timezone** (#93), so fatigue is judged when the user looks, not at
+  the upload. `builtAt` is when it was last built: a rebuild that gives the same plan (`isSamePlan`) keeps it and its
+  id, and only moves `builtAt` on. A plan stored without `builtAt` is due once.
 - **A stale plan is never shown** (`PlannedWorkoutCopy.stale`). It goes stale while a Pending Workout exists and from an
   upload until the next answer (`awaitingNextPlan`). Today then says "Connect to plan your next Workout", but only once nothing is on its way (`syncing` on the Logbook provider), so an online finish never shows it. An answer that an upload overtakes is asked for again, not kept.
 - **Starting takes a snapshot.** Exercises are copied in with `planned: {sets, target}`, dropped at Finish, so a rebuild

@@ -9,6 +9,7 @@ export * from "./data/exercises";
 export * from "./days-workout";
 export * from "./e1rm";
 export * from "./equipment";
+export * from "./fatigue";
 export * from "./logbook";
 export * from "./picker";
 export * from "./plan-rebuild";
