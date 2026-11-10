@@ -23,10 +23,20 @@ import { LastWorkoutSection } from "../components/last-workout-section";
 import { PlannedWorkoutSheet } from "../components/planned-workout-sheet";
 import { ThisWeekSection } from "../components/this-week-section";
 import { TodayCard, TodayCardLink } from "../components/today-card";
+import { CheckInCard } from "../components/check-in-card";
+import { useCheckIn } from "../hooks/use-check-in";
 import { useDaysWorkout } from "../hooks/use-days-workout";
 import { useDismissedOffer } from "../hooks/use-dismissed-offer";
 import { usePlannedWorkout } from "../hooks/use-planned-workout";
-import { todayCard, todayLoggedLine, todayPlan, todayPlanLine, todayRestDay, todayState } from "../today-status";
+import {
+  showsCheckIn,
+  todayCard,
+  todayLoggedLine,
+  todayPlan,
+  todayPlanLine,
+  todayRestDay,
+  todayState,
+} from "../today-status";
 
 const WHY_REST: Record<RestDayReason, string> = {
   "days-per-week-reached": "You've reached your days per week.",
@@ -59,7 +69,8 @@ export default function TodayView() {
     syncing,
   });
   const plannedWorkout = plan === "planned" ? latestPlan : null;
-  const { today, clearChoices } = useDaysWorkout(plannedWorkout);
+  const { checkIn, keep: keepCheckIn } = useCheckIn();
+  const { today, clearChoices } = useDaysWorkout(plannedWorkout, checkIn);
 
   // A forgotten Workout must be finished or discarded before the user carries on
   useEffect(() => {
@@ -149,7 +160,7 @@ export default function TodayView() {
         <TodayCard
           tone="accent"
           headline="Time to train."
-          line={todayPlanLine(today.plannedExercises, today.estimatedSeconds)}
+          line={todayPlanLine(today.plannedExercises, today.estimatedSeconds, today.lighter)}
         >
           {plannedWorkout?.cue ? <Text color="onAccent">{plannedWorkout.cue}</Text> : null}
           <LoadingButton
@@ -181,6 +192,11 @@ export default function TodayView() {
             onPress={handleManual}
           />
         </TodayCard>
+      ) : null}
+      {showsCheckIn({ card, hasDaysWorkout: !!today, checkedIn: checkIn === undefined ? undefined : !!checkIn }) ? (
+        <View style={{ marginTop: spacing[3] }}>
+          <CheckInCard onCheckIn={keepCheckIn} />
+        </View>
       ) : null}
       {state === "offline" ? (
         <Text size="sm" color="muted" style={{ marginTop: spacing[2] }}>
@@ -231,6 +247,11 @@ export default function TodayView() {
           equipmentChoices={today.equipmentChoices}
           onChooseEquipment={today.chooseEquipment}
           onPickAlternative={today.pickAlternative}
+          checkIn={checkIn ?? null}
+          onCheckIn={keepCheckIn}
+          lighter={today.lighter}
+          fullWorkout={today.fullWorkout}
+          onChooseFullWorkout={today.chooseFullWorkout}
           onStart={handleStartPlan}
         />
       ) : null}

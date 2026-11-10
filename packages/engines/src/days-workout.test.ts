@@ -447,6 +447,115 @@ describe("daysWorkout", () => {
     });
   });
 
+  describe("after the check-in", () => {
+    const badNight = { sleep: 1, energy: 2, soreness: 5 }; // readiness 4: keeps 0.7
+    const tired = { sleep: 3, energy: 3, soreness: 3 }; // 9: keeps 0.85
+    const allFours = { sleep: 4, energy: 4, soreness: 4 }; // 10: keeps everything
+    const setsOf = (choices: DayChoices, plan: Pick<PlannedWorkout, "plannedExercises"> = longPlan) =>
+      daysWorkout(plan, choices).plannedExercises.map(({ slug, sets }) => [slug, sets]);
+
+    it("changes nothing with no check-in, or with all 4s", () => {
+      const usual = daysWorkout(longPlan, { workoutLength: "long" });
+      expect(usual.lighter).toBe(false);
+      expect(daysWorkout(longPlan, { workoutLength: "long", checkIn: allFours })).toEqual(usual);
+    });
+
+    it("keeps 0.7 of the Sets after a bad night, taking the lowest priority first", () => {
+      // 27 Sets at Long keep 19: six whole Exercises and the split squat's first Set
+      expect(setsOf({ workoutLength: "long", checkIn: badNight })).toEqual([
+        ["goblet-squat", 3],
+        ["one-arm-dumbbell-row", 3],
+        ["dumbbell-romanian-deadlift", 3],
+        ["push-up", 3],
+        ["dumbbell-overhead-press", 3],
+        ["single-leg-romanian-deadlift", 3],
+        ["bulgarian-split-squat", 1],
+      ]);
+      expect(daysWorkout(longPlan, { workoutLength: "long", checkIn: badNight }).lighter).toBe(true);
+    });
+
+    it("keeps 0.85 when tired", () => {
+      // 23 of 27: the archer push-up keeps 2 and the cossack squat goes
+      expect(setsOf({ workoutLength: "long", checkIn: tired }).slice(-2)).toEqual([
+        ["bulgarian-split-squat", 3],
+        ["archer-push-up", 2],
+      ]);
+    });
+
+    it("trims what the Length left, at every Length", () => {
+      // Standard keeps 21 Sets, then 15 of them; Short keeps 13, then 9
+      expect(setsOf({ workoutLength: "standard", checkIn: badNight })).toEqual([
+        ["goblet-squat", 3],
+        ["one-arm-dumbbell-row", 3],
+        ["dumbbell-romanian-deadlift", 3],
+        ["push-up", 3],
+        ["dumbbell-overhead-press", 3],
+      ]);
+      expect(setsOf({ workoutLength: "short", checkIn: badNight })).toEqual([
+        ["goblet-squat", 3],
+        ["one-arm-dumbbell-row", 3],
+        ["dumbbell-romanian-deadlift", 3],
+      ]);
+    });
+
+    it("takes a 4th Set in the order the planner added it", () => {
+      // 10 Sets keep 7: the lateral raise's 4th Set came after the push-up, so it goes before the push-up's Sets
+      const plan = {
+        plannedExercises: [
+          planned("goblet-squat"),
+          { ...planned("dumbbell-lateral-raise", 4), fourthSetAfter: 3 },
+          planned("push-up"),
+        ],
+      };
+      expect(Object.fromEntries(setsOf({ workoutLength: "long", checkIn: badNight }, plan))).toEqual({
+        "goblet-squat": 3,
+        "dumbbell-lateral-raise": 3,
+        "push-up": 1,
+      });
+    });
+
+    it("times the Workout from the Sets left", () => {
+      // Warm-up 300 s and the 19 Sets: 1980 s for six Exercises and 120 s for the split squat
+      expect(daysWorkout(longPlan, { workoutLength: "long", checkIn: badNight }).estimatedSeconds).toBe(2400);
+    });
+
+    it("combines with equipment, trimming what the equipment left", () => {
+      // With no goblet squat on Bodyweight only, 18 Sets keep 13: the split squat's first Set is the 13th
+      const [squat, ...others] = longPlan.plannedExercises.slice(0, 7);
+      const plan = { plannedExercises: [{ ...squat, alternatives: { bodyweight_only: [] } }, ...others] };
+      expect(setsOf({ workoutLength: "long", equipment: "bodyweight_only", checkIn: badNight }, plan)).toEqual([
+        ["one-arm-dumbbell-row", 3],
+        ["dumbbell-romanian-deadlift", 3],
+        ["push-up", 3],
+        ["dumbbell-overhead-press", 3],
+        ["single-leg-romanian-deadlift", 1],
+      ]);
+    });
+
+    it("keeps a lone Set", () => {
+      const plan = { plannedExercises: [planned("goblet-squat", 1)] };
+      expect(setsOf({ workoutLength: "long", checkIn: badNight }, plan)).toEqual([["goblet-squat", 1]]);
+    });
+
+    it("is undone by Full Workout, giving back the Day's Workout exactly", () => {
+      const usual = daysWorkout(longPlan, { workoutLength: "standard", equipment: "bodyweight_only" });
+      const full = daysWorkout(longPlan, {
+        workoutLength: "standard",
+        equipment: "bodyweight_only",
+        checkIn: badNight,
+        fullWorkout: true,
+      });
+      expect(full).toEqual(usual);
+    });
+
+    it("is undone by Full Workout for one plan only, as for the equipment", () => {
+      const usual = { workoutLength: "standard", checkIn: badNight } as const;
+      const made = withChoice(null, "plan-1", { fullWorkout: true });
+      expect(dayChoices("plan-1", usual, made).fullWorkout).toBe(true);
+      expect(dayChoices("plan-2", usual, made)).toEqual(usual);
+    });
+  });
+
   describe("the order of the Workout", () => {
     // Priority order: two single-Muscle Exercises, then multi-Muscle ones with a swing among them
     const plan = {

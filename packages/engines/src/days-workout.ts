@@ -6,6 +6,7 @@ import {
   type PlannedWorkout,
   type WorkoutLength,
 } from "@fit/shared";
+import { readinessShare, type CheckIn } from "./check-in";
 import { exerciseBySlug } from "./data/exercises";
 import { SETS_PER_PICK } from "./weekly-budget";
 import { secondsForSets, TYPICAL_SECONDS_PER_SET, WARM_UP_SECONDS } from "./workout-length";
@@ -17,6 +18,9 @@ export type DayChoices = {
   equipment?: BuiltInEquipment;
   // The Alternative Exercise the user prefers, by the slug of the planned Exercise it replaces
   alternativePicks?: Record<string, string>;
+  // Today's check-in, which takes Sets off unless the user chooses the Full Workout
+  checkIn?: CheckIn;
+  fullWorkout?: boolean;
 };
 
 // The choices the user has made, tied to the plan they made them on
@@ -122,20 +126,27 @@ function setsInPriorityOrder(placed: readonly Placed[]): DayExercise[] {
   return sets.sort((a, b) => a.priority - b.priority).map(({ exercise }) => exercise);
 }
 
-// Keeps Sets in priority order and stops at the first that doesn't fit: nothing lower priority may take the place of
-// higher priority work
-function cutToSeconds(placed: readonly Placed[], seconds: number) {
-  const keptSets = new Map<DayExercise, number>();
+// How many Sets fit in the time: in priority order, stopping at the first that doesn't fit, as nothing lower priority
+// may take the place of higher priority work
+function setsInSeconds(sets: readonly DayExercise[], seconds: number) {
   let secondsLeft = seconds;
-  for (const exercise of setsInPriorityOrder(placed)) {
-    secondsLeft -= secondsPerSet(exercise.slug);
-    if (secondsLeft < 0) break;
-    keptSets.set(exercise, (keptSets.get(exercise) ?? 0) + 1);
-  }
-  return placed.flatMap(({ exercise }) => {
-    const sets = keptSets.get(exercise);
-    return sets ? [{ ...exercise, sets }] : [];
+  const fitting = sets.findIndex(({ slug }) => (secondsLeft -= secondsPerSet(slug)) < 0);
+  return fitting === -1 ? sets.length : fitting;
+}
+
+// The Length's cut, then the check-in's share of what's left, both taking the lowest priority Sets first. lighter says
+// whether the check-in took any
+function cut(placed: readonly Placed[], { workoutLength, checkIn, fullWorkout }: DayChoices) {
+  const sets = setsInPriorityOrder(placed);
+  const fitting = setsInSeconds(sets, secondsForSets(workoutLength));
+  const kept = Math.round(fitting * (fullWorkout ? 1 : readinessShare(checkIn)));
+  const keptSets = new Map<DayExercise, number>();
+  for (const exercise of sets.slice(0, kept)) keptSets.set(exercise, (keptSets.get(exercise) ?? 0) + 1);
+  const dayExercises = placed.flatMap(({ exercise }) => {
+    const count = keptSets.get(exercise);
+    return count ? [{ ...exercise, sets: count }] : [];
   });
+  return { dayExercises, lighter: kept < fitting };
 }
 
 // Lower goes first
@@ -149,14 +160,19 @@ function orderRank(slug: string, goal: Goal | undefined) {
 const inWorkoutOrder = (dayExercises: readonly DayExercise[], goal: Goal | undefined) =>
   [...dayExercises].sort((a, b) => orderRank(a.slug, goal) - orderRank(b.slug, goal));
 
-// The Workout for today and the slugs of Exercises with no option on the chosen equipment. Equipment comes first so
-// the cut times what's actually done, the order last as the cut needs priority. goal is undefined until the user loads
+// The Workout for today, the slugs of Exercises with no option on the chosen equipment, and whether the check-in made it
+// lighter. Equipment comes first so the cut times what's actually done, the order last as the cut needs priority. goal is undefined until the user loads
 export function daysWorkout(
   { plannedExercises }: Pick<PlannedWorkout, "plannedExercises">,
   choices: DayChoices,
   goal?: Goal,
 ) {
   const { placed, dropped } = onEquipment(plannedExercises, choices);
-  const kept = cutToSeconds(placed, secondsForSets(choices.workoutLength));
-  return { plannedExercises: inWorkoutOrder(kept, goal), estimatedSeconds: WARM_UP_SECONDS + secondsOf(kept), dropped };
+  const { dayExercises, lighter } = cut(placed, choices);
+  return {
+    plannedExercises: inWorkoutOrder(dayExercises, goal),
+    estimatedSeconds: WARM_UP_SECONDS + secondsOf(dayExercises),
+    dropped,
+    lighter,
+  };
 }
