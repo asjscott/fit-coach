@@ -18,11 +18,11 @@ export const RECOVERY_WORKOUT: readonly Pick<PlannedExercise, "slug" | "sets" | 
 export const takesOneSet = (slug: string) => slug === "walk";
 
 // Whether the logging screen offers a next Set: not once the walk has its one
-export const takesAnotherSet = ({ slug, sets }: { slug: string; sets: readonly unknown[] }) =>
-  !takesOneSet(slug) || sets.length === 0;
+export const takesAnotherSet = ({ slug, sets }: LoggedWorkoutExercise) => !takesOneSet(slug) || sets.length === 0;
 
 // What it takes to tell a Recovery Workout, however it came to be logged
-type LoggedWorkout = { workoutExercises: readonly { slug: string; sets: readonly unknown[] }[] };
+export type LoggedWorkoutExercise = { slug: string; sets: readonly unknown[] };
+type LoggedWorkout = { workoutExercises: readonly LoggedWorkoutExercise[] };
 
 // A Workout whose Sets are all of Recovery Exercises. It isn't training: it counts towards neither This Week, the days
 // per week nor a Rest Day, and the planner plans as though it never happened. Known by its Exercises rather than a

@@ -1,6 +1,14 @@
 import type { Set } from "@fit/shared";
 import { describe, expect, it } from "vitest";
-import { extendRest, restAfterSet, restSeconds, restSecondsLeft, startRest, type Rest } from "./rest-timer";
+import {
+  extendRest,
+  pairRestPlan,
+  restAfterSet,
+  restSeconds,
+  restSecondsLeft,
+  startRest,
+  type Rest,
+} from "./rest-timer";
 
 const at = (iso: string) => new Date(iso);
 
@@ -100,6 +108,31 @@ describe("restAfterSet", () => {
     it("rests as usual between a stretch's Sets", () => {
       expect(secondsOf(restAfterSet(recovery, "stretch", now))).toBe(70);
     });
+  });
+});
+
+describe("pairRestPlan", () => {
+  // A chin-up (120 s Sets, 90 s rest) with a lateral raise (60 s Sets, 45 s rest)
+  const member = (slug: string, logged: number, planned: number) => ({
+    slug,
+    sets: Array<Set>(logged).fill({ kind: "bodyweight", reps: 8, loggedAt: "2026-11-09T10:00:00Z" }),
+    planned: { sets: planned, target: { unit: "reps" as const, reps: 8 } },
+  });
+  const plan = (chinUp: [number, number], raise: [number, number]) =>
+    pairRestPlan([member("chin-up", ...chinUp), member("dumbbell-lateral-raise", ...raise)]);
+
+  it("rests the longer of the two after each round, with nothing more when both have as many Sets", () => {
+    expect(plan([0, 3], [0, 3])).toEqual({ pairSeconds: 90 });
+  });
+
+  it("says which has fewer Sets, and the other's own rest for once it's done", () => {
+    expect(plan([0, 1], [0, 3])).toEqual({ pairSeconds: 90, fewer: { slug: "chin-up", otherSeconds: 45 } });
+  });
+
+  it("isn't done with the one with fewer Sets until the round it's in is over", () => {
+    expect(plan([1, 1], [0, 3]).done).toBeUndefined();
+    expect(plan([1, 1], [1, 3]).done).toBe("chin-up");
+    expect(plan([1, 1], [3, 3]).done).toBe("chin-up");
   });
 });
 

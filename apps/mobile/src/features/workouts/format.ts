@@ -1,5 +1,5 @@
 import type { BuiltInEquipment, InProgressWorkoutExercise, Set, SetTarget, SetValues, Workout } from "@fit/shared";
-import { exerciseRestSeconds, pairRestSeconds } from "@fit/engines";
+import { pairRestPlan } from "@fit/engines";
 import { getCalendars } from "expo-localization";
 import { bandLevelLabels } from "../equipment/loads";
 import { exerciseName } from "./library";
@@ -233,22 +233,12 @@ export const supersetLetter = (index: number) => String.fromCharCode(65 + index)
 // The superset box's banner mid-round (#96). The name is the library's, as it is (#111)
 export const straightToLabel = (name: string) => `No rest: straight to ${name}`;
 
-type PairMember = Pick<InProgressWorkoutExercise, "slug" | "sets" | "planned">;
-
-const isDone = ({ sets, planned }: PairMember) => !!planned && sets.length >= planned.sets;
-
-// The superset box's note on its rests, as restAfterSet gives them (#111): the longer of the two after each round both
-// are in. Once the one with fewer Sets has all of them and its last round is over, the other rests its own time
-export function supersetNote(pair: readonly [PairMember, PairMember]) {
-  const [first, second] = pair;
-  const pairSeconds = pairRestSeconds(first.slug, second.slug);
+// The superset box's note on its rests, as pairRestPlan gives them (#111)
+export function supersetNote(pair: Parameters<typeof pairRestPlan>[0]) {
+  const { pairSeconds, fewer, done } = pairRestPlan(pair);
   const pairNote = `No rest between them, then ${pairSeconds} s rest`;
-  const plannedSets = ({ planned }: PairMember) => planned?.sets ?? 0;
-  if (plannedSets(first) === plannedSets(second)) return pairNote;
-  const [fewer, more] = plannedSets(first) < plannedSets(second) ? [first, second] : [second, first];
-  const own = exerciseRestSeconds(more.slug);
-  if (isDone(fewer) && more.sets.length >= fewer.sets.length) {
-    return `${exerciseName(fewer.slug)} is done: ${own} s rest between Sets`;
-  }
-  return own === pairSeconds ? pairNote : `${pairNote}. Once ${exerciseName(fewer.slug)} is done, ${own} s`;
+  if (!fewer) return pairNote;
+  const name = exerciseName(fewer.slug);
+  if (done === fewer.slug) return `${name} is done: ${fewer.otherSeconds} s rest between Sets`;
+  return fewer.otherSeconds === pairSeconds ? pairNote : `${pairNote}. Once ${name} is done, ${fewer.otherSeconds} s`;
 }
