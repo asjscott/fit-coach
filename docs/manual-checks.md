@@ -145,6 +145,15 @@ Expo Go can't reload offline. Load the app, then turn on airplane mode without c
 - [x] **P15** Turn signal back on, without touching the app, then with the app in the background. The upload and next plan arrive.
   - iOS: Result: ✅ · Android: Result: · Notes:
 
+## Rest timer (#95)
+
+`expo-keep-awake` is a new native module, so these need a new development or release build. Leave the phone's auto-lock at its usual setting (30 s to 1 min makes R2 quick).
+
+- [ ] **R1** Log a Goblet squat Set and wait out the rest (1:30). The phone vibrates once when it reaches 0, with no sound, and the timer goes. Then log a Set, put the app in the background past the end, and come back: the timer has gone, with no vibration on return.
+  - iOS: Result: · Android: Result: · Notes:
+- [ ] **R2** Start a Workout and leave the phone untouched past its auto-lock time, on the logging screen and on Today: the screen stays on. Finish or Discard, then leave it again: it dims and locks as usual.
+  - iOS: Result: · Android: Result: · Notes:
+
 ## Over time
 
 These need real weeks of training on `dev`, so run them while M5's gaps are built.

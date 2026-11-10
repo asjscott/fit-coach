@@ -1,8 +1,11 @@
 import {
   createLogbook,
+  extendRest,
+  startRest,
   type FinishResult,
   type Logbook,
   type PlannedWorkoutCopy,
+  type Rest,
   type WorkoutTimes,
 } from "@fit/engines";
 import {
@@ -14,7 +17,9 @@ import {
   type Workout,
 } from "@fit/shared";
 import * as Crypto from "expo-crypto";
+import { useKeepAwake } from "expo-keep-awake";
 import { createContext, use, useCallback, useEffect, useState, type ReactNode } from "react";
+import { Vibration } from "react-native";
 import { useApi } from "@/api";
 import { deviceStorage } from "./device-storage";
 import { useSyncTriggers } from "./hooks/use-sync-triggers";
@@ -44,6 +49,11 @@ type LogbookContextValue = {
   logSet: (workoutExerciseId: string, values: SetValues) => Promise<void>;
   editSet: (workoutExerciseId: string, setIndex: number, values: SetValues) => Promise<void>;
   deleteSet: (workoutExerciseId: string, setIndex: number) => Promise<void>;
+  // The rest after the last Set logged, or null: every Log set starts or restarts it, and Finish or Discard ends it
+  rest: Rest | null;
+  // +15 s on this rest only
+  extendRest: () => void;
+  skipRest: () => void;
   // The values a new Set starts with: a test's suggested load, else the last Set's, or null for the first
   nextSetDraft: Logbook["nextSetDraft"];
   // Where the kg stepper goes on − or +
@@ -73,6 +83,9 @@ export type PlannedWorkoutToStart = Parameters<Logbook["startPlannedWorkout"]>[0
 // uploaded settles once the upload attempt does: true when the server has this Workout,
 // false when it stays on the phone as a Pending Workout for the next try
 export type FinishOutcome = { status: "pending"; uploaded: Promise<boolean> } | { status: "nothing-to-save" };
+
+// A rest that ended this long ago, while the app was in the background, ends without vibrating on return
+const LATE_REST_END_MS = 2000;
 
 // Adding an Exercise waits for its Previous Sets, so a weak signal gives up after this long and
 // falls back to Pending Workouts
@@ -119,6 +132,8 @@ export function LogbookProvider({ children }: { children: ReactNode }) {
     stale: false,
   });
   const [isLoaded, setIsLoaded] = useState(false);
+  // Held in memory only, as it belongs to the Workout, not an Exercise: a force-quit loses it
+  const [rest, setRest] = useState<Rest | null>(null);
   // Counted, as a sync and a finish can overlap
   const [syncsUnderWay, setSyncsUnderWay] = useState(0);
 
@@ -191,10 +206,32 @@ export function LogbookProvider({ children }: { children: ReactNode }) {
     [logbook, run],
   );
 
+  // Starts the rest once the Set is stored, restarting one under way
   const logSet = useCallback(
-    (workoutExerciseId: string, values: SetValues) => run(() => logbook.logSet(workoutExerciseId, values, new Date())),
+    async (workoutExerciseId: string, values: SetValues) => {
+      const now = new Date();
+      await run(() => logbook.logSet(workoutExerciseId, values, now));
+      const logged = (await logbook.inProgress())?.workoutExercises.find((we) => we.id === workoutExerciseId);
+      if (logged) setRest(startRest(logged.slug, now));
+    },
     [logbook, run],
   );
+
+  // One vibration at the end, unless it ended while the app was in the background (that alert waits for M8)
+  useEffect(() => {
+    if (!rest) return;
+    const timer = setTimeout(
+      () => {
+        if (Date.now() - rest.endsAt < LATE_REST_END_MS) Vibration.vibrate();
+        setRest(null);
+      },
+      Math.max(0, rest.endsAt - Date.now()),
+    );
+    return () => clearTimeout(timer);
+  }, [rest]);
+
+  const extendCurrentRest = useCallback(() => setRest((current) => current && extendRest(current)), []);
+  const skipRest = useCallback(() => setRest(null), []);
 
   const removeWorkoutExercise = useCallback(
     (workoutExerciseId: string) => run(() => logbook.removeWorkoutExercise(workoutExerciseId)),
@@ -225,6 +262,7 @@ export function LogbookProvider({ children }: { children: ReactNode }) {
           result = await finishing();
         });
         if (!result || result.status === "nothing-to-save") return { status: "nothing-to-save" };
+        setRest(null);
         const { id } = result.workout;
         const uploaded = sync().then(async () => !(await logbook.pending()).some((p) => p.id === id));
         return { status: "pending", uploaded };
@@ -243,7 +281,10 @@ export function LogbookProvider({ children }: { children: ReactNode }) {
 
   const finishAtLastSet = useCallback(() => uploadFinished(() => logbook.finishAtLastSet()), [logbook, uploadFinished]);
 
-  const discard = useCallback(() => run(() => logbook.discard()), [logbook, run]);
+  const discard = useCallback(async () => {
+    await run(() => logbook.discard());
+    setRest(null);
+  }, [logbook, run]);
 
   const isStale = useCallback(() => logbook.isStale(new Date()), [logbook]);
 
@@ -251,7 +292,10 @@ export function LogbookProvider({ children }: { children: ReactNode }) {
 
   const pendingCount = useCallback(() => logbook.pendingCount(), [logbook]);
 
-  const clear = useCallback(() => run(() => logbook.clear()), [logbook, run]);
+  const clear = useCallback(async () => {
+    await run(() => logbook.clear());
+    setRest(null);
+  }, [logbook, run]);
 
   return (
     <LogbookContext
@@ -271,6 +315,9 @@ export function LogbookProvider({ children }: { children: ReactNode }) {
         logSet,
         editSet,
         deleteSet,
+        rest,
+        extendRest: extendCurrentRest,
+        skipRest,
         nextSetDraft: logbook.nextSetDraft,
         nextLoadKg: logbook.nextLoadKg,
         finish,
@@ -283,9 +330,16 @@ export function LogbookProvider({ children }: { children: ReactNode }) {
         clear,
       }}
     >
+      {workout ? <KeepAwake /> : null}
       {children}
     </LogbookContext>
   );
+}
+
+// The screen stays on for the whole In-progress Workout, on any screen, and goes back to normal after it
+function KeepAwake() {
+  useKeepAwake("in-progress-workout", { suppressDeactivateWarnings: true });
+  return null;
 }
 
 export function useLogbook() {
