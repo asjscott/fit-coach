@@ -1,4 +1,5 @@
-import { CheckIn, readStoredCopy, type DeviceStorage } from "@fit/engines";
+import { readStoredCopy, type DeviceStorage } from "@fit/engines";
+import { CheckIn } from "@fit/shared";
 import { z } from "zod";
 import { localDateText } from "../workouts/local-date-time";
 

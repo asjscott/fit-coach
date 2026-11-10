@@ -35,6 +35,7 @@ import { useDismissedOffer } from "../hooks/use-dismissed-offer";
 import { usePlannedWorkout } from "../hooks/use-planned-workout";
 import { planReasonLines } from "../plan-reasons";
 import {
+  RECOVERY_INSTEAD,
   showsCheckIn,
   todayCard,
   todayLoggedLine,
@@ -49,8 +50,6 @@ const WHY_REST: Record<RestDayReason, string> = {
   "trained-today": "You've trained today.",
   "trained-yesterday": "You trained yesterday, and this week's Workouts still fit.",
 };
-
-const RECOVERY_INSTEAD = "Recovery Workout instead";
 
 // The training hub: one card for what the day calls for, then this week against the user's days per week, and the last
 // Workout. Everything about the next Workout itself is a tap away in its sheet
@@ -78,7 +77,7 @@ export default function TodayView() {
     syncing,
   });
   const plannedWorkout = plan === "planned" ? latestPlan : null;
-  const { checkIn, keep: keepCheckIn } = useCheckIn();
+  const { checkIn, state: checkInState, keep: keepCheckIn } = useCheckIn();
   const { today, clearChoices } = useDaysWorkout(plannedWorkout, checkIn);
 
   // A forgotten Workout must be finished or discarded before the user carries on
@@ -210,7 +209,7 @@ export default function TodayView() {
           />
         </TodayCard>
       ) : null}
-      {showsCheckIn({ card, hasDaysWorkout: !!today, checkedIn: checkIn === undefined ? undefined : !!checkIn }) ? (
+      {showsCheckIn({ card, hasDaysWorkout: !!today, checkIn: checkInState }) ? (
         <View style={{ marginTop: spacing[3] }}>
           <CheckInCard onCheckIn={keepCheckIn} />
         </View>
@@ -265,11 +264,17 @@ export default function TodayView() {
           equipmentChoices={today.equipmentChoices}
           onChooseEquipment={today.chooseEquipment}
           onPickAlternative={today.pickAlternative}
-          checkIn={checkIn ?? null}
-          onCheckIn={keepCheckIn}
-          lighter={today.lighter}
-          fullWorkout={today.fullWorkout}
-          onChooseFullWorkout={today.chooseFullWorkout}
+          checkIn={
+            checkIn
+              ? {
+                  ratings: checkIn,
+                  onChange: keepCheckIn,
+                  lighter: today.lighter,
+                  fullWorkout: today.fullWorkout,
+                  onChooseFullWorkout: today.chooseFullWorkout,
+                }
+              : null
+          }
           onStart={handleStartPlan}
           onStartRecovery={handleStartRecovery}
         />

@@ -96,6 +96,12 @@ export function todayLoggedLine(workouts: readonly FinishedWorkoutSets[]) {
   );
 }
 
+// The plan's sheet says it on its own, and the day's card at the end of todayPlanLine
+export const LIGHTER_AFTER_CHECK_IN = "Lighter after your check-in";
+
+// On the Rest Day card and in the plan's sheet
+export const RECOVERY_INSTEAD = "Recovery workout instead";
+
 // What's in a Planned Workout: "6 Exercises · 18 Sets · About 45 min", and "· lighter after your check-in" when it
 // took Sets off
 export function todayPlanLine(
@@ -108,18 +114,21 @@ export function todayPlanLine(
     counted(plannedExercises.length, "Exercise"),
     counted(sets, "Set"),
     estimatedTimeLabel(estimatedSeconds),
-    ...(lighter ? ["lighter after your check-in"] : []),
+    ...(lighter ? [LIGHTER_AFTER_CHECK_IN.toLowerCase()] : []),
   ].join(" · ");
 }
 
+// Where today's check-in stands: not yet read from the phone, or read and made or not
+export type CheckInState = "unread" | "not-checked-in" | "checked-in";
+
 // The check-in card sits under the day's card only while there's a Planned Workout to start, and goes once the user
-// checks in or a Workout starts that day. checkedIn is undefined until the phone has read it
+// checks in or a Workout starts that day
 export const showsCheckIn = ({
   card,
   hasDaysWorkout,
-  checkedIn,
+  checkIn,
 }: {
   card: TodayCard;
   hasDaysWorkout: boolean;
-  checkedIn: boolean | undefined;
-}) => (card === "ready" || card === "rest") && hasDaysWorkout && checkedIn === false;
+  checkIn: CheckInState;
+}) => (card === "ready" || card === "rest") && hasDaysWorkout && checkIn === "not-checked-in";

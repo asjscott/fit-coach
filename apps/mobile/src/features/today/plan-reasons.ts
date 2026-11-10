@@ -1,4 +1,6 @@
-import { MUSCLE_GROUPS, MuscleGroup, type Muscle, type PlanReason } from "@fit/shared";
+import { muscleGroupsOf, type Muscle, type MuscleGroup, type PlanReason } from "@fit/shared";
+import { weekdayLabel } from "../workouts/format";
+import { localDateText } from "../workouts/local-date-time";
 
 const GROUP_NAMES: Record<MuscleGroup, { name: string; plural: boolean }> = {
   legs: { name: "Legs", plural: true },
@@ -11,14 +13,9 @@ const GROUP_NAMES: Record<MuscleGroup, { name: string; plural: boolean }> = {
 // The order Today puts them in, its card showing the first
 const ORDER: PlanReason["code"][] = ["recovering", "budget-met", "behind"];
 
-const WEEKDAYS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
-
-const localDate = (date: Date) =>
-  [date.getFullYear(), date.getMonth() + 1, date.getDate()].map((part) => String(part).padStart(2, "0")).join("-");
-
 // "Legs and Back are", or null when none of the Muscles is in a group
 function groupsAre(muscles: readonly Muscle[]) {
-  const groups = MuscleGroup.options.filter((group) => MUSCLE_GROUPS[group].some((muscle) => muscles.includes(muscle)));
+  const groups = muscleGroupsOf(muscles);
   if (!groups.length) return null;
   const names = groups.map((group) => GROUP_NAMES[group].name);
   const listed = names.length > 1 ? `${names.slice(0, -1).join(", ")} and ${names.at(-1)}` : names[0];
@@ -28,7 +25,7 @@ function groupsAre(muscles: readonly Muscle[]) {
 
 // The day of a date in the user's timezone: today, or its weekday, as fatigue lasts less than a week
 const dayOf = (date: string, now: Date) =>
-  date === localDate(now) ? "today" : WEEKDAYS[new Date(`${date}T12:00:00Z`).getUTCDay()];
+  date === localDateText(now) ? "today" : weekdayLabel(new Date(`${date}T12:00:00`));
 
 function line(reason: PlanReason, now: Date) {
   switch (reason.code) {

@@ -177,7 +177,7 @@ describe("todayPlanLine", () => {
 });
 
 describe("showsCheckIn", () => {
-  const base = { card: "ready", hasDaysWorkout: true, checkedIn: false } as const;
+  const base = { card: "ready", hasDaysWorkout: true, checkIn: "not-checked-in" } as const;
 
   it("shows with a Planned Workout to start, ready or on a Rest Day", () => {
     expect(showsCheckIn(base)).toBe(true);
@@ -185,7 +185,7 @@ describe("showsCheckIn", () => {
   });
 
   it("goes once the user has checked in", () => {
-    expect(showsCheckIn({ ...base, checkedIn: true })).toBe(false);
+    expect(showsCheckIn({ ...base, checkIn: "checked-in" })).toBe(false);
   });
 
   it("goes once a Workout starts or is done that day", () => {
@@ -201,6 +201,6 @@ describe("showsCheckIn", () => {
   });
 
   it("waits until the phone has read today's check-in", () => {
-    expect(showsCheckIn({ ...base, checkedIn: undefined })).toBe(false);
+    expect(showsCheckIn({ ...base, checkIn: "unread" })).toBe(false);
   });
 });

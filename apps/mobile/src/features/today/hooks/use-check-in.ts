@@ -1,7 +1,8 @@
-import type { CheckIn } from "@fit/engines";
+import type { CheckIn } from "@fit/shared";
 import { useCallback, useEffect, useState } from "react";
 import { deviceStorage } from "@/features/workouts/device-storage";
 import { createStoredCheckIn } from "../stored-check-in";
+import type { CheckInState } from "../today-status";
 
 const storedCheckIn = createStoredCheckIn(deviceStorage);
 
@@ -19,5 +20,6 @@ export function useCheckIn() {
     storedCheckIn.keep(next, new Date()).catch(() => {});
   }, []);
 
-  return { checkIn, keep };
+  const state: CheckInState = checkIn === undefined ? "unread" : checkIn ? "checked-in" : "not-checked-in";
+  return { checkIn, state, keep };
 }

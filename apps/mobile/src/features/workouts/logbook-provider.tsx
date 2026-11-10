@@ -53,7 +53,6 @@ type LogbookContextValue = {
   deleteSet: (workoutExerciseId: string, setIndex: number) => Promise<void>;
   // The rest after the last Set logged, or null: every Log set starts or restarts it, and Finish or Discard ends it
   rest: Rest | null;
-  // +15 s on this rest only
   extendRest: () => void;
   skipRest: () => void;
   // The values a new Set starts with: a test's suggested load, else the last Set's, or null for the first
@@ -214,9 +213,11 @@ export function LogbookProvider({ children }: { children: ReactNode }) {
   const logSet = useCallback(
     async (workoutExerciseId: string, values: SetValues) => {
       const now = new Date();
-      await run(() => logbook.logSet(workoutExerciseId, values, now));
-      const logged = (await logbook.inProgress())?.workoutExercises.find((we) => we.id === workoutExerciseId);
-      if (logged) setRest(startRest(logged.slug, now));
+      let slug = "";
+      await run(async () => {
+        ({ slug } = await logbook.logSet(workoutExerciseId, values, now));
+      });
+      setRest(startRest(slug, now));
     },
     [logbook, run],
   );

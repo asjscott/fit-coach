@@ -629,6 +629,21 @@ describe("planWorkout", () => {
       ]);
     });
 
+    it("takes the day from the Sets that worked the Muscles as primary, the ones that tired them", () => {
+      // Early Wednesday in New York, a plank credits glutes only as secondary
+      const wednesdayMorning = "2026-11-04T11:00:00.000Z";
+      const plankThisMorning = {
+        id: "plank",
+        startedAt: wednesdayMorning,
+        workoutExercises: [{ slug: "plank", sets: loggedSets(1, wednesdayMorning) }],
+      };
+      expect(reasons({ workouts: [legDay, plankThisMorning] })[0]).toEqual({
+        code: "recovering",
+        muscles: ["quads", "glutes"],
+        lastSetOn: "2026-11-03",
+      });
+    });
+
     it("says the Workout is extra once the week's budget is met", () => {
       const workouts = [
         week({
@@ -756,6 +771,18 @@ describe("planWorkout", () => {
     it("is needed once a week", () => {
       const workouts = [oneSidedDone, logged("w2", "back-squat", 3)];
       expect(athletic({ workouts })[0]?.slug).not.toBe("back-squat");
+    });
+
+    it("is still needed after goblet squat where the equipment allows back squat", () => {
+      const workouts = [oneSidedDone, logged("w2", "goblet-squat", 3)];
+      expect(athletic({ workouts })[0]).toMatchObject({ slug: "back-squat", sets: 3 });
+    });
+
+    it("is still needed until the week has had 3 Sets of it", () => {
+      const short = [oneSidedDone, logged("w2", "back-squat", 2)];
+      expect(athletic({ workouts: short })[0]).toMatchObject({ slug: "back-squat", sets: 3 });
+      const acrossTwo = [oneSidedDone, logged("w2", "back-squat", 2), logged("w3", "back-squat", 1)];
+      expect(athletic({ workouts: acrossTwo })[0]?.slug).not.toBe("back-squat");
     });
 
     it("waits while quads are recovering, rather than coming back as a last resort", () => {
