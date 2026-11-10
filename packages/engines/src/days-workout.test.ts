@@ -504,6 +504,18 @@ describe("daysWorkout", () => {
       ]);
     });
 
+    it("keeps 0.85 with soreness 5 after a good night, unless Full Workout", () => {
+      const sore = { sleep: 5, energy: 5, soreness: 5 }; // 11, but soreness 5 keeps at most 0.85
+      const lighter = daysWorkout(longPlan, { workoutLength: "long", checkIn: sore });
+      expect(lighter.lighter).toBe(true);
+      expect(setsOf({ workoutLength: "long", checkIn: sore })).toEqual(
+        setsOf({ workoutLength: "long", checkIn: tired }),
+      );
+      expect(daysWorkout(longPlan, { workoutLength: "long", checkIn: sore, fullWorkout: true })).toEqual(
+        daysWorkout(longPlan, { workoutLength: "long" }),
+      );
+    });
+
     it("trims what the Length left, at every Length", () => {
       // Standard keeps 21 Sets, then 15 of them; Short keeps 13, then 9
       expect(setsOf({ workoutLength: "standard", noSupersets: true, checkIn: badNight })).toEqual([
