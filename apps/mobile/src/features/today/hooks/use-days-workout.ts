@@ -34,9 +34,11 @@ export function useDaysWorkout(plannedWorkout: PlannedWorkout | null, checkIn?: 
       equipment: choices.equipment,
       equipmentChoices: equipmentChoices(plannedWorkout),
       fullWorkout: !!choices.fullWorkout,
+      noSupersets: !!choices.noSupersets,
       chooseLength: (workoutLength: DayLength) => choose({ workoutLength }),
       chooseEquipment: (equipment?: BuiltInEquipment) => choose({ equipment }),
       chooseFullWorkout: (fullWorkout: boolean) => choose({ fullWorkout }),
+      chooseNoSupersets: (noSupersets: boolean) => choose({ noSupersets }),
       pickAlternative: (replaces: string, slug: string) =>
         choose({ alternativePicks: { ...choices.alternativePicks, [replaces]: slug } }),
     },

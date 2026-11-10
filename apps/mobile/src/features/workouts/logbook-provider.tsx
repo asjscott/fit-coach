@@ -1,7 +1,7 @@
 import {
   createLogbook,
   extendRest,
-  startRest,
+  restAfterSet,
   type FinishResult,
   type Logbook,
   type PlannedWorkoutCopy,
@@ -209,15 +209,14 @@ export function LogbookProvider({ children }: { children: ReactNode }) {
     [logbook, run],
   );
 
-  // Starts the rest once the Set is stored, restarting one under way
+  // Starts the rest once the Set is stored, restarting one under way. Between the two Exercises of a superset there's
+  // none, so one under way ends
   const logSet = useCallback(
     async (workoutExerciseId: string, values: SetValues) => {
       const now = new Date();
-      let slug = "";
-      await run(async () => {
-        ({ slug } = await logbook.logSet(workoutExerciseId, values, now));
-      });
-      setRest(startRest(slug, now));
+      await run(() => logbook.logSet(workoutExerciseId, values, now));
+      const logged = await logbook.inProgress();
+      setRest(logged && restAfterSet(logged, workoutExerciseId, now));
     },
     [logbook, run],
   );

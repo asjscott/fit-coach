@@ -264,6 +264,7 @@ export default function TodayView() {
           equipmentChoices={today.equipmentChoices}
           onChooseEquipment={today.chooseEquipment}
           onPickAlternative={today.pickAlternative}
+          supersets={{ paired: today.paired, off: today.noSupersets, onChooseOff: today.chooseNoSupersets }}
           checkIn={
             checkIn
               ? {

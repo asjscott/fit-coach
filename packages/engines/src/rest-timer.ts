@@ -31,9 +31,11 @@ export function restAfterSet(
   const behind = partner && partner.sets.length < logged.sets.length;
   if (!partner || (behind && partner.sets.length >= (partner.planned?.sets ?? 0))) return startRest(logged.slug, now);
   if (behind) return null;
-  const longer = Math.max(secondsPerSetOf(logged.slug), secondsPerSetOf(partner.slug));
-  return { endsAt: now.getTime() + restSeconds(longer) * 1000 };
+  return { endsAt: now.getTime() + pairRestSeconds(logged.slug, partner.slug) * 1000 };
 }
+
+// The rest after a superset's round: the longer of its two Exercises' rests
+export const pairRestSeconds = (a: string, b: string) => restSeconds(Math.max(secondsPerSetOf(a), secondsPerSetOf(b)));
 
 export const extendRest = (rest: Rest): Rest => ({ endsAt: rest.endsAt + REST_EXTENSION_SECONDS * 1000 });
 

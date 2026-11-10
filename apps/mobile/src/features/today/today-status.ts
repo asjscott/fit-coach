@@ -99,6 +99,10 @@ export function todayLoggedLine(workouts: readonly FinishedWorkoutSets[]) {
 // The plan's sheet says it on its own, and the day's card at the end of todayPlanLine
 export const LIGHTER_AFTER_CHECK_IN = "Lighter after your check-in";
 
+// The plan's sheet, when the Workout pairs Exercises to fit its Length (#96), and under each paired Exercise
+export const SUPERSETS_TO_FIT = "Paired into supersets to fit the time";
+export const supersetWithLabel = (partnerName: string) => `Superset with ${partnerName.toLowerCase()}`;
+
 // On the Rest Day card and in the plan's sheet
 export const RECOVERY_INSTEAD = "Recovery workout instead";
 
