@@ -93,6 +93,16 @@ describe("weekLedger", () => {
     expect(weekLedger([lateSunday], { monday: "2026-11-02", timeZone: "UTC" }).quads).toBe(3);
   });
 
+  it("credits nothing for a Recovery Exercise's Sets", () => {
+    const recovery = ["walk", "hip-flexor-stretch", "open-book", "cat-cow", "worlds-greatest-stretch"];
+    expect(
+      weekLedger(
+        recovery.map((slug, i) => workout(`w${i}`, tuesday, slug, 2)),
+        week,
+      ),
+    ).toEqual({});
+  });
+
   it("ignores an Exercise the library doesn't know", () => {
     expect(weekLedger([workout("w1", tuesday, "not-in-this-library", 3)], week)).toEqual({});
   });

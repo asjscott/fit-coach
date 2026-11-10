@@ -1,5 +1,6 @@
 import type { Set as LoggedSet, PreviousSets } from "@fit/shared";
 import { EXERCISES } from "./data/exercises";
+import { trainingWorkouts } from "./recovery-workout";
 
 // Training summaries: pure functions that sum up Workouts for Today, History, the In-progress Workout and Finish.
 // - One Workout: workoutVolume, setCount, summarizeWorkout
@@ -121,7 +122,8 @@ export function previousSets(workouts: readonly FinishedWorkoutSets[], slug: str
 
 export type TrainingDay = { date: Date; trained: boolean; isToday: boolean };
 
-// This week (Monday to Sunday, local time) so far, against the user's days per week when they've set it
+// This week (Monday to Sunday, local time) so far, against the user's days per week when they've set it. A Recovery
+// Workout isn't training, so it's left out
 export type ThisWeek = {
   // Monday at midnight, local time
   start: Date;
@@ -142,7 +144,7 @@ export function thisWeek(workouts: readonly FinishedWorkoutSets[], now: Date, da
     return { date, trained: false, isToday: date.getDate() === now.getDate() && date.getMonth() === now.getMonth() };
   });
   const week: ThisWeek = { start, workoutCount: 0, target: daysPerWeek, days, volumeKg: 0, sets: 0, durationMs: 0 };
-  for (const workout of workouts) {
+  for (const workout of trainingWorkouts(workouts)) {
     const startedAt = new Date(workout.startedAt);
     if (weekStart(startedAt).getTime() !== start.getTime()) continue;
     const summary = summarizeWorkout(workout);

@@ -14,9 +14,11 @@ export type LedgerWorkout = Pick<Workout, "id" | "startedAt"> & {
 
 const SECONDARY_CREDIT = 0.5;
 
-// What one Set of an Exercise credits. A one-sided Exercise is no different: a Set is a Set, per side
-export function creditsPerSet({ muscles }: Pick<Exercise, "muscles">): MuscleCredits {
+// What one Set of an Exercise credits. A one-sided Exercise is no different: a Set is a Set, per side. A Recovery
+// Exercise credits nothing
+export function creditsPerSet({ muscles, recovery }: Pick<Exercise, "muscles" | "recovery">): MuscleCredits {
   const credits: MuscleCredits = {};
+  if (recovery) return credits;
   for (const muscle of muscles.secondary) credits[muscle] = SECONDARY_CREDIT;
   for (const muscle of muscles.primary) credits[muscle] = 1;
   return credits;

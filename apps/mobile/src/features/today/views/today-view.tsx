@@ -14,7 +14,12 @@ import { useCurrentUser } from "@/features/user/current-user-provider";
 import { ForgottenWorkoutModal } from "@/features/workouts/components/forgotten-workout-modal";
 import { elapsedLabel, estimatedTimeLabel } from "@/features/workouts/format";
 import { useHistory } from "@/features/workouts/history-provider";
-import { useResumeWorkout, useStartPlannedWorkout, useStartWorkout } from "@/features/workouts/hooks/use-open-workout";
+import {
+  useResumeWorkout,
+  useStartPlannedWorkout,
+  useStartRecoveryWorkout,
+  useStartWorkout,
+} from "@/features/workouts/hooks/use-open-workout";
 import { useRefreshHistory } from "@/features/workouts/hooks/use-refresh-history";
 import { useLogbook } from "@/features/workouts/logbook-provider";
 import { spacing } from "@/theme";
@@ -34,12 +39,15 @@ const WHY_REST: Record<RestDayReason, string> = {
   "trained-yesterday": "You trained yesterday, and this week's Workouts still fit.",
 };
 
+const RECOVERY_INSTEAD = "Recovery Workout instead";
+
 // The training hub: one card for what the day calls for, then this week against the user's days per week, and the last
 // Workout. Everything about the next Workout itself is a tap away in its sheet
 export default function TodayView() {
   const logbook = useLogbook();
   const { startWorkout, starting } = useStartWorkout();
   const { startPlannedWorkout, startingPlan } = useStartPlannedWorkout();
+  const { startRecoveryWorkout } = useStartRecoveryWorkout();
   const { resumeWorkout, forgotten, setForgotten } = useResumeWorkout();
   const { isLoaded, isStale, pending, syncing } = logbook;
   const { workouts, error } = useHistory();
@@ -68,6 +76,11 @@ export default function TodayView() {
 
   const handleManual = async () => {
     if (await startWorkout()) router.push("/workout");
+  };
+
+  // Leaves the plan as it is: the Recovery Workout links to none, so the plan is offered again afterwards
+  const handleStartRecovery = async () => {
+    if (await startRecoveryWorkout()) router.push("/workout");
   };
 
   const handleStartPlan = async () => {
@@ -142,6 +155,7 @@ export default function TodayView() {
           line={`${WHY_REST[restDayReason]} You can still train if you want to.`}
         >
           {today ? <TodayCardLink label={nextWorkout("Train anyway")} color="text" onPress={openSheet} /> : null}
+          <TodayCardLink label={RECOVERY_INSTEAD} color="text" onPress={handleStartRecovery} />
           {connectNote ? <Text color="muted">{connectNote}</Text> : null}
         </TodayCard>
       ) : null}
@@ -232,6 +246,7 @@ export default function TodayView() {
           onChooseEquipment={today.chooseEquipment}
           onPickAlternative={today.pickAlternative}
           onStart={handleStartPlan}
+          onStartRecovery={handleStartRecovery}
         />
       ) : null}
       <ForgottenWorkoutModal isOpen={forgotten} onDone={() => setForgotten(false)} />

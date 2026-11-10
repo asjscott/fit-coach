@@ -20,6 +20,7 @@ import { builtInEquipmentLabels, noAlternativeLabel, plannedSetsLabel } from "@/
 import { exerciseName, libraryExercise } from "@/features/workouts/library";
 import { spacing, useTheme } from "@/theme";
 import { todayPlanLine } from "../today-status";
+import { TodayCardLink } from "./today-card";
 
 type PlannedWorkoutSheetProps = {
   isOpen: boolean;
@@ -35,6 +36,8 @@ type PlannedWorkoutSheetProps = {
   onChooseEquipment: (equipment?: BuiltInEquipment) => void;
   onPickAlternative: (replaces: string, slug: string) => void;
   onStart: () => void;
+  // The Recovery Workout, on offer every day in place of this one
+  onStartRecovery: () => void;
 };
 
 // The Day's Workout in full, with the choices that shape it
@@ -52,17 +55,18 @@ export function PlannedWorkoutSheet({
   onChooseEquipment,
   onPickAlternative,
   onStart,
+  onStartRecovery,
 }: PlannedWorkoutSheetProps) {
   const { colors } = useTheme();
   // iOS can't present the Workout until the sheet has gone
-  const startOnClosed = useRef(false);
-  const start = () => {
-    startOnClosed.current = true;
+  const startOnClosed = useRef<(() => void) | null>(null);
+  const startOnceClosed = (startWorkout: () => void) => () => {
+    startOnClosed.current = startWorkout;
     onClose();
   };
   const handleClosed = () => {
-    if (startOnClosed.current) onStart();
-    startOnClosed.current = false;
+    startOnClosed.current?.();
+    startOnClosed.current = null;
   };
 
   return (
@@ -149,8 +153,16 @@ export function PlannedWorkoutSheet({
             icon="dumbbell"
             fullWidth
             disabled={!plannedExercises.length}
-            onPress={start}
+            onPress={startOnceClosed(onStart)}
           />
+          <View style={styles.recovery}>
+            <TodayCardLink
+              label="Recovery Workout instead"
+              color="text"
+              size="sm"
+              onPress={startOnceClosed(onStartRecovery)}
+            />
+          </View>
         </View>
       </ActionsheetContent>
     </Actionsheet>
@@ -162,5 +174,6 @@ const styles = StyleSheet.create({
   content: { gap: spacing[3], paddingBottom: spacing[3] },
   // Outside the scroll, so Start is in reach however long the list is
   start: { width: "100%", paddingTop: spacing[3] },
+  recovery: { alignItems: "center", paddingTop: spacing[3] },
   exercise: { paddingVertical: spacing[2], gap: 2, borderTopWidth: StyleSheet.hairlineWidth },
 });

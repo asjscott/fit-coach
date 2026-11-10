@@ -35,6 +35,8 @@ type LogbookContextValue = {
   syncing: boolean;
   // Starts a Planned Workout with its Exercises already added, linked to it
   startPlannedWorkout: (plannedWorkout: PlannedWorkoutToStart) => Promise<void>;
+  // Starts the Recovery Workout, linked to no plan, so the Planned Workout stays on offer
+  startRecoveryWorkout: () => Promise<void>;
   // For a test Exercise of an Assessment Workout: the suggested next load, or done
   protocolState: Logbook["protocolState"];
   // For an Assessment Workout: its next test, and whether every test is done
@@ -186,6 +188,8 @@ export function LogbookProvider({ children }: { children: ReactNode }) {
     [logbook, run],
   );
 
+  const startRecoveryWorkout = useCallback(() => run(() => logbook.startRecoveryWorkout(new Date())), [logbook, run]);
+
   const addWorkoutExercise = useCallback(
     (exercise: Pick<Exercise, "slug" | "loadType">) => run(() => logbook.addWorkoutExercise(exercise)),
     [logbook, run],
@@ -264,6 +268,7 @@ export function LogbookProvider({ children }: { children: ReactNode }) {
         start,
         startAssessment,
         startPlannedWorkout,
+        startRecoveryWorkout,
         protocolState: logbook.protocolState,
         testProgress: logbook.testProgress,
         addWorkoutExercise,

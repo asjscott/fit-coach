@@ -6,10 +6,11 @@ import { BUILT_IN_EQUIPMENT, isAvailable, isSafeFor } from "./equipment";
 
 const target: SetTarget = { unit: "reps", reps: 10 };
 
-// Everything the user could be given on Bodyweight only
+// Everything the user could be given on Bodyweight only. The planner never gives a Recovery Exercise
 const bodyweightCandidates = (injuries: InjuryTag[] = []): Candidate[] =>
   EXERCISES.filter(
-    (exercise) => isAvailable(exercise, BUILT_IN_EQUIPMENT.bodyweight_only) && isSafeFor(exercise, injuries),
+    (exercise) =>
+      !exercise.recovery && isAvailable(exercise, BUILT_IN_EQUIPMENT.bodyweight_only) && isSafeFor(exercise, injuries),
   ).map((exercise) => ({ exercise, target }));
 
 const optionsFor = (slug: string, injuries?: InjuryTag[]) =>
