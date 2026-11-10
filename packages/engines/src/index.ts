@@ -5,6 +5,7 @@ export * from "./assessment-pairing";
 // The Logbook reports a test's protocol state, so `protocolState` itself isn't exported
 export { isRatedTest, takesNoMoreSets, TEST_REPS, type ProtocolState, type TestProgress } from "./assessment-protocol";
 export * from "./assessment-tests";
+export * from "./block";
 export * from "./data/exercises";
 export * from "./days-workout";
 export * from "./e1rm";

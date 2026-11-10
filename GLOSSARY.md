@@ -105,7 +105,7 @@ A walk or mobility Workout the user chooses in place of the Day's Workout, for o
 _Avoid_: Recovery day, recovery session
 
 **Block**:
-A run of weeks of training, started by an Assessment, with a set length and a deload week.
+A run of weeks of training, started by an Assessment, with a set length and a deload week. A newer Assessment starts a new one; without one, the next starts the week after the deload.
 _Avoid_: Program, mesocycle, cycle
 
 **Rest Day**:

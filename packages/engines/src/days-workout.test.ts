@@ -1,4 +1,4 @@
-import type { BuiltInEquipment, Goal, PlannedExercise, PlannedWorkout, WorkoutLength } from "@fit/shared";
+import type { BuiltInEquipment, DayLength, Goal, PlannedExercise, PlannedWorkout } from "@fit/shared";
 import { describe, expect, it } from "vitest";
 import { dayChoices, daysWorkout, equipmentChoices, withChoice, type DayChoices } from "./days-workout";
 
@@ -19,7 +19,7 @@ const longPlan = {
   ],
 };
 
-const cut = (workoutLength: WorkoutLength) =>
+const cut = (workoutLength: DayLength) =>
   daysWorkout(longPlan, { workoutLength }).plannedExercises.map(({ slug, sets }) => [slug, sets]);
 
 describe("daysWorkout", () => {
@@ -53,6 +53,15 @@ describe("daysWorkout", () => {
         ["dumbbell-romanian-deadlift", 3],
         ["push-up", 3],
         ["dumbbell-overhead-press", 1],
+      ]);
+    });
+
+    it("keeps only the highest-priority work at Quick", () => {
+      // 15 minutes after the warm-up is 900 s: 675 s takes the squat and row, leaving 225 s for one 120 s Set
+      expect(cut("quick")).toEqual([
+        ["goblet-squat", 3],
+        ["one-arm-dumbbell-row", 3],
+        ["dumbbell-romanian-deadlift", 1],
       ]);
     });
 
@@ -161,6 +170,7 @@ describe("daysWorkout", () => {
       expect(daysWorkout(longPlan, { workoutLength: "long" }).estimatedSeconds).toBe(3315);
       expect(daysWorkout(longPlan, { workoutLength: "standard" }).estimatedSeconds).toBe(2640);
       expect(daysWorkout(longPlan, { workoutLength: "short" }).estimatedSeconds).toBe(1725);
+      expect(daysWorkout(longPlan, { workoutLength: "quick" }).estimatedSeconds).toBe(1095);
     });
 
     it("shows how short a plan under the Length is", () => {
@@ -189,6 +199,12 @@ describe("daysWorkout", () => {
     it("is the user's for the Planned Workout they made it on", () => {
       const made = { plannedWorkoutId: "plan-1", choices: { workoutLength: "short" } } as const;
       expect(dayChoices("plan-1", usual, made)).toEqual({ workoutLength: "short" });
+    });
+
+    it("can be Quick, and the next plan goes back to the usual Workout Length", () => {
+      const made = withChoice(null, "plan-1", { workoutLength: "quick" });
+      expect(dayChoices("plan-1", usual, made)).toEqual({ workoutLength: "quick" });
+      expect(dayChoices("plan-2", usual, made)).toEqual(usual);
     });
 
     it("returns to the usual Workout Length on the next plan", () => {
