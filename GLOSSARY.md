@@ -149,3 +149,31 @@ _Avoid_: Exercise state, starting load, current weight
 **Reference Strength**:
 The user's estimated one-rep maximum in kg on a Pattern's barbell lift (for core, the seconds they can hold a plank), from which the Working Levels of every Exercise in that Pattern follow.
 _Avoid_: Strength score, base e1RM
+
+### Progression
+
+**Load Step**:
+The smallest change in load an Equipment Profile allows for one kind of equipment, such as 5 lb for dumbbells. Progression moves a weighted Exercise up or down one Load Step at a time.
+_Avoid_: Increment, jump, plate step
+
+**Miss**:
+A Workout in which an Exercise's Sets average more than 2 reps short of their target. Two in a row on the same Exercise drop it a Load Step. A skipped Workout isn't one, and nothing in a deload week is.
+_Avoid_: Failure, failed set, stall
+
+**PR**:
+A new best on an Exercise: the highest estimated one-rep maximum for a weighted one, from Sets of 12 reps or fewer, or the most reps or seconds for a bodyweight or timed variant. The first Workout on an Exercise sets a baseline, not a PR.
+_Avoid_: Personal best, record, PB
+
+**Weekly Streak**:
+How many weeks in a row the user has finished at least one fewer Workout than their days per week, Recovery Workouts included. Weeks run Monday to Sunday, as the Week Ledger does.
+_Avoid_: Streak (alone), consistency score
+
+### Nutrition and activity
+
+**Food Entry**:
+One food the user ate, in a meal of a day: the portion and a snapshot of that food's calories and macros when it was logged, so a later change to the food doesn't change the day.
+_Avoid_: Meal log, food log item, intake
+
+**Activity**:
+Training done outside the app, such as a run, a ride or a game of a sport: its type, duration and effort, logged by hand or imported from Strava. It adds Fatigue to the Muscles its type works and credits part of its calories to the day.
+_Avoid_: Cardio, exercise (for this), conditioning session
