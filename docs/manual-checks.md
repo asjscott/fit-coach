@@ -156,6 +156,17 @@ These need real weeks of training on `dev`, so run them while M5's gaps are buil
 - [x] **P18** Sign out: the plan and the stored User are gone from the phone, and the next account doesn't see them.
   - iOS: Result: ✅· Android: Result: · Notes: The storage table was empty after sign-out. Deleted bytes stayed in the SQLite file, which the app can't read. Signed in with second account and all good.
 
+## Recovery Workout (#97)
+
+Needs `pnpm --filter @fit/api seed:exercises` run once from the main checkout (it needs `apps/api/.env`), so the Exercises tab lists the five Recovery Exercises.
+
+- [ ] **R1** On a Rest Day, the "Rest today." card has a "Recovery Workout instead" link. Tap it: a Workout opens with a 20-minute walk, then hip flexor stretch, open book, cat-cow and world's greatest stretch at 2 × 45 s each, logged on the normal timed-Set screen.
+  - iOS: Result: · Android: Result: · Notes:
+- [ ] **R2** On a day that isn't a Rest Day, open the plan's sheet ("See or change this Workout"): "Recovery Workout instead" is under Start, and starts the same Workout once the sheet has gone. Whatever Length is chosen, it's the same Workout.
+  - iOS: Result: · Android: Result: · Notes:
+- [ ] **R3** In airplane mode, start, log and finish a Recovery Workout. Today still offers the same Planned Workout (not "Connect to plan your next Workout"), This Week's count and day circles don't change, and tomorrow isn't a Rest Day because of it. Back online, it uploads and shows in History, and the plan on Today is the same one.
+  - iOS: Result: · Android: Result: · Notes:
+
 ## Your call
 
 Not a bug, but it needs your judgement once you've done some Workouts. Details in `docs/research/planner-simulation.md`.

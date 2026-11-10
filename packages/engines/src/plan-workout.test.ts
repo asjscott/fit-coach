@@ -656,6 +656,28 @@ describe("planWorkout", () => {
     });
   });
 
+  describe("Recovery Exercises", () => {
+    const recovery = EXERCISES.filter((exercise) => exercise.recovery).map(({ slug }) => slug);
+    const recoveryLevels: WorkingLevel[] = recovery.map((slug) => ({ slug, unit: "seconds", seconds: 45 }));
+
+    it("never picks one, even with a Working Level for it", () => {
+      const planned = [...slugs({ workingLevels: [...levels, ...recoveryLevels] }), ...onFullGym()];
+      expect(planned.filter((slug) => recovery.includes(slug))).toEqual([]);
+    });
+
+    it("plans as though a Recovery Workout never happened", () => {
+      const recoveryWorkout = {
+        id: "recovery",
+        startedAt: "2026-11-03T18:00:00.000Z",
+        workoutExercises: recovery.map((slug) => ({ slug, sets: [{}, {}] })),
+      };
+      const workouts = [week({ "goblet-squat": 3, "one-arm-dumbbell-row": 3 })];
+      expect(plan({ workouts: [...workouts, recoveryWorkout], daysPerWeek: 2 })).toEqual(
+        plan({ workouts, daysPerWeek: 2 }),
+      );
+    });
+  });
+
   it("tags the plan with the Monday of its week in the user's timezone", () => {
     // Monday 04:30 UTC is still Sunday in New York
     const lateSunday = new Date("2026-11-02T04:30:00Z");

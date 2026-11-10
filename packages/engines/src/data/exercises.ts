@@ -3,6 +3,7 @@ import { BATCH_1 } from "./batch_1";
 import { BATCH_2 } from "./batch_2";
 import { BATCH_3 } from "./batch_3";
 import { BATCH_4 } from "./batch_4";
+import { RECOVERY } from "./recovery";
 
 // The first 20 exercises. Every movement pattern (except carry) has at least
 // one option for every equipment preset, including "Bodyweight only".
@@ -19,6 +20,7 @@ const Base: Exercise[] = [
     loadType: "bodyweight",
     unilateral: false,
     ballistic: false,
+    recovery: false,
     secondsPerSet: 75,
     regression: null,
     progression: "goblet-squat",
@@ -35,6 +37,7 @@ const Base: Exercise[] = [
     loadType: "external",
     unilateral: false,
     ballistic: false,
+    recovery: false,
     secondsPerSet: 120,
     regression: "bodyweight-squat",
     progression: "back-squat",
@@ -55,6 +58,7 @@ const Base: Exercise[] = [
     loadType: "external",
     unilateral: false,
     ballistic: false,
+    recovery: false,
     secondsPerSet: 180,
     regression: "goblet-squat",
     progression: null,
@@ -71,6 +75,7 @@ const Base: Exercise[] = [
     loadType: "bodyweight",
     unilateral: true,
     ballistic: false,
+    recovery: false,
     secondsPerSet: 120,
     regression: "split-squat",
     progression: "shrimp-squat",
@@ -89,6 +94,7 @@ const Base: Exercise[] = [
     loadType: "bodyweight",
     unilateral: true,
     ballistic: false,
+    recovery: false,
     secondsPerSet: 90,
     regression: "glute-bridge",
     progression: "dumbbell-romanian-deadlift",
@@ -105,6 +111,7 @@ const Base: Exercise[] = [
     loadType: "external",
     unilateral: false,
     ballistic: true,
+    recovery: false,
     secondsPerSet: 90,
     regression: "single-leg-glute-bridge",
     progression: "single-arm-kettlebell-swing",
@@ -125,6 +132,7 @@ const Base: Exercise[] = [
     loadType: "external",
     unilateral: false,
     ballistic: false,
+    recovery: false,
     secondsPerSet: 120,
     regression: "single-leg-glute-bridge",
     progression: "barbell-romanian-deadlift",
@@ -145,6 +153,7 @@ const Base: Exercise[] = [
     loadType: "external",
     unilateral: false,
     ballistic: false,
+    recovery: false,
     secondsPerSet: 150,
     regression: "dumbbell-romanian-deadlift",
     progression: "deadlift",
@@ -163,6 +172,7 @@ const Base: Exercise[] = [
     loadType: "bodyweight",
     unilateral: false,
     ballistic: false,
+    recovery: false,
     secondsPerSet: 75,
     regression: null,
     progression: "push-up",
@@ -179,6 +189,7 @@ const Base: Exercise[] = [
     loadType: "bodyweight",
     unilateral: false,
     ballistic: false,
+    recovery: false,
     secondsPerSet: 90,
     regression: "incline-push-up",
     progression: "decline-push-up",
@@ -199,6 +210,7 @@ const Base: Exercise[] = [
     loadType: "external",
     unilateral: false,
     ballistic: false,
+    recovery: false,
     secondsPerSet: 120,
     regression: "push-up",
     progression: "barbell-bench-press",
@@ -219,6 +231,7 @@ const Base: Exercise[] = [
     loadType: "external",
     unilateral: false,
     ballistic: false,
+    recovery: false,
     secondsPerSet: 180,
     regression: "dumbbell-bench-press",
     progression: null,
@@ -235,6 +248,7 @@ const Base: Exercise[] = [
     loadType: "external",
     unilateral: false,
     ballistic: false,
+    recovery: false,
     secondsPerSet: 120,
     regression: null,
     progression: "barbell-overhead-press",
@@ -257,6 +271,7 @@ const Base: Exercise[] = [
     loadType: "bodyweight",
     unilateral: false,
     ballistic: false,
+    recovery: false,
     secondsPerSet: 90,
     regression: null,
     progression: "pull-up-negative",
@@ -277,6 +292,7 @@ const Base: Exercise[] = [
     loadType: "bodyweight",
     unilateral: false,
     ballistic: false,
+    recovery: false,
     secondsPerSet: 120,
     regression: "pull-up-negative",
     progression: null,
@@ -293,6 +309,7 @@ const Base: Exercise[] = [
     loadType: "external",
     unilateral: true,
     ballistic: false,
+    recovery: false,
     secondsPerSet: 105,
     regression: "inverted-row",
     progression: null,
@@ -309,6 +326,7 @@ const Base: Exercise[] = [
     loadType: "external",
     unilateral: false,
     ballistic: false,
+    recovery: false,
     secondsPerSet: 60,
     regression: null,
     progression: null,
@@ -327,6 +345,7 @@ const Base: Exercise[] = [
     loadType: "timed",
     unilateral: false,
     ballistic: false,
+    recovery: false,
     secondsPerSet: 75,
     regression: null,
     progression: "ab-wheel-rollout",
@@ -343,6 +362,7 @@ const Base: Exercise[] = [
     loadType: "bodyweight",
     unilateral: false,
     ballistic: false,
+    recovery: false,
     secondsPerSet: 75,
     regression: null,
     progression: "hollow-hold",
@@ -361,6 +381,7 @@ const Base: Exercise[] = [
     loadType: "external",
     unilateral: false,
     ballistic: false,
+    recovery: false,
     secondsPerSet: 120,
     regression: null,
     progression: null,
@@ -370,7 +391,7 @@ const Base: Exercise[] = [
   },
 ];
 
-export const EXERCISES: Exercise[] = [...Base, ...BATCH_1, ...BATCH_2, ...BATCH_3, ...BATCH_4];
+export const EXERCISES: Exercise[] = [...Base, ...BATCH_1, ...BATCH_2, ...BATCH_3, ...BATCH_4, ...RECOVERY];
 
 const bySlug = new Map(EXERCISES.map((exercise) => [exercise.slug, exercise]));
 

@@ -177,6 +177,13 @@ Schemas: packages/shared/src/planned-workouts.ts
   gets the same bodyweight Workout, and a Full home gym only sees loads rounded to the built-in table.
 - **`ballistic` needs `pnpm --filter @fit/api seed:exercises`** on the real database (needs `.env`, so it's a human
   step). `findExercises` parses stored docs, so an older collection reads as not Ballistic rather than failing.
+- **A Recovery Workout isn't training** (#97, `recovery-workout.ts`). It's known by its Exercises: every one with Sets
+  is a Recovery Exercise (`Exercise.recovery`), so a Workout needs no flag and sync and History are unchanged.
+  `trainingWorkouts` leaves it out of This Week, the Rest Day, `finishedToday` and `planWorkout`; `creditsPerSet` gives
+  a Recovery Exercise nothing, and the planner never picks one. It links to no plan, POST /workouts doesn't rebuild
+  after one, and on the phone it neither makes the plan stale nor sets `awaitingNextPlan`, so the same plan stays on
+  offer. Recovery Exercises have no Pattern and no strength ratio, so no Working Level. `recovery` also needs
+  `seed:exercises` re-run, as `ballistic` did.
 - **Build and tune with the simulation.** Scores tie often, as many Exercises share budgeted credits. The planner is
   deterministic, so ties fall to last week's Exercises, then the longest Sets, then the slug, never library order.
   `plan-outcomes.test.ts` pins what a user should see, with the library in either order: run it after any tuning.

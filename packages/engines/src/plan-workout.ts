@@ -14,6 +14,7 @@ import { withAlternatives, type Candidate } from "./alternative-exercises";
 import { exerciseBySlug, EXERCISES } from "./data/exercises";
 import { BUILT_IN_EQUIPMENT, isAvailable, isSafeFor, matchesBuiltIn, type ProfileWithLoads } from "./equipment";
 import { scoreExercise, type WeekSoFar } from "./plan-score";
+import { trainingWorkouts } from "./recovery-workout";
 import {
   addCredits,
   creditsPerSet,
@@ -127,13 +128,14 @@ function withinVarietyCap(candidates: readonly Candidate[], thisWeek: readonly L
 const byTieOrder = ({ exercise: a }: Candidate, { exercise: b }: Candidate) =>
   b.secondsPerSet - a.secondsPerSet || a.slug.localeCompare(b.slug);
 
-// What the equipment and injuries allow, with a target to prescribe
+// What the equipment and injuries allow, with a target to prescribe. Never a Recovery Exercise
 function possibleExercises(input: PlanWorkoutInput): Candidate[] {
   const { equipmentProfile, injuries } = input;
   const levels = workingLevelsFor(input);
   return EXERCISES.flatMap((exercise) => {
     const level = levels.get(exercise.slug);
-    if (!level || !isAvailable(exercise, equipmentProfile) || !isSafeFor(exercise, injuries)) return [];
+    if (!level || exercise.recovery || !isAvailable(exercise, equipmentProfile) || !isSafeFor(exercise, injuries))
+      return [];
     const target = targetFrom(level, exercise, equipmentProfile);
     return target ? [{ exercise, target }] : [];
   });
@@ -287,9 +289,11 @@ function selectExercises(selection: Selection, weekSoFar: MuscleCredits): Planne
   }
 }
 
-// The user's next Planned Workout, in priority order. Pure: only the server calls it (ADR 0003)
+// The user's next Planned Workout, in priority order. Pure: only the server calls it (ADR 0003). A Recovery Workout
+// isn't training, so it's planned as though it never happened
 export function planWorkout(input: PlanWorkoutInput): WorkoutPlan {
-  const { workouts, now, timeZone, goal, daysPerWeek } = input;
+  const { now, timeZone, goal, daysPerWeek } = input;
+  const workouts = trainingWorkouts(input.workouts);
   const monday = mondayOf(now, timeZone);
   const week = { monday, timeZone };
   const thisWeek = workoutsInWeek(workouts, week);
