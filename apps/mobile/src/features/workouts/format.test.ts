@@ -139,6 +139,12 @@ describe("setsSummary", () => {
     expect(setsSummary([hold(45)])).toBe("45 s");
   });
 
+  it("gives timed Sets of a minute or more in minutes, each in full when it has seconds over (#109)", () => {
+    const hold = (seconds: number): Set => ({ kind: "timed", seconds, loggedAt });
+    expect(setsSummary([hold(1200)])).toBe("20 min");
+    expect(setsSummary([hold(90), hold(75)])).toBe("1 min 30 s, 1 min 15 s");
+  });
+
   it("is empty with no Sets", () => {
     expect(setsSummary([])).toBe("");
   });
@@ -275,6 +281,11 @@ describe("describeSet", () => {
     expect(describeSet(lifted(16, 10))).toBe("16 kg × 10");
     expect(describeSet({ kind: "bodyweight", reps: 12, loggedAt })).toBe("12 reps");
     expect(describeSet({ kind: "timed", seconds: 45, loggedAt })).toBe("45 s");
+  });
+
+  it("reads a timed Set of a minute or more in minutes, as its target does (#109)", () => {
+    expect(describeSet({ kind: "timed", seconds: 1200, loggedAt })).toBe("20 min");
+    expect(describeSet({ kind: "timed", seconds: 90, loggedAt })).toBe("1 min 30 s");
   });
 });
 
