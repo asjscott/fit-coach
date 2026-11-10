@@ -4,6 +4,7 @@ import type {
   PlannedExercise,
   PlannedWorkout,
   PreviousSets,
+  SetValues,
   UserProfile,
   Workout,
 } from "@fit/shared";
@@ -17,6 +18,7 @@ import {
   type PlannedWorkoutSource,
   type PreviousSetsSource,
 } from "./logbook";
+import { restAfterSet } from "./rest-timer";
 import { mondayOf, weekLedger } from "./week-ledger";
 
 const exercise = (slug: string) => {
@@ -1286,6 +1288,41 @@ describe("Logbook: Planned Workouts", () => {
       expect(press?.planned?.supersetWith).toBe(inverted?.id);
       expect(inverted?.planned?.supersetWith).toBe(press?.id);
       expect(squat?.planned).not.toHaveProperty("supersetWith");
+    });
+
+    // Check S2: a 1-Set chin-up with 3 Sets of lateral raise, logged as the logging screen does, which starts the
+    // rest from the stored Workout straight after each Set
+    it("rests the lateral raise's own 45 s once the 1-Set chin-up is done", async () => {
+      const { logbook } = setup();
+      // As daysWorkout gives them, each naming its partner
+      const plannedExercises = [
+        {
+          slug: "chin-up",
+          sets: 1,
+          target: { unit: "reps" as const, reps: 8 },
+          supersetWith: "dumbbell-lateral-raise",
+        },
+        {
+          slug: "dumbbell-lateral-raise",
+          sets: 3,
+          target: { unit: "kg" as const, kg: 6, reps: 12 },
+          supersetWith: "chin-up",
+        },
+      ];
+      const { workoutExercises } = await logbook.startPlannedWorkout({ id: PLAN_ID, plannedExercises }, at("09:00"));
+      const [chinUp, raise] = workoutExercises;
+      const restAfter = async (id: string, values: SetValues, now: Date) => {
+        await logbook.logSet(id, values, now);
+        const logged = await logbook.inProgress();
+        const rest = logged && restAfterSet(logged, id, now);
+        return rest && (rest.endsAt - now.getTime()) / 1000;
+      };
+      const raiseSet: SetValues = { kind: "external", kg: 6, reps: 12 };
+
+      expect(await restAfter(chinUp!.id, { kind: "bodyweight", reps: 8 }, at("09:05"))).toBeNull();
+      expect(await restAfter(raise!.id, raiseSet, at("09:06"))).toBe(90);
+      expect(await restAfter(raise!.id, raiseSet, at("09:08"))).toBe(45);
+      expect(await restAfter(raise!.id, raiseSet, at("09:10"))).toBe(45);
     });
 
     it("logs each Set under its own Exercise, and uploads no sign of the pair", async () => {

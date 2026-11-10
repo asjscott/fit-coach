@@ -198,7 +198,9 @@ Schemas: packages/shared/src/planned-workouts.ts
   cutting. At Start the partner's slug becomes `planned.supersetWith`, the partner's Workout Exercise id both ways,
   dropped at Finish with `planned`, so sync and History are unchanged. Removing one of the pair unpairs the other.
   `restAfterSet` (`rest-timer.ts`) gives no rest while the other is behind, and `pairRestSeconds` after the round.
-  The logging screen draws a pair with `SupersetBox` (layout A, Stacked), from `supersetGroups` and `supersetTurn`.
+  Once the one with fewer Sets is done and its last round is over, the other rests its own time (#111), and the box's
+  note (`supersetNote`, `format.ts`) says so. The logging screen draws a pair with `SupersetBox` (layout A, Stacked),
+  from `supersetGroups` and `supersetTurn`. Partner names are the library's as they are, never lower-cased.
   An Assessment or Recovery Workout never goes through `daysWorkout`, so is never paired.
 - **A Recovery Workout isn't training** (#97, `recovery-workout.ts`). It's known by its Exercises: every one with Sets
   is a Recovery Exercise (`Exercise.recovery`), so a Workout needs no flag and sync and History are unchanged.
