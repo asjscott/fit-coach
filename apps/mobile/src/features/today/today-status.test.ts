@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import {
+  checkInLighterRow,
   showsCheckIn,
   todayCard,
   todayLoggedLine,
@@ -202,5 +203,39 @@ describe("showsCheckIn", () => {
 
   it("waits until the phone has read today's check-in", () => {
     expect(showsCheckIn({ ...base, checkIn: "unread" })).toBe(false);
+  });
+});
+
+describe("checkInLighterRow", () => {
+  it("isn't there while the check-in hasn't made the Workout lighter", () => {
+    expect(checkInLighterRow({ lighter: false, fullWorkout: false }, false)).toEqual({
+      place: false,
+      note: false,
+      chip: false,
+    });
+  });
+
+  it("shows the note and Full workout once the check-in makes the Workout lighter", () => {
+    expect(checkInLighterRow({ lighter: true, fullWorkout: false }, false)).toEqual({
+      place: true,
+      note: true,
+      chip: true,
+    });
+  });
+
+  it("keeps the note's place while Full workout is chosen, so the chip stays under the finger", () => {
+    expect(checkInLighterRow({ lighter: false, fullWorkout: true }, true)).toEqual({
+      place: true,
+      note: false,
+      chip: true,
+    });
+  });
+
+  it("keeps the row's place once shown, when a rating makes the Workout full again (#113)", () => {
+    expect(checkInLighterRow({ lighter: false, fullWorkout: false }, true)).toEqual({
+      place: true,
+      note: false,
+      chip: false,
+    });
   });
 });
