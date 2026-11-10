@@ -3,6 +3,7 @@ import { secondsForSets, usualWorkoutLength } from "./workout-length";
 
 describe("secondsForSets", () => {
   it("leaves each Workout Length less its 5-minute warm-up", () => {
+    expect(secondsForSets("quick")).toBe(900);
     expect(secondsForSets("short")).toBe(1500);
     expect(secondsForSets("standard")).toBe(2400);
     expect(secondsForSets("long")).toBe(3300);

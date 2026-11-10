@@ -145,6 +145,11 @@ Expo Go can't reload offline. Load the app, then turn on airplane mode without c
 - [x] **P15** Turn signal back on, without touching the app, then with the app in the background. The upload and next plan arrive.
   - iOS: Result: ✅ · Android: Result: · Notes:
 
+## Quick (#98)
+
+- [ ] **Q1** In airplane mode, open the Next Workout sheet and choose Quick. The Length row reads Quick, Short, Standard, Long and wraps rather than running off the screen on a narrow phone. The card shows about two Exercises and 20 minutes or less. Finish it once signal is back, and the next plan is on your usual Length again, with Profile still showing it.
+  - iOS: Result: · Android: Result: · Notes:
+
 ## Over time
 
 These need real weeks of training on `dev`, so run them while M5's gaps are built.
