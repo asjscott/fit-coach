@@ -29,7 +29,8 @@ export const workoutRoutes: FastifyPluginAsyncZod = async (app) => {
 
   // Idempotent on the phone-generated id: 201 when stored, 200 with the stored Workout when it was already uploaded.
   // Also works out any Assessment it completes, marks the Planned Workout it came from finished and rebuilds the
-  // Planned Workout, unless it's a Recovery Workout, which changes no plan. 403 before onboarding, which the app never offers logging before
+  // Planned Workout, unless it's a Recovery Workout, which changes no plan. 403 before onboarding, which the app never
+  // offers logging before
   app.post(
     "/workouts",
     { schema: { body: Workout, response: { 200: Workout, 201: Workout, 403: ErrorResponse } } },

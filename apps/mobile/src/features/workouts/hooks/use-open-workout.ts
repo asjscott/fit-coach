@@ -32,8 +32,8 @@ export function useStartPlannedWorkout() {
 }
 
 export function useStartRecoveryWorkout() {
-  const { startWorkout, starting } = useStarting(useLogbook().startRecoveryWorkout);
-  return { startRecoveryWorkout: startWorkout, startingRecovery: starting };
+  const { startWorkout } = useStarting(useLogbook().startRecoveryWorkout);
+  return { startRecoveryWorkout: startWorkout };
 }
 
 // Resuming opens the In-progress Workout, unless it was forgotten: then `forgotten` asks for the

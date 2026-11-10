@@ -14,6 +14,10 @@ _Avoid_: Exercise type, measure
 A movement in the library, such as a goblet squat, with how it is loaded, the muscles it works and its easier and harder variants.
 _Avoid_: Movement, lift
 
+**Recovery Exercise**:
+A walk or a mobility hold, made for the Recovery Workout. It has no Pattern, credits no Muscle, and the Coach never plans one into a training Workout.
+_Avoid_: Stretch, mobility exercise, cooldown
+
 **Pattern**:
 The kind of movement an Exercise trains: squat, hinge, push, pull, carry or core.
 _Avoid_: Movement pattern, category
@@ -90,7 +94,15 @@ _Avoid_: Tally, weekly progress
 
 **Fatigue**:
 How much recent training a Muscle is still carrying: each logged Set credits it as in the Week Ledger, in full when logged and fading in a straight line to nothing after 48 hours. The Coach leaves out an Exercise while any of its primary Muscles is over the limit of 4, unless nothing else helps the Weekly Budget. Those Muscles are held back.
-_Avoid_: Soreness, recovery score, readiness
+_Avoid_: Recovery score; soreness and readiness, which are the user's own Check-in
+
+**Check-in**:
+How the user says they feel on a day, before training: sleep, energy and soreness, each rated 1 to 5. It lasts for that day only.
+_Avoid_: Daily survey, wellness check, mood
+
+**Readiness**:
+How ready to train a Check-in says the user is: sleep + energy + (6 − soreness), from 3 to 15. Low Readiness keeps fewer of the Day's Workout's Sets.
+_Avoid_: Recovery score, fatigue (for this)
 
 **Equipment Profile**:
 A named set of equipment the user trains with, and the loads it makes. One is primary. Full gym and Bodyweight only always exist, without the user creating them, for a day when the usual equipment isn't available.

@@ -1,5 +1,5 @@
-import type { CheckIn, DayExercise } from "@fit/engines";
-import type { BuiltInEquipment, DayLength } from "@fit/shared";
+import type { DayExercise } from "@fit/engines";
+import type { BuiltInEquipment, CheckIn, DayLength } from "@fit/shared";
 import { useRef } from "react";
 import { StyleSheet, View } from "react-native";
 import {
@@ -19,9 +19,18 @@ import { dayLengthOptions } from "@/features/user/components/form/fields/user-wo
 import { builtInEquipmentLabels, noAlternativeLabel, plannedSetsLabel } from "@/features/workouts/format";
 import { exerciseName, libraryExercise } from "@/features/workouts/library";
 import { spacing, useTheme } from "@/theme";
-import { todayPlanLine } from "../today-status";
+import { LIGHTER_AFTER_CHECK_IN, RECOVERY_INSTEAD, todayPlanLine } from "../today-status";
 import { CheckInRatings } from "./check-in-card";
 import { TodayCardLink } from "./today-card";
+
+type SheetCheckIn = {
+  ratings: CheckIn;
+  onChange: (checkIn: CheckIn) => void;
+  // Whether it took Sets off, and whether the user chose the Full workout anyway
+  lighter: boolean;
+  fullWorkout: boolean;
+  onChooseFullWorkout: (fullWorkout: boolean) => void;
+};
 
 type PlannedWorkoutSheetProps = {
   isOpen: boolean;
@@ -38,11 +47,8 @@ type PlannedWorkoutSheetProps = {
   equipmentChoices: BuiltInEquipment[];
   onChooseEquipment: (equipment?: BuiltInEquipment) => void;
   onPickAlternative: (replaces: string, slug: string) => void;
-  checkIn: CheckIn | null;
-  onCheckIn: (checkIn: CheckIn) => void;
-  lighter: boolean;
-  fullWorkout: boolean;
-  onChooseFullWorkout: (fullWorkout: boolean) => void;
+  // Today's check-in and what it did to the Workout, null before the user checks in
+  checkIn: SheetCheckIn | null;
   onStart: () => void;
   // The Recovery Workout, on offer every day in place of this one
   onStartRecovery: () => void;
@@ -64,10 +70,6 @@ export function PlannedWorkoutSheet({
   onChooseEquipment,
   onPickAlternative,
   checkIn,
-  onCheckIn,
-  lighter,
-  fullWorkout,
-  onChooseFullWorkout,
   onStart,
   onStartRecovery,
 }: PlannedWorkoutSheetProps) {
@@ -133,21 +135,24 @@ export function PlannedWorkoutSheet({
             ) : null}
             {checkIn ? (
               <View style={{ gap: spacing[2] }}>
-                {lighter ? (
+                {checkIn.lighter ? (
                   <Text size="sm" color="muted">
-                    Lighter after your check-in
+                    {LIGHTER_AFTER_CHECK_IN}
                   </Text>
                 ) : null}
-                {lighter || fullWorkout ? (
+                {checkIn.lighter || checkIn.fullWorkout ? (
                   <HStack spacing={2}>
                     <Chip
-                      label="Full Workout"
-                      selected={fullWorkout}
-                      onPress={() => onChooseFullWorkout(!fullWorkout)}
+                      label="Full workout"
+                      selected={checkIn.fullWorkout}
+                      onPress={() => checkIn.onChooseFullWorkout(!checkIn.fullWorkout)}
                     />
                   </HStack>
                 ) : null}
-                <CheckInRatings ratings={checkIn} onRate={(key, rating) => onCheckIn({ ...checkIn, [key]: rating })} />
+                <CheckInRatings
+                  ratings={checkIn.ratings}
+                  onRate={(key, rating) => checkIn.onChange({ ...checkIn.ratings, [key]: rating })}
+                />
               </View>
             ) : null}
             <View>
@@ -194,12 +199,7 @@ export function PlannedWorkoutSheet({
             onPress={startOnceClosed(onStart)}
           />
           <View style={styles.recovery}>
-            <TodayCardLink
-              label="Recovery Workout instead"
-              color="text"
-              size="sm"
-              onPress={startOnceClosed(onStartRecovery)}
-            />
+            <TodayCardLink label={RECOVERY_INSTEAD} color="text" size="sm" onPress={startOnceClosed(onStartRecovery)} />
           </View>
         </View>
       </ActionsheetContent>

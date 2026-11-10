@@ -17,7 +17,6 @@ export const startRest = (slug: string, now: Date): Rest => ({
   endsAt: now.getTime() + restSeconds(exerciseBySlug(slug)?.secondsPerSet ?? TYPICAL_SECONDS_PER_SET) * 1000,
 });
 
-// +15 s, for this rest only
 export const extendRest = (rest: Rest): Rest => ({ endsAt: rest.endsAt + REST_EXTENSION_SECONDS * 1000 });
 
 // Whole seconds left, rounded up so it reads 0 only once the rest is over

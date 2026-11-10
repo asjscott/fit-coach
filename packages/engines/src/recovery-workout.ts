@@ -24,6 +24,5 @@ export function isRecoveryWorkout({ workoutExercises }: LoggedWorkout) {
   return done.length > 0 && done.every(({ slug }) => exerciseBySlug(slug)?.recovery);
 }
 
-// The Workouts that are training, leaving out Recovery Workouts
 export const trainingWorkouts = <Workout extends LoggedWorkout>(workouts: readonly Workout[]) =>
   workouts.filter((workout) => !isRecoveryWorkout(workout));

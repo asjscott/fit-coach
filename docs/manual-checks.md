@@ -165,7 +165,7 @@ Expo Go can't reload offline. Load the app, then turn on airplane mode without c
   - iOS: Result: · Android: Result: · Notes:
 - [ ] **C2** In airplane mode, check in with sleep 1, energy 2, soreness 5. The card goes, and the day's card adds "· lighter after your check-in" with fewer Sets. Force-quit and reopen, still offline: the lighter Workout and no card.
   - iOS: Result: · Android: Result: · Notes:
-- [ ] **C3** Open "See or change this Workout": it says "Lighter after your check-in". "Full Workout" gives back the whole Workout, and tapping it again makes it lighter again. Change a rating there to all 5s and soreness 1: the Workout is full straight away.
+- [ ] **C3** Open "See or change this Workout": it says "Lighter after your check-in". "Full workout" gives back the whole Workout, and tapping it again makes it lighter again. Change a rating there to all 5s and soreness 1: the Workout is full straight away.
   - iOS: Result: · Android: Result: · Notes:
 - [ ] **C4** Check in lighter, start the Workout, then go back to Today: the started Workout keeps its Sets. Finish it, and the card doesn't come back.
   - iOS: Result: · Android: Result: · Notes:
@@ -198,9 +198,9 @@ These need real weeks of training on `dev`, so run them while M5's gaps are buil
 
 Needs `pnpm --filter @fit/api seed:exercises` run once from the main checkout (it needs `apps/api/.env`), so the Exercises tab lists the five Recovery Exercises.
 
-- [ ] **R1** On a Rest Day, the "Rest today." card has a "Recovery Workout instead" link. Tap it: a Workout opens with a 20-minute walk, then hip flexor stretch, open book, cat-cow and world's greatest stretch at 2 × 45 s each, logged on the normal timed-Set screen.
+- [ ] **R1** On a Rest Day, the "Rest today." card has a "Recovery workout instead" link. Tap it: a Workout opens with a 20-minute walk, then hip flexor stretch, open book, cat-cow and world's greatest stretch at 2 × 45 s each, logged on the normal timed-Set screen.
   - iOS: Result: · Android: Result: · Notes:
-- [ ] **R2** On a day that isn't a Rest Day, open the plan's sheet ("See or change this Workout"): "Recovery Workout instead" is under Start, and starts the same Workout once the sheet has gone. Whatever Length is chosen, it's the same Workout.
+- [ ] **R2** On a day that isn't a Rest Day, open the plan's sheet ("See or change this Workout"): "Recovery workout instead" is under Start, and starts the same Workout once the sheet has gone. Whatever Length is chosen, it's the same Workout.
   - iOS: Result: · Android: Result: · Notes:
 - [ ] **R3** In airplane mode, start, log and finish a Recovery Workout. Today still offers the same Planned Workout (not "Connect to plan your next Workout"), This Week's count and day circles don't change, and tomorrow isn't a Rest Day because of it. Back online, it uploads and shows in History, and the plan on Today is the same one.
   - iOS: Result: · Android: Result: · Notes:

@@ -28,7 +28,6 @@ import {
   type MuscleCredits,
 } from "./week-ledger";
 import {
-  FATIGUE_LIMIT,
   fillOrder,
   MAX_SETS_PER_EXERCISE,
   MIN_WORKOUTS_PER_MUSCLE,
@@ -233,23 +232,27 @@ function requiredPick(candidates: readonly Candidate[], thisWeek: readonly Ledge
 // Athletic's two-legged loaded squat, in order of preference
 const TWO_LEGGED_SQUATS = ["back-squat", "goblet-squat"];
 
-// Athletic's other one a week: a heavy two-legged squat, which this Goal needs but which scores below one-sided leg work.
-// It never shares a Workout with the one-sided pick, and waits while its Muscles recover rather than coming back as a
-// last resort. Once done, it competes on score like any other
+// Athletic's other one a week: a heavy two-legged squat, which this Goal needs but which scores below one-sided leg
+// work. It's the first of TWO_LEGGED_SQUATS the equipment allows, and the week is done only once that one has had a
+// pick's worth of Sets, so goblet squat doesn't stand in for back squat. It never shares a Workout with the one-sided
+// pick, and waits while its Muscles recover rather than coming back as a last resort. Once done, it competes on score
+// like any other
 function requiredSquat(
   candidates: readonly Candidate[],
   thisWeek: readonly LedgerWorkout[],
   goal: Goal,
   isRested: (candidate: Candidate) => boolean,
 ) {
-  const trained = thisWeek.some(({ workoutExercises }) =>
-    workoutExercises.some(({ slug }) => TWO_LEGGED_SQUATS.includes(slug)),
-  );
-  if (goal !== "athletic" || trained) return undefined;
+  if (goal !== "athletic") return undefined;
   const squat = TWO_LEGGED_SQUATS.map((slug) => candidates.find(({ exercise }) => exercise.slug === slug)).find(
     (candidate) => candidate !== undefined,
   );
-  return squat && isRested(squat) ? squat : undefined;
+  if (!squat) return undefined;
+  const setsThisWeek = thisWeek
+    .flatMap(({ workoutExercises }) => workoutExercises)
+    .filter(({ slug }) => slug === squat.exercise.slug)
+    .reduce((sum, { sets }) => sum + sets.length, 0);
+  return setsThisWeek < SETS_PER_PICK && isRested(squat) ? squat : undefined;
 }
 
 type Selection = {
@@ -343,7 +346,7 @@ export function planWorkout(input: PlanWorkoutInput): WorkoutPlan {
   const candidates = pickableExercises(possibleExercises(input), thisWeek, lastWeek, daysPerWeek);
   const budget = weeklyBudget(goal, daysPerWeek);
   const ledger = weekLedger(workouts, week);
-  const tired = new Set(tiredMuscles(muscleFatigue(workouts, now), FATIGUE_LIMIT));
+  const tired = new Set(tiredMuscles(muscleFatigue(workouts, now)));
   const isRested = ({ exercise }: Candidate) => !exercise.muscles.primary.some((muscle) => tired.has(muscle));
   const selection: Selection = {
     candidates,

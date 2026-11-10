@@ -1,4 +1,4 @@
-import type { CheckIn } from "@fit/engines";
+import type { CheckIn } from "@fit/shared";
 import { useState } from "react";
 import { StyleSheet, View } from "react-native";
 import { Chip } from "@/components/chip";

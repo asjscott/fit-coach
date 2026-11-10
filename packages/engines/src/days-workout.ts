@@ -1,12 +1,13 @@
 import {
   BuiltInEquipment,
   type AlternativeExercise,
+  type CheckIn,
   type DayLength,
   type Goal,
   type PlannedExercise,
   type PlannedWorkout,
 } from "@fit/shared";
-import { readinessShare, type CheckIn } from "./check-in";
+import { readinessShare } from "./check-in";
 import { exerciseBySlug } from "./data/exercises";
 import { SETS_PER_PICK } from "./weekly-budget";
 import { secondsForSets, TYPICAL_SECONDS_PER_SET, WARM_UP_SECONDS } from "./workout-length";
@@ -162,7 +163,8 @@ const inWorkoutOrder = (dayExercises: readonly DayExercise[], goal: Goal | undef
   [...dayExercises].sort((a, b) => orderRank(a.slug, goal) - orderRank(b.slug, goal));
 
 // The Workout for today, the slugs of Exercises with no option on the chosen equipment, and whether the check-in made it
-// lighter. Equipment comes first so the cut times what's actually done, the order last as the cut needs priority. goal is undefined until the user loads
+// lighter. Equipment comes first so the cut times what's actually done, the order last as the cut needs priority. goal
+// is undefined until the user loads
 export function daysWorkout(
   { plannedExercises }: Pick<PlannedWorkout, "plannedExercises">,
   choices: DayChoices,

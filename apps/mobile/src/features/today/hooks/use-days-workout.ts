@@ -4,11 +4,10 @@ import {
   equipmentChoices,
   usualWorkoutLength,
   withChoice,
-  type CheckIn,
   type DayChoices,
   type MadeChoices,
 } from "@fit/engines";
-import type { BuiltInEquipment, DayLength, PlannedWorkout } from "@fit/shared";
+import type { BuiltInEquipment, CheckIn, DayLength, PlannedWorkout } from "@fit/shared";
 import { useCallback, useState } from "react";
 import { useCurrentUser } from "@/features/user/current-user-provider";
 

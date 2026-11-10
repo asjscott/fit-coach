@@ -155,7 +155,7 @@ Phone
   ├─ useDaysWorkout: the user's choices over daysWorkout (days-workout.ts), held in memory until Start
   ├─ useCheckIn: today's check-in (stored-check-in.ts, key today.checkIn, by local date), passed to daysWorkout with
   │  the usual choices. readinessShare (check-in.ts) trims the lowest-priority Sets after the Length cut, unless the
-  │  user picks Full Workout. Card: check-in-card.tsx, shown by showsCheckIn (today-status.ts)
+  │  user picks Full workout. Card: check-in-card.tsx, shown by showsCheckIn (today-status.ts)
   ├─ Today (features/today/views/today-view.tsx): one card for the day (`todayCard` in today-status.ts, drawn by today-card.tsx), and planned-workout-sheet.tsx with the Exercises, targets, Length and equipment
   │  (rest-day.ts). todayPlan (today-status.ts) gates both: a plan, stale or not, and no In-progress Workout
   ├─ CurrentUserProvider: starts from stored-user.ts, so Goal and usual Length survive a cold start offline

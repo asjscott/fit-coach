@@ -59,6 +59,10 @@ export const MUSCLE_GROUPS: Record<MuscleGroup, readonly Muscle[]> = {
   core: ["abs"],
 };
 
+// The groups any of the Muscles are in, in MuscleGroup's order
+export const muscleGroupsOf = (muscles: readonly Muscle[]): MuscleGroup[] =>
+  MuscleGroup.options.filter((group) => MUSCLE_GROUPS[group].some((muscle) => muscles.includes(muscle)));
+
 // One is current at a time; the others are kept, so a Workout started from one can still link to it (ADR 0003)
 export const PlannedWorkoutStatus = z.enum(["current", "finished", "replaced"]);
 export type PlannedWorkoutStatus = z.infer<typeof PlannedWorkoutStatus>;
