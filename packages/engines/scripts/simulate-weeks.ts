@@ -48,7 +48,11 @@ function workoutDates(week: number, days: number) {
 
 // Every Workout done exactly as planned, on the usual Length
 export function simulate({ goal, days, length, lifter, profile }: Run) {
-  const workouts: { id: string; startedAt: string; workoutExercises: { slug: string; sets: unknown[] }[] }[] = [];
+  const workouts: {
+    id: string;
+    startedAt: string;
+    workoutExercises: { slug: string; sets: { loggedAt: string }[] }[];
+  }[] = [];
   const weeks = [];
   for (let week = 0; week < WEEKS; week++) {
     const thisWeek = [];
@@ -67,10 +71,10 @@ export function simulate({ goal, days, length, lifter, profile }: Run) {
       const today = daysWorkout({ plannedExercises: plan.plannedExercises }, { workoutLength: length }, goal);
       const workoutExercises = today.plannedExercises.map(({ slug, sets }) => ({
         slug,
-        sets: Array.from({ length: sets }, () => ({})),
+        sets: Array.from({ length: sets }, () => ({ loggedAt: now.toISOString() })),
       }));
       workouts.push({ id: `w${workouts.length}`, startedAt: now.toISOString(), workoutExercises });
-      thisWeek.push({ exercises: today.plannedExercises, seconds: today.estimatedSeconds });
+      thisWeek.push({ exercises: today.plannedExercises, seconds: today.estimatedSeconds, heldBack: plan.heldBack });
     }
     weeks.push(thisWeek);
   }

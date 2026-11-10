@@ -39,21 +39,22 @@ const plan = (more: Partial<PlanWorkoutInput> = {}) =>
 
 const slugs = (more?: Partial<PlanWorkoutInput>) => plan(more).plannedExercises.map(({ slug }) => slug);
 
+// Early on Monday in New York: this week, and long enough ago to leave no fatigue
+const earlierThisWeek = "2026-11-02T10:00:00.000Z";
+const loggedSets = (count: number, loggedAt = earlierThisWeek) => Array.from({ length: count }, () => ({ loggedAt }));
+
 // Sets of an Exercise logged this week
 const logged = (id: string, slug: string, sets: number) => ({
   id,
-  startedAt: "2026-11-03T18:00:00.000Z",
-  workoutExercises: [{ slug, sets: Array.from({ length: sets }, () => ({})) }],
+  startedAt: earlierThisWeek,
+  workoutExercises: [{ slug, sets: loggedSets(sets) }],
 });
 
 // One Workout this week, with this many Sets of each Exercise
 const week = (sets: Record<string, number>) => ({
   id: "this-week",
-  startedAt: "2026-11-03T18:00:00.000Z",
-  workoutExercises: Object.entries(sets).map(([slug, count]) => ({
-    slug,
-    sets: Array.from({ length: count }, () => ({})),
-  })),
+  startedAt: earlierThisWeek,
+  workoutExercises: Object.entries(sets).map(([slug, count]) => ({ slug, sets: loggedSets(count) })),
 });
 
 const earlierWorkouts = (count: number) =>
@@ -249,7 +250,7 @@ describe("planWorkout", () => {
     });
 
     it("outlasts that Exercise in the cut to Standard", () => {
-      const today = daysWorkout({ plannedExercises }, { workoutLength: "standard" }, "lose_fat");
+      const today = daysWorkout({ plannedExercises }, { workoutLength: "standard", noSupersets: true }, "lose_fat");
       const setsOf = (slug: string) => today.plannedExercises.find((exercise) => exercise.slug === slug)?.sets;
       expect(setsOf("dumbbell-lateral-raise")).toBe(4);
       expect(setsOf("band-row")).toBe(1);
@@ -563,6 +564,114 @@ describe("planWorkout", () => {
     );
   });
 
+  describe("the recovery filter", () => {
+    // Tuesday evening's leg day, 13 hours before Wednesday noon: quads and glutes at 6 × 35/48 = 4.4, over 4
+    const tuesdayEvening = "2026-11-03T23:00:00.000Z";
+    const legDay = {
+      id: "leg-day",
+      startedAt: tuesdayEvening,
+      workoutExercises: [{ slug: "goblet-squat", sets: loggedSets(6, tuesdayEvening) }],
+    };
+    const primaries = (slug: string) => exerciseBySlug(slug)!.muscles.primary;
+    const onFullGymPlan = (more: Partial<PlanWorkoutInput> = {}) =>
+      plan({ equipmentProfile: fullHomeGym, workingLevels: [], assessment, ...more });
+
+    it("leaves out Exercises for quads and glutes the day after a heavy leg day", () => {
+      const chosen = onFullGym({ workouts: [legDay] });
+      const forLegs = chosen.filter((slug) =>
+        primaries(slug).some((muscle) => muscle === "quads" || muscle === "glutes"),
+      );
+
+      expect(chosen.length).toBeGreaterThan(0);
+      expect(forLegs).toEqual([]);
+    });
+
+    it("still allows them as a secondary Muscle", () => {
+      const chosen = onFullGym({ workouts: [legDay] });
+
+      expect(chosen.some((slug) => exerciseBySlug(slug)!.muscles.secondary.includes("glutes"))).toBe(true);
+    });
+
+    it("says which Muscles it held back", () => {
+      expect([...onFullGymPlan({ workouts: [legDay] }).heldBack].sort()).toEqual(["glutes", "quads"]);
+    });
+
+    it("holds nothing back after rest", () => {
+      expect(onFullGymPlan().heldBack).toEqual([]);
+    });
+
+    it("brings tired Muscles' Exercises back when nothing else helps the budget, so there's always a plan", () => {
+      const { plannedExercises, heldBack } = plan({ workingLevels: [kg("goblet-squat", 20)], workouts: [legDay] });
+
+      // Only goblet squat trains quads and glutes here, so it comes back once the core Exercises have done all they can
+      expect(plannedExercises.map(({ slug }) => slug)).toContain("goblet-squat");
+      expect(heldBack).toEqual([]);
+    });
+  });
+
+  describe("the reasons", () => {
+    // Tuesday evening in New York, the day before Wednesday noon
+    const tuesdayEvening = "2026-11-03T23:00:00.000Z";
+    const legDay = {
+      id: "leg-day",
+      startedAt: tuesdayEvening,
+      workoutExercises: [{ slug: "goblet-squat", sets: loggedSets(6, tuesdayEvening) }],
+    };
+    const reasons = (more: Partial<PlanWorkoutInput> = {}) =>
+      plan({ equipmentProfile: fullHomeGym, workingLevels: [], assessment, ...more }).reasons;
+    const back = { code: "behind", muscles: ["lats", "upper_back"] };
+
+    it("says the Muscles held back are recovering, from the day of their last Set, before the group furthest behind", () => {
+      expect(reasons({ workouts: [legDay] })).toEqual([
+        { code: "recovering", muscles: ["quads", "glutes"], lastSetOn: "2026-11-03" },
+        // Legs are recovering, so the furthest behind of the rest, on a tie the first of Back, Chest, Shoulders, Core
+        back,
+      ]);
+    });
+
+    it("takes the day from the Sets that worked the Muscles as primary, the ones that tired them", () => {
+      // Early Wednesday in New York, a plank credits glutes only as secondary
+      const wednesdayMorning = "2026-11-04T11:00:00.000Z";
+      const plankThisMorning = {
+        id: "plank",
+        startedAt: wednesdayMorning,
+        workoutExercises: [{ slug: "plank", sets: loggedSets(1, wednesdayMorning) }],
+      };
+      expect(reasons({ workouts: [legDay, plankThisMorning] })[0]).toEqual({
+        code: "recovering",
+        muscles: ["quads", "glutes"],
+        lastSetOn: "2026-11-03",
+      });
+    });
+
+    it("says the Workout is extra once the week's budget is met", () => {
+      const workouts = [
+        week({
+          "goblet-squat": 20,
+          "dumbbell-romanian-deadlift": 20,
+          "one-arm-dumbbell-row": 20,
+          "dumbbell-floor-press": 20,
+          "dumbbell-lateral-raise": 20,
+          plank: 20,
+        }),
+      ];
+      expect(plan({ workouts, workingLevels: withBench }).reasons).toEqual([{ code: "budget-met" }]);
+    });
+
+    it("names the group furthest behind its budget this week", () => {
+      const workouts = [week({ "goblet-squat": 6, "dumbbell-floor-press": 6, "dumbbell-lateral-raise": 4, plank: 4 })];
+      expect(plan({ workouts, workingLevels: withBench }).reasons).toEqual([back]);
+    });
+
+    it("gives none in a week with nothing done yet, when every group is as far behind", () => {
+      expect(reasons()).toEqual([]);
+    });
+
+    it("gives the same reasons in the same order for the same inputs", () => {
+      expect(reasons({ workouts: [legDay] })).toEqual(reasons({ workouts: [legDay] }));
+    });
+  });
+
   describe("the cue", () => {
     it("tells an athletic user to lift fast", () => {
       expect(plan({ goal: "athletic" }).cue).toBe("Lift as fast as you can on the way up");
@@ -622,6 +731,77 @@ describe("planWorkout", () => {
     });
   });
 
+  describe("an athletic user's two-legged loaded squat", () => {
+    const oneSidedDone = logged("w1", "dumbbell-bulgarian-split-squat", 3);
+    const athletic = (more: Partial<PlanWorkoutInput> = {}) =>
+      plan({ goal: "athletic", equipmentProfile: fullHomeGym, workingLevels: [], assessment, ...more })
+        .plannedExercises;
+
+    it("is back squat, first in the Workout with 3 Sets, where the equipment allows", () => {
+      expect(athletic({ workouts: [oneSidedDone] })[0]).toMatchObject({ slug: "back-squat", sets: 3 });
+    });
+
+    it("is goblet squat on dumbbells", () => {
+      expect(slugs({ goal: "athletic", workouts: [logged("w1", "dumbbell-reverse-lunge", 3)] })[0]).toBe(
+        "goblet-squat",
+      );
+    });
+
+    it("isn't given on bodyweight only", () => {
+      const chosen = slugs({
+        goal: "athletic",
+        equipmentProfile: BUILT_IN_EQUIPMENT.bodyweight_only,
+        workingLevels: [],
+        assessment,
+        workouts: [oneSidedDone],
+      });
+      expect(chosen.length).toBeGreaterThan(0);
+      expect(chosen).not.toContain("goblet-squat");
+      expect(chosen).not.toContain("back-squat");
+    });
+
+    it("isn't given to another Goal", () => {
+      expect(onFullGym({ goal: "build_muscle", workouts: [oneSidedDone] })[0]).not.toBe("back-squat");
+    });
+
+    it("waits for a Workout without the one-sided Exercise, so each Workout has at most one required pick", () => {
+      expect(athletic()[0]?.slug).toBe("dumbbell-bulgarian-split-squat");
+    });
+
+    it("is needed once a week", () => {
+      const workouts = [oneSidedDone, logged("w2", "back-squat", 3)];
+      expect(athletic({ workouts })[0]?.slug).not.toBe("back-squat");
+    });
+
+    it("is still needed after goblet squat where the equipment allows back squat", () => {
+      const workouts = [oneSidedDone, logged("w2", "goblet-squat", 3)];
+      expect(athletic({ workouts })[0]).toMatchObject({ slug: "back-squat", sets: 3 });
+    });
+
+    it("is still needed until the week has had 3 Sets of it", () => {
+      const short = [oneSidedDone, logged("w2", "back-squat", 2)];
+      expect(athletic({ workouts: short })[0]).toMatchObject({ slug: "back-squat", sets: 3 });
+      const acrossTwo = [oneSidedDone, logged("w2", "back-squat", 2), logged("w3", "back-squat", 1)];
+      expect(athletic({ workouts: acrossTwo })[0]?.slug).not.toBe("back-squat");
+    });
+
+    it("waits while quads are recovering, rather than coming back as a last resort", () => {
+      // Last Sunday evening's leg day leaves quads over the fatigue limit at Monday noon, with the squat still needed
+      // this week. Goblet squat is the only Exercise for quads here, so the recovery filter's last resort brings it
+      // back, but not first
+      const sundayEvening = "2026-11-02T04:00:00.000Z";
+      const legDay = {
+        id: "leg-day",
+        startedAt: sundayEvening,
+        workoutExercises: [{ slug: "goblet-squat", sets: loggedSets(6, sundayEvening) }],
+      };
+      const now = new Date("2026-11-02T17:00:00Z");
+      const chosen = slugs({ goal: "athletic", workingLevels: [kg("goblet-squat", 20)], workouts: [legDay], now });
+      expect(chosen).toContain("goblet-squat");
+      expect(chosen[0]).not.toBe("goblet-squat");
+    });
+  });
+
   describe("Set targets", () => {
     const planned = (slug: string, more?: Parameters<typeof plan>[0]) =>
       plan(more).plannedExercises.find((exercise) => exercise.slug === slug);
@@ -653,6 +833,31 @@ describe("planWorkout", () => {
         level: "medium",
         reps: 12,
       });
+    });
+  });
+
+  describe("Recovery Exercises", () => {
+    const recovery = EXERCISES.filter((exercise) => exercise.recovery).map(({ slug }) => slug);
+    const recoveryLevels: WorkingLevel[] = recovery.map((slug) => ({ slug, unit: "seconds", seconds: 45 }));
+
+    it("never picks one, even with a Working Level for it", () => {
+      const planned = [...slugs({ workingLevels: [...levels, ...recoveryLevels] }), ...onFullGym()];
+      expect(planned.filter((slug) => recovery.includes(slug))).toEqual([]);
+    });
+
+    it("plans as though a Recovery Workout never happened", () => {
+      const recoveryWorkout = {
+        id: "recovery",
+        startedAt: "2026-11-03T18:00:00.000Z",
+        workoutExercises: recovery.map((slug) => {
+          const loggedAt = "2026-11-03T18:00:00.000Z";
+          return { slug, sets: [{ loggedAt }, { loggedAt }] };
+        }),
+      };
+      const workouts = [week({ "goblet-squat": 3, "one-arm-dumbbell-row": 3 })];
+      expect(plan({ workouts: [...workouts, recoveryWorkout], daysPerWeek: 2 })).toEqual(
+        plan({ workouts, daysPerWeek: 2 }),
+      );
     });
   });
 

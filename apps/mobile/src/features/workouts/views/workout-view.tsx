@@ -1,4 +1,4 @@
-import { setCount, workoutVolume } from "@fit/engines";
+import { setCount, supersetGroups, workoutVolume } from "@fit/engines";
 import type { InProgressWorkout } from "@fit/shared";
 import { Stack as NavStack, router } from "expo-router";
 import { useState } from "react";
@@ -19,9 +19,10 @@ import { useNow } from "@/hooks/use-now";
 import { fonts, spacing, useTheme } from "@/theme";
 import { errorMessage } from "@/utils/error-message";
 import { CurrentExerciseBox } from "../components/current-exercise-box";
+import { SupersetBox } from "../components/superset-box";
 import { WorkoutExerciseRow } from "../components/workout-exercise-row";
 import { nextPlannedExercise, useCurrentWorkoutExercise } from "../current-workout-exercise";
-import { elapsedClockLabel, kgLabel, timeLabel } from "../format";
+import { elapsedClockLabel, kgLabel, supersetLetter, timeLabel } from "../format";
 import { useHasEnded } from "../hooks/use-has-ended";
 import { useLeaveWorkout } from "../hooks/use-leave-workout";
 import { useStartWorkout } from "../hooks/use-open-workout";
@@ -55,6 +56,8 @@ function InProgress({ workout }: { workout: InProgressWorkout }) {
     tests?.nextTestId ?? nextPlanned,
   );
   const nextTestId = tests?.nextTestId;
+  const groups = supersetGroups(workoutExercises);
+  const pairs = groups.filter((group) => group.length === 2);
 
   return (
     <Screen padded={false} scroll="content" edges={["bottom"]}>
@@ -82,8 +85,31 @@ function InProgress({ workout }: { workout: InProgressWorkout }) {
               Add an Exercise to start logging Sets.
             </Text>
           ) : null}
-          {workoutExercises.map((workoutExercise, i) =>
-            workoutExercise.id === currentId ? (
+          {groups.map((group) => {
+            const [workoutExercise, partner] = group;
+            if (!workoutExercise) return null;
+            if (partner) {
+              const letter = supersetLetter(pairs.indexOf(group));
+              const pair = [workoutExercise, partner] as const;
+              return pair.some(({ id }) => id === currentId) ? (
+                <View key={workoutExercise.id} style={styles.current}>
+                  <SupersetBox pair={pair} letter={letter} currentId={currentId ?? ""} onChoose={choose} />
+                </View>
+              ) : (
+                <View key={workoutExercise.id} style={[styles.pairRows, { borderLeftColor: colors.accent }]}>
+                  {pair.map((member) => (
+                    <WorkoutExerciseRow
+                      key={member.id}
+                      workoutExercise={member}
+                      position={workoutExercises.indexOf(member)}
+                      onPress={() => choose(member.id)}
+                    />
+                  ))}
+                </View>
+              );
+            }
+            const i = workoutExercises.indexOf(workoutExercise);
+            return workoutExercise.id === currentId ? (
               <View key={workoutExercise.id} style={styles.current}>
                 <CurrentExerciseBox
                   workoutExercise={workoutExercise}
@@ -99,8 +125,8 @@ function InProgress({ workout }: { workout: InProgressWorkout }) {
                 position={i}
                 onPress={() => choose(workoutExercise.id)}
               />
-            ),
-          )}
+            );
+          })}
         </View>
         {/* An Assessment Workout's tests are fixed */}
         {workout.assessment ? null : (
@@ -192,6 +218,8 @@ const styles = StyleSheet.create({
   stats: { flexDirection: "row", gap: spacing[3], marginBottom: spacing[5] },
   empty: { paddingVertical: spacing[4] },
   current: { marginVertical: spacing[3] },
+  // A superset that isn't current: its two rows, marked as a pair
+  pairRows: { borderLeftWidth: 3, paddingLeft: spacing[2] },
   addRow: {
     minHeight: 56,
     flexDirection: "row",

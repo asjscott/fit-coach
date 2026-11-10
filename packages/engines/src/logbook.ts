@@ -27,6 +27,7 @@ import {
 import { canAssess, chooseTests, partTests } from "./assessment-tests";
 import { exerciseBySlug } from "./data/exercises";
 import { exerciseLoadsKg, stepLoadKg, type ProfileWithLoads, type StepDirection } from "./equipment";
+import { isRecoveryWorkout, RECOVERY_WORKOUT, trainingWorkouts } from "./recovery-workout";
 import { previousSets } from "./training-summaries";
 
 // Strings by key: SQLite on the phone, localStorage on web, a Map in tests
@@ -61,7 +62,8 @@ export type PlannedWorkoutSource = {
 };
 
 // The latest Planned Workout the phone has (ADR 0003). Stale from a Workout finishing until the plan that counts it
-// arrives, so Today never shows a plan the phone knows is out of date
+// arrives, so Today never shows a plan the phone knows is out of date. A Recovery Workout changes no plan, so it never
+// makes one stale
 export type PlannedWorkoutCopy = { plannedWorkout: PlannedWorkout | null; stale: boolean };
 
 // When a Workout started and ended, as the user confirms them on finishing
@@ -172,7 +174,7 @@ export function createLogbook({
     const stored = await readPlannedWorkout();
     if (!stored) return { plannedWorkout: null, stale: false };
     const { plannedWorkout, awaitingNextPlan } = stored;
-    return { plannedWorkout, stale: awaitingNextPlan || (await readPending()).length > 0 };
+    return { plannedWorkout, stale: awaitingNextPlan || trainingWorkouts(await readPending()).length > 0 };
   }
 
   // Shared by overlapping sync() calls, so no Workout is uploaded twice at once
@@ -239,6 +241,40 @@ export function createLogbook({
     await writePending([...(await readPending()), workout]);
     await storage.removeItem(IN_PROGRESS_KEY);
     return { status: "pending", workout };
+  }
+
+  // A Workout started with its Exercises and their targets, and nothing logged
+  async function startWithTargets(
+    plannedExercises: readonly (Pick<PlannedExercise, "slug" | "sets" | "target"> & { supersetWith?: string })[],
+    now: Date,
+    plannedWorkoutId?: string,
+  ) {
+    const fromServer = await Promise.all(
+      plannedExercises.map(({ slug }) => previousSetsSource.forExercise(slug).catch(() => null)),
+    );
+    return serially(async () => {
+      if (await read()) throw new LogbookError("A Workout is already in progress");
+      const pending = await readPending();
+      const workoutExercises = plannedExercises.map((plannedExercise, i): InProgressWorkoutExercise => {
+        const { slug, sets, target } = plannedExercise;
+        const exercise = { slug, loadType: plannedLoadType(plannedExercise) };
+        return { ...newWorkoutExercise(exercise, fromServer[i], pending), planned: { sets, target } };
+      });
+      // A superset names its partner by slug, unique in the day's Workout, and the Workout by Workout Exercise
+      plannedExercises.forEach(({ supersetWith }, i) => {
+        const partner = workoutExercises.find(({ slug }) => slug === supersetWith);
+        const planned = workoutExercises[i]?.planned;
+        if (partner && planned) planned.supersetWith = partner.id;
+      });
+      const workout: InProgressWorkout = {
+        id: newId(),
+        startedAt: now.toISOString(),
+        ...(plannedWorkoutId && { plannedWorkoutId }),
+        workoutExercises,
+      };
+      await write(workout);
+      return workout;
+    });
   }
 
   return {
@@ -319,30 +355,14 @@ export function createLogbook({
 
     // Starts a Planned Workout with its Exercises added and nothing logged: only what the user does counts, and
     // the targets start each Exercise's first Set. Works with no signal, and later edits never touch the link
-    startPlannedWorkout: async (
+    startPlannedWorkout: (
       { id: plannedWorkoutId, plannedExercises }: Pick<PlannedWorkout, "id" | "plannedExercises">,
       now: Date,
-    ) => {
-      const fromServer = await Promise.all(
-        plannedExercises.map(({ slug }) => previousSetsSource.forExercise(slug).catch(() => null)),
-      );
-      return serially(async () => {
-        if (await read()) throw new LogbookError("A Workout is already in progress");
-        const pending = await readPending();
-        const workout: InProgressWorkout = {
-          id: newId(),
-          startedAt: now.toISOString(),
-          plannedWorkoutId,
-          workoutExercises: plannedExercises.map((plannedExercise, i) => {
-            const { slug, sets, target } = plannedExercise;
-            const exercise = { slug, loadType: plannedLoadType(plannedExercise) };
-            return { ...newWorkoutExercise(exercise, fromServer[i], pending), planned: { sets, target } };
-          }),
-        };
-        await write(workout);
-        return workout;
-      });
-    },
+    ) => startWithTargets(plannedExercises, now, plannedWorkoutId),
+
+    // Starts the Recovery Workout the same way, from the library built into the app, so it works with no signal. It
+    // links to no plan, so the Planned Workout stays current and is offered again
+    startRecoveryWorkout: (now: Date) => startWithTargets(RECOVERY_WORKOUT, now),
 
     removeWorkoutExercise: (workoutExerciseId: string) =>
       serially(async () => {
@@ -510,12 +530,14 @@ export function createLogbook({
               failures.push(err);
               continue;
             }
-            uploadCount += 1;
+            // A Recovery Workout changes no plan, so the copy stays current
+            const changesPlan = !isRecoveryWorkout(workout);
+            if (changesPlan) uploadCount += 1;
             const { id } = workout;
             await serially(async () => {
               await writePending((await readPending()).filter((p) => p.id !== id));
               const stored = await readPlannedWorkout();
-              if (stored) await writePlannedWorkout({ ...stored, awaitingNextPlan: true });
+              if (stored && changesPlan) await writePlannedWorkout({ ...stored, awaitingNextPlan: true });
             });
           }
         } finally {

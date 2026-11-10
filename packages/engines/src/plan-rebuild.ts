@@ -1,6 +1,6 @@
 import type { PlannedWorkout, UserProfile, WorkoutLength } from "@fit/shared";
 import type { ProfileWithLoads } from "./equipment";
-import { mondayOf } from "./week-ledger";
+import { localDateOf, mondayOf } from "./week-ledger";
 
 // The Profile fields that shape a plan: changing any of them rebuilds it
 export type PlanInputs = Pick<UserProfile, "goal" | "daysPerWeek" | "injuries"> & {
@@ -15,13 +15,36 @@ export function planInputsKey({ goal, daysPerWeek, workoutLength, injuries, equi
   return JSON.stringify([goal, daysPerWeek, workoutLength, [...injuries].sort(), [...tags].sort(), loads]);
 }
 
-// Whether a plan should be built now: none yet, a new week, or a Profile change. Comparing rather than reacting to the
-// change means a rebuild that failed is simply still due
+// Whether a plan should be built now: none yet, a new week, a new day, or a Profile change. A new day in the user's
+// timezone, so that the recovery filter judges fatigue on the day the user looks, not at the upload. builtAt is when it
+// was last built, which a rebuild giving the same plan moves on. Comparing rather than reacting to the change means a
+// rebuild that failed is simply still due
 export function planIsDue(
-  current: (Pick<PlannedWorkout, "weekStart"> & { builtFrom?: string }) | null,
+  current: (Pick<PlannedWorkout, "weekStart"> & { builtFrom?: string; builtAt?: Date | string }) | null,
   inputs: PlanInputs,
   now: Date,
   timeZone: string,
 ) {
-  return !current || current.weekStart !== mondayOf(now, timeZone) || current.builtFrom !== planInputsKey(inputs);
+  return (
+    !current ||
+    current.weekStart !== mondayOf(now, timeZone) ||
+    current.builtFrom !== planInputsKey(inputs) ||
+    !current.builtAt ||
+    localDateOf(new Date(current.builtAt), timeZone) !== localDateOf(now, timeZone)
+  );
 }
+
+type PlanContent = Pick<PlannedWorkout, "weekStart" | "plannedExercises" | "cue">;
+
+// JSON with every object's keys sorted, so a stored plan read back with its fields in another order is no change
+const canonical = (value: unknown): string =>
+  JSON.stringify(value, (_key, inner: unknown) =>
+    inner && typeof inner === "object" && !Array.isArray(inner)
+      ? Object.fromEntries(Object.entries(inner).sort(([a], [b]) => a.localeCompare(b)))
+      : inner,
+  );
+
+// Whether a rebuild gave the plan already stored, which then stays, with its id
+export const isSamePlan = (stored: PlanContent, rebuilt: PlanContent) =>
+  canonical([stored.weekStart, stored.plannedExercises, stored.cue ?? null]) ===
+  canonical([rebuilt.weekStart, rebuilt.plannedExercises, rebuilt.cue ?? null]);

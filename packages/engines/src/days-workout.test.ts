@@ -1,4 +1,4 @@
-import type { BuiltInEquipment, Goal, PlannedExercise, PlannedWorkout, WorkoutLength } from "@fit/shared";
+import type { BuiltInEquipment, DayLength, Goal, PlannedExercise, PlannedWorkout } from "@fit/shared";
 import { describe, expect, it } from "vitest";
 import { dayChoices, daysWorkout, equipmentChoices, withChoice, type DayChoices } from "./days-workout";
 
@@ -19,8 +19,8 @@ const longPlan = {
   ],
 };
 
-const cut = (workoutLength: WorkoutLength) =>
-  daysWorkout(longPlan, { workoutLength }).plannedExercises.map(({ slug, sets }) => [slug, sets]);
+const cut = (workoutLength: DayLength) =>
+  daysWorkout(longPlan, { workoutLength, noSupersets: true }).plannedExercises.map(({ slug, sets }) => [slug, sets]);
 
 describe("daysWorkout", () => {
   describe("cutting to the Workout Length", () => {
@@ -46,13 +46,25 @@ describe("daysWorkout", () => {
       // 75 s left would take a Set of a later plank, but it stays out: shorter Lengths keep the highest priority
       const plan = { plannedExercises: [...longPlan.plannedExercises.slice(0, 5), planned("plank")] };
       expect(
-        daysWorkout(plan, { workoutLength: "short" }).plannedExercises.map(({ slug, sets }) => [slug, sets]),
+        daysWorkout(plan, { workoutLength: "short", noSupersets: true }).plannedExercises.map(({ slug, sets }) => [
+          slug,
+          sets,
+        ]),
       ).toEqual([
         ["goblet-squat", 3],
         ["one-arm-dumbbell-row", 3],
         ["dumbbell-romanian-deadlift", 3],
         ["push-up", 3],
         ["dumbbell-overhead-press", 1],
+      ]);
+    });
+
+    it("keeps only the highest-priority work at Quick", () => {
+      // 15 minutes after the warm-up is 900 s: 675 s takes the squat and row, leaving 225 s for one 120 s Set
+      expect(cut("quick")).toEqual([
+        ["goblet-squat", 3],
+        ["one-arm-dumbbell-row", 3],
+        ["dumbbell-romanian-deadlift", 1],
       ]);
     });
 
@@ -69,7 +81,10 @@ describe("daysWorkout", () => {
       });
       const setsAtShort = (plan: Pick<PlannedWorkout, "plannedExercises">) =>
         Object.fromEntries(
-          daysWorkout(plan, { workoutLength: "short" }).plannedExercises.map(({ slug, sets }) => [slug, sets]),
+          daysWorkout(plan, { workoutLength: "short", noSupersets: true }).plannedExercises.map(({ slug, sets }) => [
+            slug,
+            sets,
+          ]),
         );
 
       describe("placed by the planner", () => {
@@ -105,7 +120,7 @@ describe("daysWorkout", () => {
           const atShort = (extra: PlannedExercise[]) =>
             daysWorkout(
               { plannedExercises: [...stored.plannedExercises, ...extra] },
-              { workoutLength: "short", equipment: "bodyweight_only" },
+              { workoutLength: "short", noSupersets: true, equipment: "bodyweight_only" },
             );
           const late = planned("dumbbell-overhead-press", 3);
           const today = atShort([{ ...late, alternatives: { bodyweight_only: [late] } }]);
@@ -159,8 +174,9 @@ describe("daysWorkout", () => {
   describe("estimated time", () => {
     it("is the warm-up and the Sets kept", () => {
       expect(daysWorkout(longPlan, { workoutLength: "long" }).estimatedSeconds).toBe(3315);
-      expect(daysWorkout(longPlan, { workoutLength: "standard" }).estimatedSeconds).toBe(2640);
-      expect(daysWorkout(longPlan, { workoutLength: "short" }).estimatedSeconds).toBe(1725);
+      expect(daysWorkout(longPlan, { workoutLength: "standard", noSupersets: true }).estimatedSeconds).toBe(2640);
+      expect(daysWorkout(longPlan, { workoutLength: "short", noSupersets: true }).estimatedSeconds).toBe(1725);
+      expect(daysWorkout(longPlan, { workoutLength: "quick", noSupersets: true }).estimatedSeconds).toBe(1095);
     });
 
     it("shows how short a plan under the Length is", () => {
@@ -172,9 +188,9 @@ describe("daysWorkout", () => {
   describe("choosing again", () => {
     it("gives the same Workout on going back, and leaves the plan as it was", () => {
       const stored = structuredClone(longPlan);
-      const first = daysWorkout(stored, { workoutLength: "standard" });
-      daysWorkout(stored, { workoutLength: "short" });
-      expect(daysWorkout(stored, { workoutLength: "standard" })).toEqual(first);
+      const first = daysWorkout(stored, { workoutLength: "standard", noSupersets: true });
+      daysWorkout(stored, { workoutLength: "short", noSupersets: true });
+      expect(daysWorkout(stored, { workoutLength: "standard", noSupersets: true })).toEqual(first);
       expect(stored).toEqual(longPlan);
     });
   });
@@ -189,6 +205,12 @@ describe("daysWorkout", () => {
     it("is the user's for the Planned Workout they made it on", () => {
       const made = { plannedWorkoutId: "plan-1", choices: { workoutLength: "short" } } as const;
       expect(dayChoices("plan-1", usual, made)).toEqual({ workoutLength: "short" });
+    });
+
+    it("can be Quick, and the next plan goes back to the usual Workout Length", () => {
+      const made = withChoice(null, "plan-1", { workoutLength: "quick" });
+      expect(dayChoices("plan-1", usual, made)).toEqual({ workoutLength: "quick" });
+      expect(dayChoices("plan-2", usual, made)).toEqual(usual);
     });
 
     it("returns to the usual Workout Length on the next plan", () => {
@@ -351,26 +373,26 @@ describe("daysWorkout", () => {
       const setsOfPress = (choices: DayChoices) =>
         daysWorkout(plan, choices).plannedExercises.find(({ slug }) => slug === "dumbbell-overhead-press")?.sets;
 
-      expect(setsOfPress({ workoutLength: "short" })).toBe(1);
-      expect(setsOfPress({ workoutLength: "short", equipment: "bodyweight_only" })).toBe(3);
+      expect(setsOfPress({ workoutLength: "short", noSupersets: true })).toBe(1);
+      expect(setsOfPress({ workoutLength: "short", noSupersets: true, equipment: "bodyweight_only" })).toBe(3);
     });
 
     it("cuts a replacement's 4th Set like any other", () => {
       // 1500 s at Short. prone-ytw's three 60 s Sets and the other four Exercises take 1485 s, so its 4th can't fit
       const plan = { plannedExercises: [stored.plannedExercises[0], ...longPlan.plannedExercises.slice(2, 6)] };
-      const today = daysWorkout(plan, { workoutLength: "short", equipment: "bodyweight_only" });
+      const today = daysWorkout(plan, { workoutLength: "short", noSupersets: true, equipment: "bodyweight_only" });
       expect(today.plannedExercises.find(({ slug }) => slug === "prone-ytw")?.sets).toBe(3);
       expect(today.plannedExercises.find(({ slug }) => slug === "single-leg-romanian-deadlift")?.sets).toBe(3);
     });
 
     it("restores the plan exactly on going back", () => {
       const untouched = structuredClone(stored);
-      const usual = daysWorkout(stored, { workoutLength: "standard" });
+      const usual = daysWorkout(stored, { workoutLength: "standard", noSupersets: true });
 
-      daysWorkout(stored, { workoutLength: "standard", equipment: "bodyweight_only" });
-      daysWorkout(stored, { workoutLength: "short", equipment: "full_gym" });
+      daysWorkout(stored, { workoutLength: "standard", noSupersets: true, equipment: "bodyweight_only" });
+      daysWorkout(stored, { workoutLength: "short", noSupersets: true, equipment: "full_gym" });
 
-      expect(daysWorkout(stored, { workoutLength: "standard" })).toEqual(usual);
+      expect(daysWorkout(stored, { workoutLength: "standard", noSupersets: true })).toEqual(usual);
       expect(usual.plannedExercises.map(({ slug, sets, target }) => [slug, sets, target])).toEqual(
         stored.plannedExercises.map(({ slug, sets, target }) => [slug, sets, target]),
       );
@@ -447,6 +469,120 @@ describe("daysWorkout", () => {
     });
   });
 
+  describe("after the check-in", () => {
+    const badNight = { sleep: 1, energy: 2, soreness: 5 }; // readiness 4: keeps 0.7
+    const tired = { sleep: 3, energy: 3, soreness: 3 }; // 9: keeps 0.85
+    const allFours = { sleep: 4, energy: 4, soreness: 4 }; // 10: keeps everything
+    const setsOf = (choices: DayChoices, plan: Pick<PlannedWorkout, "plannedExercises"> = longPlan) =>
+      daysWorkout(plan, choices).plannedExercises.map(({ slug, sets }) => [slug, sets]);
+
+    it("changes nothing with no check-in, or with all 4s", () => {
+      const usual = daysWorkout(longPlan, { workoutLength: "long" });
+      expect(usual.lighter).toBe(false);
+      expect(daysWorkout(longPlan, { workoutLength: "long", checkIn: allFours })).toEqual(usual);
+    });
+
+    it("keeps 0.7 of the Sets after a bad night, taking the lowest priority first", () => {
+      // 27 Sets at Long keep 19: six whole Exercises and the split squat's first Set
+      expect(setsOf({ workoutLength: "long", checkIn: badNight })).toEqual([
+        ["goblet-squat", 3],
+        ["one-arm-dumbbell-row", 3],
+        ["dumbbell-romanian-deadlift", 3],
+        ["push-up", 3],
+        ["dumbbell-overhead-press", 3],
+        ["single-leg-romanian-deadlift", 3],
+        ["bulgarian-split-squat", 1],
+      ]);
+      expect(daysWorkout(longPlan, { workoutLength: "long", checkIn: badNight }).lighter).toBe(true);
+    });
+
+    it("keeps 0.85 when tired", () => {
+      // 23 of 27: the archer push-up keeps 2 and the cossack squat goes
+      expect(setsOf({ workoutLength: "long", checkIn: tired }).slice(-2)).toEqual([
+        ["bulgarian-split-squat", 3],
+        ["archer-push-up", 2],
+      ]);
+    });
+
+    it("trims what the Length left, at every Length", () => {
+      // Standard keeps 21 Sets, then 15 of them; Short keeps 13, then 9
+      expect(setsOf({ workoutLength: "standard", noSupersets: true, checkIn: badNight })).toEqual([
+        ["goblet-squat", 3],
+        ["one-arm-dumbbell-row", 3],
+        ["dumbbell-romanian-deadlift", 3],
+        ["push-up", 3],
+        ["dumbbell-overhead-press", 3],
+      ]);
+      expect(setsOf({ workoutLength: "short", noSupersets: true, checkIn: badNight })).toEqual([
+        ["goblet-squat", 3],
+        ["one-arm-dumbbell-row", 3],
+        ["dumbbell-romanian-deadlift", 3],
+      ]);
+    });
+
+    it("takes a 4th Set in the order the planner added it", () => {
+      // 10 Sets keep 7: the lateral raise's 4th Set came after the push-up, so it goes before the push-up's Sets
+      const plan = {
+        plannedExercises: [
+          planned("goblet-squat"),
+          { ...planned("dumbbell-lateral-raise", 4), fourthSetAfter: 3 },
+          planned("push-up"),
+        ],
+      };
+      expect(Object.fromEntries(setsOf({ workoutLength: "long", checkIn: badNight }, plan))).toEqual({
+        "goblet-squat": 3,
+        "dumbbell-lateral-raise": 3,
+        "push-up": 1,
+      });
+    });
+
+    it("times the Workout from the Sets left", () => {
+      // Warm-up 300 s and the 19 Sets: 1980 s for six Exercises and 120 s for the split squat
+      expect(daysWorkout(longPlan, { workoutLength: "long", checkIn: badNight }).estimatedSeconds).toBe(2400);
+    });
+
+    it("combines with equipment, trimming what the equipment left", () => {
+      // With no goblet squat on Bodyweight only, 18 Sets keep 13: the split squat's first Set is the 13th
+      const [squat, ...others] = longPlan.plannedExercises.slice(0, 7);
+      const plan = { plannedExercises: [{ ...squat, alternatives: { bodyweight_only: [] } }, ...others] };
+      expect(setsOf({ workoutLength: "long", equipment: "bodyweight_only", checkIn: badNight }, plan)).toEqual([
+        ["one-arm-dumbbell-row", 3],
+        ["dumbbell-romanian-deadlift", 3],
+        ["push-up", 3],
+        ["dumbbell-overhead-press", 3],
+        ["single-leg-romanian-deadlift", 1],
+      ]);
+    });
+
+    it("keeps a lone Set", () => {
+      const plan = { plannedExercises: [planned("goblet-squat", 1)] };
+      expect(setsOf({ workoutLength: "long", checkIn: badNight }, plan)).toEqual([["goblet-squat", 1]]);
+    });
+
+    it("is undone by Full Workout, giving back the Day's Workout exactly", () => {
+      const usual = daysWorkout(longPlan, {
+        workoutLength: "standard",
+        noSupersets: true,
+        equipment: "bodyweight_only",
+      });
+      const full = daysWorkout(longPlan, {
+        workoutLength: "standard",
+        noSupersets: true,
+        equipment: "bodyweight_only",
+        checkIn: badNight,
+        fullWorkout: true,
+      });
+      expect(full).toEqual(usual);
+    });
+
+    it("is undone by Full Workout for one plan only, as for the equipment", () => {
+      const usual = { workoutLength: "standard", checkIn: badNight } as const;
+      const made = withChoice(null, "plan-1", { fullWorkout: true });
+      expect(dayChoices("plan-1", usual, made).fullWorkout).toBe(true);
+      expect(dayChoices("plan-2", usual, made)).toEqual(usual);
+    });
+  });
+
   describe("the order of the Workout", () => {
     // Priority order: two single-Muscle Exercises, then multi-Muscle ones with a swing among them
     const plan = {
@@ -496,10 +632,9 @@ describe("daysWorkout", () => {
         ],
       };
       expect(
-        daysWorkout(short, { workoutLength: "short" }, "athletic").plannedExercises.map(({ slug, sets }) => [
-          slug,
-          sets,
-        ]),
+        daysWorkout(short, { workoutLength: "short", noSupersets: true }, "athletic").plannedExercises.map(
+          ({ slug, sets }) => [slug, sets],
+        ),
       ).toEqual([
         ["kettlebell-swing", 1],
         ["goblet-squat", 3],
@@ -512,6 +647,167 @@ describe("daysWorkout", () => {
 
     it("treats the plan as multi-Muscle first when the Goal isn't known yet", () => {
       expect(order()).toEqual(order("recomp"));
+    });
+  });
+
+  describe("supersets", () => {
+    const shape = (plan: Pick<PlannedWorkout, "plannedExercises">, choices: DayChoices) =>
+      daysWorkout(plan, choices).plannedExercises.map(({ slug, sets, supersetWith }) => [slug, sets, supersetWith]);
+    const pushPullSquat = {
+      plannedExercises: [planned("dumbbell-bench-press"), planned("inverted-row"), planned("goblet-squat")],
+    };
+    const twoPairs = { plannedExercises: [...pushPullSquat.plannedExercises, planned("plank")] };
+
+    it("leave a plan that fits unchanged", () => {
+      expect(daysWorkout(longPlan, { workoutLength: "long" }).plannedExercises).toEqual(longPlan.plannedExercises);
+      expect(daysWorkout(twoPairs, { workoutLength: "long" }).paired).toBe(false);
+    });
+
+    it("pair push with pull when the plan doesn't fit, before cutting a Set", () => {
+      // 900 s at Quick: 360 + 270 + 360 = 990 s alone, so the squat would lose a Set. Paired, the press and the row
+      // take 3 × (120 + 30) = 450 s, and the squat has no core Exercise to pair with
+      expect(shape(pushPullSquat, { workoutLength: "quick" })).toEqual([
+        ["dumbbell-bench-press", 3, "inverted-row"],
+        ["inverted-row", 3, "dumbbell-bench-press"],
+        ["goblet-squat", 3, undefined],
+      ]);
+    });
+
+    it("time the Workout as paired", () => {
+      expect(daysWorkout(pushPullSquat, { workoutLength: "quick" }).estimatedSeconds).toBe(300 + 450 + 360);
+    });
+
+    it("pair squat with core, one pair at a time until the Workout fits", () => {
+      // Alone 1215 s. Press and row paired: 450 + 360 + 225 = 1035 s, still over 900, so the squat pairs with the
+      // plank: 450 + 3 × (120 + 30) = 900 s
+      expect(shape(twoPairs, { workoutLength: "quick" })).toEqual([
+        ["dumbbell-bench-press", 3, "inverted-row"],
+        ["inverted-row", 3, "dumbbell-bench-press"],
+        ["goblet-squat", 3, "plank"],
+        ["plank", 3, "goblet-squat"],
+      ]);
+      expect(daysWorkout(twoPairs, { workoutLength: "quick" }).estimatedSeconds).toBe(1200);
+    });
+
+    it("pair hinge with push", () => {
+      // Alone 990 s; the deadlift and push-up paired take 3 × (120 + 30) = 450 s, and 810 s fits
+      const plan = {
+        plannedExercises: [planned("dumbbell-romanian-deadlift"), planned("goblet-squat"), planned("push-up")],
+      };
+      expect(shape(plan, { workoutLength: "quick" })).toEqual([
+        ["dumbbell-romanian-deadlift", 3, "push-up"],
+        ["push-up", 3, "dumbbell-romanian-deadlift"],
+        ["goblet-squat", 3, undefined],
+      ]);
+    });
+
+    it("cut what still doesn't fit once paired", () => {
+      // Paired, the press and row take 450 s and the squat 360 s, leaving 90 s: no room for a 120 s deadlift Set,
+      // which has no push left to pair with
+      const plan = {
+        plannedExercises: [...pushPullSquat.plannedExercises, planned("dumbbell-romanian-deadlift")],
+      };
+      expect(shape(plan, { workoutLength: "quick" })).toEqual([
+        ["dumbbell-bench-press", 3, "inverted-row"],
+        ["inverted-row", 3, "dumbbell-bench-press"],
+        ["goblet-squat", 3, undefined],
+      ]);
+      expect(daysWorkout(plan, { workoutLength: "quick" }).estimatedSeconds).toBe(300 + 810);
+    });
+
+    it("time the Sets one of the pair has over the other at its own pace", () => {
+      // 4 presses and 2 rows: 2 rounds of 150 s, then 2 presses alone at 120 s, and the squat's 360 s
+      const plan = {
+        plannedExercises: [planned("dumbbell-bench-press", 4), planned("inverted-row", 2), planned("goblet-squat")],
+      };
+      const today = daysWorkout(plan, { workoutLength: "quick" });
+      expect(today.plannedExercises.map(({ slug, sets }) => [slug, sets])).toEqual([
+        ["dumbbell-bench-press", 4],
+        ["inverted-row", 2],
+        ["goblet-squat", 3],
+      ]);
+      expect(today.estimatedSeconds).toBe(300 + 300 + 240 + 360);
+    });
+
+    it("never pair a one-sided Exercise, as its Sets are per side", () => {
+      const plan = {
+        plannedExercises: [
+          planned("dumbbell-bench-press"),
+          planned("one-arm-dumbbell-row"),
+          planned("inverted-row"),
+          planned("goblet-squat"),
+        ],
+      };
+      const shaped = shape(plan, { workoutLength: "quick" });
+      expect(shaped).toContainEqual(["dumbbell-bench-press", 3, "inverted-row"]);
+      expect(shaped.find(([slug]) => slug === "one-arm-dumbbell-row")?.[2]).toBeUndefined();
+    });
+
+    it("never pair a Ballistic Exercise, as it goes first while fresh", () => {
+      // The swing is a hinge, but the press pairs with the deadlift instead
+      const plan = {
+        plannedExercises: [
+          planned("kettlebell-swing"),
+          planned("dumbbell-bench-press"),
+          planned("dumbbell-romanian-deadlift"),
+          planned("goblet-squat"),
+        ],
+      };
+      const shaped = shape(plan, { workoutLength: "quick" });
+      expect(shaped).toContainEqual(["kettlebell-swing", 3, undefined]);
+      expect(shaped).toContainEqual(["dumbbell-bench-press", 3, "dumbbell-romanian-deadlift"]);
+    });
+
+    it("keep a pair together in the Workout's order", () => {
+      // The band pull-apart is single-Muscle, so alone it would go after the multi-Muscle Exercises
+      const plan = {
+        plannedExercises: [planned("band-pull-apart"), planned("goblet-squat"), planned("push-up"), planned("plank")],
+      };
+      const shaped = shape(plan, { workoutLength: "quick" });
+      const at = (slug: string) => shaped.findIndex(([s]) => s === slug);
+      expect(shaped[at("push-up")]?.[2]).toBe("band-pull-apart");
+      expect(Math.abs(at("band-pull-apart") - at("push-up"))).toBe(1);
+    });
+
+    it("leave an Exercise unpaired when the cut takes its partner entirely", () => {
+      // The squat pairs with the plank first, then the press with the row: 360 + 450 = 810 s, and the 120 s deadlift
+      // Set ahead of the plank doesn't fit, so the plank never comes and the squat goes alone
+      const plan = {
+        plannedExercises: [
+          planned("goblet-squat"),
+          ...pushPullSquat.plannedExercises.slice(0, 2),
+          planned("dumbbell-romanian-deadlift"),
+          planned("plank"),
+        ],
+      };
+      expect(shape(plan, { workoutLength: "quick" })).toEqual([
+        ["goblet-squat", 3, undefined],
+        ["dumbbell-bench-press", 3, "inverted-row"],
+        ["inverted-row", 3, "dumbbell-bench-press"],
+      ]);
+    });
+
+    it("give back the cut with No supersets", () => {
+      // Unpaired, 900 s takes the press and row (630 s) and two squat Sets
+      expect(shape(twoPairs, { workoutLength: "quick", noSupersets: true })).toEqual([
+        ["dumbbell-bench-press", 3, undefined],
+        ["inverted-row", 3, undefined],
+        ["goblet-squat", 2, undefined],
+      ]);
+      const today = daysWorkout(twoPairs, { workoutLength: "quick", noSupersets: true });
+      expect(today.estimatedSeconds).toBe(300 + 870);
+      expect(today.paired).toBe(false);
+    });
+
+    it("say whether there's a pair to turn off", () => {
+      expect(daysWorkout(pushPullSquat, { workoutLength: "quick" }).paired).toBe(true);
+    });
+
+    it("are off for one plan only, as for the equipment", () => {
+      const usual = { workoutLength: "quick" } as const;
+      const made = withChoice(null, "plan-1", { noSupersets: true });
+      expect(dayChoices("plan-1", usual, made).noSupersets).toBe(true);
+      expect(dayChoices("plan-2", usual, made)).toEqual(usual);
     });
   });
 });

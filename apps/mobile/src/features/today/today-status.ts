@@ -96,12 +96,43 @@ export function todayLoggedLine(workouts: readonly FinishedWorkoutSets[]) {
   );
 }
 
-// What's in a Planned Workout: "6 Exercises · 18 Sets · About 45 min"
-export function todayPlanLine(plannedExercises: readonly { sets: number }[], estimatedSeconds: number) {
+// The plan's sheet says it on its own, and the day's card at the end of todayPlanLine
+export const LIGHTER_AFTER_CHECK_IN = "Lighter after your check-in";
+
+// The plan's sheet, when the Workout pairs Exercises to fit its Length (#96), and under each paired Exercise
+export const SUPERSETS_TO_FIT = "Paired into supersets to fit the time";
+export const supersetWithLabel = (partnerName: string) => `Superset with ${partnerName.toLowerCase()}`;
+
+// On the Rest Day card and in the plan's sheet
+export const RECOVERY_INSTEAD = "Recovery workout instead";
+
+// What's in a Planned Workout: "6 Exercises · 18 Sets · About 45 min", and "· lighter after your check-in" when it
+// took Sets off
+export function todayPlanLine(
+  plannedExercises: readonly { sets: number }[],
+  estimatedSeconds: number,
+  lighter = false,
+) {
   const sets = plannedExercises.reduce((sum, exercise) => sum + exercise.sets, 0);
   return [
     counted(plannedExercises.length, "Exercise"),
     counted(sets, "Set"),
     estimatedTimeLabel(estimatedSeconds),
+    ...(lighter ? [LIGHTER_AFTER_CHECK_IN.toLowerCase()] : []),
   ].join(" · ");
 }
+
+// Where today's check-in stands: not yet read from the phone, or read and made or not
+export type CheckInState = "unread" | "not-checked-in" | "checked-in";
+
+// The check-in card sits under the day's card only while there's a Planned Workout to start, and goes once the user
+// checks in or a Workout starts that day
+export const showsCheckIn = ({
+  card,
+  hasDaysWorkout,
+  checkIn,
+}: {
+  card: TodayCard;
+  hasDaysWorkout: boolean;
+  checkIn: CheckInState;
+}) => (card === "ready" || card === "rest") && hasDaysWorkout && checkIn === "not-checked-in";

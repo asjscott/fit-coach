@@ -13,7 +13,10 @@ import {
 import { withAlternatives, type Candidate } from "./alternative-exercises";
 import { exerciseBySlug, EXERCISES } from "./data/exercises";
 import { BUILT_IN_EQUIPMENT, isAvailable, isSafeFor, matchesBuiltIn, type ProfileWithLoads } from "./equipment";
+import { muscleFatigue, tiredMuscles, type FatigueWorkout } from "./fatigue";
+import { planReasons } from "./plan-reasons";
 import { scoreExercise, type WeekSoFar } from "./plan-score";
+import { trainingWorkouts } from "./recovery-workout";
 import {
   addCredits,
   creditsPerSet,
@@ -45,7 +48,7 @@ const ATHLETIC_CUE = "Lift as fast as you can on the way up";
 // Everything a plan depends on, so the same inputs give the same plan
 export type PlanWorkoutInput = {
   // Finished Workouts, at least all of this week's and last week's; each week keeps its own and counts each once
-  workouts: readonly LedgerWorkout[];
+  workouts: readonly (LedgerWorkout & FatigueWorkout)[];
   now: Date;
   timeZone: string;
   equipmentProfile: ProfileWithLoads;
@@ -57,8 +60,10 @@ export type PlanWorkoutInput = {
   daysPerWeek: number;
 };
 
-// What the planner decides; the API gives it an id and a status when it saves it
-export type WorkoutPlan = Pick<PlannedWorkout, "weekStart" | "plannedExercises" | "cue">;
+// What the planner decides; the API gives it an id and a status when it saves it. heldBack is the tired Muscles
+// whose Exercises the recovery filter left out of the plan
+export type WorkoutPlan = Pick<PlannedWorkout, "weekStart" | "plannedExercises" | "cue"> &
+  Required<Pick<PlannedWorkout, "reasons">> & { heldBack: Muscle[] };
 
 // A Set's target from a stored Working Level, or null when it can't be prescribed on this equipment
 function targetFrom(
@@ -127,13 +132,14 @@ function withinVarietyCap(candidates: readonly Candidate[], thisWeek: readonly L
 const byTieOrder = ({ exercise: a }: Candidate, { exercise: b }: Candidate) =>
   b.secondsPerSet - a.secondsPerSet || a.slug.localeCompare(b.slug);
 
-// What the equipment and injuries allow, with a target to prescribe
+// What the equipment and injuries allow, with a target to prescribe. Never a Recovery Exercise
 function possibleExercises(input: PlanWorkoutInput): Candidate[] {
   const { equipmentProfile, injuries } = input;
   const levels = workingLevelsFor(input);
   return EXERCISES.flatMap((exercise) => {
     const level = levels.get(exercise.slug);
-    if (!level || !isAvailable(exercise, equipmentProfile) || !isSafeFor(exercise, injuries)) return [];
+    if (!level || exercise.recovery || !isAvailable(exercise, equipmentProfile) || !isSafeFor(exercise, injuries))
+      return [];
     const target = targetFrom(level, exercise, equipmentProfile);
     return target ? [{ exercise, target }] : [];
   });
@@ -223,18 +229,50 @@ function requiredPick(candidates: readonly Candidate[], thisWeek: readonly Ledge
   );
 }
 
+// Athletic's two-legged loaded squat, in order of preference
+const TWO_LEGGED_SQUATS = ["back-squat", "goblet-squat"];
+
+// Athletic's other one a week: a heavy two-legged squat, which this Goal needs but which scores below one-sided leg
+// work. It's the first of TWO_LEGGED_SQUATS the equipment allows, and the week is done only once that one has had a
+// pick's worth of Sets, so goblet squat doesn't stand in for back squat. It never shares a Workout with the one-sided
+// pick, and waits while its Muscles recover rather than coming back as a last resort. Once done, it competes on score
+// like any other
+function requiredSquat(
+  candidates: readonly Candidate[],
+  thisWeek: readonly LedgerWorkout[],
+  goal: Goal,
+  isRested: (candidate: Candidate) => boolean,
+) {
+  if (goal !== "athletic") return undefined;
+  const squat = TWO_LEGGED_SQUATS.map((slug) => candidates.find(({ exercise }) => exercise.slug === slug)).find(
+    (candidate) => candidate !== undefined,
+  );
+  if (!squat) return undefined;
+  const setsThisWeek = thisWeek
+    .flatMap(({ workoutExercises }) => workoutExercises)
+    .filter(({ slug }) => slug === squat.exercise.slug)
+    .reduce((sum, { sets }) => sum + sets.length, 0);
+  return setsThisWeek < SETS_PER_PICK && isRested(squat) ? squat : undefined;
+}
+
 type Selection = {
   candidates: readonly Candidate[];
   stages: readonly WeeklyBudget[];
   goal: Goal;
   budget: WeeklyBudget;
   limitOf: (muscle: Muscle) => number;
+  // False while one of its primary Muscles is over the fatigue limit
+  isRested: (candidate: Candidate) => boolean;
   required?: Candidate;
 };
 
 // The next pick that fits the time, by fill order and then score. The limits give way once nothing within them helps,
-// and a 4th Set waits for a stage to run out of new Exercises
-function nextPick({ candidates, stages, goal, budget, limitOf }: Selection, draft: Draft, ledger: MuscleCredits) {
+// then the recovery filter as a last resort, and a 4th Set waits for a stage to run out of new Exercises
+function nextPick(
+  { candidates, stages, goal, budget, limitOf, isRested }: Selection,
+  draft: Draft,
+  ledger: MuscleCredits,
+) {
   const open = candidates.filter((candidate) => {
     const sets = setsToAdd(draft, candidate);
     return sets > 0 && candidate.exercise.secondsPerSet * sets <= draft.secondsLeft;
@@ -244,7 +282,8 @@ function nextPick({ candidates, stages, goal, budget, limitOf }: Selection, draf
       ([muscle, credit]) => (draft.credits[muscle] ?? 0) + credit * setsToAdd(draft, candidate) <= limitOf(muscle),
     ),
   );
-  for (const allowed of [withinLimits, open]) {
+  const rested = (allowed: readonly Candidate[]) => allowed.filter(isRested);
+  for (const allowed of [rested(withinLimits), rested(open), withinLimits, open]) {
     for (const stage of stages) {
       const helping = allowed.filter((candidate) => helpsStage(candidate, stage, ledger));
       const unpicked = helping.filter((candidate) => !draft.sets.has(candidate));
@@ -287,9 +326,19 @@ function selectExercises(selection: Selection, weekSoFar: MuscleCredits): Planne
   }
 }
 
-// The user's next Planned Workout, in priority order. Pure: only the server calls it (ADR 0003)
+// The tired Muscles an Exercise was left out for, unless one came back as a last resort
+function heldBack(candidates: readonly Candidate[], selected: readonly PlannedExercise[], tired: ReadonlySet<Muscle>) {
+  const primaryOf = (slug: string) => exerciseBySlug(slug)?.muscles.primary ?? [];
+  const planned = new Set(selected.flatMap(({ slug }) => primaryOf(slug)));
+  const leftOut = new Set(candidates.flatMap(({ exercise }) => exercise.muscles.primary));
+  return [...tired].filter((muscle) => leftOut.has(muscle) && !planned.has(muscle));
+}
+
+// The user's next Planned Workout, in priority order. Pure: only the server calls it (ADR 0003). A Recovery Workout
+// isn't training, so it's planned as though it never happened
 export function planWorkout(input: PlanWorkoutInput): WorkoutPlan {
-  const { workouts, now, timeZone, goal, daysPerWeek } = input;
+  const { now, timeZone, goal, daysPerWeek } = input;
+  const workouts = trainingWorkouts(input.workouts);
   const monday = mondayOf(now, timeZone);
   const week = { monday, timeZone };
   const thisWeek = workoutsInWeek(workouts, week);
@@ -297,20 +346,26 @@ export function planWorkout(input: PlanWorkoutInput): WorkoutPlan {
   const candidates = pickableExercises(possibleExercises(input), thisWeek, lastWeek, daysPerWeek);
   const budget = weeklyBudget(goal, daysPerWeek);
   const ledger = weekLedger(workouts, week);
+  const tired = new Set(tiredMuscles(muscleFatigue(workouts, now)));
+  const isRested = ({ exercise }: Candidate) => !exercise.muscles.primary.some((muscle) => tired.has(muscle));
   const selection: Selection = {
     candidates,
     stages: fillOrder(goal, daysPerWeek),
     goal,
     budget,
     limitOf: muscleLimits(budget, Math.max(1, daysPerWeek - thisWeek.length)),
-    required: requiredPick(candidates, thisWeek, { goal, budget, ledger }),
+    isRested,
+    required:
+      requiredPick(candidates, thisWeek, { goal, budget, ledger }) ??
+      requiredSquat(candidates, thisWeek, goal, isRested),
   };
+  const selected = selectExercises(selection, ledger);
+  const held = heldBack(candidates, selected, tired);
   return {
     weekStart: monday,
-    plannedExercises: withAlternatives(
-      selectExercises(selection, ledger),
-      builtInCandidates(input, thisWeek, lastWeek),
-    ),
+    plannedExercises: withAlternatives(selected, builtInCandidates(input, thisWeek, lastWeek)),
     ...(goal === "athletic" && { cue: ATHLETIC_CUE }),
+    heldBack: held,
+    reasons: planReasons({ heldBack: held, workouts, ledger, budget, timeZone }),
   };
 }

@@ -46,6 +46,9 @@ function summary(run: Run) {
   };
 }
 
+const DAYS = [2, 3, 4, 5, 6];
+const LENGTHS: WorkoutLength[] = ["short", "standard", "long"];
+
 const COMBINATIONS: [number, WorkoutLength][] = [
   [4, "standard"],
   [3, "standard"],
@@ -77,4 +80,45 @@ for (const goal of GOALS) {
   console.log(`\n${goal}:\n`);
   const { lastWeek } = summary({ goal, days: 4, length: "standard", lifter: "intermediate", profile: "Full gym" });
   for (const workout of lastWeek) console.log(`- ${workout}`);
+}
+
+console.log("\n### Weekly Budget: main Muscles, then side delts and abs\n");
+console.log(`| Goal | ${DAYS.map((days) => `${days} days`).join(" | ")} |`);
+console.log(`| --- |${DAYS.map(() => " --- |").join("")}`);
+for (const goal of GOALS) {
+  const cells = DAYS.map((days) => {
+    const budget = weeklyBudget(goal, days);
+    return `${budget.quads}, ${budget.side_delts}`;
+  });
+  console.log(`| ${goal} | ${cells.join(" | ")} |`);
+}
+
+// The fewest credited Sets any budgeted Muscle gets in a week, which the 4-Set floor is judged by
+function lowestMuscle(run: Run, weeks: ReturnType<typeof simulate>) {
+  const lowestIn = (week: (typeof weeks)[number]) => {
+    const credits = week
+      .flatMap(({ exercises }) => exercises)
+      .reduce<MuscleCredits>(
+        (total, { slug, sets }) => addCredits(total, creditsPerSet(exerciseBySlug(slug)!), sets),
+        {},
+      );
+    return Math.min(...Object.keys(weeklyBudget(run.goal, run.days)).map((muscle) => credits[muscle as Muscle] ?? 0));
+  };
+  return Math.min(...weeks.map(lowestIn));
+}
+
+// The recovery filter's effect: the floor, and how many of the 3 weeks' Workouts held a Muscle back
+console.log("\n### Lowest Muscle a week, and Workouts holding a Muscle back: Full gym, intermediate\n");
+console.log(`| Goal | Length | ${DAYS.map((days) => `${days} days`).join(" | ")} |`);
+console.log(`| --- | --- |${DAYS.map(() => " --- |").join("")}`);
+for (const goal of GOALS) {
+  for (const length of LENGTHS) {
+    const cells = DAYS.map((days) => {
+      const run: Run = { goal, days, length, lifter: "intermediate", profile: "Full gym" };
+      const weeks = simulate(run).slice(1);
+      const holding = weeks.flat().filter(({ heldBack }) => heldBack.length).length;
+      return `${lowestMuscle(run, weeks)} (${holding})`;
+    });
+    console.log(`| ${goal} | ${length} | ${cells.join(" | ")} |`);
+  }
 }

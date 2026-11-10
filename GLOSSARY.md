@@ -14,6 +14,10 @@ _Avoid_: Exercise type, measure
 A movement in the library, such as a goblet squat, with how it is loaded, the muscles it works and its easier and harder variants.
 _Avoid_: Movement, lift
 
+**Recovery Exercise**:
+A walk or a mobility hold, made for the Recovery Workout. It has no Pattern, credits no Muscle, and the Coach never plans one into a training Workout.
+_Avoid_: Stretch, mobility exercise, cooldown
+
 **Pattern**:
 The kind of movement an Exercise trains: squat, hinge, push, pull, carry or core.
 _Avoid_: Movement pattern, category
@@ -21,6 +25,10 @@ _Avoid_: Movement pattern, category
 **Ballistic Exercise**:
 An Exercise where the load or the body is accelerated through the end of the movement, such as a swing or a jump.
 _Avoid_: Explosive exercise, power exercise
+
+**Superset**:
+Two Exercises of a Workout done in turn, a Set of one then a Set of the other with no rest between, and a rest only after the pair. The phone pairs them only when a Workout wouldn't otherwise fit its Length, by each one's main Pattern: push with pull, squat with core, hinge with push. Each Set is still logged under its own Exercise.
+_Avoid_: Circuit, paired set
 
 **Workout**:
 One occasion when the user trained, from start to finish, made up of the exercises they did in the order they did them.
@@ -73,7 +81,7 @@ _Avoid_: Custom workout, freestyle workout
 ### Planning
 
 **Planned Workout**:
-What the Coach prescribes for the user's next training day, built for their primary Equipment Profile: the Exercises in priority order, their Sets and targets, at Long, with the Alternative Exercises for Full gym and Bodyweight only. There is one current at a time. It's rebuilt after an upload, in a new week, after an Assessment and after a change to the Profile fields it depends on. The old one is kept, marked finished or replaced. Starting it begins a Workout linked to it.
+What the Coach prescribes for the user's next training day, built for their primary Equipment Profile: the Exercises in priority order, their Sets and targets, at Long, with the Alternative Exercises for Full gym and Bodyweight only. There is one current at a time. It's rebuilt after an upload, on a new day, after an Assessment and after a change to the Profile fields it depends on. A rebuild that gives the same plan keeps it; otherwise the old one is kept, marked finished or replaced. Starting it begins a Workout linked to it.
 _Avoid_: Session, planned session, program
 
 **Day's Workout**:
@@ -87,6 +95,18 @@ _Avoid_: Weekly target, quota, weekly volume
 **Week Ledger**:
 The credited Sets each Muscle has had so far this week, counted from the Sets the user logged and read against the Weekly Budget. A Set credits 1 to each primary Muscle and 0.5 to each secondary, and a one-sided Set counts once. Weeks run Monday to Sunday in the user's timezone.
 _Avoid_: Tally, weekly progress
+
+**Fatigue**:
+How much recent training a Muscle is still carrying: each logged Set credits it as in the Week Ledger, in full when logged and fading in a straight line to nothing after 48 hours. The Coach leaves out an Exercise while any of its primary Muscles is over the limit of 4, unless nothing else helps the Weekly Budget. Those Muscles are held back.
+_Avoid_: Recovery score; soreness and readiness, which are the user's own Check-in
+
+**Check-in**:
+How the user says they feel on a day, before training: sleep, energy and soreness, each rated 1 to 5. It lasts for that day only.
+_Avoid_: Daily survey, wellness check, mood
+
+**Readiness**:
+How ready to train a Check-in says the user is: sleep + energy + (6 − soreness), from 3 to 15. Low Readiness keeps fewer of the Day's Workout's Sets.
+_Avoid_: Recovery score, fatigue (for this)
 
 **Equipment Profile**:
 A named set of equipment the user trains with, and the loads it makes. One is primary. Full gym and Bodyweight only always exist, without the user creating them, for a day when the usual equipment isn't available.
@@ -105,7 +125,7 @@ A walk or mobility Workout the user chooses in place of the Day's Workout, for o
 _Avoid_: Recovery day, recovery session
 
 **Block**:
-A run of weeks of training, started by an Assessment, with a set length and a deload week.
+A run of weeks of training, started by an Assessment, with a set length and a deload week. A newer Assessment starts a new one; without one, the next starts the week after the deload.
 _Avoid_: Program, mesocycle, cycle
 
 **Rest Day**:

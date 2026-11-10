@@ -15,6 +15,7 @@ import {
   noAlternativeLabel,
   plannedSetsLabel,
   setTargetLabel,
+  supersetLetter,
   workoutExerciseSummary,
   workoutTimesLabel,
   workoutWhenLabel,
@@ -274,5 +275,11 @@ describe("setParts", () => {
       [10, ""],
     ]);
     expect(setParts({ kind: "timed", seconds: 45, loggedAt })).toEqual([[45, "s"]]);
+  });
+});
+
+describe("supersetLetter", () => {
+  it("names the Workout's supersets A, B, C in order", () => {
+    expect([0, 1, 2].map(supersetLetter)).toEqual(["A", "B", "C"]);
   });
 });

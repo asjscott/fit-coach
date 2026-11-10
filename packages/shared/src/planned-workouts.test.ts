@@ -57,6 +57,24 @@ describe("PlannedWorkout", () => {
     expect(PlannedWorkout.safeParse(plan).success).toBe(false);
   });
 
+  it("parses a plan stored without reasons, and one with them", () => {
+    expect(PlannedWorkout.parse(plannedWorkout)).not.toHaveProperty("reasons");
+
+    const reasons = [
+      { code: "recovering", muscles: ["quads", "glutes"], lastSetOn: "2026-11-03" },
+      { code: "budget-met" },
+      { code: "behind", muscles: ["lats", "upper_back"] },
+    ];
+    expect(PlannedWorkout.parse({ ...plannedWorkout, reasons }).reasons).toEqual(reasons);
+  });
+
+  it("refuses a reason it doesn't know, or one missing its Muscles", () => {
+    const parse = (reason: object) => PlannedWorkout.safeParse({ ...plannedWorkout, reasons: [reason] }).success;
+    expect(parse({ code: "time-cut" })).toBe(false);
+    expect(parse({ code: "behind", muscles: [] })).toBe(false);
+    expect(parse({ code: "recovering", muscles: ["quads"] })).toBe(false);
+  });
+
   it("refuses a plan with no Exercises", () => {
     expect(PlannedWorkout.safeParse({ ...plannedWorkout, plannedExercises: [] }).success).toBe(false);
   });

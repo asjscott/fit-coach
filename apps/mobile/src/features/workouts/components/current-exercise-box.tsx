@@ -18,6 +18,7 @@ import { exerciseName, libraryExercise } from "../library";
 import { useLogbook } from "../logbook-provider";
 import { protocolNote } from "../protocol-note";
 import { draftValues, rpeMissing, setDraft, SET_FIELDS, type SetDraft } from "../set-entry";
+import { RestTimer } from "./rest-timer";
 import { SetRow } from "./set-row";
 import { SetStepper, type KgSteps } from "./set-stepper";
 import { WorkoutExerciseMenu } from "./workout-exercise-menu";
@@ -33,9 +34,40 @@ export type CurrentExerciseBoxProps = {
 };
 
 // The Workout Exercise being logged: its name, target, Previous Sets, the Sets so far (each with a ⋯ to edit or delete it) and
-// steppers for the next Set, which starts from the previous one. A test that's done takes no more Sets
+// steppers for the next Set, which starts from the previous one, then the rest after the last Set. A test that's done
+// takes no more Sets
 export function CurrentExerciseBox({ workoutExercise, position, count, onNextTest }: CurrentExerciseBoxProps) {
+  return (
+    <ExerciseBox>
+      <HStack spacing={2} align="start">
+        <Stack spacing={1} style={styles.title}>
+          <SectionLabel color="accent">{`Exercise ${position + 1} of ${count}`}</SectionLabel>
+          <Text accessibilityRole="header" style={styles.name}>
+            {exerciseName(workoutExercise.slug)}
+          </Text>
+        </Stack>
+        <WorkoutExerciseMenu workoutExercise={workoutExercise} />
+      </HStack>
+      <ExerciseLogging workoutExercise={workoutExercise} onNextTest={onNextTest} />
+      <RestTimer />
+    </ExerciseBox>
+  );
+}
+
+// The box the current Exercise, or the current superset, is logged in
+export function ExerciseBox({ children }: { children: ReactNode }) {
   const { colors } = useTheme();
+  return <View style={[styles.box, { backgroundColor: colors.surface, borderColor: colors.accent }]}>{children}</View>;
+}
+
+// Logging one Workout Exercise, under its name: its target, Previous Sets, the Sets so far and the next Set's
+// steppers, or a done test's Next test. hideTarget leaves the target to the summary under the name, as a superset
+// shows it
+export function ExerciseLogging({
+  workoutExercise,
+  onNextTest,
+  hideTarget = false,
+}: Pick<CurrentExerciseBoxProps, "workoutExercise" | "onNextTest"> & { hideTarget?: boolean }) {
   const { workout, logSet, editSet, deleteSet, nextSetDraft, protocolState, nextLoadKg } = useLogbook();
   const primaryEquipment = usePrimaryEquipmentProfile();
   const { showToast } = useToast();
@@ -60,17 +92,8 @@ export function CurrentExerciseBox({ workoutExercise, position, count, onNextTes
   };
 
   return (
-    <View style={[styles.box, { backgroundColor: colors.surface, borderColor: colors.accent }]}>
-      <HStack spacing={2} align="start">
-        <Stack spacing={1} style={styles.title}>
-          <SectionLabel color="accent">{`Exercise ${position + 1} of ${count}`}</SectionLabel>
-          <Text accessibilityRole="header" style={styles.name}>
-            {exerciseName(slug)}
-          </Text>
-        </Stack>
-        <WorkoutExerciseMenu workoutExercise={workoutExercise} />
-      </HStack>
-      {planned ? (
+    <>
+      {planned && !hideTarget ? (
         <Text size="sm" color="muted" style={styles.note}>
           {`Target: ${plannedSetsLabel(planned, unilateral)}`}
         </Text>
@@ -177,10 +200,7 @@ export function CurrentExerciseBox({ workoutExercise, position, count, onNextTes
           }
         }}
       />
-
-      {/* Kept free for the rest timer, so adding it later doesn't move anything */}
-      <View style={styles.restSlot} />
-    </View>
+    </>
   );
 }
 
@@ -278,5 +298,4 @@ const styles = StyleSheet.create({
   banner: { marginTop: spacing[3] },
   sets: { marginTop: spacing[3] },
   entry: { marginTop: spacing[4] },
-  restSlot: { height: 44, marginTop: spacing[3] },
 });

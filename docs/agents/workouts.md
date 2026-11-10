@@ -43,6 +43,11 @@ Schemas shared by app and API: packages/shared/src/workouts.ts
   rule in `stepLoadKg`, `packages/engines/src/equipment.ts`), staying put past the lightest or heaviest, and by 2 kg
   when the loads aren't known. `set-entry.ts` only parses the typed text, steps reps (1) and seconds (5), and names
   the kg step for screen readers (`kgStepLabel`: "Next heavier weight", or "Plus 2 kg" when the loads aren't known).
+- **The rest timer lives in memory on the LogbookProvider** (#95), not in the Logbook or storage: it belongs to the
+  Workout, so it follows the user between Exercises and to Today, and a force-quit loses it. Only Log set starts or
+  restarts it; Finish, Discard and sign-out end it. Its length and countdown are pure (`rest-timer.ts` in
+  `@fit/engines`): `max(45, secondsPerSet − 30)` to a fixed end time, so backgrounding doesn't skew it. The provider
+  also keeps the screen on (`expo-keep-awake`) while a Workout is in progress.
 - **Times follow the phone's 12- or 24-hour setting, not its locale** (#69): `timeLabel` and Android's time dialog both
   read `uses24HourClock` (`format.ts`, from `expo-localization`), and the dialog is 24-hour whatever the phone says
   without it. The iOS pickers follow the setting by themselves. Hermes alone goes by the language: en-GB with a Canadian
@@ -52,7 +57,7 @@ Schemas shared by app and API: packages/shared/src/workouts.ts
   back on its own insets and gets no change notifications, so it can keep a zero bottom inset. `workout/_layout.tsx` has
   the provider, on iOS only; web's static build keeps Expo Router's non-measuring provider. The Add exercise sheet is
   presented on top, outside it, and has no inset, which its list doesn't need to clear the home indicator.
-- **New native modules need a new development build** (`expo-sqlite`, `expo-network`, `expo-localization` so far). Add dependencies with
+- **New native modules need a new development build** (`expo-sqlite`, `expo-network`, `expo-localization`, `expo-keep-awake` so far). Add dependencies with
   `npx expo install` and check the SDK 58 docs first (`apps/mobile/AGENTS.md`).
 
 ## Assessment (spec #29)
@@ -135,6 +140,9 @@ planWorkout (packages/engines/src/plan-workout.ts): pure, only the server calls 
   │  the rep cap and variety cap guards. Their order settles a tie: last week's first, then longest Sets, then slug
   ├─ Week Ledger (week-ledger.ts): weekLedger, recalculated from logged Sets; mondayOf is the server's week
   ├─ Weekly Budget (weekly-budget.ts): DOSES, DAYS_SCALE and the limits, weeklyBudget, fillOrder
+  ├─ Recovery filter: muscleFatigue (fatigue.ts) from each logged Set's loggedAt; FATIGUE_HOURS and FATIGUE_LIMIT
+  │  sit with the budget's tables. A tired primary Muscle leaves its Exercises out until nothing else helps the
+  │  budget, and planWorkout returns the Muscles it held back (heldBack, not stored)
   ├─ scoreExercise (plan-score.ts): every tilt, in one place
   └─ withAlternatives (alternative-exercises.ts): each Exercise's options for Full gym and Bodyweight only, saved in
      the plan. What's possible stays; only what's pickable stands in. Both built-ins are BUILT_IN_EQUIPMENT in
@@ -145,6 +153,9 @@ Phone
   ├─ Logbook: plannedWorkout, refreshPlannedWorkout, startPlannedWorkout; key logbook:planned-workout
   ├─ usePlannedWorkout (features/today/hooks): the copy, asking the server on every Today visit
   ├─ useDaysWorkout: the user's choices over daysWorkout (days-workout.ts), held in memory until Start
+  ├─ useCheckIn: today's check-in (stored-check-in.ts, key today.checkIn, by local date), passed to daysWorkout with
+  │  the usual choices. readinessShare (check-in.ts) trims the lowest-priority Sets after the Length cut, unless the
+  │  user picks Full workout. Card: check-in-card.tsx, shown by showsCheckIn (today-status.ts)
   ├─ Today (features/today/views/today-view.tsx): one card for the day (`todayCard` in today-status.ts, drawn by today-card.tsx), and planned-workout-sheet.tsx with the Exercises, targets, Length and equipment
   │  (rest-day.ts). todayPlan (today-status.ts) gates both: a plan, stale or not, and no In-progress Workout
   ├─ CurrentUserProvider: starts from stored-user.ts, so Goal and usual Length survive a cold start offline
@@ -160,6 +171,9 @@ Schemas: packages/shared/src/planned-workouts.ts
 - **The phone asks, the server decides.** POST `/planned-workouts/current` runs on every Today visit and after every
   sync. It's idempotent, as `planIsDue` compares `builtFrom` (`planInputsKey`) and `weekStart`, so a failed rebuild is
   just still due and logs rather than fails the request. A new plan input goes in `PlanInputs`.
+- **A plan is also due on a new day in the user's timezone** (#93), so fatigue is judged when the user looks, not at
+  the upload. `builtAt` is when it was last built: a rebuild that gives the same plan (`isSamePlan`) keeps it and its
+  id, and only moves `builtAt` on. A plan stored without `builtAt` is due once.
 - **A stale plan is never shown** (`PlannedWorkoutCopy.stale`). It goes stale while a Pending Workout exists and from an
   upload until the next answer (`awaitingNextPlan`). Today then says "Connect to plan your next Workout", but only once nothing is on its way (`syncing` on the Logbook provider), so an online finish never shows it. An answer that an upload overtakes is asked for again, not kept.
 - **Starting takes a snapshot.** Exercises are copied in with `planned: {sets, target}`, dropped at Finish, so a rebuild
@@ -177,6 +191,22 @@ Schemas: packages/shared/src/planned-workouts.ts
   gets the same bodyweight Workout, and a Full home gym only sees loads rounded to the built-in table.
 - **`ballistic` needs `pnpm --filter @fit/api seed:exercises`** on the real database (needs `.env`, so it's a human
   step). `findExercises` parses stored docs, so an older collection reads as not Ballistic rather than failing.
+- **Supersets are the phone's, and only to fit the Length** (#96, `supersets.ts`). `daysWorkout` pairs only when the
+  Length would cut a Set: one pair at a time in priority order (`canPair`: main Pattern, never one-sided or
+  Ballistic) until the Workout fits, then cuts what still doesn't. A pair is timed by `pairSeconds`, Sets ×
+  (the longer `secondsPerSet` + 30) for the rounds they share. "No supersets" (`DayChoices.noSupersets`) goes back to
+  cutting. At Start the partner's slug becomes `planned.supersetWith`, the partner's Workout Exercise id both ways,
+  dropped at Finish with `planned`, so sync and History are unchanged. Removing one of the pair unpairs the other.
+  `restAfterSet` (`rest-timer.ts`) gives no rest while the other is behind, and `pairRestSeconds` after the round.
+  The logging screen draws a pair with `SupersetBox` (layout A, Stacked), from `supersetGroups` and `supersetTurn`.
+  An Assessment or Recovery Workout never goes through `daysWorkout`, so is never paired.
+- **A Recovery Workout isn't training** (#97, `recovery-workout.ts`). It's known by its Exercises: every one with Sets
+  is a Recovery Exercise (`Exercise.recovery`), so a Workout needs no flag and sync and History are unchanged.
+  `trainingWorkouts` leaves it out of This Week, the Rest Day, `finishedToday` and `planWorkout`; `creditsPerSet` gives
+  a Recovery Exercise nothing, and the planner never picks one. It links to no plan, POST /workouts doesn't rebuild
+  after one, and on the phone it neither makes the plan stale nor sets `awaitingNextPlan`, so the same plan stays on
+  offer. Recovery Exercises have no Pattern and no strength ratio, so no Working Level. `recovery` also needs
+  `seed:exercises` re-run, as `ballistic` did.
 - **Build and tune with the simulation.** Scores tie often, as many Exercises share budgeted credits. The planner is
   deterministic, so ties fall to last week's Exercises, then the longest Sets, then the slug, never library order.
   `plan-outcomes.test.ts` pins what a user should see, with the library in either order: run it after any tuning.

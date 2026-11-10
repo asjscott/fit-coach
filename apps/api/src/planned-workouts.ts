@@ -1,17 +1,19 @@
 import { randomUUID } from "node:crypto";
 import type { WithId } from "mongodb";
-import { planInputsKey, planIsDue, planWorkout } from "@fit/engines";
+import { isSamePlan, planInputsKey, planIsDue, planWorkout } from "@fit/engines";
 import { PlannedWorkout } from "@fit/shared";
 import { findLatestAssessment } from "./assessments";
 import { client, db } from "./db";
 import { findOnboardedUser, type OnboardedUser } from "./users";
 import { findWorkoutsSince, toWorkout } from "./workouts";
 
-// builtFrom is absent on a plan from before it existed, which counts as due for a rebuild
+// builtFrom and builtAt are absent on a plan from before they existed, which counts as due for a rebuild. builtAt is
+// when it was last built: a rebuild that gives the same plan moves it on and keeps the plan
 type PlannedWorkoutDoc = Omit<PlannedWorkout, "createdAt"> & {
   clerkUserId: string;
   createdAt: Date;
   builtFrom?: string;
+  builtAt?: Date;
 };
 
 export const plannedWorkouts = db.collection<PlannedWorkoutDoc>("plannedWorkouts");
@@ -43,8 +45,9 @@ function planInputs(user: OnboardedUser) {
   return equipmentProfile ? { ...user, equipmentProfile } : null;
 }
 
-// Replaces the current plan with one built from the user's data as it stands now, keeping the old one. Does nothing
-// before the first Assessment, since the Coach has no Working Levels to prescribe from
+// Replaces the current plan with one built from the user's data as it stands now, keeping the old one, unless it's the
+// same plan, which stays with its id. Does nothing before the first Assessment, since the Coach has no Working Levels
+// to prescribe from
 async function rebuildPlannedWorkout(clerkUserId: string, user: OnboardedUser) {
   const latest = await findLatestAssessment(clerkUserId);
   const inputs = planInputs(user);
@@ -52,7 +55,7 @@ async function rebuildPlannedWorkout(clerkUserId: string, user: OnboardedUser) {
 
   const now = new Date();
   const recent = await findWorkoutsSince(clerkUserId, new Date(now.getTime() - PLAN_LOOKBACK_MS));
-  const plan = planWorkout({
+  const built = planWorkout({
     workouts: recent.map(toWorkout),
     now,
     timeZone: user.timeZone,
@@ -64,8 +67,18 @@ async function rebuildPlannedWorkout(clerkUserId: string, user: OnboardedUser) {
     daysPerWeek: user.daysPerWeek,
   });
 
+  // The Muscles held back are stored as the recovering reason
+  const { weekStart, plannedExercises, cue, reasons } = built;
+  const plan = { weekStart, plannedExercises, ...(cue && { cue }) };
+  const builtFrom = planInputsKey(inputs);
   await client.withSession((session) =>
     session.withTransaction(async () => {
+      const current = await plannedWorkouts.findOne({ clerkUserId, status: "current" }, { session });
+      if (current && current.builtFrom === builtFrom && isSamePlan(current, plan)) {
+        // The same Exercises can have new reasons, such as the day's recovery, which update in place
+        await plannedWorkouts.updateOne({ _id: current._id }, { $set: { builtAt: now, reasons } }, { session });
+        return;
+      }
       await plannedWorkouts.updateMany(
         { clerkUserId, status: "current" },
         { $set: { status: "replaced" } },
@@ -75,11 +88,13 @@ async function rebuildPlannedWorkout(clerkUserId: string, user: OnboardedUser) {
       await plannedWorkouts.insertOne(
         {
           ...plan,
+          reasons,
           id: randomUUID(),
           status: "current",
           clerkUserId,
-          createdAt: new Date(),
-          builtFrom: planInputsKey(inputs),
+          createdAt: now,
+          builtFrom,
+          builtAt: now,
         },
         { session },
       );
@@ -113,11 +128,20 @@ export async function rebuildAfterUpload(
 ) {
   if (!created) {
     const current = await findCurrent(clerkUserId);
-    if (current && current.createdAt >= uploadedAt) return;
+    if (current && (current.builtAt ?? current.createdAt) >= uploadedAt) return;
   }
   await rebuildPlannedWorkout(clerkUserId, user);
 }
 
-function toPlannedWorkout({ id, status, weekStart, createdAt, plannedExercises, cue }: WithId<PlannedWorkoutDoc>) {
-  return PlannedWorkout.parse({ id, status, weekStart, createdAt: createdAt.toISOString(), plannedExercises, cue });
+function toPlannedWorkout({
+  id,
+  status,
+  weekStart,
+  createdAt,
+  plannedExercises,
+  cue,
+  reasons,
+}: WithId<PlannedWorkoutDoc>) {
+  const createdAtIso = createdAt.toISOString();
+  return PlannedWorkout.parse({ id, status, weekStart, createdAt: createdAtIso, plannedExercises, cue, reasons });
 }

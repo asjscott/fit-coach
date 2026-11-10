@@ -1,3 +1,4 @@
+import { trainingWorkouts } from "./recovery-workout";
 import { thisWeek, type FinishedWorkoutSets } from "./training-summaries";
 
 // Why the Coach recommends a Rest Day
@@ -6,17 +7,20 @@ export type RestDayReason = "days-per-week-reached" | "trained-today" | "trained
 const sameDay = (a: Date, b: Date) =>
   a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
 
-// The Workouts finished today, on the phone's local day. Pass the Workouts with the Pending ones
+// The Workouts finished today, on the phone's local day. Pass the Workouts with the Pending ones. A Recovery Workout
+// isn't training, so it leaves the day's Planned Workout on offer
 export const finishedToday = <Workout extends FinishedWorkoutSets>(workouts: readonly Workout[], now: Date) =>
-  workouts.filter(({ endedAt }) => sameDay(new Date(endedAt), now));
+  trainingWorkouts(workouts).filter(({ endedAt }) => sameDay(new Date(endedAt), now));
 
 // Whether today is a Rest Day, on the phone's local days like This Week, or null. Advice only. Pass the Workouts with
-// the Pending ones; offline the rest are unknown, which can only miss a recommendation, never make a wrong one
+// the Pending ones; offline the rest are unknown, which can only miss a recommendation, never make a wrong one. A
+// Recovery Workout isn't training, so it counts for nothing here
 export function restDay(
-  workouts: readonly FinishedWorkoutSets[],
+  allWorkouts: readonly FinishedWorkoutSets[],
   now: Date,
   daysPerWeek?: number,
 ): RestDayReason | null {
+  const workouts = trainingWorkouts(allWorkouts);
   const { workoutCount } = thisWeek(workouts, now);
   if (daysPerWeek !== undefined && workoutCount >= daysPerWeek) return "days-per-week-reached";
 

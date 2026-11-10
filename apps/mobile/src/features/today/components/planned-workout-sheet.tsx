@@ -1,5 +1,5 @@
 import type { DayExercise } from "@fit/engines";
-import type { BuiltInEquipment, WorkoutLength } from "@fit/shared";
+import type { BuiltInEquipment, CheckIn, DayLength } from "@fit/shared";
 import { useRef } from "react";
 import { StyleSheet, View } from "react-native";
 import {
@@ -15,26 +15,57 @@ import { Heading } from "@/components/heading";
 import { LoadingButton } from "@/components/loading-button";
 import { HStack } from "@/components/stack";
 import { Text } from "@/components/text";
-import { workoutLengthOptions } from "@/features/user/components/form/fields/user-workout-length-field";
+import { dayLengthOptions } from "@/features/user/components/form/fields/user-workout-length-field";
 import { builtInEquipmentLabels, noAlternativeLabel, plannedSetsLabel } from "@/features/workouts/format";
 import { exerciseName, libraryExercise } from "@/features/workouts/library";
 import { spacing, useTheme } from "@/theme";
-import { todayPlanLine } from "../today-status";
+import {
+  LIGHTER_AFTER_CHECK_IN,
+  RECOVERY_INSTEAD,
+  SUPERSETS_TO_FIT,
+  supersetWithLabel,
+  todayPlanLine,
+} from "../today-status";
+import { CheckInRatings } from "./check-in-card";
+import { TodayCardLink } from "./today-card";
+
+type SheetCheckIn = {
+  ratings: CheckIn;
+  onChange: (checkIn: CheckIn) => void;
+  // Whether it took Sets off, and whether the user chose the Full workout anyway
+  lighter: boolean;
+  fullWorkout: boolean;
+  onChooseFullWorkout: (fullWorkout: boolean) => void;
+};
+
+type SheetSupersets = {
+  // Whether the Workout pairs any Exercises, and whether the user turned that off for this Workout
+  paired: boolean;
+  off: boolean;
+  onChooseOff: (off: boolean) => void;
+};
 
 type PlannedWorkoutSheetProps = {
   isOpen: boolean;
   onClose: () => void;
   cue?: string;
+  // Why the Coach planned it, worded, in the order to show
+  reasons: string[];
   plannedExercises: DayExercise[];
   estimatedSeconds: number;
   dropped: string[];
-  workoutLength: WorkoutLength;
-  onChooseLength: (workoutLength: WorkoutLength) => void;
+  workoutLength: DayLength;
+  onChooseLength: (workoutLength: DayLength) => void;
   equipment: BuiltInEquipment | undefined;
   equipmentChoices: BuiltInEquipment[];
   onChooseEquipment: (equipment?: BuiltInEquipment) => void;
   onPickAlternative: (replaces: string, slug: string) => void;
+  supersets: SheetSupersets;
+  // Today's check-in and what it did to the Workout, null before the user checks in
+  checkIn: SheetCheckIn | null;
   onStart: () => void;
+  // The Recovery Workout, on offer every day in place of this one
+  onStartRecovery: () => void;
 };
 
 // The Day's Workout in full, with the choices that shape it
@@ -42,6 +73,7 @@ export function PlannedWorkoutSheet({
   isOpen,
   onClose,
   cue,
+  reasons,
   plannedExercises,
   estimatedSeconds,
   dropped,
@@ -51,18 +83,21 @@ export function PlannedWorkoutSheet({
   equipmentChoices,
   onChooseEquipment,
   onPickAlternative,
+  supersets,
+  checkIn,
   onStart,
+  onStartRecovery,
 }: PlannedWorkoutSheetProps) {
   const { colors } = useTheme();
   // iOS can't present the Workout until the sheet has gone
-  const startOnClosed = useRef(false);
-  const start = () => {
-    startOnClosed.current = true;
+  const startOnClosed = useRef<(() => void) | null>(null);
+  const startOnceClosed = (startWorkout: () => void) => () => {
+    startOnClosed.current = startWorkout;
     onClose();
   };
   const handleClosed = () => {
-    if (startOnClosed.current) onStart();
-    startOnClosed.current = false;
+    startOnClosed.current?.();
+    startOnClosed.current = null;
   };
 
   return (
@@ -79,14 +114,19 @@ export function PlannedWorkoutSheet({
               <Text size="sm" color="muted">
                 {todayPlanLine(plannedExercises, estimatedSeconds)}
               </Text>
+              {reasons.map((reason) => (
+                <Text key={reason} size="sm" color="muted">
+                  {reason}
+                </Text>
+              ))}
               {cue ? (
                 <Text size="sm" color="muted">
                   {cue}
                 </Text>
               ) : null}
             </View>
-            <HStack spacing={2}>
-              {workoutLengthOptions.map(({ value, label }) => (
+            <HStack spacing={2} wrap="wrap">
+              {dayLengthOptions.map(({ value, label }) => (
                 <Chip
                   key={value}
                   label={label}
@@ -108,13 +148,57 @@ export function PlannedWorkoutSheet({
                 ))}
               </HStack>
             ) : null}
+            {supersets.paired || supersets.off ? (
+              // Like Full workout: offered only once it would change something, and kept while chosen
+              <View style={{ gap: spacing[2] }}>
+                {supersets.paired ? (
+                  <Text size="sm" color="muted">
+                    {SUPERSETS_TO_FIT}
+                  </Text>
+                ) : null}
+                <HStack spacing={2}>
+                  <Chip
+                    label="No supersets"
+                    selected={supersets.off}
+                    onPress={() => supersets.onChooseOff(!supersets.off)}
+                  />
+                </HStack>
+              </View>
+            ) : null}
+            {checkIn ? (
+              <View style={{ gap: spacing[2] }}>
+                {checkIn.lighter ? (
+                  <Text size="sm" color="muted">
+                    {LIGHTER_AFTER_CHECK_IN}
+                  </Text>
+                ) : null}
+                {checkIn.lighter || checkIn.fullWorkout ? (
+                  <HStack spacing={2}>
+                    <Chip
+                      label="Full workout"
+                      selected={checkIn.fullWorkout}
+                      onPress={() => checkIn.onChooseFullWorkout(!checkIn.fullWorkout)}
+                    />
+                  </HStack>
+                ) : null}
+                <CheckInRatings
+                  ratings={checkIn.ratings}
+                  onRate={(key, rating) => checkIn.onChange({ ...checkIn.ratings, [key]: rating })}
+                />
+              </View>
+            ) : null}
             <View>
-              {plannedExercises.map(({ slug, sets, target, replaces, otherOptions }) => (
+              {plannedExercises.map(({ slug, sets, target, replaces, otherOptions, supersetWith }) => (
                 <View key={slug} style={[styles.exercise, { borderTopColor: colors.line }]}>
                   <Text>{exerciseName(slug)}</Text>
                   <Text size="sm" color="muted">
                     {plannedSetsLabel({ sets, target }, libraryExercise(slug)?.unilateral)}
                   </Text>
+                  {supersetWith ? (
+                    <Text size="sm" color="muted">
+                      {supersetWithLabel(exerciseName(supersetWith))}
+                    </Text>
+                  ) : null}
                   {replaces ? (
                     <Text size="sm" color="muted">
                       {`Instead of ${exerciseName(replaces)}`}
@@ -149,8 +233,11 @@ export function PlannedWorkoutSheet({
             icon="dumbbell"
             fullWidth
             disabled={!plannedExercises.length}
-            onPress={start}
+            onPress={startOnceClosed(onStart)}
           />
+          <View style={styles.recovery}>
+            <TodayCardLink label={RECOVERY_INSTEAD} color="text" size="sm" onPress={startOnceClosed(onStartRecovery)} />
+          </View>
         </View>
       </ActionsheetContent>
     </Actionsheet>
@@ -162,5 +249,6 @@ const styles = StyleSheet.create({
   content: { gap: spacing[3], paddingBottom: spacing[3] },
   // Outside the scroll, so Start is in reach however long the list is
   start: { width: "100%", paddingTop: spacing[3] },
+  recovery: { alignItems: "center", paddingTop: spacing[3] },
   exercise: { paddingVertical: spacing[2], gap: 2, borderTopWidth: StyleSheet.hairlineWidth },
 });

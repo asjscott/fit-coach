@@ -9,7 +9,19 @@ const finished = (endedAt: string) => ({
   workoutExercises: [],
 });
 
+// A walk, the Recovery Workout's first Exercise
+const recovery = (endedAt: string) => ({
+  ...finished(endedAt),
+  workoutExercises: [{ slug: "walk", sets: [{ kind: "timed" as const, seconds: 1200, loggedAt: endedAt }] }],
+});
+
 describe("restDay", () => {
+  it("doesn't count a Recovery Workout as training, today, yesterday or towards days per week", () => {
+    const thursday = new Date("2026-10-22T18:00:00-07:00");
+    const week = [finished("2026-10-19T08:00:00-07:00"), recovery("2026-10-21T08:00:00-07:00")];
+    expect(restDay([...week, recovery("2026-10-22T08:00:00-07:00")], thursday, 2)).toBeNull();
+  });
+
   it("recommends one when a Workout was finished today", () => {
     const wednesday = new Date("2026-10-21T18:00:00-07:00");
     expect(restDay([finished("2026-10-21T08:00:00-07:00")], wednesday, 4)).toBe("trained-today");
@@ -104,6 +116,11 @@ describe("restDay", () => {
 });
 
 describe("finishedToday", () => {
+  it("leaves out a Recovery Workout, so the Planned Workout is offered again", () => {
+    const wednesday = new Date("2026-10-21T18:00:00-07:00");
+    expect(finishedToday([recovery("2026-10-21T08:00:00-07:00")], wednesday)).toEqual([]);
+  });
+
   it("keeps the Workouts finished on the phone's local day", () => {
     const wednesday = new Date("2026-10-21T18:00:00-07:00");
     const today = finished("2026-10-21T08:00:00-07:00");

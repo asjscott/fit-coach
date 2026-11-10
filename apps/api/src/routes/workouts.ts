@@ -1,4 +1,5 @@
 import type { FastifyPluginAsyncZod } from "fastify-type-provider-zod";
+import { isRecoveryWorkout } from "@fit/engines";
 import { ErrorResponse, PreviousSets, PreviousSetsQuery, Workout, WorkoutsQuery } from "@fit/shared";
 import { z } from "zod";
 import { assessIfPaired } from "../assessments";
@@ -28,7 +29,8 @@ export const workoutRoutes: FastifyPluginAsyncZod = async (app) => {
 
   // Idempotent on the phone-generated id: 201 when stored, 200 with the stored Workout when it was already uploaded.
   // Also works out any Assessment it completes, marks the Planned Workout it came from finished and rebuilds the
-  // Planned Workout. 403 before onboarding, which the app never offers logging before
+  // Planned Workout, unless it's a Recovery Workout, which changes no plan. 403 before onboarding, which the app never
+  // offers logging before
   app.post(
     "/workouts",
     { schema: { body: Workout, response: { 200: Workout, 201: Workout, 403: ErrorResponse } } },
@@ -43,8 +45,11 @@ export const workoutRoutes: FastifyPluginAsyncZod = async (app) => {
       await assessIfPaired(clerkUserId, stored, user);
       // Before the rebuild, which would otherwise mark its plan replaced
       if (stored.plannedWorkoutId) await finishPlannedWorkout(clerkUserId, stored.plannedWorkoutId);
-      // After pairing, so a retake's plan uses the new Working Levels. A failure fails the upload in the same way
-      await rebuildAfterUpload(clerkUserId, user, { created, uploadedAt: workout.uploadedAt });
+      // After pairing, so a retake's plan uses the new Working Levels. A failure fails the upload in the same way.
+      // A Recovery Workout isn't training, so the plan, and its id, stay as they are
+      if (!isRecoveryWorkout(stored)) {
+        await rebuildAfterUpload(clerkUserId, user, { created, uploadedAt: workout.uploadedAt });
+      }
       return reply.code(created ? 201 : 200).send(stored);
     },
   );

@@ -43,6 +43,7 @@ describe.each([
     { goal: "recomp", days: 4, length: "standard" },
     { goal: "build_muscle", days: 6, length: "standard" },
     { goal: "athletic", days: 4, length: "long" },
+    { goal: "athletic", days: 4, length: "standard" },
   ] as const)("$goal at $days days $length has back squat on a Full gym", (run) => {
     expect(setsPerWeek({ ...fullGym, ...run }, "back-squat")).toBeGreaterThanOrEqual(3);
   });
@@ -70,8 +71,9 @@ describe.each([
     );
 
   // Story 23: a short week still covers every budgeted Muscle, as far as the 4-Set floor. These three can't, an
-  // accepted limit of spec #77: the plan is always built Long, so at Short big barbell lifts leave no time
-  const belowFloor = { build_muscle: 3, recomp: 2, lose_fat: 4, athletic: 3 };
+  // accepted limit of spec #77: the plan is always built Long, so at Short big barbell lifts leave no time. Athletic's
+  // weekly back squat (#100) takes one of its two Short Workouts' time, leaving side delts at 2
+  const belowFloor = { build_muscle: 3, recomp: 2, lose_fat: 4, athletic: 2 };
 
   it.each(GOAL_NAMES)("%s at 2 days Short stays where the floor's limit says", (goal) => {
     expect(lowestMuscle({ ...fullGym, goal, days: 2, length: "short" })).toBeGreaterThanOrEqual(belowFloor[goal]);

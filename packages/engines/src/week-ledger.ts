@@ -14,9 +14,11 @@ export type LedgerWorkout = Pick<Workout, "id" | "startedAt"> & {
 
 const SECONDARY_CREDIT = 0.5;
 
-// What one Set of an Exercise credits. A one-sided Exercise is no different: a Set is a Set, per side
-export function creditsPerSet({ muscles }: Pick<Exercise, "muscles">): MuscleCredits {
+// What one Set of an Exercise credits. A one-sided Exercise is no different: a Set is a Set, per side. A Recovery
+// Exercise credits nothing
+export function creditsPerSet({ muscles, recovery }: Pick<Exercise, "muscles" | "recovery">): MuscleCredits {
   const credits: MuscleCredits = {};
+  if (recovery) return credits;
   for (const muscle of muscles.secondary) credits[muscle] = SECONDARY_CREDIT;
   for (const muscle of muscles.primary) credits[muscle] = 1;
   return credits;
@@ -30,12 +32,14 @@ export function addCredits(ledger: MuscleCredits, credits: MuscleCredits, sets: 
   return total;
 }
 
+// The calendar date of this moment in the timezone, as YYYY-MM-DD, which is how en-CA writes a date
+export const localDateOf = (date: Date, timeZone: string): string =>
+  new Intl.DateTimeFormat("en-CA", { timeZone, dateStyle: "short" }).format(date);
+
 // The Monday of the week holding this moment, as YYYY-MM-DD in the timezone. `weekStart` is the phone's version, in
 // the host's time; the server's host time is nobody's. Worked out on the calendar, so daylight saving can't shift it
 export function mondayOf(date: Date, timeZone: string): string {
-  // en-CA writes a date as YYYY-MM-DD
-  const localDate = new Intl.DateTimeFormat("en-CA", { timeZone, dateStyle: "short" }).format(date);
-  const monday = new Date(`${localDate}T00:00:00Z`);
+  const monday = new Date(`${localDateOf(date, timeZone)}T00:00:00Z`);
   monday.setUTCDate(monday.getUTCDate() - ((monday.getUTCDay() + 6) % 7));
   return monday.toISOString().slice(0, 10);
 }

@@ -14,7 +14,12 @@ import { useCurrentUser } from "@/features/user/current-user-provider";
 import { ForgottenWorkoutModal } from "@/features/workouts/components/forgotten-workout-modal";
 import { elapsedLabel, estimatedTimeLabel } from "@/features/workouts/format";
 import { useHistory } from "@/features/workouts/history-provider";
-import { useResumeWorkout, useStartPlannedWorkout, useStartWorkout } from "@/features/workouts/hooks/use-open-workout";
+import {
+  useResumeWorkout,
+  useStartPlannedWorkout,
+  useStartRecoveryWorkout,
+  useStartWorkout,
+} from "@/features/workouts/hooks/use-open-workout";
 import { useRefreshHistory } from "@/features/workouts/hooks/use-refresh-history";
 import { useLogbook } from "@/features/workouts/logbook-provider";
 import { spacing } from "@/theme";
@@ -23,10 +28,22 @@ import { LastWorkoutSection } from "../components/last-workout-section";
 import { PlannedWorkoutSheet } from "../components/planned-workout-sheet";
 import { ThisWeekSection } from "../components/this-week-section";
 import { TodayCard, TodayCardLink } from "../components/today-card";
+import { CheckInCard } from "../components/check-in-card";
+import { useCheckIn } from "../hooks/use-check-in";
 import { useDaysWorkout } from "../hooks/use-days-workout";
 import { useDismissedOffer } from "../hooks/use-dismissed-offer";
 import { usePlannedWorkout } from "../hooks/use-planned-workout";
-import { todayCard, todayLoggedLine, todayPlan, todayPlanLine, todayRestDay, todayState } from "../today-status";
+import { planReasonLines } from "../plan-reasons";
+import {
+  RECOVERY_INSTEAD,
+  showsCheckIn,
+  todayCard,
+  todayLoggedLine,
+  todayPlan,
+  todayPlanLine,
+  todayRestDay,
+  todayState,
+} from "../today-status";
 
 const WHY_REST: Record<RestDayReason, string> = {
   "days-per-week-reached": "You've reached your days per week.",
@@ -40,6 +57,7 @@ export default function TodayView() {
   const logbook = useLogbook();
   const { startWorkout, starting } = useStartWorkout();
   const { startPlannedWorkout, startingPlan } = useStartPlannedWorkout();
+  const { startRecoveryWorkout } = useStartRecoveryWorkout();
   const { resumeWorkout, forgotten, setForgotten } = useResumeWorkout();
   const { isLoaded, isStale, pending, syncing } = logbook;
   const { workouts, error } = useHistory();
@@ -59,7 +77,8 @@ export default function TodayView() {
     syncing,
   });
   const plannedWorkout = plan === "planned" ? latestPlan : null;
-  const { today, clearChoices } = useDaysWorkout(plannedWorkout);
+  const { checkIn, state: checkInState, keep: keepCheckIn } = useCheckIn();
+  const { today, clearChoices } = useDaysWorkout(plannedWorkout, checkIn);
 
   // A forgotten Workout must be finished or discarded before the user carries on
   useEffect(() => {
@@ -68,6 +87,11 @@ export default function TodayView() {
 
   const handleManual = async () => {
     if (await startWorkout()) router.push("/workout");
+  };
+
+  // Leaves the plan as it is: the Recovery Workout links to none, so the plan is offered again afterwards
+  const handleStartRecovery = async () => {
+    if (await startRecoveryWorkout()) router.push("/workout");
   };
 
   const handleStartPlan = async () => {
@@ -110,6 +134,7 @@ export default function TodayView() {
     today ? `Next Workout: ${estimatedTimeLabel(today.estimatedSeconds)} · ${action}` : "";
   const openSheet = () => setSheetIsOpen(true);
   const connectNote = plan === "connect" ? "Connect to plan your next Workout" : null;
+  const reasonLines = planReasonLines(plannedWorkout?.reasons, now);
 
   return (
     <Screen scroll="screen" edges={["top"]}>
@@ -142,6 +167,7 @@ export default function TodayView() {
           line={`${WHY_REST[restDayReason]} You can still train if you want to.`}
         >
           {today ? <TodayCardLink label={nextWorkout("Train anyway")} color="text" onPress={openSheet} /> : null}
+          <TodayCardLink label={RECOVERY_INSTEAD} color="text" onPress={handleStartRecovery} />
           {connectNote ? <Text color="muted">{connectNote}</Text> : null}
         </TodayCard>
       ) : null}
@@ -149,8 +175,9 @@ export default function TodayView() {
         <TodayCard
           tone="accent"
           headline="Time to train."
-          line={todayPlanLine(today.plannedExercises, today.estimatedSeconds)}
+          line={todayPlanLine(today.plannedExercises, today.estimatedSeconds, today.lighter)}
         >
+          {reasonLines.length ? <Text color="onAccent">{reasonLines[0]}</Text> : null}
           {plannedWorkout?.cue ? <Text color="onAccent">{plannedWorkout.cue}</Text> : null}
           <LoadingButton
             label="Start workout"
@@ -181,6 +208,11 @@ export default function TodayView() {
             onPress={handleManual}
           />
         </TodayCard>
+      ) : null}
+      {showsCheckIn({ card, hasDaysWorkout: !!today, checkIn: checkInState }) ? (
+        <View style={{ marginTop: spacing[3] }}>
+          <CheckInCard onCheckIn={keepCheckIn} />
+        </View>
       ) : null}
       {state === "offline" ? (
         <Text size="sm" color="muted" style={{ marginTop: spacing[2] }}>
@@ -222,6 +254,7 @@ export default function TodayView() {
           isOpen={sheetIsOpen}
           onClose={() => setSheetIsOpen(false)}
           cue={plannedWorkout?.cue}
+          reasons={reasonLines}
           plannedExercises={today.plannedExercises}
           estimatedSeconds={today.estimatedSeconds}
           dropped={today.dropped}
@@ -231,7 +264,20 @@ export default function TodayView() {
           equipmentChoices={today.equipmentChoices}
           onChooseEquipment={today.chooseEquipment}
           onPickAlternative={today.pickAlternative}
+          supersets={{ paired: today.paired, off: today.noSupersets, onChooseOff: today.chooseNoSupersets }}
+          checkIn={
+            checkIn
+              ? {
+                  ratings: checkIn,
+                  onChange: keepCheckIn,
+                  lighter: today.lighter,
+                  fullWorkout: today.fullWorkout,
+                  onChooseFullWorkout: today.chooseFullWorkout,
+                }
+              : null
+          }
           onStart={handleStartPlan}
+          onStartRecovery={handleStartRecovery}
         />
       ) : null}
       <ForgottenWorkoutModal isOpen={forgotten} onDone={() => setForgotten(false)} />

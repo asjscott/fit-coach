@@ -57,6 +57,9 @@ const midnight = (date: Date) => new Date(date.getFullYear(), date.getMonth(), d
 // Whole calendar days between two moments' dates; rounded, so a daylight-saving day still counts as one
 const daysBetween = (from: Date, to: Date) => Math.round((midnight(to).getTime() - midnight(from).getTime()) / DAY_MS);
 
+// The day of the week in the phone's language: "Tuesday"
+export const weekdayLabel = (date: Date) => date.toLocaleDateString([], { weekday: "long" });
+
 // When a Workout was: "Today, 1:33 PM", "Yesterday, 6:10 PM", "Tuesday, 7:02 AM", then "Sat 17 Oct, 9:40 AM"
 export function relativeDateLabel(iso: string, now = new Date()) {
   const date = new Date(iso);
@@ -64,7 +67,7 @@ export function relativeDateLabel(iso: string, now = new Date()) {
   const time = timeLabel(iso);
   if (days === 0) return `Today, ${time}`;
   if (days === 1) return `Yesterday, ${time}`;
-  if (days > 1 && days < 7) return `${date.toLocaleDateString([], { weekday: "long" })}, ${time}`;
+  if (days > 1 && days < 7) return `${weekdayLabel(date)}, ${time}`;
   const sameYear = date.getFullYear() === now.getFullYear();
   const day = date.toLocaleDateString([], {
     weekday: "short",
@@ -213,3 +216,6 @@ export const describeSet = (set: Set | SetValues) =>
   setParts(set)
     .map(([value, unit]) => (unit ? `${value} ${unit}` : String(value)))
     .join(" ");
+
+// A superset's letter by its place among the Workout's supersets, from 0: A makes A1 and A2, as gym programmes write them
+export const supersetLetter = (index: number) => String.fromCharCode(65 + index);

@@ -28,20 +28,28 @@ export type Muscle = z.infer<typeof Muscle>;
 export const LoadType = z.enum(["external", "bodyweight", "timed"]);
 export type LoadType = z.infer<typeof LoadType>;
 
-export const Exercise = z.object({
-  slug: z.string().regex(/^[a-z0-9-]+$/), // stable ID, e.g. "goblet-squat"
-  name: z.string(),
-  patterns: z.array(z.object({ pattern: Pattern, credit: z.number().min(0).max(1) })).min(1),
-  muscles: z.object({ primary: z.array(Muscle).min(1), secondary: z.array(Muscle) }),
-  equipmentOptions: z.array(z.array(EquipmentTag)).min(1), // any one option works; [[]] = no equipment
-  loadType: LoadType,
-  unilateral: z.boolean(),
-  ballistic: z.boolean().default(false), // the default covers an exercises collection seeded before this field
-  secondsPerSet: z.number().int().positive(), // including rest
-  regression: z.string().nullable(), // slug of the easier variant
-  progression: z.string().nullable(), // slug of the harder variant
-  avoidWith: z.array(InjuryTag),
-  cues: z.array(z.string()).max(3),
-  videoUrl: z.url().nullable(),
-});
+export const Exercise = z
+  .object({
+    slug: z.string().regex(/^[a-z0-9-]+$/), // stable ID, e.g. "goblet-squat"
+    name: z.string(),
+    // Empty only for a Recovery Exercise, which trains no Pattern
+    patterns: z.array(z.object({ pattern: Pattern, credit: z.number().min(0).max(1) })),
+    muscles: z.object({ primary: z.array(Muscle).min(1), secondary: z.array(Muscle) }),
+    equipmentOptions: z.array(z.array(EquipmentTag)).min(1), // any one option works; [[]] = no equipment
+    loadType: LoadType,
+    unilateral: z.boolean(),
+    ballistic: z.boolean().default(false), // the default covers an exercises collection seeded before this field
+    // For a Recovery Workout only: credits nothing and the planner never picks it. Defaults like ballistic
+    recovery: z.boolean().default(false),
+    secondsPerSet: z.number().int().positive(), // including rest
+    regression: z.string().nullable(), // slug of the easier variant
+    progression: z.string().nullable(), // slug of the harder variant
+    avoidWith: z.array(InjuryTag),
+    cues: z.array(z.string()).max(3),
+    videoUrl: z.url().nullable(),
+  })
+  .refine((exercise) => exercise.recovery || exercise.patterns.length > 0, {
+    error: "Only a Recovery Exercise trains no Pattern",
+    path: ["patterns"],
+  });
 export type Exercise = z.infer<typeof Exercise>;

@@ -1,22 +1,31 @@
 import {
   BuiltInEquipment,
   type AlternativeExercise,
+  type CheckIn,
+  type DayLength,
   type Goal,
   type PlannedExercise,
   type PlannedWorkout,
-  type WorkoutLength,
 } from "@fit/shared";
+import { readinessShare } from "./check-in";
 import { exerciseBySlug } from "./data/exercises";
+import { canPair, pairSeconds, secondsPerSetOf } from "./supersets";
 import { SETS_PER_PICK } from "./weekly-budget";
-import { secondsForSets, TYPICAL_SECONDS_PER_SET, WARM_UP_SECONDS } from "./workout-length";
+import { secondsForSets, WARM_UP_SECONDS } from "./workout-length";
 
 // What the user can change for one Workout. Local to the phone: nothing here reaches the stored plan
 export type DayChoices = {
-  workoutLength: WorkoutLength;
+  // Can be Quick, unlike the usual Workout Length
+  workoutLength: DayLength;
   // Absent on the primary Equipment Profile
   equipment?: BuiltInEquipment;
   // The Alternative Exercise the user prefers, by the slug of the planned Exercise it replaces
   alternativePicks?: Record<string, string>;
+  // Today's check-in, which takes Sets off unless the user chooses the Full Workout
+  checkIn?: CheckIn;
+  fullWorkout?: boolean;
+  // Cuts Sets instead of pairing Exercises into supersets when the Workout doesn't fit its Length
+  noSupersets?: boolean;
 };
 
 // The choices the user has made, tied to the plan they made them on
@@ -46,19 +55,15 @@ export const equipmentChoices = ({ plannedExercises }: Pick<PlannedWorkout, "pla
   );
 
 // An Exercise in today's Workout. replaces and otherOptions are on an Alternative Exercise: the slug of the planned
-// Exercise it stands in for, and what else could
+// Exercise it stands in for, and what else could. supersetWith is the slug of the Exercise it's paired with
 export type DayExercise = Omit<PlannedExercise, "alternatives" | "fourthSetAfter"> & {
   replaces?: string;
   otherOptions?: AlternativeExercise[];
+  supersetWith?: string;
 };
 
 // A day's Exercise with what the cut needs: its index in the plan, kept when an earlier Exercise drops out
 type Placed = { exercise: DayExercise; place: number; fourthSetAfter?: number };
-
-const secondsPerSet = (slug: string) => exerciseBySlug(slug)?.secondsPerSet ?? TYPICAL_SECONDS_PER_SET;
-
-const secondsOf = (dayExercises: readonly DayExercise[]) =>
-  dayExercises.reduce((seconds, { slug, sets }) => seconds + sets * secondsPerSet(slug), 0);
 
 // Applies the equipment. No Exercise can be done twice, so what stays claims its slot first, then the user's picks,
 // then each remaining Exercise's first free option in priority order
@@ -122,20 +127,81 @@ function setsInPriorityOrder(placed: readonly Placed[]): DayExercise[] {
   return sets.sort((a, b) => a.priority - b.priority).map(({ exercise }) => exercise);
 }
 
-// Keeps Sets in priority order and stops at the first that doesn't fit: nothing lower priority may take the place of
-// higher priority work
-function cutToSeconds(placed: readonly Placed[], seconds: number) {
-  const keptSets = new Map<DayExercise, number>();
-  let secondsLeft = seconds;
-  for (const exercise of setsInPriorityOrder(placed)) {
-    secondsLeft -= secondsPerSet(exercise.slug);
-    if (secondsLeft < 0) break;
-    keptSets.set(exercise, (keptSets.get(exercise) ?? 0) + 1);
+// Each Exercise's partner in a superset, both ways
+type Partners = Map<DayExercise, DayExercise>;
+
+// The first so many Sets in priority order, counted by Exercise
+function setCounts(sets: readonly DayExercise[], kept: number) {
+  const counts = new Map<DayExercise, number>();
+  for (const exercise of sets.slice(0, kept)) counts.set(exercise, (counts.get(exercise) ?? 0) + 1);
+  return counts;
+}
+
+// The Sets' time, a pair's by pairSeconds once both have Sets
+function secondsOfSets(counts: ReadonlyMap<DayExercise, number>, partners: Partners) {
+  let seconds = 0;
+  const timed = new Set<DayExercise>();
+  for (const [exercise, sets] of counts) {
+    if (timed.has(exercise)) continue;
+    const partner = partners.get(exercise);
+    const partnerSets = partner && counts.get(partner);
+    if (partner && partnerSets) {
+      seconds += pairSeconds({ slug: exercise.slug, sets }, { slug: partner.slug, sets: partnerSets });
+      timed.add(partner);
+    } else {
+      seconds += sets * secondsPerSetOf(exercise.slug);
+    }
   }
-  return placed.flatMap(({ exercise }) => {
-    const sets = keptSets.get(exercise);
-    return sets ? [{ ...exercise, sets }] : [];
+  return seconds;
+}
+
+// How many Sets fit in the time: in priority order, stopping at the first that doesn't fit, as nothing lower priority
+// may take the place of higher priority work. A Set never makes the Workout shorter, so the first that doesn't fit
+// is the end
+function setsInSeconds(sets: readonly DayExercise[], partners: Partners, seconds: number) {
+  const fitting = sets.findIndex((_, i) => secondsOfSets(setCounts(sets, i + 1), partners) > seconds);
+  return fitting === -1 ? sets.length : fitting;
+}
+
+// The pairs worth making, in priority order: each Exercise with the first later one whose Pattern goes with its own
+function possiblePairs(placed: readonly Placed[]) {
+  const paired = new Set<DayExercise>();
+  const pairs: [DayExercise, DayExercise][] = [];
+  for (const [i, { exercise }] of placed.entries()) {
+    if (paired.has(exercise)) continue;
+    const partner = placed
+      .slice(i + 1)
+      .find(({ exercise: other }) => !paired.has(other) && canPair(exercise.slug, other.slug))?.exercise;
+    if (!partner) continue;
+    pairs.push([exercise, partner]);
+    paired.add(exercise).add(partner);
+  }
+  return pairs;
+}
+
+// The Length's cut, then the check-in's share of what's left, both taking the lowest priority Sets first. When the
+// Length would cut a Set, Exercises pair first, one pair at a time in priority order until the Workout fits, and
+// only what still doesn't fit is cut. lighter says whether the check-in took any
+function cut(placed: readonly Placed[], { workoutLength, checkIn, fullWorkout, noSupersets }: DayChoices) {
+  const sets = setsInPriorityOrder(placed);
+  const seconds = secondsForSets(workoutLength);
+  const partners: Partners = new Map();
+  let fitting = setsInSeconds(sets, partners, seconds);
+  for (const [a, b] of noSupersets ? [] : possiblePairs(placed)) {
+    if (fitting === sets.length) break;
+    partners.set(a, b).set(b, a);
+    fitting = setsInSeconds(sets, partners, seconds);
+  }
+  const kept = Math.round(fitting * (fullWorkout ? 1 : readinessShare(checkIn)));
+  const keptSets = setCounts(sets, kept);
+  const dayExercises = placed.flatMap(({ exercise }) => {
+    const count = keptSets.get(exercise);
+    if (!count) return [];
+    const partner = partners.get(exercise);
+    const paired = partner && keptSets.get(partner);
+    return [{ ...exercise, sets: count, ...(paired && { supersetWith: partner.slug }) }];
   });
+  return { dayExercises, seconds: secondsOfSets(keptSets, partners), lighter: kept < fitting };
 }
 
 // Lower goes first
@@ -145,18 +211,34 @@ function orderRank(slug: string, goal: Goal | undefined) {
   return exercise && exercise.muscles.primary.length > 1 ? 1 : 2;
 }
 
-// Stable, so Exercises of the same rank stay in priority order
-const inWorkoutOrder = (dayExercises: readonly DayExercise[], goal: Goal | undefined) =>
-  [...dayExercises].sort((a, b) => orderRank(a.slug, goal) - orderRank(b.slug, goal));
+// Stable, so Exercises of the same rank stay in priority order. A pair stays together, ordered the same way within it,
+// and goes where its earlier Exercise would
+function inWorkoutOrder(dayExercises: readonly DayExercise[], goal: Goal | undefined) {
+  const rank = ({ slug }: DayExercise) => orderRank(slug, goal);
+  const byRank = (a: DayExercise, b: DayExercise) => rank(a) - rank(b);
+  const units = dayExercises.flatMap((exercise, i) => {
+    const partner = dayExercises.find(({ slug }) => slug === exercise.supersetWith);
+    if (partner && dayExercises.indexOf(partner) < i) return [];
+    return [partner ? [exercise, partner].sort(byRank) : [exercise]];
+  });
+  return units.sort((a, b) => Math.min(...a.map(rank)) - Math.min(...b.map(rank))).flat();
+}
 
-// The Workout for today and the slugs of Exercises with no option on the chosen equipment. Equipment comes first so
-// the cut times what's actually done, the order last as the cut needs priority. goal is undefined until the user loads
+// The Workout for today, the slugs of Exercises with no option on the chosen equipment, whether the check-in made it
+// lighter, and whether any Exercises are paired. Equipment comes first so the cut times what's actually done, the order last as the cut needs priority. goal
+// is undefined until the user loads
 export function daysWorkout(
   { plannedExercises }: Pick<PlannedWorkout, "plannedExercises">,
   choices: DayChoices,
   goal?: Goal,
 ) {
   const { placed, dropped } = onEquipment(plannedExercises, choices);
-  const kept = cutToSeconds(placed, secondsForSets(choices.workoutLength));
-  return { plannedExercises: inWorkoutOrder(kept, goal), estimatedSeconds: WARM_UP_SECONDS + secondsOf(kept), dropped };
+  const { dayExercises, seconds, lighter } = cut(placed, choices);
+  return {
+    plannedExercises: inWorkoutOrder(dayExercises, goal),
+    estimatedSeconds: WARM_UP_SECONDS + seconds,
+    dropped,
+    lighter,
+    paired: dayExercises.some(({ supersetWith }) => supersetWith),
+  };
 }

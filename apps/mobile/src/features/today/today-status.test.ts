@@ -1,5 +1,13 @@
 import { describe, expect, it, vi } from "vitest";
-import { todayCard, todayLoggedLine, todayPlan, todayPlanLine, todayRestDay, todayState } from "./today-status";
+import {
+  showsCheckIn,
+  todayCard,
+  todayLoggedLine,
+  todayPlan,
+  todayPlanLine,
+  todayRestDay,
+  todayState,
+} from "./today-status";
 
 vi.mock("expo-localization", () => ({ getCalendars: () => [{}] }));
 
@@ -159,5 +167,40 @@ describe("todayPlanLine", () => {
 
   it("uses the singular for one", () => {
     expect(todayPlanLine([{ sets: 1 }], 600)).toBe("1 Exercise · 1 Set · About 10 min");
+  });
+
+  it("says when the check-in took Sets off", () => {
+    expect(todayPlanLine([{ sets: 3 }], 900, true)).toBe(
+      "1 Exercise · 3 Sets · About 15 min · lighter after your check-in",
+    );
+  });
+});
+
+describe("showsCheckIn", () => {
+  const base = { card: "ready", hasDaysWorkout: true, checkIn: "not-checked-in" } as const;
+
+  it("shows with a Planned Workout to start, ready or on a Rest Day", () => {
+    expect(showsCheckIn(base)).toBe(true);
+    expect(showsCheckIn({ ...base, card: "rest" })).toBe(true);
+  });
+
+  it("goes once the user has checked in", () => {
+    expect(showsCheckIn({ ...base, checkIn: "checked-in" })).toBe(false);
+  });
+
+  it("goes once a Workout starts or is done that day", () => {
+    expect(showsCheckIn({ ...base, card: "resume" })).toBe(false);
+    expect(showsCheckIn({ ...base, card: "done" })).toBe(false);
+  });
+
+  it("doesn't show without a Planned Workout to start", () => {
+    expect(showsCheckIn({ ...base, card: "rest", hasDaysWorkout: false })).toBe(false);
+    for (const card of ["loading", "assessment", "connect", "manual"] as const) {
+      expect(showsCheckIn({ ...base, card })).toBe(false);
+    }
+  });
+
+  it("waits until the phone has read today's check-in", () => {
+    expect(showsCheckIn({ ...base, checkIn: "unread" })).toBe(false);
   });
 });
