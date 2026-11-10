@@ -1,4 +1,5 @@
 import { ClerkProvider } from "@clerk/expo";
+import { resourceCache } from "@clerk/expo/resource-cache";
 import { tokenCache } from "@clerk/expo/token-cache";
 import {
   Inter_400Regular,
@@ -37,7 +38,10 @@ export default function RootLayout() {
   if (!ready) return null;
 
   return (
-    <ClerkProvider publishableKey={publishableKey} tokenCache={tokenCache}>
+    // Clerk can't reach its servers on a cold start with no signal, so without the resource cache it never finishes
+    // loading and the signed-in screens stay blank. With it, Clerk starts from the client and session it saved last
+    // time and refreshes them once it's back online.
+    <ClerkProvider publishableKey={publishableKey} tokenCache={tokenCache} __experimental_resourceCache={resourceCache}>
       <CurrentUserProvider>
         <ThemeProvider>
           <ToastProvider>

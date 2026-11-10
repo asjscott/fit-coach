@@ -9,6 +9,9 @@ export const patternLabels: Record<Pattern, string> = {
   core: "Core",
 };
 
+// What a Recovery Exercise is listed under, in place of a Pattern
+export const RECOVERY_LABEL = "Recovery";
+
 // "front_delts" -> "Front delts"
 export const muscleLabel = (muscle: Muscle) => {
   const words = muscle.replace(/_/g, " ");

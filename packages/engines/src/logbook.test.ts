@@ -1,7 +1,25 @@
-import type { BodyProfile, EquipmentProfile, PreviousSets, UserProfile, Workout } from "@fit/shared";
-import { describe, expect, it } from "vitest";
+import type {
+  BodyProfile,
+  EquipmentProfile,
+  PlannedExercise,
+  PlannedWorkout,
+  PreviousSets,
+  SetValues,
+  UserProfile,
+  Workout,
+} from "@fit/shared";
+import { describe, expect, it, vi } from "vitest";
 import { EXERCISES } from "./data/exercises";
-import { createLogbook, LogbookError, type DeviceStorage, type PreviousSetsSource } from "./logbook";
+import { daysWorkout, equipmentChoices } from "./days-workout";
+import {
+  createLogbook,
+  LogbookError,
+  type DeviceStorage,
+  type PlannedWorkoutSource,
+  type PreviousSetsSource,
+} from "./logbook";
+import { restAfterSet } from "./rest-timer";
+import { mondayOf, weekLedger } from "./week-ledger";
 
 const exercise = (slug: string) => {
   const found = EXERCISES.find((e) => e.slug === slug);
@@ -36,9 +54,13 @@ const offline: PreviousSetsSource = {
   },
 };
 
-function setup(storage = memoryStorage(), previousSets = fakePreviousSets()) {
+function setup(
+  storage = memoryStorage(),
+  previousSets = fakePreviousSets(),
+  plannedWorkouts: PlannedWorkoutSource = { current: async () => null },
+) {
   const uploader = fakeUploader();
-  const logbook = createLogbook({ storage, uploader, previousSets, newId: () => crypto.randomUUID() });
+  const logbook = createLogbook({ storage, uploader, previousSets, plannedWorkouts, newId: () => crypto.randomUUID() });
   return { logbook, uploader, storage };
 }
 
@@ -1010,6 +1032,332 @@ describe("Logbook: Assessment Workouts", () => {
   });
 });
 
+describe("Logbook: Planned Workouts", () => {
+  const PLAN_ID = "7c9e6679-7425-40de-944b-e07fc1f90ae7";
+  const gobletSquat: PlannedExercise = { slug: "goblet-squat", sets: 3, target: { unit: "kg", kg: 20, reps: 8 } };
+  const pushUp: PlannedExercise = { slug: "push-up", sets: 2, target: { unit: "reps", reps: 12 } };
+  const plank: PlannedExercise = { slug: "plank", sets: 3, target: { unit: "seconds", seconds: 40 } };
+  const plan = (...plannedExercises: PlannedExercise[]) => ({ id: PLAN_ID, plannedExercises });
+
+  it("starts filled with the plan's Exercises in order, each with its target Sets and none logged", async () => {
+    const { logbook } = setup();
+
+    const workout = await logbook.startPlannedWorkout(plan(gobletSquat, plank), at("09:00"));
+
+    expect(workout).toMatchObject({
+      startedAt: "2026-10-24T09:00:00.000Z",
+      plannedWorkoutId: PLAN_ID,
+      workoutExercises: [
+        { slug: "goblet-squat", loadType: "external", sets: [], planned: { sets: 3, target: gobletSquat.target } },
+        { slug: "plank", loadType: "timed", sets: [], planned: { sets: 3, target: plank.target } },
+      ],
+    });
+    expect(await logbook.inProgress()).toEqual(workout);
+  });
+
+  it("starts the day's Workout at the chosen Workout Length, linked to the whole plan", async () => {
+    const { logbook } = setup();
+    // 1500 s at Short: 480 s of goblet squat, 300 s of plank and 360 s of push-up leave 360 s, so 3 overhead press Sets
+    const stored = plan(
+      { ...gobletSquat, sets: 4 },
+      { ...plank, sets: 4 },
+      { ...pushUp, sets: 4 },
+      { ...pushUp, slug: "dumbbell-overhead-press", sets: 4 },
+    );
+    const { plannedExercises } = daysWorkout(stored, { workoutLength: "short", noSupersets: true });
+
+    const workout = await logbook.startPlannedWorkout({ id: PLAN_ID, plannedExercises }, at("09:00"));
+
+    expect(workout.plannedWorkoutId).toBe(PLAN_ID);
+    expect(workout.workoutExercises.map(({ slug, planned }) => [slug, planned?.sets])).toEqual([
+      ["goblet-squat", 4],
+      ["push-up", 4],
+      ["dumbbell-overhead-press", 3],
+      ["plank", 4],
+    ]);
+  });
+
+  it("refuses to start while a Workout is in progress", async () => {
+    const { logbook } = setup();
+    await logbook.start(at("09:00"));
+
+    await expect(logbook.startPlannedWorkout(plan(gobletSquat), at("09:05"))).rejects.toThrow(LogbookError);
+  });
+
+  it("starts a Recovery Workout: about 30 minutes of timed Sets, whatever the Length", async () => {
+    const { logbook } = setup();
+
+    const workout = await logbook.startRecoveryWorkout(at("09:00"));
+
+    expect(workout.plannedWorkoutId).toBeUndefined();
+    expect(
+      workout.workoutExercises.map(({ slug, loadType, sets, planned }) => [slug, loadType, sets, planned]),
+    ).toEqual([
+      ["walk", "timed", [], { sets: 1, target: { unit: "seconds", seconds: 1200 } }],
+      ["hip-flexor-stretch", "timed", [], { sets: 2, target: { unit: "seconds", seconds: 45 } }],
+      ["open-book", "timed", [], { sets: 2, target: { unit: "seconds", seconds: 45 } }],
+      ["cat-cow", "timed", [], { sets: 2, target: { unit: "seconds", seconds: 45 } }],
+      ["worlds-greatest-stretch", "timed", [], { sets: 2, target: { unit: "seconds", seconds: 45 } }],
+    ]);
+    expect(logbook.nextSetDraft(workout.workoutExercises[0])).toEqual({ kind: "timed", seconds: 1200 });
+  });
+
+  it("starts with no signal, with Previous Sets from Pending Workouts", async () => {
+    const { logbook } = setup(memoryStorage(), offline);
+    await finishPlank(logbook, "08:00");
+
+    const workout = await logbook.startPlannedWorkout(plan(plank), at("09:00"));
+
+    expect(workout.workoutExercises[0].previousSets?.sets).toEqual([
+      { kind: "timed", seconds: 60, loggedAt: "2026-10-24T08:00:00.000Z" },
+    ]);
+  });
+
+  it("uploads with its link through added, removed and swapped Exercises", async () => {
+    const { logbook, uploader } = setup();
+    const { workoutExercises } = await logbook.startPlannedWorkout(plan(gobletSquat, plank), at("09:00"));
+    const [squat, plannedPlank] = workoutExercises;
+
+    await logbook.removeWorkoutExercise(plannedPlank.id);
+    const swapped = await logbook.addWorkoutExercise(exercise("side-plank"));
+    const added = await logbook.addWorkoutExercise(exercise("push-up"));
+    await logbook.moveWorkoutExercise(added.id, 0);
+    await logbook.logSet(squat.id, { kind: "external", kg: 20, reps: 8 }, at("09:05"));
+    await logbook.logSet(swapped.id, { kind: "timed", seconds: 30 }, at("09:10"));
+    await logbook.logSet(added.id, { kind: "bodyweight", reps: 10 }, at("09:15"));
+    await logbook.finish({ startedAt: at("09:00"), endedAt: at("09:30"), now: at("09:30") });
+    await logbook.sync();
+
+    expect(uploader.uploaded).toHaveLength(1);
+    expect(uploader.uploaded[0].plannedWorkoutId).toBe(PLAN_ID);
+    expect(uploader.uploaded[0].workoutExercises.map(({ slug }) => slug)).toEqual([
+      "push-up",
+      "goblet-squat",
+      "side-plank",
+    ]);
+  });
+
+  it("keeps its link when a forgotten Workout finishes at its last Set", async () => {
+    const { logbook } = setup();
+    const { workoutExercises } = await logbook.startPlannedWorkout(plan(gobletSquat), at("09:00"));
+    await logbook.logSet(workoutExercises[0].id, { kind: "external", kg: 20, reps: 8 }, at("09:05"));
+
+    await logbook.finishAtLastSet();
+
+    expect((await logbook.pending())[0].plannedWorkoutId).toBe(PLAN_ID);
+  });
+
+  describe("on an equipment choice", () => {
+    const row: PlannedExercise = {
+      slug: "one-arm-dumbbell-row",
+      sets: 3,
+      target: { unit: "kg", kg: 18, reps: 8 },
+      alternatives: { bodyweight_only: [{ slug: "prone-ytw", target: { unit: "reps", reps: 15 } }] },
+    };
+
+    it("starts the Alternative Exercise, linked to the plan, and leaves the plan as it was", async () => {
+      const { logbook } = setup();
+      const stored = plan(row);
+      const { plannedExercises } = daysWorkout(stored, { workoutLength: "long", equipment: "bodyweight_only" });
+
+      const workout = await logbook.startPlannedWorkout({ id: PLAN_ID, plannedExercises }, at("09:00"));
+
+      expect(workout.plannedWorkoutId).toBe(PLAN_ID);
+      expect(workout.workoutExercises.map(({ slug, loadType, planned }) => [slug, loadType, planned])).toEqual([
+        ["prone-ytw", "bodyweight", { sets: 3, target: { unit: "reps", reps: 15 } }],
+      ]);
+      expect(stored).toEqual(plan(row));
+    });
+
+    it("counts done Sets in the Week Ledger under the Exercise actually done", async () => {
+      const { logbook, uploader } = setup();
+      const { plannedExercises } = daysWorkout(plan(row), { workoutLength: "long", equipment: "bodyweight_only" });
+      const { workoutExercises } = await logbook.startPlannedWorkout({ id: PLAN_ID, plannedExercises }, at("09:00"));
+      await logbook.logSet(workoutExercises[0].id, { kind: "bodyweight", reps: 15 }, at("09:05"));
+      await logbook.finish({ startedAt: at("09:00"), endedAt: at("09:30"), now: at("09:30") });
+      await logbook.sync();
+
+      const [workout] = uploader.uploaded;
+      expect(workout.plannedWorkoutId).toBe(PLAN_ID);
+      // prone-ytw's primary Muscles, each with one Set. The row it replaced would have credited lats instead
+      const ledger = weekLedger([workout], { monday: mondayOf(new Date(workout.startedAt), "UTC"), timeZone: "UTC" });
+      expect(ledger).toMatchObject({ rear_delts: 1, upper_back: 1 });
+      expect(ledger).not.toHaveProperty("lats");
+    });
+  });
+
+  it("uploads what was logged, not what was planned", async () => {
+    const { logbook, uploader } = setup();
+    const { workoutExercises } = await logbook.startPlannedWorkout(plan(gobletSquat, plank), at("09:00"));
+    await logbook.logSet(workoutExercises[0].id, { kind: "external", kg: 17.5, reps: 8 }, at("09:05"));
+
+    await logbook.finish({ startedAt: at("09:00"), endedAt: at("09:30"), now: at("09:30") });
+    await logbook.sync();
+
+    expect(uploader.uploaded[0].workoutExercises).toEqual([
+      {
+        slug: "goblet-squat",
+        loadType: "external",
+        sets: [{ kind: "external", kg: 17.5, reps: 8, loggedAt: "2026-10-24T09:05:00.000Z" }],
+      },
+    ]);
+  });
+
+  it("leaves a Manual Workout with no link", async () => {
+    const { logbook, uploader } = setup();
+    await finishPlank(logbook, "09:00");
+    await logbook.sync();
+
+    expect(uploader.uploaded[0]).not.toHaveProperty("plannedWorkoutId");
+  });
+
+  it("logs an Exercise the phone's library doesn't know yet", async () => {
+    const { logbook } = setup();
+    const unknown: PlannedExercise = { slug: "added-in-a-later-version", sets: 3, target: { unit: "reps", reps: 10 } };
+
+    const { workoutExercises } = await logbook.startPlannedWorkout(plan(unknown), at("09:00"));
+    await logbook.logSet(workoutExercises[0].id, { kind: "bodyweight", reps: 10 }, at("09:05"));
+
+    expect(workoutExercises[0].loadType).toBe("bodyweight");
+  });
+
+  describe("the first Set's draft", () => {
+    const draftFor = async (plannedExercise: PlannedExercise) => {
+      const { logbook } = setup();
+      const { workoutExercises } = await logbook.startPlannedWorkout(plan(plannedExercise), at("09:00"));
+      return logbook.nextSetDraft(workoutExercises[0]);
+    };
+
+    it("starts from the target", async () => {
+      expect(await draftFor(gobletSquat)).toEqual({ kind: "external", kg: 20, reps: 8 });
+      expect(await draftFor(pushUp)).toEqual({ kind: "bodyweight", reps: 12 });
+      expect(await draftFor(plank)).toEqual({ kind: "timed", seconds: 40 });
+    });
+
+    it("rounds a load to the 0.25 kg steps a Set can log, which a 25 lb dumbbell isn't on", async () => {
+      const target = { unit: "kg", kg: 11.34, reps: 8 } as const;
+      expect(await draftFor({ ...gobletSquat, target })).toEqual({ kind: "external", kg: 11.25, reps: 8 });
+    });
+
+    it("gives a band level no weight to start from, on an Exercise that logs kg", async () => {
+      const target = { unit: "band", level: "medium", reps: 12 } as const;
+      expect(await draftFor({ slug: "dumbbell-lateral-raise", sets: 3, target })).toBeNull();
+    });
+
+    it("gives reps to an Exercise that logs reps, whatever band it's done with", async () => {
+      const target = { unit: "band", level: "light", reps: 12 } as const;
+      expect(await draftFor({ ...pushUp, target })).toEqual({ kind: "bodyweight", reps: 12 });
+    });
+
+    it("follows the last Set once one is logged, so a lighter load carries on", async () => {
+      const { logbook } = setup();
+      const { workoutExercises } = await logbook.startPlannedWorkout(plan(gobletSquat), at("09:00"));
+      const lighter = await logbook.logSet(
+        workoutExercises[0].id,
+        { kind: "external", kg: 17.5, reps: 8 },
+        at("09:05"),
+      );
+
+      expect(logbook.nextSetDraft(lighter)).toEqual({ kind: "external", kg: 17.5, reps: 8 });
+    });
+
+    it("starts empty on an Exercise added to the Workout", async () => {
+      const { logbook } = setup();
+      await logbook.startPlannedWorkout(plan(gobletSquat), at("09:00"));
+      const added = await logbook.addWorkoutExercise(exercise("push-up"));
+
+      expect(logbook.nextSetDraft(added)).toBeNull();
+    });
+  });
+
+  describe("supersets", () => {
+    const bench: PlannedExercise = { slug: "dumbbell-bench-press", sets: 3, target: { unit: "kg", kg: 20, reps: 8 } };
+    const row: PlannedExercise = { slug: "inverted-row", sets: 3, target: { unit: "reps", reps: 10 } };
+    // At Quick the press and row pair, and the squat goes alone
+    const paired = () => daysWorkout(plan(bench, row, gobletSquat), { workoutLength: "quick" }).plannedExercises;
+
+    it("starts a pair linked both ways by Workout Exercise", async () => {
+      const { logbook } = setup();
+
+      const { workoutExercises } = await logbook.startPlannedWorkout(
+        { id: PLAN_ID, plannedExercises: paired() },
+        at("09:00"),
+      );
+
+      const [press, inverted, squat] = workoutExercises;
+      expect(press?.planned?.supersetWith).toBe(inverted?.id);
+      expect(inverted?.planned?.supersetWith).toBe(press?.id);
+      expect(squat?.planned).not.toHaveProperty("supersetWith");
+    });
+
+    // Check S2: a 1-Set chin-up with 3 Sets of lateral raise, logged as the logging screen does, which starts the
+    // rest from the stored Workout straight after each Set
+    it("rests the lateral raise's own 45 s once the 1-Set chin-up is done", async () => {
+      const { logbook } = setup();
+      // As daysWorkout gives them, each naming its partner
+      const plannedExercises = [
+        {
+          slug: "chin-up",
+          sets: 1,
+          target: { unit: "reps" as const, reps: 8 },
+          supersetWith: "dumbbell-lateral-raise",
+        },
+        {
+          slug: "dumbbell-lateral-raise",
+          sets: 3,
+          target: { unit: "kg" as const, kg: 6, reps: 12 },
+          supersetWith: "chin-up",
+        },
+      ];
+      const { workoutExercises } = await logbook.startPlannedWorkout({ id: PLAN_ID, plannedExercises }, at("09:00"));
+      const [chinUp, raise] = workoutExercises;
+      const restAfter = async (id: string, values: SetValues, now: Date) => {
+        await logbook.logSet(id, values, now);
+        const logged = await logbook.inProgress();
+        const rest = logged && restAfterSet(logged, id, now);
+        return rest && (rest.endsAt - now.getTime()) / 1000;
+      };
+      const raiseSet: SetValues = { kind: "external", kg: 6, reps: 12 };
+
+      expect(await restAfter(chinUp!.id, { kind: "bodyweight", reps: 8 }, at("09:05"))).toBeNull();
+      expect(await restAfter(raise!.id, raiseSet, at("09:06"))).toBe(90);
+      expect(await restAfter(raise!.id, raiseSet, at("09:08"))).toBe(45);
+      expect(await restAfter(raise!.id, raiseSet, at("09:10"))).toBe(45);
+    });
+
+    it("logs each Set under its own Exercise, and uploads no sign of the pair", async () => {
+      const { logbook, uploader } = setup();
+      const { workoutExercises } = await logbook.startPlannedWorkout(
+        { id: PLAN_ID, plannedExercises: paired() },
+        at("09:00"),
+      );
+      const [press, inverted] = workoutExercises;
+      await logbook.logSet(press!.id, { kind: "external", kg: 20, reps: 8 }, at("09:05"));
+      await logbook.logSet(inverted!.id, { kind: "bodyweight", reps: 10 }, at("09:06"));
+      await logbook.logSet(press!.id, { kind: "external", kg: 20, reps: 8 }, at("09:08"));
+
+      await logbook.finish({ startedAt: at("09:00"), endedAt: at("09:30"), now: at("09:30") });
+      await logbook.sync();
+
+      expect(uploader.uploaded[0]?.workoutExercises).toEqual([
+        {
+          slug: "dumbbell-bench-press",
+          loadType: "external",
+          sets: [
+            { kind: "external", kg: 20, reps: 8, loggedAt: "2026-10-24T09:05:00.000Z" },
+            { kind: "external", kg: 20, reps: 8, loggedAt: "2026-10-24T09:08:00.000Z" },
+          ],
+        },
+        {
+          slug: "inverted-row",
+          loadType: "bodyweight",
+          sets: [{ kind: "bodyweight", reps: 10, loggedAt: "2026-10-24T09:06:00.000Z" }],
+        },
+      ]);
+    });
+  });
+});
+
 describe("Logbook: the next load for the kg stepper", () => {
   const home: EquipmentProfile = {
     id: "home",
@@ -1075,5 +1423,360 @@ describe("Logbook: the next load for the kg stepper", () => {
     expect(logbook.nextLoadKg("goblet-squat", 12.5, 1, bodyweightOnly)).toBe(14.5);
     expect(logbook.nextLoadKg("goblet-squat", 12.5, -1, undefined)).toBe(10.5);
     expect(logbook.nextLoadKg("not-in-the-library", 1, -1, home)).toBe(0);
+  });
+});
+
+describe("the Planned Workout on the phone", () => {
+  const FIRST = "3b241101-e2bb-4255-8caf-4136c566a962";
+  const NEXT = "9c858901-8a57-4791-81fe-4c455b099bc9";
+
+  const squatPlan = (id: string, more: Partial<PlannedWorkout> = {}): PlannedWorkout => ({
+    id,
+    status: "current",
+    weekStart: "2026-10-19",
+    createdAt: "2026-10-24T08:00:00.000Z",
+    plannedExercises: [{ slug: "goblet-squat", sets: 3, target: { unit: "kg", kg: 20, reps: 8 } }],
+    ...more,
+  });
+
+  // The server's current plan, which a test can change between asks
+  const fakeServer = (plannedWorkout: PlannedWorkout | null = null) => ({
+    plannedWorkout,
+    async current() {
+      return this.plannedWorkout;
+    },
+  });
+
+  const noSignal: PlannedWorkoutSource = {
+    current: async () => {
+      throw new Error("Network request failed");
+    },
+  };
+
+  // A Logbook over the storage a plan arrived in, on a phone that has since lost its signal
+  async function offlineWithPlan(storage = memoryStorage()) {
+    await setup(storage, fakePreviousSets(), fakeServer(squatPlan(FIRST))).logbook.refreshPlannedWorkout();
+    return setup(storage, offline, noSignal);
+  }
+
+  it("has nothing until a plan arrives", async () => {
+    expect(await setup().logbook.plannedWorkout()).toEqual({ plannedWorkout: null, stale: false });
+  });
+
+  it("keeps the latest plan for a Logbook rebuilt with no signal", async () => {
+    const { logbook } = await offlineWithPlan();
+
+    expect(await logbook.plannedWorkout()).toEqual({ plannedWorkout: squatPlan(FIRST), stale: false });
+  });
+
+  it("keeps its copy when asking for a plan fails", async () => {
+    const { logbook } = await offlineWithPlan();
+
+    await expect(logbook.refreshPlannedWorkout()).rejects.toThrow("Network request failed");
+
+    expect((await logbook.plannedWorkout()).plannedWorkout?.id).toBe(FIRST);
+  });
+
+  it("drops its copy when the server has no plan", async () => {
+    const server = fakeServer(squatPlan(FIRST));
+    const { logbook } = setup(memoryStorage(), fakePreviousSets(), server);
+    await logbook.refreshPlannedWorkout();
+
+    server.plannedWorkout = null;
+
+    expect(await logbook.refreshPlannedWorkout()).toEqual({ plannedWorkout: null, stale: false });
+  });
+
+  it("treats a copy this version of the app can't read as no plan, so the phone asks again", async () => {
+    const storage = memoryStorage();
+    await storage.setItem("logbook:planned-workout", JSON.stringify({ plannedWorkout: { id: "older-shape" } }));
+
+    expect(await setup(storage).logbook.plannedWorkout()).toEqual({ plannedWorkout: null, stale: false });
+  });
+
+  describe("with Alternative Exercises and a cue", () => {
+    const row: PlannedExercise = {
+      slug: "one-arm-dumbbell-row",
+      sets: 3,
+      target: { unit: "kg", kg: 18, reps: 8 },
+      alternatives: {
+        full_gym: [{ slug: "one-arm-dumbbell-row", target: { unit: "kg", kg: 20, reps: 8 } }],
+        bodyweight_only: [
+          { slug: "prone-ytw", target: { unit: "reps", reps: 15 } },
+          { slug: "inverted-row", target: { unit: "reps", reps: 12 } },
+        ],
+      },
+    };
+    // Drops on Bodyweight only, which an empty list has to say
+    const benchPress: PlannedExercise = {
+      slug: "barbell-bench-press",
+      sets: 3,
+      target: { unit: "kg", kg: 60, reps: 8 },
+      alternatives: {
+        full_gym: [{ slug: "barbell-bench-press", target: { unit: "kg", kg: 60, reps: 8 } }],
+        bodyweight_only: [],
+      },
+    };
+    const athleticPlan = squatPlan(FIRST, {
+      plannedExercises: [row, benchPress],
+      cue: "Lift as fast as you can on the way up",
+    });
+
+    async function offlineWithAthleticPlan() {
+      const storage = memoryStorage();
+      await setup(storage, fakePreviousSets(), fakeServer(athleticPlan)).logbook.refreshPlannedWorkout();
+      return setup(storage, offline, noSignal);
+    }
+
+    it("keeps them for a Logbook rebuilt with no signal", async () => {
+      const { logbook } = await offlineWithAthleticPlan();
+
+      expect((await logbook.plannedWorkout()).plannedWorkout).toEqual(athleticPlan);
+    });
+
+    it("offers the equipment choices from the copy and starts one with no signal", async () => {
+      const { logbook } = await offlineWithAthleticPlan();
+      const copy = (await logbook.plannedWorkout()).plannedWorkout!;
+
+      expect(equipmentChoices(copy)).toEqual(["bodyweight_only"]);
+
+      const { plannedExercises, dropped } = daysWorkout(copy, { workoutLength: "long", equipment: "bodyweight_only" });
+      const workout = await logbook.startPlannedWorkout({ id: copy.id, plannedExercises }, at("09:00"));
+
+      expect(dropped).toEqual(["barbell-bench-press"]);
+      expect(workout.plannedWorkoutId).toBe(FIRST);
+      expect(workout.workoutExercises.map(({ slug, planned }) => [slug, planned])).toEqual([
+        ["prone-ytw", { sets: 3, target: { unit: "reps", reps: 15 } }],
+      ]);
+    });
+
+    it("gives a picked Alternative Exercise from the copy with no signal", async () => {
+      const { logbook } = await offlineWithAthleticPlan();
+      const copy = (await logbook.plannedWorkout()).plannedWorkout!;
+
+      const { plannedExercises } = daysWorkout(copy, {
+        workoutLength: "long",
+        equipment: "bodyweight_only",
+        alternativePicks: { "one-arm-dumbbell-row": "inverted-row" },
+      });
+
+      expect(plannedExercises.map(({ slug }) => slug)).toEqual(["inverted-row"]);
+    });
+  });
+
+  it("starts the kept plan with no signal, linked to it", async () => {
+    const { logbook } = await offlineWithPlan();
+    const { plannedWorkout } = await logbook.plannedWorkout();
+
+    const workout = await logbook.startPlannedWorkout(plannedWorkout!, at("09:00"));
+
+    expect(workout.plannedWorkoutId).toBe(FIRST);
+    expect(workout.workoutExercises.map(({ slug }) => slug)).toEqual(["goblet-squat"]);
+  });
+
+  describe("over a Recovery Workout", () => {
+    // Logs every Set the Recovery Workout plans, at its targets, and finishes
+    async function finishRecovery(logbook: ReturnType<typeof setup>["logbook"]) {
+      const { workoutExercises } = await logbook.startRecoveryWorkout(at("09:00"));
+      for (const { id, planned } of workoutExercises) {
+        for (let i = 0; i < planned!.sets; i++) {
+          await logbook.logSet(
+            id,
+            { kind: "timed", seconds: (planned!.target as { seconds: number }).seconds },
+            at("09:10"),
+          );
+        }
+      }
+      const result = await logbook.finish({ startedAt: at("09:00"), endedAt: at("09:30"), now: at("09:30") });
+      if (result.status !== "pending") throw new Error("Expected a Pending Workout");
+      return result.workout;
+    }
+
+    it("starts and logs with no signal, linked to no plan, and keeps the plan current", async () => {
+      const { logbook } = await offlineWithPlan();
+
+      const workout = await finishRecovery(logbook);
+
+      expect(workout.plannedWorkoutId).toBeUndefined();
+      expect(workout.workoutExercises.map(({ slug, sets }) => [slug, sets.length])).toEqual([
+        ["walk", 1],
+        ["hip-flexor-stretch", 2],
+        ["open-book", 2],
+        ["cat-cow", 2],
+        ["worlds-greatest-stretch", 2],
+      ]);
+      expect(await logbook.pending()).toEqual([workout]);
+      expect(await logbook.plannedWorkout()).toEqual({ plannedWorkout: squatPlan(FIRST), stale: false });
+    });
+
+    it("leaves the plan current once it's uploaded", async () => {
+      const { logbook, uploader } = setup(memoryStorage(), fakePreviousSets(), fakeServer(squatPlan(FIRST)));
+      await logbook.refreshPlannedWorkout();
+      await finishRecovery(logbook);
+
+      await logbook.sync();
+
+      expect(uploader.uploaded).toHaveLength(1);
+      expect(await logbook.plannedWorkout()).toEqual({ plannedWorkout: squatPlan(FIRST), stale: false });
+    });
+  });
+
+  it("is stale once a Workout finished offline is Pending", async () => {
+    const { logbook } = await offlineWithPlan();
+
+    await finishPlank(logbook, "09:00");
+
+    expect(await logbook.plannedWorkout()).toMatchObject({ plannedWorkout: { id: FIRST }, stale: true });
+  });
+
+  it("isn't stale over a Workout still in progress", async () => {
+    const { logbook } = await offlineWithPlan();
+
+    await logbook.start(at("09:00"));
+
+    expect((await logbook.plannedWorkout()).stale).toBe(false);
+  });
+
+  it("has nothing to be stale without a plan", async () => {
+    const { logbook } = setup(memoryStorage(), offline);
+
+    await finishPlank(logbook, "09:00");
+
+    expect(await logbook.plannedWorkout()).toEqual({ plannedWorkout: null, stale: false });
+  });
+
+  it("stays stale after the upload until the next plan arrives", async () => {
+    const server = fakeServer(squatPlan(FIRST));
+    const { logbook } = setup(memoryStorage(), fakePreviousSets(), server);
+    await logbook.refreshPlannedWorkout();
+    await finishPlank(logbook, "09:00");
+
+    await logbook.sync();
+    expect((await logbook.plannedWorkout()).stale).toBe(true);
+
+    server.plannedWorkout = squatPlan(NEXT);
+    expect(await logbook.refreshPlannedWorkout()).toEqual({ plannedWorkout: squatPlan(NEXT), stale: false });
+  });
+
+  it("stays stale across a restart between the upload and the next plan", async () => {
+    const storage = memoryStorage();
+    const { logbook } = setup(storage, fakePreviousSets(), fakeServer(squatPlan(FIRST)));
+    await logbook.refreshPlannedWorkout();
+    await finishPlank(logbook, "09:00");
+    await logbook.sync();
+
+    const { logbook: restarted } = setup(storage, offline, noSignal);
+
+    expect((await restarted.plannedWorkout()).stale).toBe(true);
+  });
+
+  it("stays stale when a plan arrives while a Workout is still Pending", async () => {
+    const { logbook } = setup(memoryStorage(), fakePreviousSets(), fakeServer(squatPlan(FIRST)));
+    await finishPlank(logbook, "09:00");
+
+    expect(await logbook.refreshPlannedWorkout()).toMatchObject({ plannedWorkout: { id: FIRST }, stale: true });
+  });
+
+  describe("an answer from before an upload", () => {
+    function slowServer() {
+      const answers: ((plan: PlannedWorkout) => void)[] = [];
+      const rejections: ((error: Error) => void)[] = [];
+      const server: PlannedWorkoutSource = {
+        current: () =>
+          new Promise((resolve, reject) => {
+            answers.push(resolve);
+            rejections.push(reject);
+          }),
+      };
+      return { server, answers, rejections };
+    }
+    const asked = (asks: unknown[], count: number) => vi.waitFor(() => expect(asks).toHaveLength(count));
+
+    it("isn't taken for the next plan: the phone asks again", async () => {
+      const { server, answers } = slowServer();
+      const { logbook } = setup(memoryStorage(), fakePreviousSets(), server);
+      await finishPlank(logbook, "09:00");
+
+      const refreshed = logbook.refreshPlannedWorkout();
+      await logbook.sync();
+      answers[0](squatPlan(FIRST));
+      await asked(answers, 2);
+      answers[1](squatPlan(NEXT));
+
+      expect(await refreshed).toEqual({ plannedWorkout: squatPlan(NEXT), stale: false });
+    });
+
+    it("leaves the phone waiting when asking again fails", async () => {
+      const { server, answers, rejections } = slowServer();
+      const { logbook } = setup(memoryStorage(), fakePreviousSets(), server);
+      await logbook.startPlannedWorkout(squatPlan(FIRST), at("08:00")).catch(() => {});
+      await logbook.discard().catch(() => {});
+      await finishPlank(logbook, "09:00");
+
+      const refreshed = logbook.refreshPlannedWorkout();
+      await logbook.sync();
+      answers[0](squatPlan(FIRST));
+      await asked(rejections, 2);
+      rejections[1](new Error("no signal"));
+
+      await expect(refreshed).rejects.toThrow("no signal");
+    });
+  });
+
+  it("isn't stale once the only Pending Workout is deleted", async () => {
+    const { logbook } = await offlineWithPlan();
+    const workout = await finishPlank(logbook, "09:00");
+
+    await logbook.deletePending(workout.id);
+
+    expect((await logbook.plannedWorkout()).stale).toBe(false);
+  });
+
+  it("brings back the same plan when a Workout started from it is discarded", async () => {
+    const { logbook } = await offlineWithPlan();
+    await logbook.startPlannedWorkout(squatPlan(FIRST), at("09:00"));
+
+    await logbook.discard();
+
+    expect(await logbook.plannedWorkout()).toEqual({ plannedWorkout: squatPlan(FIRST), stale: false });
+  });
+
+  it("leaves a started Workout alone when the plan is rebuilt, and shows the new plan after a discard", async () => {
+    const server = fakeServer(squatPlan(FIRST));
+    const { logbook } = setup(memoryStorage(), fakePreviousSets(), server);
+    await logbook.refreshPlannedWorkout();
+    const started = await logbook.startPlannedWorkout(squatPlan(FIRST), at("09:00"));
+
+    server.plannedWorkout = squatPlan(NEXT, {
+      plannedExercises: [{ slug: "plank", sets: 2, target: { unit: "seconds", seconds: 40 } }],
+    });
+    await logbook.refreshPlannedWorkout();
+
+    expect(await logbook.inProgress()).toEqual(started);
+    await logbook.discard();
+    expect((await logbook.plannedWorkout()).plannedWorkout?.id).toBe(NEXT);
+  });
+
+  it("keeps the link to a plan replaced while its Workout ran", async () => {
+    const server = fakeServer(squatPlan(FIRST));
+    const { logbook, uploader } = setup(memoryStorage(), fakePreviousSets(), server);
+    await logbook.refreshPlannedWorkout();
+    const { workoutExercises } = await logbook.startPlannedWorkout(squatPlan(FIRST), at("09:00"));
+    server.plannedWorkout = squatPlan(NEXT);
+    await logbook.refreshPlannedWorkout();
+    await logbook.logSet(workoutExercises[0].id, { kind: "external", kg: 20, reps: 8 }, at("09:05"));
+
+    await logbook.finish({ startedAt: at("09:00"), endedAt: at("09:30"), now: at("09:30") });
+    await logbook.sync();
+
+    expect(uploader.uploaded[0].plannedWorkoutId).toBe(FIRST);
+  });
+
+  it("forgets the plan on sign-out", async () => {
+    const { logbook } = await offlineWithPlan();
+
+    await logbook.clear();
+
+    expect(await logbook.plannedWorkout()).toEqual({ plannedWorkout: null, stale: false });
   });
 });

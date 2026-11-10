@@ -1,4 +1,4 @@
-import { exerciseLoadsKg, isRatedTest, takesNoMoreSets } from "@fit/engines";
+import { exerciseLoadsKg, isRatedTest, takesAnotherSet, takesNoMoreSets } from "@fit/engines";
 import { RPE_SCALE, type InProgressWorkoutExercise, type LoadType, type SetValues } from "@fit/shared";
 import { useState, type ReactNode } from "react";
 import { StyleSheet, View } from "react-native";
@@ -13,11 +13,12 @@ import { useToast } from "@/contexts/toast-context";
 import { usePrimaryEquipmentProfile } from "@/features/user/current-user-provider";
 import { fonts, radii, spacing, useTheme } from "@/theme";
 import { errorMessage } from "@/utils/error-message";
-import { previousSetsLabel } from "../format";
+import { plannedSetsLabel, previousSetsLabel } from "../format";
 import { exerciseName, libraryExercise } from "../library";
 import { useLogbook } from "../logbook-provider";
 import { protocolNote } from "../protocol-note";
 import { draftValues, rpeMissing, setDraft, SET_FIELDS, type SetDraft } from "../set-entry";
+import { RestTimer } from "./rest-timer";
 import { SetRow } from "./set-row";
 import { SetStepper, type KgSteps } from "./set-stepper";
 import { WorkoutExerciseMenu } from "./workout-exercise-menu";
@@ -27,15 +28,48 @@ export type CurrentExerciseBoxProps = {
   // Its place in the Workout, from 0, and how many there are
   position: number;
   count: number;
-  // An Assessment Workout's first test that isn't done, opened by "Next test" once this test is done; none when
-  // every test is done
-  onNextTest?: () => void;
+  // Offered once it takes no more Sets: an Assessment Workout's "Next test", none when every test is done, or "Next
+  // exercise" after the walk's one Set
+  next?: NextAction;
 };
 
-// The Workout Exercise being logged: its name, Previous Sets, the Sets so far (each with a ⋯ to edit or delete it) and
-// steppers for the next Set, which starts from the previous one. A test that's done takes no more Sets
-export function CurrentExerciseBox({ workoutExercise, position, count, onNextTest }: CurrentExerciseBoxProps) {
+type NextAction = { label: string; onPress: () => void };
+
+// The Workout Exercise being logged: its name, target, Previous Sets, the Sets so far (each with a ⋯ to edit or delete it) and
+// steppers for the next Set, which starts from the previous one, then the rest after the last Set. A test that's done,
+// or the walk once logged, takes no more Sets
+export function CurrentExerciseBox({ workoutExercise, position, count, next }: CurrentExerciseBoxProps) {
+  return (
+    <ExerciseBox>
+      <HStack spacing={2} align="start">
+        <Stack spacing={1} style={styles.title}>
+          <SectionLabel color="accent">{`Exercise ${position + 1} of ${count}`}</SectionLabel>
+          <Text accessibilityRole="header" style={styles.name}>
+            {exerciseName(workoutExercise.slug)}
+          </Text>
+        </Stack>
+        <WorkoutExerciseMenu workoutExercise={workoutExercise} />
+      </HStack>
+      <ExerciseLogging workoutExercise={workoutExercise} next={next} />
+      <RestTimer />
+    </ExerciseBox>
+  );
+}
+
+// The box the current Exercise, or the current superset, is logged in
+export function ExerciseBox({ children }: { children: ReactNode }) {
   const { colors } = useTheme();
+  return <View style={[styles.box, { backgroundColor: colors.surface, borderColor: colors.accent }]}>{children}</View>;
+}
+
+// Logging one Workout Exercise, under its name: its target, Previous Sets, the Sets so far and the next Set's
+// steppers, or once it takes no more Sets, the next action. hideTarget leaves the target to the summary under the
+// name, as a superset shows it
+export function ExerciseLogging({
+  workoutExercise,
+  next,
+  hideTarget = false,
+}: Pick<CurrentExerciseBoxProps, "workoutExercise" | "next"> & { hideTarget?: boolean }) {
   const { workout, logSet, editSet, deleteSet, nextSetDraft, protocolState, nextLoadKg } = useLogbook();
   const primaryEquipment = usePrimaryEquipmentProfile();
   const { showToast } = useToast();
@@ -44,15 +78,16 @@ export function CurrentExerciseBox({ workoutExercise, position, count, onNextTes
   // The Set whose row shows Edit and Delete, and the Set waiting for its delete to be confirmed
   const [actionsIndex, setActionsIndex] = useState<number | null>(null);
   const [deletingIndex, setDeletingIndex] = useState<number | null>(null);
-  const { id, slug, loadType, sets, previousSets } = workoutExercise;
+  const { id, slug, loadType, sets, previousSets, planned } = workoutExercise;
   const unilateral = libraryExercise(slug)?.unilateral ?? false;
   const editingSet = editingIndex === null ? undefined : sets[editingIndex];
   const nextNumber = sets.length + 1;
   // In an Assessment Workout every Exercise is a test, and the Logbook says what it asks for next
   const protocol =
     workout?.assessment && primaryEquipment ? protocolState(workout, workoutExercise, primaryEquipment) : undefined;
-  const note = protocol && protocolNote(protocol, sets.length, loadType, { nextTest: !!onNextTest });
-  const testFinished = !!protocol && takesNoMoreSets(protocol);
+  const note = protocol && protocolNote(protocol, sets.length, loadType, { nextTest: !!next });
+  // A test that's done, or the walk once its one Set is logged (#109)
+  const done = (!!protocol && takesNoMoreSets(protocol)) || !takesAnotherSet(workoutExercise);
   const asksRpe = !!workout && isRatedTest(workout, loadType);
   const kgSteps: KgSteps = {
     stepKg: (kg, direction) => nextLoadKg(slug, kg, direction, primaryEquipment),
@@ -60,16 +95,12 @@ export function CurrentExerciseBox({ workoutExercise, position, count, onNextTes
   };
 
   return (
-    <View style={[styles.box, { backgroundColor: colors.surface, borderColor: colors.accent }]}>
-      <HStack spacing={2} align="start">
-        <Stack spacing={1} style={styles.title}>
-          <SectionLabel color="accent">{`Exercise ${position + 1} of ${count}`}</SectionLabel>
-          <Text accessibilityRole="header" style={styles.name}>
-            {exerciseName(slug)}
-          </Text>
-        </Stack>
-        <WorkoutExerciseMenu workoutExercise={workoutExercise} />
-      </HStack>
+    <>
+      {planned && !hideTarget ? (
+        <Text size="sm" color="muted" style={styles.note}>
+          {`Target: ${plannedSetsLabel(planned, unilateral)}`}
+        </Text>
+      ) : null}
       {previousSets ? (
         <Text size="sm" color="subtle" style={styles.note}>
           {previousSetsLabel(previousSets.sets)}
@@ -133,10 +164,10 @@ export function CurrentExerciseBox({ workoutExercise, position, count, onNextTes
         >
           <LoadingButton label="Cancel" size="md" action="secondary" onPress={() => setEditingIndex(null)} />
         </SetEntry>
-      ) : testFinished ? (
-        onNextTest ? (
+      ) : done ? (
+        next ? (
           <View style={styles.entry}>
-            <LoadingButton label="Next test" size="lg" onPress={onNextTest} fullWidth />
+            <LoadingButton label={next.label} size="lg" onPress={next.onPress} fullWidth />
           </View>
         ) : null
       ) : (
@@ -172,10 +203,7 @@ export function CurrentExerciseBox({ workoutExercise, position, count, onNextTes
           }
         }}
       />
-
-      {/* Kept free for the rest timer, so adding it later doesn't move anything */}
-      <View style={styles.restSlot} />
-    </View>
+    </>
   );
 }
 
@@ -273,5 +301,4 @@ const styles = StyleSheet.create({
   banner: { marginTop: spacing[3] },
   sets: { marginTop: spacing[3] },
   entry: { marginTop: spacing[4] },
-  restSlot: { height: 44, marginTop: spacing[3] },
 });

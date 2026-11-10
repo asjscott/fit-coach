@@ -101,7 +101,24 @@ function workout(id: string, startedAt: string, volumeKg = 200): Workout {
 
 const ids = (workouts: Workout[]) => workouts.map((w) => w.id);
 
+const recoveryExercise = { slug: "walk", loadType: "timed" as const, sets: [seconds(1200)] };
+
 describe("historyByWeek", () => {
+  it("shows a Recovery Workout", () => {
+    const walk = { ...workout("walk", "2026-10-27T15:00:00.000Z"), workoutExercises: [recoveryExercise] };
+    expect(historyByWeek([walk]).flatMap((week) => ids(week.workouts))).toEqual(["walk"]);
+  });
+
+  it("leaves a Recovery Workout out of the week's Workout count, while still listing it", () => {
+    const walk = { ...workout("walk", "2026-10-27T15:00:00.000Z"), workoutExercises: [recoveryExercise] };
+    const [withTraining] = historyByWeek([workout("mon", "2026-10-26T15:00:00.000Z"), walk]);
+    expect(withTraining!.workoutCount).toBe(1);
+    expect(ids(withTraining!.workouts)).toEqual(["walk", "mon"]);
+
+    const [walkOnly] = historyByWeek([walk]);
+    expect(walkOnly!.workoutCount).toBe(0);
+  });
+
   it("groups Workouts into Monday-to-Sunday weeks, newest first, with each week's Workouts and Volume", () => {
     const weeks = historyByWeek([
       workout("tue-13-oct", "2026-10-13T14:00:00.000Z", 400), // Tue 13 Oct, 07:00 local
@@ -285,6 +302,14 @@ describe("thisWeek", () => {
       4,
     );
     expect(week.workoutCount).toBe(1);
+    expect(week.days.map((day) => day.trained)).toEqual([true, false, false, false, false, false, false]);
+  });
+
+  it("leaves out a Recovery Workout: it isn't training", () => {
+    const walk = { ...workout("walk", "2026-10-27T15:00:00.000Z"), workoutExercises: [recoveryExercise] };
+    const week = thisWeek([workout("mon", "2026-10-26T15:00:00.000Z"), walk], now, 4);
+    expect(week.workoutCount).toBe(1);
+    expect(week.sets).toBe(1);
     expect(week.days.map((day) => day.trained)).toEqual([true, false, false, false, false, false, false]);
   });
 

@@ -1,7 +1,9 @@
 import { useAuth } from "@clerk/expo";
 import { useCallback, useEffect, useRef } from "react";
+import { untilAborted, withinMs } from "./until-aborted";
 
 const API_URL = process.env.EXPO_PUBLIC_API_URL;
+const TOKEN_TIMEOUT_MS = 10_000;
 
 export class ApiError extends Error {
   constructor(
@@ -23,7 +25,9 @@ export function useApi() {
   }, [getToken]);
 
   return useCallback(async (path: string, init: RequestInit = {}): Promise<unknown> => {
-    const token = await getTokenRef.current();
+    // With no signal, Clerk's getToken keeps retrying instead of failing. A request's own signal (Previous Sets' 4 s)
+    // covers this wait too, and every request gives up on it in the end, like a fetch with no network would
+    const token = await untilAborted(withinMs(getTokenRef.current(), TOKEN_TIMEOUT_MS), init.signal);
     const headers = new Headers(init.headers);
     if (token) headers.set("Authorization", `Bearer ${token}`);
     if (init.body && !headers.has("Content-Type")) {

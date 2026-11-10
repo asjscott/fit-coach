@@ -128,6 +128,11 @@ export const EquipmentTag = z.enum([
 ]);
 export type EquipmentTag = z.infer<typeof EquipmentTag>;
 
+// Full gym and Bodyweight only: always there, never stored, unlike the preset of the same name a stored profile can
+// start from
+export const BuiltInEquipment = z.enum(["full_gym", "bodyweight_only"]);
+export type BuiltInEquipment = z.infer<typeof BuiltInEquipment>;
+
 const kg = z.number().positive().max(200);
 
 export const DumbbellLoads = z.discriminatedUnion("kind", [

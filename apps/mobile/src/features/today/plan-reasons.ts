@@ -1,0 +1,50 @@
+import { muscleGroupsOf, type Muscle, type MuscleGroup, type PlanReason } from "@fit/shared";
+import { weekdayLabel } from "../workouts/format";
+import { localDateText } from "../workouts/local-date-time";
+
+const GROUP_NAMES: Record<MuscleGroup, { name: string; plural: boolean }> = {
+  legs: { name: "Legs", plural: true },
+  back: { name: "Back", plural: false },
+  chest: { name: "Chest", plural: false },
+  shoulders: { name: "Shoulders", plural: true },
+  core: { name: "Core", plural: false },
+};
+
+// The order Today puts them in, its card showing the first
+const ORDER: PlanReason["code"][] = ["recovering", "budget-met", "behind"];
+
+// "Legs and Back are", or null when none of the Muscles is in a group
+function groupsAre(muscles: readonly Muscle[]) {
+  const groups = muscleGroupsOf(muscles);
+  if (!groups.length) return null;
+  const names = groups.map((group) => GROUP_NAMES[group].name);
+  const listed = names.length > 1 ? `${names.slice(0, -1).join(", ")} and ${names.at(-1)}` : names[0];
+  const plural = groups.length > 1 || GROUP_NAMES[groups[0]].plural;
+  return `${listed} ${plural ? "are" : "is"}`;
+}
+
+// The day of a date in the user's timezone: today, or its weekday, as fatigue lasts less than a week
+const dayOf = (date: string, now: Date) =>
+  date === localDateText(now) ? "today" : weekdayLabel(new Date(`${date}T12:00:00`));
+
+function line(reason: PlanReason, now: Date) {
+  switch (reason.code) {
+    case "recovering": {
+      const groups = groupsAre(reason.muscles);
+      return groups && `${groups} recovering from ${dayOf(reason.lastSetOn, now)}.`;
+    }
+    case "budget-met":
+      return "This week's work is done. This one's extra.";
+    case "behind": {
+      const groups = groupsAre(reason.muscles);
+      return groups && `${groups} furthest behind this week.`;
+    }
+  }
+}
+
+// Why the Coach planned this Workout, one line per reason in the order recovering, budget met, behind. Nothing for a
+// plan stored before reasons
+export const planReasonLines = (reasons: readonly PlanReason[] | undefined, now: Date): string[] =>
+  [...(reasons ?? [])]
+    .sort((a, b) => ORDER.indexOf(a.code) - ORDER.indexOf(b.code))
+    .flatMap((reason) => line(reason, now) ?? []);

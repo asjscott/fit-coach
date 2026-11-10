@@ -45,6 +45,18 @@ describe("librarySections", () => {
     ]);
   });
 
+  it("lists the Recovery Exercises last, in a group of their own", () => {
+    const { sections } = librarySections([exercise("walk"), ...library, exercise("cat-cow")], {
+      tags: [],
+      showAll: false,
+    });
+    expect(titlesAndSlugs(sections)).toEqual([
+      ["Push", ["push-up"]],
+      ["Core", ["plank"]],
+      ["Recovery", ["walk", "cat-cow"]],
+    ]);
+  });
+
   it("counts the Exercises the equipment supports out of the whole library", () => {
     expect(librarySections(library, { tags: [], showAll: false })).toMatchObject({ availableCount: 2, total: 5 });
   });

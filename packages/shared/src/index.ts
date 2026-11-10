@@ -1,9 +1,11 @@
 import { z } from "zod";
 
 export * from "./assessments";
+export * from "./check-in";
 export * from "./exercises";
 export * from "./equipment";
 export * from "./health";
+export * from "./planned-workouts";
 export * from "./user";
 export * from "./workouts";
 

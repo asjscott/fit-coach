@@ -1,5 +1,8 @@
-import type { Set, SetValues, Workout } from "@fit/shared";
+import type { BuiltInEquipment, InProgressWorkoutExercise, Set, SetTarget, SetValues, Workout } from "@fit/shared";
+import { pairRestPlan } from "@fit/engines";
 import { getCalendars } from "expo-localization";
+import { bandLevelLabels } from "../equipment/loads";
+import { exerciseName } from "./library";
 
 // How Workouts and Sets read on screen
 
@@ -42,6 +45,9 @@ const statLabel = ({ value, unit }: { value: string; unit: string }) => `${value
 // A length of time as a Stat's value and unit, to the nearest minute
 export const timeStat = (ms: number) => minutesStat(Math.round(ms / 60_000));
 
+// How long a Workout should take, in minutes like its Workout Length: "About 44 min"
+export const estimatedTimeLabel = (seconds: number) => `About ${Math.round(seconds / 60)} min`;
+
 export const durationLabel = ({ startedAt, endedAt }: WorkoutTimes) =>
   statLabel(timeStat(Date.parse(endedAt) - Date.parse(startedAt)));
 
@@ -53,6 +59,9 @@ const midnight = (date: Date) => new Date(date.getFullYear(), date.getMonth(), d
 // Whole calendar days between two moments' dates; rounded, so a daylight-saving day still counts as one
 const daysBetween = (from: Date, to: Date) => Math.round((midnight(to).getTime() - midnight(from).getTime()) / DAY_MS);
 
+// The day of the week in the phone's language: "Tuesday"
+export const weekdayLabel = (date: Date) => date.toLocaleDateString([], { weekday: "long" });
+
 // When a Workout was: "Today, 1:33 PM", "Yesterday, 6:10 PM", "Tuesday, 7:02 AM", then "Sat 17 Oct, 9:40 AM"
 export function relativeDateLabel(iso: string, now = new Date()) {
   const date = new Date(iso);
@@ -60,7 +69,7 @@ export function relativeDateLabel(iso: string, now = new Date()) {
   const time = timeLabel(iso);
   if (days === 0) return `Today, ${time}`;
   if (days === 1) return `Yesterday, ${time}`;
-  if (days > 1 && days < 7) return `${date.toLocaleDateString([], { weekday: "long" })}, ${time}`;
+  if (days > 1 && days < 7) return `${weekdayLabel(date)}, ${time}`;
   const sameYear = date.getFullYear() === now.getFullYear();
   const day = date.toLocaleDateString([], {
     weekday: "short",
@@ -130,14 +139,16 @@ export function elapsedClockLabel(ms: number) {
 }
 
 // A Workout Exercise's Sets on one line, each unit said once where it can be: "18 kg × 10, 10, 8",
-// "16 kg × 10, 18 kg × 8", "12, 10 reps", "45, 40 s". Empty with no Sets
+// "16 kg × 10, 18 kg × 8", "12, 10 reps", "45, 40 s", "1 min 30 s, 1 min 15 s". Empty with no Sets
 export function setsSummary(sets: readonly Set[]) {
   const parts = sets.map(setParts);
   const first = parts[0];
   if (!first) return "";
-  // Everything about a Set but its last number, e.g. 18 "kg ×" for weighted Sets, or "reps"
+  // Everything about a Set but its last number, e.g. 18 "kg ×" for weighted Sets, or "reps". Only a weight is said
+  // once before the numbers: "1 min 30, 15 s" would misread
   const frame = (set: [number, string][]) => JSON.stringify([...set.slice(0, -1), set.at(-1)?.[1]]);
-  if (!parts.every((set) => frame(set) === frame(first))) return sets.map(describeSet).join(", ");
+  const sharesFrame = parts.every((set) => frame(set) === frame(first));
+  if (!sharesFrame || (first.length > 1 && sets[0]?.kind !== "external")) return sets.map(describeSet).join(", ");
   const lead = first.slice(0, -1).map(([value, unit]) => `${value} ${unit} `);
   const unit = first.at(-1)?.[1];
   return `${lead.join("")}${parts.map((set) => set.at(-1)?.[0]).join(", ")}${unit ? ` ${unit}` : ""}`;
@@ -146,9 +157,47 @@ export function setsSummary(sets: readonly Set[]) {
 // Previous Sets as a reference while logging: "Last: 18 kg × 10, 10, 8"
 export const previousSetsLabel = (sets: readonly Set[]) => `Last: ${setsSummary(sets)}`;
 
-// A collapsed Workout Exercise's line: "3 sets · 18 kg × 10, 10, 8", else its Previous Sets, else "Not started"
-export function workoutExerciseSummary(sets: readonly Set[], previous?: readonly Set[]) {
+// A Set's target as a Set reads: "20 kg × 8", "12 reps", "40 s", "Medium band × 12". A timed target of a minute or more
+// reads in minutes, as the walk's "20 min" (#109). A profile's loads are summed, so a kg can carry floating-point noise,
+// unlike a logged Set's
+export function setTargetLabel(target: SetTarget) {
+  switch (target.unit) {
+    case "kg":
+      return describeSet({ kind: "external", kg: Math.round(target.kg * 100) / 100, reps: target.reps });
+    case "reps":
+      return describeSet({ kind: "bodyweight", reps: target.reps });
+    case "seconds":
+      return describeSet({ kind: "timed", seconds: target.seconds });
+    case "band":
+      return `${bandLevelLabels[target.level]} band × ${target.reps}`;
+  }
+}
+
+type PlannedSets = NonNullable<InProgressWorkoutExercise["planned"]>;
+
+// What the plan sets for an Exercise: "3 sets · 20 kg × 8", with " per side" for a one-sided Exercise
+export const plannedSetsLabel = ({ sets, target }: PlannedSets, unilateral = false) =>
+  `${setsLabel(sets)} · ${setTargetLabel(target)}${unilateral ? " per side" : ""}`;
+
+export const builtInEquipmentLabels: Record<BuiltInEquipment, string> = {
+  full_gym: "Full gym",
+  bodyweight_only: "Bodyweight only",
+};
+
+// Why the Workout is shorter on a built-in choice: "No Bodyweight only option for lat pulldown"
+export const noAlternativeLabel = (equipment: BuiltInEquipment, name: string) =>
+  `No ${builtInEquipmentLabels[equipment]} option for ${name.toLowerCase()}`;
+
+// A collapsed Workout Exercise's line: "3 sets · 18 kg × 10, 10, 8", else its target Sets, else its Previous Sets,
+// else "Not started"
+export function workoutExerciseSummary(
+  sets: readonly Set[],
+  previous?: readonly Set[],
+  planned?: PlannedSets,
+  unilateral?: boolean,
+) {
   if (sets.length) return `${setsLabel(sets.length)} · ${setsSummary(sets)}`;
+  if (planned) return plannedSetsLabel(planned, unilateral);
   return previous?.length ? previousSetsLabel(previous) : "Not started";
 }
 
@@ -163,8 +212,15 @@ export function setParts(set: Set | SetValues): [number, string][] {
     case "bodyweight":
       return [[set.reps, "reps"]];
     case "timed":
-      return [[set.seconds, "s"]];
+      return durationParts(set.seconds);
   }
+}
+
+// A minute or more reads in minutes, as the walk's "20 min" (#109): "45 s", "1 min 30 s"
+function durationParts(seconds: number): [number, string][] {
+  if (seconds < 60) return [[seconds, "s"]];
+  const over = seconds % 60;
+  return [[Math.floor(seconds / 60), "min"], ...(over ? [[over, "s"] as [number, string]] : [])];
 }
 
 // A Set as its Load Type records it: "16 kg × 10"; add " per side" for a one-sided Exercise
@@ -172,3 +228,19 @@ export const describeSet = (set: Set | SetValues) =>
   setParts(set)
     .map(([value, unit]) => (unit ? `${value} ${unit}` : String(value)))
     .join(" ");
+
+// A superset's letter by its place among the Workout's supersets, from 0: A makes A1 and A2, as gym programmes write them
+export const supersetLetter = (index: number) => String.fromCharCode(65 + index);
+
+// The superset box's banner mid-round (#96). The name is the library's, as it is (#111)
+export const straightToLabel = (name: string) => `No rest: straight to ${name}`;
+
+// The superset box's note on its rests, as pairRestPlan gives them (#111)
+export function supersetNote(pair: Parameters<typeof pairRestPlan>[0]) {
+  const { pairSeconds, fewer, done } = pairRestPlan(pair);
+  const pairNote = `No rest between them, then ${pairSeconds} s rest`;
+  if (!fewer) return pairNote;
+  const name = exerciseName(fewer.slug);
+  if (done === fewer.slug) return `${name} is done: ${fewer.otherSeconds} s rest between Sets`;
+  return fewer.otherSeconds === pairSeconds ? pairNote : `${pairNote}. Once ${name} is done, ${fewer.otherSeconds} s`;
+}

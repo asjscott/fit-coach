@@ -11,7 +11,7 @@ import { SectionLabel } from "@/components/section-label";
 import { HStack, Stack } from "@/components/stack";
 import { Text } from "@/components/text";
 import { useExercise } from "../hooks/use-exercises";
-import { equipmentInWords, muscleLabel, patternLabels } from "../labels";
+import { equipmentInWords, muscleLabel, patternLabels, RECOVERY_LABEL } from "../labels";
 
 export default function ExerciseDetailView() {
   const { slug } = useLocalSearchParams<{ slug: string }>();
@@ -33,7 +33,9 @@ export default function ExerciseDetailView() {
         <Stack spacing={2}>
           <Stack spacing={1}>
             <Heading size="2xl">{exercise.name}</Heading>
-            <Text color="muted">{exercise.patterns.map((p) => patternLabels[p.pattern]).join(" · ")}</Text>
+            <Text color="muted">
+              {exercise.recovery ? RECOVERY_LABEL : exercise.patterns.map((p) => patternLabels[p.pattern]).join(" · ")}
+            </Text>
           </Stack>
           {/* One line until there's a video to show, so it doesn't push the Exercise down */}
           <HStack spacing={2}>

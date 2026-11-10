@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { LoadType } from "./exercises";
+import { PlannedExercise } from "./planned-workouts";
 import { BodyProfile } from "./user";
 
 // Each Set records when it was logged; values are per side for a one-sided Exercise
@@ -55,6 +56,9 @@ export const WorkoutExercise = z
   .refine(setsMatchLoadType, setsMatchLoadTypeError);
 export type WorkoutExercise = z.infer<typeof WorkoutExercise>;
 
+// The Planned Workout a Workout was started from, kept however its Exercises change. Absent on a Manual Workout
+const plannedWorkoutId = z.uuid().optional();
+
 // A finished Workout, as uploaded to and stored on the server; the phone generates the id
 export const Workout = z
   .object({
@@ -62,6 +66,7 @@ export const Workout = z
     startedAt: z.iso.datetime(),
     endedAt: z.iso.datetime(),
     assessment: AssessmentPart.optional(),
+    plannedWorkoutId,
     workoutExercises: z.array(WorkoutExercise).min(1),
   })
   .refine((workout) => Date.parse(workout.endedAt) > Date.parse(workout.startedAt), {
@@ -84,17 +89,29 @@ export const PreviousSetsQuery = z.object({ slug: workoutExerciseFields.slug });
 export type PreviousSetsQuery = z.infer<typeof PreviousSetsQuery>;
 
 // The Workout being logged, saved on the phone after every change and never uploaded as is.
-// Workout Exercises carry a phone id so the same Exercise can be added twice, and may carry a
-// read-only snapshot of their Previous Sets, dropped at Finish
+// Workout Exercises carry a phone id so the same Exercise can be added twice, and may carry read-only
+// snapshots of their Previous Sets and of what the plan set for them, superset included, both dropped at Finish
 export const InProgressWorkout = z.object({
   id: z.uuid(),
   startedAt: z.iso.datetime(),
   assessment: AssessmentPart.optional(),
   // An Assessment Workout's first suggested loads come from the profile it started with, not a later edit
   bodyProfile: BodyProfile.optional(),
+  plannedWorkoutId,
   workoutExercises: z.array(
     z
-      .object({ id: z.string(), ...workoutExerciseFields, sets: z.array(Set), previousSets: PreviousSets.optional() })
+      .object({
+        id: z.string(),
+        ...workoutExerciseFields,
+        sets: z.array(Set),
+        previousSets: PreviousSets.optional(),
+        planned: PlannedExercise.pick({ sets: true, target: true })
+          .extend({
+            // The id of the Workout Exercise it's paired with in a superset (#96), both ways
+            supersetWith: z.string().optional(),
+          })
+          .optional(),
+      })
       .refine(setsMatchLoadType, setsMatchLoadTypeError),
   ),
 });

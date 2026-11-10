@@ -5,12 +5,16 @@ import { exerciseMaximum, referenceStrength, STRENGTH_RATIOS } from "./strength-
 // Checks the hand-set ratio table against the library
 
 describe("strength ratios", () => {
-  it("has an entry for every library Exercise", () => {
-    expect(EXERCISES.map((e) => e.slug).filter((slug) => !STRENGTH_RATIOS[slug])).toEqual([]);
+  it("has an entry for every library Exercise but the Recovery Exercises, which take no Working Level", () => {
+    expect(
+      EXERCISES.filter((e) => !e.recovery)
+        .map((e) => e.slug)
+        .filter((slug) => !STRENGTH_RATIOS[slug]),
+    ).toEqual([]);
   });
 
-  it("has no entry for an Exercise that isn't in the library", () => {
-    const slugs = new Set(EXERCISES.map((e) => e.slug));
+  it("has no entry for an Exercise that isn't in the library, or a Recovery Exercise", () => {
+    const slugs = new Set(EXERCISES.filter((e) => !e.recovery).map((e) => e.slug));
     expect(Object.keys(STRENGTH_RATIOS).filter((slug) => !slugs.has(slug))).toEqual([]);
   });
 
@@ -21,7 +25,7 @@ describe("strength ratios", () => {
   });
 
   it("takes carry from hinge", () => {
-    const carries = EXERCISES.filter((e) => e.patterns[0].pattern === "carry").map((e) => e.slug);
+    const carries = EXERCISES.filter((e) => e.patterns[0]?.pattern === "carry").map((e) => e.slug);
     expect(carries.length).toBeGreaterThan(0);
     for (const slug of carries) expect(STRENGTH_RATIOS[slug]).toMatchObject({ kind: "weighted", pattern: "hinge" });
   });

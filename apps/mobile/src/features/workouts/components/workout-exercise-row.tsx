@@ -5,7 +5,7 @@ import { Pressable } from "@/components/pressable";
 import { Text } from "@/components/text";
 import { fonts, spacing, useTheme } from "@/theme";
 import { workoutExerciseSummary } from "../format";
-import { exerciseName } from "../library";
+import { exerciseName, libraryExercise } from "../library";
 import { WorkoutExerciseMenu } from "./workout-exercise-menu";
 
 export type WorkoutExerciseRowProps = {
@@ -17,12 +17,18 @@ export type WorkoutExerciseRowProps = {
 };
 
 // A Workout Exercise that isn't current, collapsed to one row: a tick once it has Sets (else its number), its
-// name and a one-line summary of its Sets (its Previous Sets before any), and its ⋯ menu. Pressing the row makes it current
+// name and a one-line summary of its Sets (its target or Previous Sets before any), and its ⋯ menu. Pressing the row makes it current
 export function WorkoutExerciseRow({ workoutExercise, position, onPress }: WorkoutExerciseRowProps) {
   const { colors } = useTheme();
   const name = exerciseName(workoutExercise.slug);
-  const summary = workoutExerciseSummary(workoutExercise.sets, workoutExercise.previousSets?.sets);
-  const done = workoutExercise.sets.length > 0;
+  const { sets, previousSets, planned } = workoutExercise;
+  const summary = workoutExerciseSummary(
+    sets,
+    previousSets?.sets,
+    planned,
+    libraryExercise(workoutExercise.slug)?.unilateral,
+  );
+  const done = sets.length > 0;
 
   return (
     <View style={[styles.row, { borderTopColor: colors.line }]}>

@@ -1,4 +1,4 @@
-import type { EquipmentProfile, EquipmentTag, Exercise, InjuryTag } from "@fit/shared";
+import { EquipmentTag, type BuiltInEquipment, type EquipmentProfile, type Exercise, type InjuryTag } from "@fit/shared";
 import { exerciseBySlug } from "./data/exercises";
 
 // Owning one item means owning another, e.g. a power rack includes a pull-up bar
@@ -14,6 +14,29 @@ export function expandTags(tags: EquipmentTag[]): Set<EquipmentTag> {
   const owned = new Set(tags);
   for (const tag of tags) IMPLIES[tag]?.forEach((extra) => owned.add(extra));
   return owned;
+}
+
+// The equipment behind each built-in choice: Full gym has every tag and these standard loads
+export const BUILT_IN_EQUIPMENT: Record<BuiltInEquipment, ProfileWithLoads> = {
+  full_gym: {
+    tags: EquipmentTag.options,
+    loads: {
+      dumbbells: { kind: "adjustable", minKg: 2.5, maxKg: 50, stepKg: 2.5 },
+      kettlebells: { weightsKg: [8, 12, 16, 20, 24, 28, 32] },
+      barbell: { barKg: 20, platesKg: [25, 20, 15, 10, 5, 2.5, 1.25] },
+      loop_bands: { levels: ["light", "medium", "heavy", "extra_heavy"] },
+      mini_bands: { levels: ["light", "medium", "heavy", "extra_heavy"] },
+      tube_bands: { levels: ["light", "medium", "heavy", "extra_heavy"] },
+    },
+  },
+  bodyweight_only: { tags: [], loads: {} },
+};
+
+// True when a profile has exactly the equipment of a built-in choice, so choosing it would change nothing
+export function matchesBuiltIn(profile: Pick<EquipmentProfile, "tags">, choice: BuiltInEquipment): boolean {
+  const owned = expandTags(profile.tags);
+  const builtIn = expandTags(BUILT_IN_EQUIPMENT[choice].tags);
+  return owned.size === builtIn.size && [...owned].every((tag) => builtIn.has(tag));
 }
 
 export function ownedOptions(
