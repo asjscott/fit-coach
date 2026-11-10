@@ -41,7 +41,8 @@ export const PlanReason = z.discriminatedUnion("code", [
   // Tired Muscles whose Exercises the recovery filter left out, and the day of the last Set for them in the user's
   // timezone
   z.object({ code: z.literal("recovering"), muscles: z.array(Muscle).min(1), lastSetOn: z.iso.date() }),
-  // The week's budget was met before this Workout, so it's extra
+  // This Week had reached the days per week before this Workout, so it's extra (the code is from when it was the
+  // week's budget, #114)
   z.object({ code: z.literal("budget-met") }),
   // The group or groups of Muscles furthest behind their budget this week
   z.object({ code: z.literal("behind"), muscles: z.array(Muscle).min(1) }),

@@ -11,6 +11,9 @@ type ReasonsInput = {
   // This week's credited Sets before this Workout
   ledger: MuscleCredits;
   budget: WeeklyBudget;
+  // This Week's Workout count before this one, Recovery Workouts left out, and the user's days per week
+  workoutsThisWeek: number;
+  daysPerWeek: number;
   timeZone: string;
 };
 
@@ -31,10 +34,10 @@ function shareShort(group: MuscleGroup, { ledger, budget }: ReasonsInput) {
   return total ? short / total : 0;
 }
 
-// Why the Coach planned this Workout, in the order the phone shows them: recovering, budget met, behind. Only Muscles
+// Why the Coach planned this Workout, in the order the phone shows them: recovering, the week's work done, behind. Only Muscles
 // in a group, as reasons are worded by group. A time cut isn't one, as the Length is the user's choice
 export function planReasons(input: ReasonsInput): PlanReason[] {
-  const { heldBack, workouts, ledger, budget, timeZone } = input;
+  const { heldBack, workouts, ledger, budget, workoutsThisWeek, daysPerWeek, timeZone } = input;
   const reasons: PlanReason[] = [];
 
   const recovering = Muscle.options.filter((muscle) => heldBack.includes(muscle) && muscleGroupsOf([muscle]).length);
@@ -42,14 +45,16 @@ export function planReasons(input: ReasonsInput): PlanReason[] {
     reasons.push({ code: "recovering", muscles: recovering, lastSetOn: lastSetOn(recovering, workouts, timeZone) });
   }
 
-  const budgeted = Object.entries(budget) as [Muscle, number][];
-  if (budgeted.every(([muscle, sets]) => (ledger[muscle] ?? 0) >= sets)) {
+  // The week's work is done once This Week reaches the days per week, whatever is left of the budget (#114). The code
+  // keeps its first name, budget-met, as stored plans carry it
+  if (workoutsThisWeek >= daysPerWeek) {
     reasons.push({ code: "budget-met" });
     return reasons;
   }
 
   // Before anything's done this week every group is as far behind, which says nothing. A recovering group isn't
   // trained today, so it isn't named. A tie goes to the first group
+  const budgeted = Object.entries(budget) as [Muscle, number][];
   if (!budgeted.some(([muscle]) => ledger[muscle])) return reasons;
   const recoveringGroups = new Set(muscleGroupsOf(recovering));
   let furthest: { group: MuscleGroup; short: number } | undefined;
