@@ -7,7 +7,7 @@ import {
   type DayChoices,
   type MadeChoices,
 } from "@fit/engines";
-import type { BuiltInEquipment, PlannedWorkout, WorkoutLength } from "@fit/shared";
+import type { BuiltInEquipment, DayLength, PlannedWorkout } from "@fit/shared";
 import { useCallback, useState } from "react";
 import { useCurrentUser } from "@/features/user/current-user-provider";
 
@@ -31,7 +31,7 @@ export function useDaysWorkout(plannedWorkout: PlannedWorkout | null) {
       workoutLength: choices.workoutLength,
       equipment: choices.equipment,
       equipmentChoices: equipmentChoices(plannedWorkout),
-      chooseLength: (workoutLength: WorkoutLength) => choose({ workoutLength }),
+      chooseLength: (workoutLength: DayLength) => choose({ workoutLength }),
       chooseEquipment: (equipment?: BuiltInEquipment) => choose({ equipment }),
       pickAlternative: (replaces: string, slug: string) =>
         choose({ alternativePicks: { ...choices.alternativePicks, [replaces]: slug } }),
