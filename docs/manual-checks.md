@@ -152,8 +152,13 @@ Expo Go can't reload offline. Load the app, then turn on airplane mode without c
 
 - [x] **T1** Log a Goblet squat Set and wait out the rest (1:30). The phone vibrates once when it reaches 0, with no sound, and the timer goes. Then log a Set, put the app in the background past the end, and come back: the timer has gone, with no vibration on return.
   - iOS: Result: ✅ · Android: Result: ✅ · Notes: Android logged one 400 ms vibration when the Goblet squat rest reached 0, and none when it came back from the background past a 2:30 deadlift rest. Separately, see R1: the walk gets a 19:30 rest.
-- [x] **T2** Start a Workout and leave the phone untouched past its auto-lock time, on the logging screen and on Today: the screen stays on. Finish or Discard, then leave it again: it dims and locks as usual.
-  - iOS: Result: ⚠️ · Android: Result: ⏭ · Notes: Phone does not lock after finsihing a workout. On the today screen the app continues to stay open, on the history screen it also stays unlocked. Ticket #108.
+- [ ] **T2** Rerun on both phones, on a Release build (`--configuration Release` / `--variant release`, not `pnpm ios`): a development build keeps the whole app awake. Don't watch the screen while you wait. Put the phone face down, or on iPhone turn off Settings › Face ID & Passcode › Attention Aware Features (on Android, Settings › Display › Screen attention). Either setting keeps the screen on while you look at it. Then:
+  1. Before starting, leave the phone on Today past its auto-lock time: it locks. If it doesn't, the cause isn't the Workout, so note that and stop.
+  2. Start a Workout and leave it on the logging screen, then on Today: the screen stays on.
+  3. Finish, then leave it on Today and again on History: it dims and locks.
+  4. Start another and Discard it, then leave it on Today: it locks.
+  5. In airplane mode, start, log a Set and finish, so the Workout is Pending, then leave it on Today: it locks.
+  - iOS: Result: · Android: Result: · Notes: Last run (iOS ⚠️, Android ⏭): the phone didn't lock after finishing, on Today or History (#108). #108 couldn't reproduce it. In Expo Go on the iPhone 17 Pro simulator, with Expo's dev hold removed, iOS's idle timer was read every 2 s. It came on at Start and went off at Discard, including after a trip to the background. On the web build, the wake lock was released after Finish and after Discard. Step 1 shows whether something outside the Workout is holding the screen on.
 
 ## Quick (#98)
 
