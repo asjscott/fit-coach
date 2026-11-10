@@ -183,6 +183,14 @@ describe("setTargetLabel", () => {
     expect(setTargetLabel(target)).toBe(label);
   });
 
+  it("reads a timed target of a minute or more in minutes, as the walk's 20 minutes", () => {
+    expect(setTargetLabel({ unit: "seconds", seconds: 1200 })).toBe("20 min");
+    expect(setTargetLabel({ unit: "seconds", seconds: 60 })).toBe("1 min");
+    expect(setTargetLabel({ unit: "seconds", seconds: 90 })).toBe("1 min 30 s");
+    expect(setTargetLabel({ unit: "seconds", seconds: 59 })).toBe("59 s");
+    expect(plannedSetsLabel({ sets: 1, target: { unit: "seconds", seconds: 1200 } })).toBe("1 set · 20 min");
+  });
+
   it("shows a load the profile has as it is, without floating-point noise", () => {
     expect(setTargetLabel({ unit: "kg", kg: 6.25, reps: 8 })).toBe("6.25 kg × 8");
     expect(setTargetLabel({ unit: "kg", kg: 2.5 + 0.1 + 0.2, reps: 8 })).toBe("2.8 kg × 8");

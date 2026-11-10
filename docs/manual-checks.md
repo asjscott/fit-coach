@@ -211,7 +211,7 @@ These need real weeks of training on `dev`, so run them while M5's gaps are buil
 
 Needs `pnpm --filter @fit/api seed:exercises` run once from the main checkout (it needs `apps/api/.env`), so the Exercises tab lists the five Recovery Exercises.
 
-- [x] **R1** On a Rest Day, the "Rest today." card has a "Recovery workout instead" link. Tap it: a Workout opens with a 20-minute walk, then hip flexor stretch, open book, cat-cow and world's greatest stretch at 2 × 45 s each, logged on the normal timed-Set screen.
+- [ ] **R1** On a Rest Day, the "Rest today." card has a "Recovery workout instead" link. Tap it: a Workout opens with a 20-minute walk, then hip flexor stretch, open book, cat-cow and world's greatest stretch at 2 × 45 s each, logged on the normal timed-Set screen. The walk's target reads "1 set · 20 min". Log it: no rest timer starts, and in place of a Set 2 there's "Next exercise", which opens the hip flexor stretch. A stretch's Set still starts its usual rest (1:10), and still offers a Set 3 after its 2. Rerun after #109.
   - iOS: Result: ⚠️ · Android: Result: · Notes: The Exercises are right, but the walk reads "1200 s" rather than 20 minutes. Logging it starts a 19:30 rest (`restSeconds` is the Set's time less 30 s) and offers a Set 2, though the target is 1 Set. Decided: "20 min", no rest after the walk and no Set 2, in #109.
 - [x] **R2** On a day that isn't a Rest Day, open the plan's sheet ("See or change this Workout"): "Recovery workout instead" is under Start, and starts the same Workout once the sheet has gone. Whatever Length is chosen, it's the same Workout.
   - iOS: Result: · Android: Result: ✅ · Notes: Tried with Quick chosen.

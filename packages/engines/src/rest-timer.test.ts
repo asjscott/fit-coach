@@ -62,6 +62,24 @@ describe("restAfterSet", () => {
     expect(secondsOf(restAfterSet(workout(4, 3, 4), "press", now))).toBe(90);
     expect(secondsOf(restAfterSet(workout(3, 4, 3), "row", now))).toBe(60);
   });
+
+  describe("in the Recovery Workout", () => {
+    const timed: Set = { kind: "timed", seconds: 45, loggedAt: now.toISOString() };
+    const recovery = {
+      workoutExercises: [
+        { id: "walk", slug: "walk", loadType: "timed" as const, sets: [{ ...timed, seconds: 1200 }] },
+        { id: "stretch", slug: "hip-flexor-stretch", loadType: "timed" as const, sets: [timed] },
+      ],
+    };
+
+    it("doesn't rest after the walk, which goes straight on to the stretches", () => {
+      expect(restAfterSet(recovery, "walk", now)).toBeNull();
+    });
+
+    it("rests as usual between a stretch's Sets", () => {
+      expect(secondsOf(restAfterSet(recovery, "stretch", now))).toBe(70);
+    });
+  });
 });
 
 describe("restSecondsLeft", () => {

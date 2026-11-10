@@ -153,8 +153,9 @@ export function setsSummary(sets: readonly Set[]) {
 // Previous Sets as a reference while logging: "Last: 18 kg × 10, 10, 8"
 export const previousSetsLabel = (sets: readonly Set[]) => `Last: ${setsSummary(sets)}`;
 
-// A Set's target as a Set reads: "20 kg × 8", "12 reps", "40 s", "Medium band × 12". A profile's loads are summed, so a
-// kg can carry floating-point noise, unlike a logged Set's
+// A Set's target as a Set reads: "20 kg × 8", "12 reps", "40 s", "Medium band × 12". A timed target of a minute or more
+// reads in minutes, as the walk's "20 min" (#109). A profile's loads are summed, so a kg can carry floating-point noise,
+// unlike a logged Set's
 export function setTargetLabel(target: SetTarget) {
   switch (target.unit) {
     case "kg":
@@ -162,10 +163,17 @@ export function setTargetLabel(target: SetTarget) {
     case "reps":
       return describeSet({ kind: "bodyweight", reps: target.reps });
     case "seconds":
-      return describeSet({ kind: "timed", seconds: target.seconds });
+      return timedTargetLabel(target.seconds);
     case "band":
       return `${bandLevelLabels[target.level]} band × ${target.reps}`;
   }
+}
+
+// "45 s", "20 min", "1 min 30 s"
+function timedTargetLabel(seconds: number) {
+  if (seconds < 60) return `${seconds} s`;
+  const over = seconds % 60;
+  return `${Math.floor(seconds / 60)} min${over ? ` ${over} s` : ""}`;
 }
 
 type PlannedSets = NonNullable<InProgressWorkoutExercise["planned"]>;

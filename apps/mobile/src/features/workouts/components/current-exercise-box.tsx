@@ -1,4 +1,4 @@
-import { exerciseLoadsKg, isRatedTest, takesNoMoreSets } from "@fit/engines";
+import { exerciseLoadsKg, isRatedTest, takesAnotherSet, takesNoMoreSets } from "@fit/engines";
 import { RPE_SCALE, type InProgressWorkoutExercise, type LoadType, type SetValues } from "@fit/shared";
 import { useState, type ReactNode } from "react";
 import { StyleSheet, View } from "react-native";
@@ -31,12 +31,20 @@ export type CurrentExerciseBoxProps = {
   // An Assessment Workout's first test that isn't done, opened by "Next test" once this test is done; none when
   // every test is done
   onNextTest?: () => void;
+  // The next planned Exercise short of its target, opened by "Next exercise" once the walk's one Set is logged
+  onNextExercise?: () => void;
 };
 
 // The Workout Exercise being logged: its name, target, Previous Sets, the Sets so far (each with a ⋯ to edit or delete it) and
-// steppers for the next Set, which starts from the previous one, then the rest after the last Set. A test that's done
-// takes no more Sets
-export function CurrentExerciseBox({ workoutExercise, position, count, onNextTest }: CurrentExerciseBoxProps) {
+// steppers for the next Set, which starts from the previous one, then the rest after the last Set. A test that's done,
+// or the walk once logged, takes no more Sets
+export function CurrentExerciseBox({
+  workoutExercise,
+  position,
+  count,
+  onNextTest,
+  onNextExercise,
+}: CurrentExerciseBoxProps) {
   return (
     <ExerciseBox>
       <HStack spacing={2} align="start">
@@ -48,7 +56,7 @@ export function CurrentExerciseBox({ workoutExercise, position, count, onNextTes
         </Stack>
         <WorkoutExerciseMenu workoutExercise={workoutExercise} />
       </HStack>
-      <ExerciseLogging workoutExercise={workoutExercise} onNextTest={onNextTest} />
+      <ExerciseLogging workoutExercise={workoutExercise} onNextTest={onNextTest} onNextExercise={onNextExercise} />
       <RestTimer />
     </ExerciseBox>
   );
@@ -61,13 +69,14 @@ export function ExerciseBox({ children }: { children: ReactNode }) {
 }
 
 // Logging one Workout Exercise, under its name: its target, Previous Sets, the Sets so far and the next Set's
-// steppers, or a done test's Next test. hideTarget leaves the target to the summary under the name, as a superset
-// shows it
+// steppers, or a done test's Next test, or the logged walk's Next exercise. hideTarget leaves the target to the summary
+// under the name, as a superset shows it
 export function ExerciseLogging({
   workoutExercise,
   onNextTest,
+  onNextExercise,
   hideTarget = false,
-}: Pick<CurrentExerciseBoxProps, "workoutExercise" | "onNextTest"> & { hideTarget?: boolean }) {
+}: Pick<CurrentExerciseBoxProps, "workoutExercise" | "onNextTest" | "onNextExercise"> & { hideTarget?: boolean }) {
   const { workout, logSet, editSet, deleteSet, nextSetDraft, protocolState, nextLoadKg } = useLogbook();
   const primaryEquipment = usePrimaryEquipmentProfile();
   const { showToast } = useToast();
@@ -85,6 +94,8 @@ export function ExerciseLogging({
     workout?.assessment && primaryEquipment ? protocolState(workout, workoutExercise, primaryEquipment) : undefined;
   const note = protocol && protocolNote(protocol, sets.length, loadType, { nextTest: !!onNextTest });
   const testFinished = !!protocol && takesNoMoreSets(protocol);
+  // The walk is one Set (#109), so once it's logged there's no Set 2 to offer
+  const walkDone = !takesAnotherSet(workoutExercise);
   const asksRpe = !!workout && isRatedTest(workout, loadType);
   const kgSteps: KgSteps = {
     stepKg: (kg, direction) => nextLoadKg(slug, kg, direction, primaryEquipment),
@@ -165,6 +176,12 @@ export function ExerciseLogging({
         onNextTest ? (
           <View style={styles.entry}>
             <LoadingButton label="Next test" size="lg" onPress={onNextTest} fullWidth />
+          </View>
+        ) : null
+      ) : walkDone ? (
+        onNextExercise ? (
+          <View style={styles.entry}>
+            <LoadingButton label="Next exercise" size="lg" onPress={onNextExercise} fullWidth />
           </View>
         ) : null
       ) : (
