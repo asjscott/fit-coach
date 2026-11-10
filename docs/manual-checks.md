@@ -153,7 +153,7 @@ Expo Go can't reload offline. Load the app, then turn on airplane mode without c
 - [x] **T1** Log a Goblet squat Set and wait out the rest (1:30). The phone vibrates once when it reaches 0, with no sound, and the timer goes. Then log a Set, put the app in the background past the end, and come back: the timer has gone, with no vibration on return.
   - iOS: Result: ✅ · Android: Result: ✅ · Notes: Android logged one 400 ms vibration when the Goblet squat rest reached 0, and none when it came back from the background past a 2:30 deadlift rest. Separately, see R1: the walk gets a 19:30 rest.
 - [x] **T2** Start a Workout and leave the phone untouched past its auto-lock time, on the logging screen and on Today: the screen stays on. Finish or Discard, then leave it again: it dims and locks as usual.
-  - iOS: Result: ⚠️ · Android: Result: ⏭ · Notes: Phone does not lock after finsihing a workout. On the today screen the app continues to stay open, on the history screen it also stays unlocked.
+  - iOS: Result: ⚠️ · Android: Result: ⏭ · Notes: Phone does not lock after finsihing a workout. On the today screen the app continues to stay open, on the history screen it also stays unlocked. Ticket #108.
 
 ## Quick (#98)
 
@@ -167,7 +167,7 @@ Expo Go can't reload offline. Load the app, then turn on airplane mode without c
 - [x] **C2** In airplane mode, check in with sleep 1, energy 2, soreness 5. The card goes, and the day's card adds "· lighter after your check-in" with fewer Sets. Force-quit and reopen, still offline: the lighter Workout and no card.
   - iOS: Result: ⏭ · Android: Result: ✅ · Notes: 6 Exercises · 16 Sets went to 4 · 11.
 - [x] **C3** Open "See or change this Workout": it says "Lighter after your check-in". "Full workout" gives back the whole Workout, and tapping it again makes it lighter again. Change a rating there to all 5s and soreness 1: the Workout is full straight away.
-  - iOS: Result: ⏭ · Android: Result: ✅ · Notes: Sleep 5 and energy 5 made it full even with soreness still at 5, and the sheet's layout jumps up as the lighter row goes, so the next tap can land on the wrong chip.
+  - iOS: Result: ⏭ · Android: Result: ✅ · Notes: Sleep 5 and energy 5 made it full even with soreness still at 5, and the sheet's layout jumps up as the lighter row goes, so the next tap can land on the wrong chip. Decided: soreness 5 lightens on its own (#112). The jump is #113.
 - [x] **C4** Check in lighter, start the Workout, then go back to Today: the started Workout keeps its Sets. Finish it, and the card doesn't come back.
   - iOS: Result: ⏭ · Android: Result: ✅ · Notes:
 - [ ] **C5** The next day the check-in is gone: the card is back (if there's a plan) and the Workout is full.
@@ -182,16 +182,16 @@ Needs the API deployed from this branch, so plans are stored with their reasons.
 - [x] **W2** Open "See or change this Workout": under the Sets and time it lists every reason, recovering first, such as "Legs are recovering from Tuesday." then "Back is furthest behind this week." Checking in lighter adds "lighter after your check-in" without taking the reasons away.
   - iOS: Result: ✅ · Android: Result: ✅ · Notes: iOS: "Legs are recovering from Sunday." then "Chest is furthest behind this week." Android, checked in lighter: "Back is recovering from today." and "Shoulders are furthest behind this week." stayed above "Lighter after your check-in".
 - [ ] **W3** Once every Workout of the week is done and you train anyway, the line reads "This week's work is done. This one's extra."
-  - iOS: Result: ⏭ · Android: Result: ⏭ · Notes: Not reached. The line comes from every Muscle's weekly Set budget being met, not from the Workout count. With 4 of 4 small Workouts done, Today said "4 of 4 Workouts" and the sheet still said "Shoulders are furthest behind this week." That may be fine after four full Workouts, but the check's wording and the code's rule differ.
+  - iOS: Result: ⏭ · Android: Result: ⏭ · Notes: Not reached. The line comes from every Muscle's weekly Set budget being met, not from the Workout count. With 4 of 4 small Workouts done, Today said "4 of 4 Workouts" and the sheet still said "Shoulders are furthest behind this week." That may be fine after four full Workouts, but the check's wording and the code's rule differ. Decided: the Workout count is the rule, in #114.
 
 ## Supersets (#96)
 
-A Workout pairs Exercises only when it wouldn't otherwise fit its Length, so choose Quick or Short on a plan of four or more Exercises. The sheet then says "Paired into supersets to fit the time" and shows "Superset with …" under each paired Exercise.
+A Workout pairs Exercises only when it wouldn't otherwise fit its Length, so choose Quick or Short on a plan of four or more Exercises. Pairs only form where the Patterns go together (push with pull or hinge, squat with core), never with a one-sided Exercise or a carry, so a plan without such Exercises may need Bodyweight only to swap some in. The sheet then says "Paired into supersets to fit the time" and shows "Superset with …" under each paired Exercise.
 
 - [ ] **S1** P9's timing check on a paired Workout: start one whose sheet shows at least one superset, note its "About N min", and run it in full with a timer, resting as the timer says and skipping nothing. A pair is timed at Sets × (the longer Exercise's Set + 30 s): does the real time come out within a few minutes of the estimate?
   - iOS: Result: ⏭ · Android: Result: ⏭ · Notes: Deferred: timing checks (this and P9) wait until the app is in real use. A simulator can't run it, as a Set takes no time there.
 - [x] **S2** On the logging screen at phone width, the pair is one box, A1 above A2. The Exercise whose turn it is is open with its steppers; the other shows its name, Sets so far and "Up next". Log A1: A2 opens straight away with "No rest: straight to …" and no rest timer. Log A2: the rest timer runs the longer of the two rests, as the box's note says. The Sets show under their own Exercise in History afterwards.
-  - iOS: Result: ✅ · Android: Result: ✅ · Notes: Rests matched the box's note: 120 s for Romanian deadlift with overhead press (the longer of 120 and 90), 90 s for chin-up with lateral raise, 60 s for Y-T-W raise with decline push-up. ⚠️ When one of a pair runs out of Sets first (a 1-Set chin-up with 3 Sets of lateral raise), the lateral raise's later rounds still rest the pair's 90 s, not its own 45 s. ⚠️ "Superset with …" lower-cases the whole name: "barbell romanian deadlift", "prone y-t-w raise". The rest still running from one pair carries into the next box.
+  - iOS: Result: ✅ · Android: Result: ✅ · Notes: Rests matched the box's note: 120 s for Romanian deadlift with overhead press (the longer of 120 and 90), 90 s for chin-up with lateral raise, 60 s for Y-T-W raise with decline push-up. ⚠️ When one of a pair runs out of Sets first (a 1-Set chin-up with 3 Sets of lateral raise), the lateral raise's later rounds still rest the pair's 90 s, not its own 45 s. ⚠️ "Superset with …" lower-cases the whole name: "barbell romanian deadlift", "prone y-t-w raise". The rest still running from one pair carries into the next box: working as intended, as it's the rest before the next Exercise. The name and the rest once one side is done are #111.
 - [x] **S3** In airplane mode, open the sheet on a paired Workout and choose "No supersets": the pairs go, Sets are cut instead and the time stays within the Length. Tap it again and the pairs come back. Start without changing it, and the started Workout keeps the pairs.
   - iOS: Result: ✅ · Android: Result: ✅ · Notes: Android, Standard: 7 Exercises · 19 Sets · about 40 min paired, 6 · 16 · about 39 min with No supersets. iOS, Quick on Bodyweight only: 11 Sets · 20 min paired, 10 Sets · 19 min without. Pairs only form where the Patterns go together (push with pull or hinge, squat with core) and never with a one-sided Exercise or a carry, so the iOS plan (a one-sided row, a carry and four pushes) had no pairs at any Length until Bodyweight only swapped in Exercises that pair. The tip above, Quick or Short on four or more Exercises, isn't always enough.
 
@@ -211,17 +211,17 @@ These need real weeks of training on `dev`, so run them while M5's gaps are buil
 Needs `pnpm --filter @fit/api seed:exercises` run once from the main checkout (it needs `apps/api/.env`), so the Exercises tab lists the five Recovery Exercises.
 
 - [x] **R1** On a Rest Day, the "Rest today." card has a "Recovery workout instead" link. Tap it: a Workout opens with a 20-minute walk, then hip flexor stretch, open book, cat-cow and world's greatest stretch at 2 × 45 s each, logged on the normal timed-Set screen.
-  - iOS: Result: ⚠️ · Android: Result: · Notes: The Exercises are right, but the walk reads "1200 s" rather than 20 minutes. Logging it starts a 19:30 rest (`restSeconds` is the Set's time less 30 s) and offers a Set 2, though the target is 1 Set.
+  - iOS: Result: ⚠️ · Android: Result: · Notes: The Exercises are right, but the walk reads "1200 s" rather than 20 minutes. Logging it starts a 19:30 rest (`restSeconds` is the Set's time less 30 s) and offers a Set 2, though the target is 1 Set. Decided: "20 min", no rest after the walk and no Set 2, in #109.
 - [x] **R2** On a day that isn't a Rest Day, open the plan's sheet ("See or change this Workout"): "Recovery workout instead" is under Start, and starts the same Workout once the sheet has gone. Whatever Length is chosen, it's the same Workout.
   - iOS: Result: · Android: Result: ✅ · Notes: Tried with Quick chosen.
 - [x] **R3** In airplane mode, start, log and finish a Recovery Workout. Today still offers the same Planned Workout (not "Connect to plan your next Workout"), This Week's count and day circles don't change, and tomorrow isn't a Rest Day because of it. Back online, it uploads and shows in History, and the plan on Today is the same one.
-  - iOS: Result: ⚠️ · Android: Result: · Notes: Started online, then logged and finished offline (walk only). Today kept the plan and stayed at 0 of 4 with no day filled. It uploaded and the plan kept its id. But History's "This week" read "1 of 4 Workouts", counting the walk. And the card went from "Rest today." to "Time to train." while the walk was waiting to upload, then back to "Rest today." after it had (I had also posted a Workout to the API by then, which Today's count never showed, so that may have played a part). "Tomorrow" wasn't checked. Same result running on the built app
+  - iOS: Result: ⚠️ · Android: Result: · Notes: Started online, then logged and finished offline (walk only). Today kept the plan and stayed at 0 of 4 with no day filled. It uploaded and the plan kept its id. But History's "This week" read "1 of 4 Workouts", counting the walk. And the card went from "Rest today." to "Time to train." while the walk was waiting to upload, then back to "Rest today." after it had (I had also posted a Workout to the API by then, which Today's count never showed, so that may have played a part). "Tomorrow" wasn't checked. Same result running on the built app. History's count is #110. The card's flip is working as intended: offline, Today knows only the Workouts on the phone, so it can miss a Rest Day but never make a wrong one (ADR 0001).
 
 ## Your call
 
 Not a bug, but it needs your judgement once you've done some Workouts. Details in `docs/research/planner-simulation.md`.
 
-- Do Workouts that fill their Length, at up to 214% of a Muscle's budget, feel like too much? Should a Workout stop at the budget?
+- Do Workouts that fill their Length, at up to 214% of a Muscle's budget, feel like too much? Should a Workout stop at the budget? Left until after real use (2026-11-09).
 
 ---
 
