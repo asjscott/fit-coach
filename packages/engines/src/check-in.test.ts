@@ -29,4 +29,18 @@ describe("the share of Sets a check-in keeps", () => {
     expect(readinessShare({ sleep: 3, energy: 3, soreness: 3 })).toBe(0.85); // 9
     expect(readinessShare({ sleep: 3, energy: 4, soreness: 3 })).toBe(1); // 10
   });
+
+  it("keeps at most 0.85 with soreness 5, however good sleep and energy were", () => {
+    expect(readinessShare({ sleep: 5, energy: 5, soreness: 5 })).toBe(0.85); // 11
+    expect(readinessShare({ sleep: 4, energy: 4, soreness: 5 })).toBe(0.85); // 9
+  });
+
+  it("still keeps 0.7 with soreness 5 and a low score", () => {
+    expect(readinessShare({ sleep: 2, energy: 3, soreness: 5 })).toBe(0.7); // 6
+  });
+
+  it("goes by the score alone with soreness 4 or less", () => {
+    expect(readinessShare({ sleep: 5, energy: 5, soreness: 4 })).toBe(1); // 12
+    expect(readinessShare({ sleep: 2, energy: 2, soreness: 4 })).toBe(0.7); // 6
+  });
 });

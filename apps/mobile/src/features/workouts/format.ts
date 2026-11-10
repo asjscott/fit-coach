@@ -1,6 +1,8 @@
 import type { BuiltInEquipment, InProgressWorkoutExercise, Set, SetTarget, SetValues, Workout } from "@fit/shared";
+import { exerciseRestSeconds, pairRestSeconds } from "@fit/engines";
 import { getCalendars } from "expo-localization";
 import { bandLevelLabels } from "../equipment/loads";
+import { exerciseName } from "./library";
 
 // How Workouts and Sets read on screen
 
@@ -153,8 +155,9 @@ export function setsSummary(sets: readonly Set[]) {
 // Previous Sets as a reference while logging: "Last: 18 kg × 10, 10, 8"
 export const previousSetsLabel = (sets: readonly Set[]) => `Last: ${setsSummary(sets)}`;
 
-// A Set's target as a Set reads: "20 kg × 8", "12 reps", "40 s", "Medium band × 12". A profile's loads are summed, so a
-// kg can carry floating-point noise, unlike a logged Set's
+// A Set's target as a Set reads: "20 kg × 8", "12 reps", "40 s", "Medium band × 12". A timed target of a minute or more
+// reads in minutes, as the walk's "20 min" (#109). A profile's loads are summed, so a kg can carry floating-point noise,
+// unlike a logged Set's
 export function setTargetLabel(target: SetTarget) {
   switch (target.unit) {
     case "kg":
@@ -162,10 +165,17 @@ export function setTargetLabel(target: SetTarget) {
     case "reps":
       return describeSet({ kind: "bodyweight", reps: target.reps });
     case "seconds":
-      return describeSet({ kind: "timed", seconds: target.seconds });
+      return timedTargetLabel(target.seconds);
     case "band":
       return `${bandLevelLabels[target.level]} band × ${target.reps}`;
   }
+}
+
+// "45 s", "20 min", "1 min 30 s"
+function timedTargetLabel(seconds: number) {
+  if (seconds < 60) return `${seconds} s`;
+  const over = seconds % 60;
+  return `${Math.floor(seconds / 60)} min${over ? ` ${over} s` : ""}`;
 }
 
 type PlannedSets = NonNullable<InProgressWorkoutExercise["planned"]>;
@@ -219,3 +229,26 @@ export const describeSet = (set: Set | SetValues) =>
 
 // A superset's letter by its place among the Workout's supersets, from 0: A makes A1 and A2, as gym programmes write them
 export const supersetLetter = (index: number) => String.fromCharCode(65 + index);
+
+// The superset box's banner mid-round (#96). The name is the library's, as it is (#111)
+export const straightToLabel = (name: string) => `No rest: straight to ${name}`;
+
+type PairMember = Pick<InProgressWorkoutExercise, "slug" | "sets" | "planned">;
+
+const isDone = ({ sets, planned }: PairMember) => !!planned && sets.length >= planned.sets;
+
+// The superset box's note on its rests, as restAfterSet gives them (#111): the longer of the two after each round both
+// are in. Once the one with fewer Sets has all of them and its last round is over, the other rests its own time
+export function supersetNote(pair: readonly [PairMember, PairMember]) {
+  const [first, second] = pair;
+  const pairSeconds = pairRestSeconds(first.slug, second.slug);
+  const pairNote = `No rest between them, then ${pairSeconds} s rest`;
+  const plannedSets = ({ planned }: PairMember) => planned?.sets ?? 0;
+  if (plannedSets(first) === plannedSets(second)) return pairNote;
+  const [fewer, more] = plannedSets(first) < plannedSets(second) ? [first, second] : [second, first];
+  const own = exerciseRestSeconds(more.slug);
+  if (isDone(fewer) && more.sets.length >= fewer.sets.length) {
+    return `${exerciseName(fewer.slug)} is done: ${own} s rest between Sets`;
+  }
+  return own === pairSeconds ? pairNote : `${pairNote}. Once ${exerciseName(fewer.slug)} is done, ${own} s`;
+}

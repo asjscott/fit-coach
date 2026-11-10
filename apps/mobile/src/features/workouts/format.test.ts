@@ -15,7 +15,9 @@ import {
   noAlternativeLabel,
   plannedSetsLabel,
   setTargetLabel,
+  straightToLabel,
   supersetLetter,
+  supersetNote,
   workoutExerciseSummary,
   workoutTimesLabel,
   workoutWhenLabel,
@@ -183,6 +185,14 @@ describe("setTargetLabel", () => {
     expect(setTargetLabel(target)).toBe(label);
   });
 
+  it("reads a timed target of a minute or more in minutes, as the walk's 20 minutes", () => {
+    expect(setTargetLabel({ unit: "seconds", seconds: 1200 })).toBe("20 min");
+    expect(setTargetLabel({ unit: "seconds", seconds: 60 })).toBe("1 min");
+    expect(setTargetLabel({ unit: "seconds", seconds: 90 })).toBe("1 min 30 s");
+    expect(setTargetLabel({ unit: "seconds", seconds: 59 })).toBe("59 s");
+    expect(plannedSetsLabel({ sets: 1, target: { unit: "seconds", seconds: 1200 } })).toBe("1 set · 20 min");
+  });
+
   it("shows a load the profile has as it is, without floating-point noise", () => {
     expect(setTargetLabel({ unit: "kg", kg: 6.25, reps: 8 })).toBe("6.25 kg × 8");
     expect(setTargetLabel({ unit: "kg", kg: 2.5 + 0.1 + 0.2, reps: 8 })).toBe("2.8 kg × 8");
@@ -281,5 +291,40 @@ describe("setParts", () => {
 describe("supersetLetter", () => {
   it("names the Workout's supersets A, B, C in order", () => {
     expect([0, 1, 2].map(supersetLetter)).toEqual(["A", "B", "C"]);
+  });
+});
+
+describe("straightToLabel", () => {
+  it("names the other Exercise exactly as the library does", () => {
+    expect(straightToLabel("Barbell Romanian deadlift")).toBe("No rest: straight to Barbell Romanian deadlift");
+  });
+});
+
+describe("supersetNote", () => {
+  // A chin-up (120 s Sets, 90 s rest) with a lateral raise (60 s Sets, 45 s rest)
+  const member = (slug: string, logged: number, planned: number) => ({
+    slug,
+    sets: Array<Set>(logged).fill({ kind: "bodyweight", reps: 8, loggedAt: "2026-11-09T10:00:00Z" }),
+    planned: { sets: planned, target: { unit: "reps" as const, reps: 8 } },
+  });
+  const note = (chinUp: [number, number], raise: [number, number]) =>
+    supersetNote([member("chin-up", ...chinUp), member("dumbbell-lateral-raise", ...raise)]);
+
+  it("gives the longer of the two rests after each round", () => {
+    expect(note([0, 3], [0, 3])).toBe("No rest between them, then 90 s rest");
+  });
+
+  it("says when the one with more Sets will rest its own time", () => {
+    expect(note([0, 1], [0, 3])).toBe("No rest between them, then 90 s rest. Once Chin-up is done, 45 s");
+  });
+
+  it("keeps the pair's rest until the round both are in is over", () => {
+    expect(note([1, 1], [0, 3])).toBe("No rest between them, then 90 s rest. Once Chin-up is done, 45 s");
+  });
+
+  it("gives the one left its own rest once the other is done", () => {
+    expect(note([1, 1], [1, 3])).toBe("Chin-up is done: 45 s rest between Sets");
+    expect(note([1, 1], [2, 3])).toBe("Chin-up is done: 45 s rest between Sets");
+    expect(note([1, 1], [3, 3])).toBe("Chin-up is done: 45 s rest between Sets");
   });
 });

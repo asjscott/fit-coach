@@ -105,7 +105,7 @@ How the user says they feel on a day, before training: sleep, energy and sorenes
 _Avoid_: Daily survey, wellness check, mood
 
 **Readiness**:
-How ready to train a Check-in says the user is: sleep + energy + (6 − soreness), from 3 to 15. Low Readiness keeps fewer of the Day's Workout's Sets.
+How ready to train a Check-in says the user is: sleep + energy + (6 − soreness), from 3 to 15. Low Readiness keeps fewer of the Day's Workout's Sets, and soreness 5 always keeps fewer, however good sleep and energy were.
 _Avoid_: Recovery score, fatigue (for this)
 
 **Equipment Profile**:
