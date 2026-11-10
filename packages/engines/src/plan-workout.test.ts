@@ -250,7 +250,7 @@ describe("planWorkout", () => {
     });
 
     it("outlasts that Exercise in the cut to Standard", () => {
-      const today = daysWorkout({ plannedExercises }, { workoutLength: "standard" }, "lose_fat");
+      const today = daysWorkout({ plannedExercises }, { workoutLength: "standard", noSupersets: true }, "lose_fat");
       const setsOf = (slug: string) => today.plannedExercises.find((exercise) => exercise.slug === slug)?.sets;
       expect(setsOf("dumbbell-lateral-raise")).toBe(4);
       expect(setsOf("band-row")).toBe(1);
