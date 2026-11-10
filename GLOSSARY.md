@@ -1,6 +1,6 @@
 # Fit Coach
 
-A training app that coaches people through strength workouts using the equipment they actually have.
+A training app for its author and a few invited people. You tell the Coach what you did and ate, and it coaches you through strength workouts with the equipment you actually have, around everything else you do.
 
 ## Language
 
@@ -129,7 +129,7 @@ A run of weeks of training, started by an Assessment, with a set length and a de
 _Avoid_: Program, mesocycle, cycle
 
 **Rest Day**:
-A day the Coach recommends not training: the user has trained today, or reached their days per week, or trained yesterday and the week's other Workouts still fit. It's advice, shown above the Planned Workout.
+A day the Coach recommends not training: the user has trained today, or reached their days per week, or trained or did a hard Activity yesterday and the week's other Workouts still fit. It's advice, shown above the Planned Workout.
 _Avoid_: Off day, recovery day
 
 ### Assessment
@@ -175,5 +175,5 @@ One food the user ate, in a meal of a day: the portion and a snapshot of that fo
 _Avoid_: Meal log, food log item, intake
 
 **Activity**:
-Training done outside the app, such as a run, a ride or a game of a sport: its type, duration and effort, logged by hand or imported from Strava. It adds Fatigue to the Muscles its type works and credits part of its calories to the day.
+Training done outside the app, such as a run, a ride or a game of a sport: its type, duration and effort, logged by hand, told to the Coach or imported from Strava, on the day it was done. It adds Fatigue to the Muscles its type works and credits part of its calories to the day.
 _Avoid_: Cardio, exercise (for this), conditioning session
