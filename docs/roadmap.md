@@ -140,7 +140,7 @@ M9 Rewards is cut down to PR detection (M6) and a Weekly Streak (M8). M11 Meal p
 
 - **Web push.** VAPID keys on the server, a subscription saved per device. iOS only delivers it to the installed PWA (iOS 16.4+).
 - **Scheduled jobs.** A GitHub Actions workflow runs hourly and POSTs to `/jobs/run` with a secret. That wakes the Render instance, which runs whatever is due in the user's timezone and records that it ran, so a late or repeated call never sends twice. Agenda is dropped.
-- **Evening summary, about 8 pm, templated:** "Push day done ✅ · 1,840 / 2,300 kcal · 120 g protein · next up: Legs, Standard". It says "next", not "tomorrow" ([ADR 0004](adr/0004-spec-77-replaces-the-plans-m5.md)).
+- **Evening summary, due at 6 pm so it arrives by 7, templated:** "Push day done ✅ · 1,840 / 2,300 kcal · 120 g protein · next up: Legs, Standard". It says "next", not "tomorrow" ([ADR 0004](adr/0004-spec-77-replaces-the-plans-m5.md)).
 - **Sunday weekly review**, in the app and announced by push: Workouts done against planned and the Weekly Streak; the Weekly Budget met per Muscle; PRs and Exercises that progressed or dropped; average kcal and protein against target; the 7-day average weight change; the Readiness trend from Check-ins.
 - **Weekly Streak.** A week counts when the user finishes at least `daysPerWeek − 1` Workouts, Recovery Workouts included. No freezes. Weeks run Monday to Sunday, as the Week Ledger does.
 - The PDF's event bus is dropped unless the spec finds a need. An LLM sentence in the summary is optional, through M7's interface.

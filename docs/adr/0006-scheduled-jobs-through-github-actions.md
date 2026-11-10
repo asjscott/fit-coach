@@ -4,7 +4,7 @@ The evening summary and the Sunday review need something to run at a time of day
 
 ## Consequences
 
-- Jobs run to within about an hour, as GitHub's cron can start late and runs hourly. An 8 pm summary may arrive closer to 9.
+- Jobs run to within about an hour, as GitHub's cron can start late and runs hourly. So the evening summary is due at 6 pm, to arrive by 7.
 - The repository is private, so each run spends Actions minutes from the 2,000 free a month. An hourly run for production and staging uses about 1,450. If CI needs more, the workflow runs only in the evening hours.
 - Every job is idempotent and keyed by user, job and local date, and `/jobs/run` rejects calls without the secret.
 - Agenda is dropped, and so is any in-process timer.
