@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { planInputsKey, planIsDue, type PlanInputs } from "./plan-rebuild";
+import { isSamePlan, planInputsKey, planIsDue, type PlanInputs } from "./plan-rebuild";
 
 const inputs: PlanInputs = {
   goal: "build_muscle",
@@ -17,7 +17,9 @@ const now = new Date("2026-11-04T12:00:00Z");
 const timeZone = "America/New_York";
 
 const builtFrom = planInputsKey(inputs);
-const due = (more: Partial<PlanInputs>, plan = { weekStart: "2026-11-02", builtFrom }) =>
+// Built earlier the same day in New York
+const builtAt = "2026-11-04T05:00:00.000Z";
+const due = (more: Partial<PlanInputs>, plan = { weekStart: "2026-11-02", builtFrom, builtAt }) =>
   planIsDue(plan, { ...inputs, ...more }, now, timeZone);
 
 describe("planIsDue", () => {
@@ -30,19 +32,31 @@ describe("planIsDue", () => {
   });
 
   it("is due at a new week", () => {
-    expect(due({}, { weekStart: "2026-10-26", builtFrom })).toBe(true);
+    expect(due({}, { weekStart: "2026-10-26", builtFrom, builtAt })).toBe(true);
   });
 
   it("goes by the Monday in the user's timezone", () => {
     const lateSunday = new Date("2026-11-02T03:30:00Z");
-    const plan = { weekStart: "2026-10-26", builtFrom };
+    const plan = { weekStart: "2026-10-26", builtFrom, builtAt: "2026-11-01T20:00:00.000Z" };
 
     expect(planIsDue(plan, inputs, lateSunday, "America/New_York")).toBe(false);
     expect(planIsDue(plan, inputs, lateSunday, "UTC")).toBe(true);
   });
 
   it("is due for a plan with no record of what it was built from", () => {
-    expect(planIsDue({ weekStart: "2026-11-02" }, inputs, now, timeZone)).toBe(true);
+    expect(planIsDue({ weekStart: "2026-11-02", builtAt }, inputs, now, timeZone)).toBe(true);
+  });
+
+  // So the recovery filter judges fatigue on the day the user looks, not at the upload
+  it("is due on a new day in the user's timezone, for a plan built straight after a Workout", () => {
+    const afterTuesdaysWorkout = { weekStart: "2026-11-02", builtFrom, builtAt: "2026-11-03T23:30:00.000Z" };
+
+    expect(planIsDue(afterTuesdaysWorkout, inputs, new Date("2026-11-04T04:30:00Z"), timeZone)).toBe(false);
+    expect(planIsDue(afterTuesdaysWorkout, inputs, new Date("2026-11-04T05:30:00Z"), timeZone)).toBe(true);
+  });
+
+  it("is due for a plan with no record of when it was built", () => {
+    expect(planIsDue({ weekStart: "2026-11-02", builtFrom }, inputs, now, timeZone)).toBe(true);
   });
 
   it.each<[string, Partial<PlanInputs>]>([
@@ -67,5 +81,38 @@ describe("planIsDue", () => {
   it("isn't due when only the order of injuries or equipment changed", () => {
     expect(due({ injuries: ["wrist", "knee"] })).toBe(false);
     expect(due({ equipmentProfile: { ...inputs.equipmentProfile, tags: ["flat_bench", "dumbbells"] } })).toBe(false);
+  });
+});
+
+describe("isSamePlan", () => {
+  const plan = {
+    weekStart: "2026-11-02",
+    plannedExercises: [
+      { slug: "goblet-squat", sets: 3, target: { unit: "kg" as const, kg: 20, reps: 8 } },
+      { slug: "push-up", sets: 4, fourthSetAfter: 1, target: { unit: "reps" as const, reps: 12 } },
+    ],
+    cue: "Lift as fast as you can on the way up",
+  };
+
+  it("is the same plan rebuilt from unchanged inputs, whatever order its fields come back in", () => {
+    const stored = {
+      cue: plan.cue,
+      plannedExercises: [
+        { target: { reps: 8, kg: 20, unit: "kg" as const }, sets: 3, slug: "goblet-squat" },
+        plan.plannedExercises[1]!,
+      ],
+      weekStart: "2026-11-02",
+    };
+
+    expect(isSamePlan(stored, plan)).toBe(true);
+  });
+
+  it.each<[string, Partial<typeof plan>]>([
+    ["another week", { weekStart: "2026-11-09" }],
+    ["other Sets", { plannedExercises: [{ ...plan.plannedExercises[0]!, sets: 4 }, plan.plannedExercises[1]!] }],
+    ["another order", { plannedExercises: [...plan.plannedExercises].reverse() }],
+    ["no cue", { cue: undefined }],
+  ])("isn't the same with %s", (_name, change) => {
+    expect(isSamePlan(plan, { ...plan, ...change })).toBe(false);
   });
 });

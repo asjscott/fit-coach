@@ -39,21 +39,22 @@ const plan = (more: Partial<PlanWorkoutInput> = {}) =>
 
 const slugs = (more?: Partial<PlanWorkoutInput>) => plan(more).plannedExercises.map(({ slug }) => slug);
 
+// Early on Monday in New York: this week, and long enough ago to leave no fatigue
+const earlierThisWeek = "2026-11-02T10:00:00.000Z";
+const loggedSets = (count: number, loggedAt = earlierThisWeek) => Array.from({ length: count }, () => ({ loggedAt }));
+
 // Sets of an Exercise logged this week
 const logged = (id: string, slug: string, sets: number) => ({
   id,
-  startedAt: "2026-11-03T18:00:00.000Z",
-  workoutExercises: [{ slug, sets: Array.from({ length: sets }, () => ({})) }],
+  startedAt: earlierThisWeek,
+  workoutExercises: [{ slug, sets: loggedSets(sets) }],
 });
 
 // One Workout this week, with this many Sets of each Exercise
 const week = (sets: Record<string, number>) => ({
   id: "this-week",
-  startedAt: "2026-11-03T18:00:00.000Z",
-  workoutExercises: Object.entries(sets).map(([slug, count]) => ({
-    slug,
-    sets: Array.from({ length: count }, () => ({})),
-  })),
+  startedAt: earlierThisWeek,
+  workoutExercises: Object.entries(sets).map(([slug, count]) => ({ slug, sets: loggedSets(count) })),
 });
 
 const earlierWorkouts = (count: number) =>
@@ -563,6 +564,51 @@ describe("planWorkout", () => {
     );
   });
 
+  describe("the recovery filter", () => {
+    // Tuesday evening's leg day, 13 hours before Wednesday noon: quads and glutes at 6 × 35/48 = 4.4, over 4
+    const tuesdayEvening = "2026-11-03T23:00:00.000Z";
+    const legDay = {
+      id: "leg-day",
+      startedAt: tuesdayEvening,
+      workoutExercises: [{ slug: "goblet-squat", sets: loggedSets(6, tuesdayEvening) }],
+    };
+    const primaries = (slug: string) => exerciseBySlug(slug)!.muscles.primary;
+    const onFullGymPlan = (more: Partial<PlanWorkoutInput> = {}) =>
+      plan({ equipmentProfile: fullHomeGym, workingLevels: [], assessment, ...more });
+
+    it("leaves out Exercises for quads and glutes the day after a heavy leg day", () => {
+      const chosen = onFullGym({ workouts: [legDay] });
+      const forLegs = chosen.filter((slug) =>
+        primaries(slug).some((muscle) => muscle === "quads" || muscle === "glutes"),
+      );
+
+      expect(chosen.length).toBeGreaterThan(0);
+      expect(forLegs).toEqual([]);
+    });
+
+    it("still allows them as a secondary Muscle", () => {
+      const chosen = onFullGym({ workouts: [legDay] });
+
+      expect(chosen.some((slug) => exerciseBySlug(slug)!.muscles.secondary.includes("glutes"))).toBe(true);
+    });
+
+    it("says which Muscles it held back", () => {
+      expect([...onFullGymPlan({ workouts: [legDay] }).heldBack].sort()).toEqual(["glutes", "quads"]);
+    });
+
+    it("holds nothing back after rest", () => {
+      expect(onFullGymPlan().heldBack).toEqual([]);
+    });
+
+    it("brings tired Muscles' Exercises back when nothing else helps the budget, so there's always a plan", () => {
+      const { plannedExercises, heldBack } = plan({ workingLevels: [kg("goblet-squat", 20)], workouts: [legDay] });
+
+      // Only goblet squat trains quads and glutes here, so it comes back once the core Exercises have done all they can
+      expect(plannedExercises.map(({ slug }) => slug)).toContain("goblet-squat");
+      expect(heldBack).toEqual([]);
+    });
+  });
+
   describe("the cue", () => {
     it("tells an athletic user to lift fast", () => {
       expect(plan({ goal: "athletic" }).cue).toBe("Lift as fast as you can on the way up");
@@ -669,7 +715,10 @@ describe("planWorkout", () => {
       const recoveryWorkout = {
         id: "recovery",
         startedAt: "2026-11-03T18:00:00.000Z",
-        workoutExercises: recovery.map((slug) => ({ slug, sets: [{}, {}] })),
+        workoutExercises: recovery.map((slug) => {
+          const loggedAt = "2026-11-03T18:00:00.000Z";
+          return { slug, sets: [{ loggedAt }, { loggedAt }] };
+        }),
       };
       const workouts = [week({ "goblet-squat": 3, "one-arm-dumbbell-row": 3 })];
       expect(plan({ workouts: [...workouts, recoveryWorkout], daysPerWeek: 2 })).toEqual(
