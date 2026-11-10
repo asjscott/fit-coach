@@ -10,7 +10,11 @@ export type InjuryTag = z.infer<typeof InjuryTag>;
 export const WorkoutLength = z.enum(["short", "standard", "long"]);
 export type WorkoutLength = z.infer<typeof WorkoutLength>;
 
-export const WORKOUT_LENGTH_MINUTES: Record<WorkoutLength, number> = { short: 30, standard: 45, long: 60 };
+// The Lengths for one Workout: the usual ones and Quick, which is never stored on the user. Shortest first
+export const DayLength = z.enum(["quick", ...WorkoutLength.options]);
+export type DayLength = z.infer<typeof DayLength>;
+
+export const WORKOUT_LENGTH_MINUTES: Record<DayLength, number> = { quick: 20, short: 30, standard: 45, long: 60 };
 
 export const UserProfile = z.object({
   gender: z.enum(["male", "female"], { error: "Choose one" }),

@@ -1,4 +1,4 @@
-import { WORKOUT_LENGTH_MINUTES, type UserProfile, type WorkoutLength } from "@fit/shared";
+import { WORKOUT_LENGTH_MINUTES, type DayLength, type UserProfile, type WorkoutLength } from "@fit/shared";
 
 // Part of the Workout Length but not of secondsPerSet: see docs/research/weekly-budget-volume.md
 export const WARM_UP_SECONDS = 5 * 60;
@@ -12,4 +12,4 @@ export function usualWorkoutLength(profile: Partial<Pick<UserProfile, "workoutLe
 }
 
 // What a Workout Length leaves for Sets
-export const secondsForSets = (length: WorkoutLength) => WORKOUT_LENGTH_MINUTES[length] * 60 - WARM_UP_SECONDS;
+export const secondsForSets = (length: DayLength) => WORKOUT_LENGTH_MINUTES[length] * 60 - WARM_UP_SECONDS;

@@ -1,5 +1,13 @@
 import { describe, expect, it } from "vitest";
-import { OnboardingProfile, User, UserUpdate, WORKOUT_LENGTH_MINUTES, WorkoutLength } from "./user";
+import {
+  DayLength,
+  OnboardingProfile,
+  User,
+  UserProfile,
+  UserUpdate,
+  WORKOUT_LENGTH_MINUTES,
+  WorkoutLength,
+} from "./user";
 
 const onboardingAnswers = {
   gender: "female",
@@ -15,7 +23,21 @@ const user = { id: "u1", profile: {}, onboardedAt: null, equipmentProfiles: [] }
 describe("WorkoutLength", () => {
   it("is Short, Standard or Long at 30, 45 or 60 minutes", () => {
     expect(WorkoutLength.options).toEqual(["short", "standard", "long"]);
-    expect(WORKOUT_LENGTH_MINUTES).toEqual({ short: 30, standard: 45, long: 60 });
+    expect(WORKOUT_LENGTH_MINUTES).toMatchObject({ short: 30, standard: 45, long: 60 });
+  });
+
+  it("can't be Quick, which is only for one Workout", () => {
+    expect(WorkoutLength.safeParse("quick").success).toBe(false);
+    expect(UserProfile.partial().safeParse({ workoutLength: "quick" }).success).toBe(false);
+    expect(UserUpdate.safeParse({ profile: { workoutLength: "quick" } }).success).toBe(false);
+    expect(OnboardingProfile.safeParse({ ...onboardingAnswers, workoutLength: "quick" }).success).toBe(false);
+  });
+});
+
+describe("DayLength", () => {
+  it("is Quick at 20 minutes, then the usual Lengths, shortest to longest", () => {
+    expect(DayLength.options).toEqual(["quick", "short", "standard", "long"]);
+    expect(WORKOUT_LENGTH_MINUTES).toEqual({ quick: 20, short: 30, standard: 45, long: 60 });
   });
 
   it("refuses any other length", () => {
