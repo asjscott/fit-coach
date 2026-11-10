@@ -230,6 +230,28 @@ function requiredPick(candidates: readonly Candidate[], thisWeek: readonly Ledge
   );
 }
 
+// Athletic's two-legged loaded squat, in order of preference
+const TWO_LEGGED_SQUATS = ["back-squat", "goblet-squat"];
+
+// Athletic's other one a week: a heavy two-legged squat, which this Goal needs but which scores below one-sided leg work.
+// It never shares a Workout with the one-sided pick, and waits while its Muscles recover rather than coming back as a
+// last resort. Once done, it competes on score like any other
+function requiredSquat(
+  candidates: readonly Candidate[],
+  thisWeek: readonly LedgerWorkout[],
+  goal: Goal,
+  isRested: (candidate: Candidate) => boolean,
+) {
+  const trained = thisWeek.some(({ workoutExercises }) =>
+    workoutExercises.some(({ slug }) => TWO_LEGGED_SQUATS.includes(slug)),
+  );
+  if (goal !== "athletic" || trained) return undefined;
+  const squat = TWO_LEGGED_SQUATS.map((slug) => candidates.find(({ exercise }) => exercise.slug === slug)).find(
+    (candidate) => candidate !== undefined,
+  );
+  return squat && isRested(squat) ? squat : undefined;
+}
+
 type Selection = {
   candidates: readonly Candidate[];
   stages: readonly WeeklyBudget[];
@@ -330,7 +352,9 @@ export function planWorkout(input: PlanWorkoutInput): WorkoutPlan {
     budget,
     limitOf: muscleLimits(budget, Math.max(1, daysPerWeek - thisWeek.length)),
     isRested,
-    required: requiredPick(candidates, thisWeek, { goal, budget, ledger }),
+    required:
+      requiredPick(candidates, thisWeek, { goal, budget, ledger }) ??
+      requiredSquat(candidates, thisWeek, goal, isRested),
   };
   const selected = selectExercises(selection, ledger);
   const held = heldBack(candidates, selected, tired);

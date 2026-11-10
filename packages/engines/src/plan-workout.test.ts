@@ -716,6 +716,65 @@ describe("planWorkout", () => {
     });
   });
 
+  describe("an athletic user's two-legged loaded squat", () => {
+    const oneSidedDone = logged("w1", "dumbbell-bulgarian-split-squat", 3);
+    const athletic = (more: Partial<PlanWorkoutInput> = {}) =>
+      plan({ goal: "athletic", equipmentProfile: fullHomeGym, workingLevels: [], assessment, ...more })
+        .plannedExercises;
+
+    it("is back squat, first in the Workout with 3 Sets, where the equipment allows", () => {
+      expect(athletic({ workouts: [oneSidedDone] })[0]).toMatchObject({ slug: "back-squat", sets: 3 });
+    });
+
+    it("is goblet squat on dumbbells", () => {
+      expect(slugs({ goal: "athletic", workouts: [logged("w1", "dumbbell-reverse-lunge", 3)] })[0]).toBe(
+        "goblet-squat",
+      );
+    });
+
+    it("isn't given on bodyweight only", () => {
+      const chosen = slugs({
+        goal: "athletic",
+        equipmentProfile: BUILT_IN_EQUIPMENT.bodyweight_only,
+        workingLevels: [],
+        assessment,
+        workouts: [oneSidedDone],
+      });
+      expect(chosen.length).toBeGreaterThan(0);
+      expect(chosen).not.toContain("goblet-squat");
+      expect(chosen).not.toContain("back-squat");
+    });
+
+    it("isn't given to another Goal", () => {
+      expect(onFullGym({ goal: "build_muscle", workouts: [oneSidedDone] })[0]).not.toBe("back-squat");
+    });
+
+    it("waits for a Workout without the one-sided Exercise, so each Workout has at most one required pick", () => {
+      expect(athletic()[0]?.slug).toBe("dumbbell-bulgarian-split-squat");
+    });
+
+    it("is needed once a week", () => {
+      const workouts = [oneSidedDone, logged("w2", "back-squat", 3)];
+      expect(athletic({ workouts })[0]?.slug).not.toBe("back-squat");
+    });
+
+    it("waits while quads are recovering, rather than coming back as a last resort", () => {
+      // Last Sunday evening's leg day leaves quads over the fatigue limit at Monday noon, with the squat still needed
+      // this week. Goblet squat is the only Exercise for quads here, so the recovery filter's last resort brings it
+      // back, but not first
+      const sundayEvening = "2026-11-02T04:00:00.000Z";
+      const legDay = {
+        id: "leg-day",
+        startedAt: sundayEvening,
+        workoutExercises: [{ slug: "goblet-squat", sets: loggedSets(6, sundayEvening) }],
+      };
+      const now = new Date("2026-11-02T17:00:00Z");
+      const chosen = slugs({ goal: "athletic", workingLevels: [kg("goblet-squat", 20)], workouts: [legDay], now });
+      expect(chosen).toContain("goblet-squat");
+      expect(chosen[0]).not.toBe("goblet-squat");
+    });
+  });
+
   describe("Set targets", () => {
     const planned = (slug: string, more?: Parameters<typeof plan>[0]) =>
       plan(more).plannedExercises.find((exercise) => exercise.slug === slug);
