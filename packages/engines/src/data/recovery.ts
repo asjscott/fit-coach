@@ -3,8 +3,12 @@ import type { Exercise } from "@fit/shared";
 // The Recovery Exercises, for the Recovery Workout only (recovery-workout.ts). All timed, with no Pattern: they credit
 // nothing, and the planner never picks them. The muscles say what they loosen, for the Exercise's page
 
-const recovery = (exercise: Omit<Exercise, "recovery" | "ballistic" | "patterns" | "loadType" | "videoUrl">) =>
+const recovery = (
+  exercise: Omit<Exercise, "recovery" | "ballistic" | "patterns" | "loadType" | "videoUrl" | "oneSet"> &
+    Partial<Pick<Exercise, "oneSet">>,
+) =>
   ({
+    oneSet: false,
     ...exercise,
     patterns: [],
     loadType: "timed",
@@ -21,6 +25,7 @@ export const RECOVERY: Exercise[] = [
     equipmentOptions: [[]],
     unilateral: false,
     secondsPerSet: 1200,
+    oneSet: true,
     regression: null,
     progression: null,
     avoidWith: [],

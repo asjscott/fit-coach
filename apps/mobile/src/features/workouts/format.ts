@@ -1,5 +1,5 @@
 import type { BuiltInEquipment, InProgressWorkoutExercise, Set, SetTarget, SetValues, Workout } from "@fit/shared";
-import { exerciseRestSeconds, pairRestSeconds } from "@fit/engines";
+import { pairRestPlan } from "@fit/engines";
 import { getCalendars } from "expo-localization";
 import { bandLevelLabels } from "../equipment/loads";
 import { exerciseName } from "./library";
@@ -139,14 +139,16 @@ export function elapsedClockLabel(ms: number) {
 }
 
 // A Workout Exercise's Sets on one line, each unit said once where it can be: "18 kg × 10, 10, 8",
-// "16 kg × 10, 18 kg × 8", "12, 10 reps", "45, 40 s". Empty with no Sets
+// "16 kg × 10, 18 kg × 8", "12, 10 reps", "45, 40 s", "1 min 30 s, 1 min 15 s". Empty with no Sets
 export function setsSummary(sets: readonly Set[]) {
   const parts = sets.map(setParts);
   const first = parts[0];
   if (!first) return "";
-  // Everything about a Set but its last number, e.g. 18 "kg ×" for weighted Sets, or "reps"
+  // Everything about a Set but its last number, e.g. 18 "kg ×" for weighted Sets, or "reps". Only a weight is said
+  // once before the numbers: "1 min 30, 15 s" would misread
   const frame = (set: [number, string][]) => JSON.stringify([...set.slice(0, -1), set.at(-1)?.[1]]);
-  if (!parts.every((set) => frame(set) === frame(first))) return sets.map(describeSet).join(", ");
+  const sharesFrame = parts.every((set) => frame(set) === frame(first));
+  if (!sharesFrame || (first.length > 1 && sets[0]?.kind !== "external")) return sets.map(describeSet).join(", ");
   const lead = first.slice(0, -1).map(([value, unit]) => `${value} ${unit} `);
   const unit = first.at(-1)?.[1];
   return `${lead.join("")}${parts.map((set) => set.at(-1)?.[0]).join(", ")}${unit ? ` ${unit}` : ""}`;
@@ -165,17 +167,10 @@ export function setTargetLabel(target: SetTarget) {
     case "reps":
       return describeSet({ kind: "bodyweight", reps: target.reps });
     case "seconds":
-      return timedTargetLabel(target.seconds);
+      return describeSet({ kind: "timed", seconds: target.seconds });
     case "band":
       return `${bandLevelLabels[target.level]} band × ${target.reps}`;
   }
-}
-
-// "45 s", "20 min", "1 min 30 s"
-function timedTargetLabel(seconds: number) {
-  if (seconds < 60) return `${seconds} s`;
-  const over = seconds % 60;
-  return `${Math.floor(seconds / 60)} min${over ? ` ${over} s` : ""}`;
 }
 
 type PlannedSets = NonNullable<InProgressWorkoutExercise["planned"]>;
@@ -217,8 +212,15 @@ export function setParts(set: Set | SetValues): [number, string][] {
     case "bodyweight":
       return [[set.reps, "reps"]];
     case "timed":
-      return [[set.seconds, "s"]];
+      return durationParts(set.seconds);
   }
+}
+
+// A minute or more reads in minutes, as the walk's "20 min" (#109): "45 s", "1 min 30 s"
+function durationParts(seconds: number): [number, string][] {
+  if (seconds < 60) return [[seconds, "s"]];
+  const over = seconds % 60;
+  return [[Math.floor(seconds / 60), "min"], ...(over ? [[over, "s"] as [number, string]] : [])];
 }
 
 // A Set as its Load Type records it: "16 kg × 10"; add " per side" for a one-sided Exercise
@@ -233,22 +235,12 @@ export const supersetLetter = (index: number) => String.fromCharCode(65 + index)
 // The superset box's banner mid-round (#96). The name is the library's, as it is (#111)
 export const straightToLabel = (name: string) => `No rest: straight to ${name}`;
 
-type PairMember = Pick<InProgressWorkoutExercise, "slug" | "sets" | "planned">;
-
-const isDone = ({ sets, planned }: PairMember) => !!planned && sets.length >= planned.sets;
-
-// The superset box's note on its rests, as restAfterSet gives them (#111): the longer of the two after each round both
-// are in. Once the one with fewer Sets has all of them and its last round is over, the other rests its own time
-export function supersetNote(pair: readonly [PairMember, PairMember]) {
-  const [first, second] = pair;
-  const pairSeconds = pairRestSeconds(first.slug, second.slug);
+// The superset box's note on its rests, as pairRestPlan gives them (#111)
+export function supersetNote(pair: Parameters<typeof pairRestPlan>[0]) {
+  const { pairSeconds, fewer, done } = pairRestPlan(pair);
   const pairNote = `No rest between them, then ${pairSeconds} s rest`;
-  const plannedSets = ({ planned }: PairMember) => planned?.sets ?? 0;
-  if (plannedSets(first) === plannedSets(second)) return pairNote;
-  const [fewer, more] = plannedSets(first) < plannedSets(second) ? [first, second] : [second, first];
-  const own = exerciseRestSeconds(more.slug);
-  if (isDone(fewer) && more.sets.length >= fewer.sets.length) {
-    return `${exerciseName(fewer.slug)} is done: ${own} s rest between Sets`;
-  }
-  return own === pairSeconds ? pairNote : `${pairNote}. Once ${exerciseName(fewer.slug)} is done, ${own} s`;
+  if (!fewer) return pairNote;
+  const name = exerciseName(fewer.slug);
+  if (done === fewer.slug) return `${name} is done: ${fewer.otherSeconds} s rest between Sets`;
+  return fewer.otherSeconds === pairSeconds ? pairNote : `${pairNote}. Once ${name} is done, ${fewer.otherSeconds} s`;
 }
