@@ -27,6 +27,8 @@ type PlannedWorkoutSheetProps = {
   isOpen: boolean;
   onClose: () => void;
   cue?: string;
+  // Why the Coach planned it, worded, in the order to show
+  reasons: string[];
   plannedExercises: DayExercise[];
   estimatedSeconds: number;
   dropped: string[];
@@ -51,6 +53,7 @@ export function PlannedWorkoutSheet({
   isOpen,
   onClose,
   cue,
+  reasons,
   plannedExercises,
   estimatedSeconds,
   dropped,
@@ -94,6 +97,11 @@ export function PlannedWorkoutSheet({
               <Text size="sm" color="muted">
                 {todayPlanLine(plannedExercises, estimatedSeconds)}
               </Text>
+              {reasons.map((reason) => (
+                <Text key={reason} size="sm" color="muted">
+                  {reason}
+                </Text>
+              ))}
               {cue ? (
                 <Text size="sm" color="muted">
                   {cue}

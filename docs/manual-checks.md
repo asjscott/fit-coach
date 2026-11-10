@@ -172,6 +172,17 @@ Expo Go can't reload offline. Load the app, then turn on airplane mode without c
 - [ ] **C5** The next day the check-in is gone: the card is back (if there's a plan) and the Workout is full.
   - iOS: Result: · Android: Result: · Notes:
 
+## The Coach says why (#94)
+
+Needs the API deployed from this branch, so plans are stored with their reasons.
+
+- [ ] **W1** The day after a heavy leg day (6 or more Sets of squats or lunges the evening before), the "Time to train." card has a line under the Sets and time: "Legs are recovering from <that day>." The headline is unchanged. At phone width the line wraps rather than running off the card.
+  - iOS: Result: · Android: Result: · Notes:
+- [ ] **W2** Open "See or change this Workout": under the Sets and time it lists every reason, recovering first, such as "Legs are recovering from Tuesday." then "Back is furthest behind this week." Checking in lighter adds "lighter after your check-in" without taking the reasons away.
+  - iOS: Result: · Android: Result: · Notes:
+- [ ] **W3** Once every Workout of the week is done and you train anyway, the line reads "This week's work is done. This one's extra."
+  - iOS: Result: · Android: Result: · Notes:
+
 ## Over time
 
 These need real weeks of training on `dev`, so run them while M5's gaps are built.
