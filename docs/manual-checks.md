@@ -159,6 +159,19 @@ Expo Go can't reload offline. Load the app, then turn on airplane mode without c
 - [ ] **Q1** In airplane mode, open the Next Workout sheet and choose Quick. The Length row reads Quick, Short, Standard, Long and wraps rather than running off the screen on a narrow phone. The card shows about two Exercises and 20 minutes or less. Finish it once signal is back, and the next plan is on your usual Length again, with Profile still showing it.
   - iOS: Result: · Android: Result: · Notes:
 
+## Daily check-in (#92)
+
+- [ ] **C1** With a plan on Today, the check-in card sits below "Time to train." (or "Rest today."). At phone width the five chips of each row fit on one line, with "Poor … Great" and "None … Very" under the ends, and nothing scrolls sideways. Start workout works without checking in.
+  - iOS: Result: · Android: Result: · Notes:
+- [ ] **C2** In airplane mode, check in with sleep 1, energy 2, soreness 5. The card goes, and the day's card adds "· lighter after your check-in" with fewer Sets. Force-quit and reopen, still offline: the lighter Workout and no card.
+  - iOS: Result: · Android: Result: · Notes:
+- [ ] **C3** Open "See or change this Workout": it says "Lighter after your check-in". "Full Workout" gives back the whole Workout, and tapping it again makes it lighter again. Change a rating there to all 5s and soreness 1: the Workout is full straight away.
+  - iOS: Result: · Android: Result: · Notes:
+- [ ] **C4** Check in lighter, start the Workout, then go back to Today: the started Workout keeps its Sets. Finish it, and the card doesn't come back.
+  - iOS: Result: · Android: Result: · Notes:
+- [ ] **C5** The next day the check-in is gone: the card is back (if there's a plan) and the Workout is full.
+  - iOS: Result: · Android: Result: · Notes:
+
 ## Over time
 
 These need real weeks of training on `dev`, so run them while M5's gaps are built.

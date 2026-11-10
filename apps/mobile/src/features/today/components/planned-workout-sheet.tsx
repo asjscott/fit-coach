@@ -1,4 +1,4 @@
-import type { DayExercise } from "@fit/engines";
+import type { CheckIn, DayExercise } from "@fit/engines";
 import type { BuiltInEquipment, DayLength } from "@fit/shared";
 import { useRef } from "react";
 import { StyleSheet, View } from "react-native";
@@ -20,6 +20,7 @@ import { builtInEquipmentLabels, noAlternativeLabel, plannedSetsLabel } from "@/
 import { exerciseName, libraryExercise } from "@/features/workouts/library";
 import { spacing, useTheme } from "@/theme";
 import { todayPlanLine } from "../today-status";
+import { CheckInRatings } from "./check-in-card";
 import { TodayCardLink } from "./today-card";
 
 type PlannedWorkoutSheetProps = {
@@ -35,6 +36,11 @@ type PlannedWorkoutSheetProps = {
   equipmentChoices: BuiltInEquipment[];
   onChooseEquipment: (equipment?: BuiltInEquipment) => void;
   onPickAlternative: (replaces: string, slug: string) => void;
+  checkIn: CheckIn | null;
+  onCheckIn: (checkIn: CheckIn) => void;
+  lighter: boolean;
+  fullWorkout: boolean;
+  onChooseFullWorkout: (fullWorkout: boolean) => void;
   onStart: () => void;
   // The Recovery Workout, on offer every day in place of this one
   onStartRecovery: () => void;
@@ -54,6 +60,11 @@ export function PlannedWorkoutSheet({
   equipmentChoices,
   onChooseEquipment,
   onPickAlternative,
+  checkIn,
+  onCheckIn,
+  lighter,
+  fullWorkout,
+  onChooseFullWorkout,
   onStart,
   onStartRecovery,
 }: PlannedWorkoutSheetProps) {
@@ -111,6 +122,25 @@ export function PlannedWorkoutSheet({
                   />
                 ))}
               </HStack>
+            ) : null}
+            {checkIn ? (
+              <View style={{ gap: spacing[2] }}>
+                {lighter ? (
+                  <Text size="sm" color="muted">
+                    Lighter after your check-in
+                  </Text>
+                ) : null}
+                {lighter || fullWorkout ? (
+                  <HStack spacing={2}>
+                    <Chip
+                      label="Full Workout"
+                      selected={fullWorkout}
+                      onPress={() => onChooseFullWorkout(!fullWorkout)}
+                    />
+                  </HStack>
+                ) : null}
+                <CheckInRatings ratings={checkIn} onRate={(key, rating) => onCheckIn({ ...checkIn, [key]: rating })} />
+              </View>
             ) : null}
             <View>
               {plannedExercises.map(({ slug, sets, target, replaces, otherOptions }) => (
