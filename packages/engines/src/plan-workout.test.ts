@@ -644,7 +644,11 @@ describe("planWorkout", () => {
       });
     });
 
-    it("says the Workout is extra once the week's budget is met", () => {
+    it("says the Workout is extra once This Week reaches the days per week", () => {
+      expect(plan({ workouts: earlierWorkouts(4), daysPerWeek: 4 }).reasons).toEqual([{ code: "budget-met" }]);
+    });
+
+    it("gives the usual reasons below the days per week, even with every Muscle's budget met", () => {
       const workouts = [
         week({
           "goblet-squat": 20,
@@ -655,7 +659,17 @@ describe("planWorkout", () => {
           plank: 20,
         }),
       ];
-      expect(plan({ workouts, workingLevels: withBench }).reasons).toEqual([{ code: "budget-met" }]);
+      expect(plan({ workouts, workingLevels: withBench }).reasons).toEqual([]);
+      expect(plan({ workouts: earlierWorkouts(3), daysPerWeek: 4 }).reasons).toEqual([back]);
+    });
+
+    it("doesn't count a Recovery Workout towards the days per week", () => {
+      const walk = {
+        id: "walk",
+        startedAt: earlierThisWeek,
+        workoutExercises: [{ slug: "walk", sets: loggedSets(1) }],
+      };
+      expect(plan({ workouts: [...earlierWorkouts(3), walk], daysPerWeek: 4 }).reasons).toEqual([back]);
     });
 
     it("names the group furthest behind its budget this week", () => {

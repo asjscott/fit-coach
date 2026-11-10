@@ -366,6 +366,14 @@ export function planWorkout(input: PlanWorkoutInput): WorkoutPlan {
     plannedExercises: withAlternatives(selected, builtInCandidates(input, thisWeek, lastWeek)),
     ...(goal === "athletic" && { cue: ATHLETIC_CUE }),
     heldBack: held,
-    reasons: planReasons({ heldBack: held, workouts, ledger, budget, timeZone }),
+    reasons: planReasons({
+      heldBack: held,
+      workouts,
+      ledger,
+      budget,
+      workoutsThisWeek: thisWeek.length,
+      daysPerWeek,
+      timeZone,
+    }),
   };
 }
