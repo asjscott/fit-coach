@@ -41,6 +41,8 @@ export const Exercise = z
     ballistic: z.boolean().default(false), // the default covers an exercises collection seeded before this field
     // For a Recovery Workout only: credits nothing and the planner never picks it. Defaults like ballistic
     recovery: z.boolean().default(false),
+    // Done as one Set, like the walk (#109): no rest after it and no Set 2. Defaults like ballistic
+    oneSet: z.boolean().default(false),
     secondsPerSet: z.number().int().positive(), // including rest
     regression: z.string().nullable(), // slug of the easier variant
     progression: z.string().nullable(), // slug of the harder variant

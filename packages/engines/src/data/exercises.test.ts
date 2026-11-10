@@ -40,6 +40,10 @@ describe("exercise library", () => {
     expect(recovery.every((e) => e.loadType === "timed")).toBe(true);
   });
 
+  it("marks only the walk as one Set (#109)", () => {
+    expect(EXERCISES.filter((e) => e.oneSet).map((e) => e.slug)).toEqual(["walk"]);
+  });
+
   it.each(EXERCISES.map((e) => [e.slug, e] as const))("%s passes Exercise.parse", (_slug, exercise) => {
     expect(() => Exercise.parse(exercise)).not.toThrow();
   });
