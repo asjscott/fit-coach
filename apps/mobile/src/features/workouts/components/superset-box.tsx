@@ -1,4 +1,4 @@
-import { pairRestSeconds, supersetTurn } from "@fit/engines";
+import { supersetTurn } from "@fit/engines";
 import type { InProgressWorkoutExercise } from "@fit/shared";
 import { useState } from "react";
 import { StyleSheet, View } from "react-native";
@@ -8,7 +8,7 @@ import { SectionLabel } from "@/components/section-label";
 import { HStack } from "@/components/stack";
 import { Text } from "@/components/text";
 import { fonts, radii, spacing, useTheme } from "@/theme";
-import { describeSet, plannedSetsLabel } from "../format";
+import { describeSet, plannedSetsLabel, straightToLabel, supersetNote } from "../format";
 import { exerciseName, libraryExercise } from "../library";
 import { ExerciseBox, ExerciseLogging } from "./current-exercise-box";
 import { RestTimer } from "./rest-timer";
@@ -27,7 +27,8 @@ export type SupersetBoxProps = {
 
 // A superset being logged (#96), stacked: one box holds both Exercises, A1 above A2. The one whose turn it is is open
 // with its steppers, the other shrinks to its name, its Sets so far and "Up next". Logging a Set opens the other,
-// with no rest between them, and the rest after the pair's second Set is the longer of the two
+// with no rest between them, and the rest after the pair's second Set is the longer of the two. Once the one with fewer
+// Sets is done, the other rests its own time, as the note says
 export function SupersetBox({ pair, letter, currentId, onChoose }: SupersetBoxProps) {
   const { colors } = useTheme();
   const [first, second] = pair;
@@ -47,7 +48,7 @@ export function SupersetBox({ pair, letter, currentId, onChoose }: SupersetBoxPr
     <ExerciseBox>
       <SectionLabel color="accent">{`Superset ${letter} · Round ${round} of ${rounds}`}</SectionLabel>
       <Text size="sm" color="muted" style={styles.note}>
-        {`No rest between them, then ${pairRestSeconds(first.slug, second.slug)} s rest`}
+        {supersetNote(pair)}
       </Text>
       {pair.map((workoutExercise, i) => {
         const open = workoutExercise.id === openId;
@@ -103,7 +104,7 @@ export function SupersetBox({ pair, letter, currentId, onChoose }: SupersetBoxPr
         <Alert action="info" style={styles.banner}>
           <AlertIcon />
           <AlertText size="md" weight="semiBold">
-            {`No rest: straight to ${exerciseName(straightTo.slug).toLowerCase()}`}
+            {straightToLabel(exerciseName(straightTo.slug))}
           </AlertText>
         </Alert>
       ) : null}

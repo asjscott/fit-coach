@@ -107,9 +107,10 @@ export function checkInLighterRow({ lighter, fullWorkout }: { lighter: boolean; 
   return { place: chip || held, note: lighter, chip };
 }
 
-// The plan's sheet, when the Workout pairs Exercises to fit its Length (#96), and under each paired Exercise
+// The plan's sheet, when the Workout pairs Exercises to fit its Length (#96), and under each paired Exercise. The
+// partner's name is the library's, as it is (#111)
 export const SUPERSETS_TO_FIT = "Paired into supersets to fit the time";
-export const supersetWithLabel = (partnerName: string) => `Superset with ${partnerName.toLowerCase()}`;
+export const supersetWithLabel = (partnerName: string) => `Superset with ${partnerName}`;
 
 // On the Rest Day card and in the plan's sheet
 export const RECOVERY_INSTEAD = "Recovery workout instead";

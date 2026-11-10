@@ -63,6 +63,27 @@ describe("restAfterSet", () => {
     expect(secondsOf(restAfterSet(workout(3, 4, 3), "row", now))).toBe(60);
   });
 
+  // Seen in check S2: a 1-Set chin-up (120 s Sets, 90 s rest) paired with 3 Sets of lateral raise (60 s, 45 s rest)
+  describe("once one Exercise of a pair has all its Sets", () => {
+    const chinUpWithLateralRaise = (chinUpSets: number, lateralRaiseSets: number, chinUpFirst = true) => {
+      const chinUp = workoutExercise("chin-up", "chin-up", chinUpSets, 1, "raise");
+      const raise = workoutExercise("raise", "dumbbell-lateral-raise", lateralRaiseSets, 3, "chin-up");
+      return { workoutExercises: chinUpFirst ? [chinUp, raise] : [raise, chinUp] };
+    };
+
+    it.each([true, false])("rests the pair's 90 s after round 1, then the lateral raise's own 45 s", (chinUpFirst) => {
+      expect(restAfterSet(chinUpWithLateralRaise(1, 0, chinUpFirst), "chin-up", now)).toBeNull();
+      expect(secondsOf(restAfterSet(chinUpWithLateralRaise(1, 1, chinUpFirst), "raise", now))).toBe(90);
+      expect(secondsOf(restAfterSet(chinUpWithLateralRaise(1, 2, chinUpFirst), "raise", now))).toBe(45);
+      expect(secondsOf(restAfterSet(chinUpWithLateralRaise(1, 3, chinUpFirst), "raise", now))).toBe(45);
+    });
+
+    it("rests the pair's 90 s when the lateral raise goes first in round 1", () => {
+      expect(restAfterSet(chinUpWithLateralRaise(0, 1), "raise", now)).toBeNull();
+      expect(secondsOf(restAfterSet(chinUpWithLateralRaise(1, 1), "chin-up", now))).toBe(90);
+    });
+  });
+
   describe("in the Recovery Workout", () => {
     const timed: Set = { kind: "timed", seconds: 45, loggedAt: now.toISOString() };
     const recovery = {

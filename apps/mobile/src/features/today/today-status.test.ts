@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 import {
   checkInLighterRow,
   showsCheckIn,
+  supersetWithLabel,
   todayCard,
   todayLoggedLine,
   todayPlan,
@@ -237,5 +238,12 @@ describe("checkInLighterRow", () => {
       note: false,
       chip: false,
     });
+  });
+});
+
+describe("supersetWithLabel", () => {
+  it("names the partner exactly as the library does", () => {
+    expect(supersetWithLabel("Barbell Romanian deadlift")).toBe("Superset with Barbell Romanian deadlift");
+    expect(supersetWithLabel("Prone Y-T-W raise")).toBe("Superset with Prone Y-T-W raise");
   });
 });
