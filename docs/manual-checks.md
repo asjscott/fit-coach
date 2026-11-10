@@ -1,6 +1,6 @@
 # Manual checks on the phone
 
-Checks still to run for Planned Workouts (spec #77). The rest passed on an iPhone 14 on 2026-11-06.
+Checks still to run on the phone. The rest have passed.
 
 Run from `apps/mobile` with `pnpm ios` / `pnpm android`. If something breaks, `apps/mobile/.expo/dev.log` has the error. Use a physical phone where you can: airplane mode is the point of the offline checks.
 
@@ -10,19 +10,16 @@ Result codes: **✅ pass** · **❌ fail** · **⚠️ works but feels off** · 
 
 ## Session
 
-- Date: 2026-11-06
-- Device(s) and OS version: iPhone 17 Pro simulator, iOS 26.4
-- Build (dev build / Expo Go / web, browser): Release simulator build, API on localhost
-- Branch and commit: `dev`, ecdf9a5
-- Simulator run: it has no airplane mode, so "offline" here means the API was down and Clerk stayed online. Ticked boxes passed here on iOS only.
-- Phone run, 2026-11-09: iPhone 14, Release build from `fix/p11-clerk-offline-cold-start`, real airplane mode. P11 to P15 and P20 passed.
-- Simulator run of M5's gaps, 2026-11-09: iPhone 17 Pro simulator (iOS 26.4) and a Pixel emulator (Android, 411 dp wide), both in Expo Go from `feat/m5-gaps` at 01eacab. Each had its own in-memory API (`dev:local` plus the seeded Exercises) and the Clerk stub. Onboarding, the Assessment and the leg days for W1 were posted to the API rather than tapped through. "Offline" means that device's API was cut off; the device kept its network. Vibration was read from Android's vibrator log.
+- Date:
+- Device(s) and OS version:
+- Build (dev build / Expo Go / web, browser):
+- Branch and commit:
 
 ## Before you start
 
 - **Test accounts** on the Clerk dev instance: a `+clerk_test` email takes the code `424242`.
 
-### A release build, for P11 and P14
+### A release build
 
 Expo Go can't reload offline, and the repo has no EAS setup until M8, so build locally on your Mac. A Release build carries its JavaScript inside the app, so it opens with no Metro and no signal.
 
@@ -91,7 +88,7 @@ The API deployed on Render runs `main`, which has no Planned Workouts, so the ph
 
 9. If the phone says "Untrusted Developer": **Settings → General → VPN & Device Management**, tap your Apple ID under Developer App, then **Trust**.
 10. Open the app. When it asks to find devices on your local network, tap **Allow**. Without it the app can't reach the API on your Mac.
-11. Sign in with a test account and finish the Assessment, so Today has a plan. Run P11 from there, then P14, and P12, P13, P15 and P20 while you're in real airplane mode.
+11. Sign in with a test account and finish the Assessment, so Today has a plan. Run the checks from there.
 
 **Airplane mode**
 
@@ -129,79 +126,29 @@ npx expo run:android --variant release --device
 - [ ] **P9** The estimated time is honest: run a full Standard Workout with a timer. The 5-minute warm-up is a spec assumption "unless it proves wrong on a phone".
   - iOS: Result: · Android: Result: · Notes:
 
-## Real offline (airplane mode)
-
-Expo Go can't reload offline. Load the app, then turn on airplane mode without closing it: that covers P12, P13, P15 and P20. P11 and P14 need a force-quit, so they need a release build on the phone.
-
-- [x] **P11** **Clerk on a cold start with no signal.** Have a plan on Today, turn on airplane mode, force-quit, reopen. Today and the card should appear. If the app stays blank, Clerk's `isLoaded` stayed false: `(app)/_layout.tsx` renders nothing until then, and nothing else can pass. The stand-in couldn't show this. A likely fix is `__experimental_resourceCache` from `@clerk/expo/resource-cache`.
-  - iOS: Result: ✅ · Android: Result: · Notes: Blank until Clerk was given its resource cache. With it, Today and the card appear in airplane mode.
-- [x] **P12** Still in airplane mode: change the Length and equipment. The card follows, with your usual Length still selected first.
-  - iOS: Result: ✅ · Android: Result: · Notes: Standard was selected first. Short went from 8 Exercises and 23 Sets to 5 and 15; Bodyweight only swapped in alternatives.
-- [x] **P13** Start, log and finish. Start isn't held up by the Previous Sets request for long (each has a 4 s timeout). Today says "Connect to plan your next Workout".
-  - iOS: Result: ✅ · Android: Result: · Notes: With a server that never answers, the five Previous Sets requests ran in parallel and Start took about 4 s. Finish was with connections refused. "Connect to plan your next Workout" showed. Offline, the ring went from 3 of 3 to 1 of 3, as History isn't known.
-- [x] **P20** After that finish, Today shows "Done for today." with "Connect to plan your next Workout" on the card.
-  - iOS: Result: ✅ · Android: Result: · Notes: "Done for today." with "Connect to plan your next Workout" on the card.
-- [x] **P14** Force-quit and reopen, still offline: the Pending Workout, the message and native storage all hold.
-  - iOS: Result: ✅ · Android: Result: · Notes: Force-quit and relaunch: the Pending Workout, the message and all three stored keys held. Clerk was still online, so this doesn't replace P11.
-- [x] **P15** Turn signal back on, without touching the app, then with the app in the background. The upload and next plan arrive.
-  - iOS: Result: ✅ · Android: Result: · Notes:
-
 ## Rest timer (#95)
 
 `expo-keep-awake` is a new native module, so these need a new development or release build. Leave the phone's auto-lock at its usual setting (30 s to 1 min makes T2 quick).
 
-- [x] **T1** Log a Goblet squat Set and wait out the rest (1:30). The phone vibrates once when it reaches 0, with no sound, and the timer goes. Then log a Set, put the app in the background past the end, and come back: the timer has gone, with no vibration on return.
-  - iOS: Result: ✅ · Android: Result: ✅ · Notes: Android logged one 400 ms vibration when the Goblet squat rest reached 0, and none when it came back from the background past a 2:30 deadlift rest. Separately, see R1: the walk gets a 19:30 rest.
 - [ ] **T2** Rerun on both phones, on a Release build (`--configuration Release` / `--variant release`, not `pnpm ios`): a development build keeps the whole app awake. Don't watch the screen while you wait. Put the phone face down, or on iPhone turn off Settings › Face ID & Passcode › Attention Aware Features (on Android, Settings › Display › Screen attention). Either setting keeps the screen on while you look at it. Then:
   1. Before starting, leave the phone on Today past its auto-lock time: it locks. If it doesn't, the cause isn't the Workout, so note that and stop.
-  - Fail: it still doesn't autolock, and nor does Notes, with Auto-Lock on. So it isn't the app. It's likely the phone's development set-up (Developer Mode, pairing with Xcode).
   2. Start a Workout and leave it on the logging screen, then on Today: the screen stays on.
   3. Finish, then leave it on Today and again on History: it dims and locks.
   4. Start another and Discard it, then leave it on Today: it locks.
   5. In airplane mode, start, log a Set and finish, so the Workout is Pending, then leave it on Today: it locks.
-  - iOS: Result: · Android: Result: · Notes: Last run (iOS ⚠️, Android ⏭): the phone didn't lock after finishing, on Today or History (#108). #108 couldn't reproduce it. In Expo Go on the iPhone 17 Pro simulator, with Expo's dev hold removed, iOS's idle timer was read every 2 s. It came on at Start and went off at Discard, including after a trip to the background. On the web build, the wake lock was released after Finish and after Discard. Step 1 shows whether something outside the Workout is holding the screen on.
-
-## Quick (#98)
-
-- [x] **Q1** In airplane mode, open the Next Workout sheet and choose Quick. The Length row reads Quick, Short, Standard, Long and wraps rather than running off the screen on a narrow phone. The card shows about two Exercises and 20 minutes or less. Finish it once signal is back, and the next plan is on your usual Length again, with Profile still showing it.
-  - iOS: Result: ⏭ · Android: Result: ✅ · Notes: Quick was 2 Exercises · 5 Sets · about 18 min. At 320 dp (display density raised) the row wraps, with Long on a second line. After finishing, the sheet was back on Standard and Profile read "Standard (45 minutes)". On iOS only the row was seen: one line at 402 pt.
+  - iOS: Result: · Android: Result: · Notes:
 
 ## Daily check-in (#92)
 
-- [x] **C1** With a plan on Today, the check-in card sits below "Time to train." (or "Rest today."). At phone width the five chips of each row fit on one line, with "Poor … Great" and "None … Very" under the ends, and nothing scrolls sideways. Start workout works without checking in.
-  - iOS: Result: ✅ · Android: Result: ✅ · Notes: Under "Rest today." on iOS and "Time to train." on Android. The chips still fit on one line at 320 dp.
-- [x] **C2** In airplane mode, check in with sleep 1, energy 2, soreness 5. The card goes, and the day's card adds "· lighter after your check-in" with fewer Sets. Force-quit and reopen, still offline: the lighter Workout and no card.
-  - iOS: Result: ⏭ · Android: Result: ✅ · Notes: 6 Exercises · 16 Sets went to 4 · 11.
-- [x] **C3** Open "See or change this Workout": it says "Lighter after your check-in". "Full workout" gives back the whole Workout, and tapping it again makes it lighter again. Change a rating there to all 5s and soreness 1: the Workout is full straight away. Rerun after #112: sleep 5, energy 5 and soreness 5 still makes it lighter, and the card says "lighter after your check-in". Rerun after #113: the check-in chips don't move as the Workout goes from lighter to full or back. "Lighter after your check-in" and Full workout keep their space, empty when the Workout is full, from the moment the sheet opens, so tapping sleep 5, energy 5 and soreness 1 one after another sets those three, and tapping sleep 1 and energy 1 from a full Workout doesn't push the chips down either. On a usual phone and on a narrow one (320 dp).
-  - iOS: Result: ⏭ · Android: Result: ✅ · Notes: Sleep 5 and energy 5 made it full even with soreness still at 5, and the sheet's layout jumps up as the lighter row goes, so the next tap can land on the wrong chip. Decided: soreness 5 lightens on its own (#112). The jump is #113.
-- [x] **C4** Check in lighter, start the Workout, then go back to Today: the started Workout keeps its Sets. Finish it, and the card doesn't come back.
-  - iOS: Result: ⏭ · Android: Result: ✅ · Notes:
 - [ ] **C5** The next day the check-in is gone: the card is back (if there's a plan) and the Workout is full.
-  - iOS: Result: ⏭ · Android: Result: ⏭ · Notes: Needs a real next day.
-
-## The Coach says why (#94)
-
-Needs the API deployed from this branch, so plans are stored with their reasons.
-
-- [x] **W1** The day after a heavy leg day (6 or more Sets of squats or lunges the evening before), the "Time to train." card has a line under the Sets and time: "Legs are recovering from <that day>." The headline is unchanged. At phone width the line wraps rather than running off the card.
-  - iOS: Result: ✅ · Android: Result: ⏭ · Notes: "Legs are recovering from Sunday." The line was short enough to fit at 402 pt, so the wrap wasn't seen. Four Sets of goblet squats wasn't enough for the reason; six plus three lunges was.
-- [x] **W2** Open "See or change this Workout": under the Sets and time it lists every reason, recovering first, such as "Legs are recovering from Tuesday." then "Back is furthest behind this week." Checking in lighter adds "lighter after your check-in" without taking the reasons away.
-  - iOS: Result: ✅ · Android: Result: ✅ · Notes: iOS: "Legs are recovering from Sunday." then "Chest is furthest behind this week." Android, checked in lighter: "Back is recovering from today." and "Shoulders are furthest behind this week." stayed above "Lighter after your check-in".
-- [x] **W3** Once every Workout of the week is done and you train anyway, the line reads "This week's work is done. This one's extra."
-  - Rerun after #114: with the API deployed from this branch, finish as many Workouts this week as your days per week (a Recovery Workout doesn't count), then open Today. The card and "See or change this Workout" both read "This week's work is done. This one's extra." One Workout short of it, the reasons are as before (recovering, furthest behind).
-  - iOS: Result: ✅ · Android: Result: ✅ · Notes: Reached
+  - iOS: Result: · Android: Result: · Notes:
 
 ## Supersets (#96)
 
 A Workout pairs Exercises only when it wouldn't otherwise fit its Length, so choose Quick or Short on a plan of four or more Exercises. Pairs only form where the Patterns go together (push with pull or hinge, squat with core), never with a one-sided Exercise or a carry, so a plan without such Exercises may need Bodyweight only to swap some in. The sheet then says "Paired into supersets to fit the time" and shows "Superset with …" under each paired Exercise.
 
 - [ ] **S1** P9's timing check on a paired Workout: start one whose sheet shows at least one superset, note its "About N min", and run it in full with a timer, resting as the timer says and skipping nothing. A pair is timed at Sets × (the longer Exercise's Set + 30 s): does the real time come out within a few minutes of the estimate?
-  - iOS: Result: ⏭ · Android: Result: ⏭ · Notes: Deferred: timing checks (this and P9) wait until the app is in real use. A simulator can't run it, as a Set takes no time there.
-- [x] **S2** On the logging screen at phone width, the pair is one box, A1 above A2. The Exercise whose turn it is is open with its steppers; the other shows its name, Sets so far and "Up next". Log A1: A2 opens straight away with "No rest: straight to …" and no rest timer. Log A2: the rest timer runs the longer of the two rests, as the box's note says. The Sets show under their own Exercise in History afterwards.
-  - iOS: Result: ✅ · Android: Result: ✅ · Notes:
-  - Rerun after #111: on a pair where one Exercise has fewer Sets (a 1-Set chin-up with 3 Sets of lateral raise), the note first reads "No rest between them, then 90 s rest. Once Chin-up is done, 45 s". Log the chin-up, then the lateral raise: the rest is 90 s. The note now reads "Chin-up is done: 45 s rest between Sets", and the lateral raise's next Sets rest 45 s. "Superset with …" in the plan's sheet and "No rest: straight to …" on the logging screen use the library's names as they are: "Superset with Barbell Romanian deadlift".
-- [x] **S3** In airplane mode, open the sheet on a paired Workout and choose "No supersets": the pairs go, Sets are cut instead and the time stays within the Length. Tap it again and the pairs come back. Start without changing it, and the started Workout keeps the pairs.
-  - iOS: Result: ✅ · Android: Result: ✅ · Notes: Android, Standard: 7 Exercises · 19 Sets · about 40 min paired, 6 · 16 · about 39 min with No supersets. iOS, Quick on Bodyweight only: 11 Sets · 20 min paired, 10 Sets · 19 min without. Pairs only form where the Patterns go together (push with pull or hinge, squat with core) and never with a one-sided Exercise or a carry, so the iOS plan (a one-sided row, a carry and four pushes) had no pairs at any Length until Bodyweight only swapped in Exercises that pair. The tip above, Quick or Short on four or more Exercises, isn't always enough.
+  - iOS: Result: · Android: Result: · Notes:
 
 ## Over time
 
@@ -211,20 +158,13 @@ These need real weeks of training on `dev`, so run them while M5's gaps are buil
   - iOS: Result: · Android: Result: · Notes:
 - [ ] **P17** Week after week, do the same Exercises carry on, and do Previous Sets stay useful?
   - iOS: Result: · Android: Result: · Notes:
-- [x] **P18** Sign out: the plan and the stored User are gone from the phone, and the next account doesn't see them.
-  - iOS: Result: ✅· Android: Result: · Notes: The storage table was empty after sign-out. Deleted bytes stayed in the SQLite file, which the app can't read. Signed in with second account and all good.
 
 ## Recovery Workout (#97)
 
 Needs `pnpm --filter @fit/api seed:exercises` run once from the main checkout (it needs `apps/api/.env`), so the Exercises tab lists the five Recovery Exercises.
 
-- [ ] **R1** On a Rest Day, the "Rest today." card has a "Recovery workout instead" link. Tap it: a Workout opens with a 20-minute walk, then hip flexor stretch, open book, cat-cow and world's greatest stretch at 2 × 45 s each, logged on the normal timed-Set screen. The walk's target reads "1 set · 20 min". Log it: no rest timer starts, and in place of a Set 2 there's "Next exercise", which opens the hip flexor stretch. A stretch's Set still starts its usual rest (1:10), and still offers a Set 3 after its 2. Rerun after #109.
-  - iOS: Result: ✅ · Android: Result: · Notes: Pass
-- [x] **R2** On a day that isn't a Rest Day, open the plan's sheet ("See or change this Workout"): "Recovery workout instead" is under Start, and starts the same Workout once the sheet has gone. Whatever Length is chosen, it's the same Workout.
-  - iOS: Result: · Android: Result: ✅ · Notes: Tried with Quick chosen.
-- [x] **R3** In airplane mode, start, log and finish a Recovery Workout. Today still offers the same Planned Workout (not "Connect to plan your next Workout"), This Week's count and day circles don't change, and tomorrow isn't a Rest Day because of it. Back online, it uploads and shows in History, and the plan on Today is the same one.
-  - iOS: Result: ✅ · Android: Result: · Notes: Pass
-  - Rerun after #110: History's "This week" now leaves the Recovery Workout out of its count and ring, but still lists it. Log the walk alone and check History reads "0 of 4 Workouts" with the walk listed; then after a training Workout too, "1 of 4 Workouts" and a ring of 1. Also check "Tomorrow" this time.
+- [ ] **R1** On a Rest Day, the "Rest today." card has a "Recovery workout instead" link. Tap it: a Workout opens with a 20-minute walk, then hip flexor stretch, open book, cat-cow and world's greatest stretch at 2 × 45 s each, logged on the normal timed-Set screen. The walk's target reads "1 set · 20 min". Log it: no rest timer starts, and in place of a Set 2 there's "Next exercise", which opens the hip flexor stretch. A stretch's Set still starts its usual rest (1:10), and still offers a Set 3 after its 2.
+  - iOS: Result: · Android: Result: · Notes:
 
 ## Your call
 
