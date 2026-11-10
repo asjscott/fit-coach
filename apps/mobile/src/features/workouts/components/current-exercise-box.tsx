@@ -1,4 +1,4 @@
-import { exerciseLoadsKg, isRatedTest, takesNoMoreSets } from "@fit/engines";
+import { exerciseLoadsKg, isRatedTest, takesAnotherSet, takesNoMoreSets } from "@fit/engines";
 import { RPE_SCALE, type InProgressWorkoutExercise, type LoadType, type SetValues } from "@fit/shared";
 import { useState, type ReactNode } from "react";
 import { StyleSheet, View } from "react-native";
@@ -28,15 +28,17 @@ export type CurrentExerciseBoxProps = {
   // Its place in the Workout, from 0, and how many there are
   position: number;
   count: number;
-  // An Assessment Workout's first test that isn't done, opened by "Next test" once this test is done; none when
-  // every test is done
-  onNextTest?: () => void;
+  // Offered once it takes no more Sets: an Assessment Workout's "Next test", none when every test is done, or "Next
+  // exercise" after the walk's one Set
+  next?: NextAction;
 };
 
+type NextAction = { label: string; onPress: () => void };
+
 // The Workout Exercise being logged: its name, target, Previous Sets, the Sets so far (each with a ⋯ to edit or delete it) and
-// steppers for the next Set, which starts from the previous one, then the rest after the last Set. A test that's done
-// takes no more Sets
-export function CurrentExerciseBox({ workoutExercise, position, count, onNextTest }: CurrentExerciseBoxProps) {
+// steppers for the next Set, which starts from the previous one, then the rest after the last Set. A test that's done,
+// or the walk once logged, takes no more Sets
+export function CurrentExerciseBox({ workoutExercise, position, count, next }: CurrentExerciseBoxProps) {
   return (
     <ExerciseBox>
       <HStack spacing={2} align="start">
@@ -48,7 +50,7 @@ export function CurrentExerciseBox({ workoutExercise, position, count, onNextTes
         </Stack>
         <WorkoutExerciseMenu workoutExercise={workoutExercise} />
       </HStack>
-      <ExerciseLogging workoutExercise={workoutExercise} onNextTest={onNextTest} />
+      <ExerciseLogging workoutExercise={workoutExercise} next={next} />
       <RestTimer />
     </ExerciseBox>
   );
@@ -61,13 +63,13 @@ export function ExerciseBox({ children }: { children: ReactNode }) {
 }
 
 // Logging one Workout Exercise, under its name: its target, Previous Sets, the Sets so far and the next Set's
-// steppers, or a done test's Next test. hideTarget leaves the target to the summary under the name, as a superset
-// shows it
+// steppers, or once it takes no more Sets, the next action. hideTarget leaves the target to the summary under the
+// name, as a superset shows it
 export function ExerciseLogging({
   workoutExercise,
-  onNextTest,
+  next,
   hideTarget = false,
-}: Pick<CurrentExerciseBoxProps, "workoutExercise" | "onNextTest"> & { hideTarget?: boolean }) {
+}: Pick<CurrentExerciseBoxProps, "workoutExercise" | "next"> & { hideTarget?: boolean }) {
   const { workout, logSet, editSet, deleteSet, nextSetDraft, protocolState, nextLoadKg } = useLogbook();
   const primaryEquipment = usePrimaryEquipmentProfile();
   const { showToast } = useToast();
@@ -83,8 +85,9 @@ export function ExerciseLogging({
   // In an Assessment Workout every Exercise is a test, and the Logbook says what it asks for next
   const protocol =
     workout?.assessment && primaryEquipment ? protocolState(workout, workoutExercise, primaryEquipment) : undefined;
-  const note = protocol && protocolNote(protocol, sets.length, loadType, { nextTest: !!onNextTest });
-  const testFinished = !!protocol && takesNoMoreSets(protocol);
+  const note = protocol && protocolNote(protocol, sets.length, loadType, { nextTest: !!next });
+  // A test that's done, or the walk once its one Set is logged (#109)
+  const done = (!!protocol && takesNoMoreSets(protocol)) || !takesAnotherSet(workoutExercise);
   const asksRpe = !!workout && isRatedTest(workout, loadType);
   const kgSteps: KgSteps = {
     stepKg: (kg, direction) => nextLoadKg(slug, kg, direction, primaryEquipment),
@@ -161,10 +164,10 @@ export function ExerciseLogging({
         >
           <LoadingButton label="Cancel" size="md" action="secondary" onPress={() => setEditingIndex(null)} />
         </SetEntry>
-      ) : testFinished ? (
-        onNextTest ? (
+      ) : done ? (
+        next ? (
           <View style={styles.entry}>
-            <LoadingButton label="Next test" size="lg" onPress={onNextTest} fullWidth />
+            <LoadingButton label={next.label} size="lg" onPress={next.onPress} fullWidth />
           </View>
         ) : null
       ) : (

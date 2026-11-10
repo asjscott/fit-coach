@@ -55,7 +55,10 @@ function InProgress({ workout }: { workout: InProgressWorkout }) {
     workoutExercises.map((we) => we.id),
     tests?.nextTestId ?? nextPlanned,
   );
-  const nextTestId = tests?.nextTestId;
+  // What the current Exercise offers once it takes no more Sets: an Assessment Workout's next test, else the next
+  // planned Exercise
+  const nextId = tests ? tests.nextTestId : nextPlanned;
+  const next = nextId ? { label: tests ? "Next test" : "Next exercise", onPress: () => choose(nextId) } : undefined;
   const groups = supersetGroups(workoutExercises);
   const pairs = groups.filter((group) => group.length === 2);
 
@@ -115,7 +118,7 @@ function InProgress({ workout }: { workout: InProgressWorkout }) {
                   workoutExercise={workoutExercise}
                   position={i}
                   count={workoutExercises.length}
-                  onNextTest={nextTestId ? () => choose(nextTestId) : undefined}
+                  next={next}
                 />
               </View>
             ) : (

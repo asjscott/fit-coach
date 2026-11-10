@@ -1,6 +1,6 @@
 import type { DayExercise } from "@fit/engines";
 import type { BuiltInEquipment, CheckIn, DayLength } from "@fit/shared";
-import { useRef } from "react";
+import { type ReactNode, useRef } from "react";
 import { StyleSheet, View } from "react-native";
 import {
   Actionsheet,
@@ -20,6 +20,7 @@ import { builtInEquipmentLabels, noAlternativeLabel, plannedSetsLabel } from "@/
 import { exerciseName, libraryExercise } from "@/features/workouts/library";
 import { spacing, useTheme } from "@/theme";
 import {
+  checkInLighterRow,
   LIGHTER_AFTER_CHECK_IN,
   RECOVERY_INSTEAD,
   SUPERSETS_TO_FIT,
@@ -32,8 +33,9 @@ import { TodayCardLink } from "./today-card";
 type SheetCheckIn = {
   ratings: CheckIn;
   onChange: (checkIn: CheckIn) => void;
-  // Whether it took Sets off, and whether the user chose the Full workout anyway
+  // Whether it took Sets off, whether some rating would, and whether the user chose the Full workout anyway
   lighter: boolean;
+  canBeLighter: boolean;
   fullWorkout: boolean;
   onChooseFullWorkout: (fullWorkout: boolean) => void;
 };
@@ -99,6 +101,7 @@ export function PlannedWorkoutSheet({
     startOnClosed.current?.();
     startOnClosed.current = null;
   };
+  const lighterRow = checkIn && checkInLighterRow(checkIn);
 
   return (
     <Actionsheet isOpen={isOpen} onClose={onClose} onClosed={handleClosed}>
@@ -167,19 +170,23 @@ export function PlannedWorkoutSheet({
             ) : null}
             {checkIn ? (
               <View style={{ gap: spacing[2] }}>
-                {checkIn.lighter ? (
-                  <Text size="sm" color="muted">
-                    {LIGHTER_AFTER_CHECK_IN}
-                  </Text>
-                ) : null}
-                {checkIn.lighter || checkIn.fullWorkout ? (
-                  <HStack spacing={2}>
-                    <Chip
-                      label="Full workout"
-                      selected={checkIn.fullWorkout}
-                      onPress={() => checkIn.onChooseFullWorkout(!checkIn.fullWorkout)}
-                    />
-                  </HStack>
+                {lighterRow?.reserved ? (
+                  <>
+                    <Reserved hidden={!lighterRow.note}>
+                      <Text size="sm" color="muted">
+                        {LIGHTER_AFTER_CHECK_IN}
+                      </Text>
+                    </Reserved>
+                    <Reserved hidden={!lighterRow.chip}>
+                      <HStack spacing={2}>
+                        <Chip
+                          label="Full workout"
+                          selected={checkIn.fullWorkout}
+                          onPress={() => checkIn.onChooseFullWorkout(!checkIn.fullWorkout)}
+                        />
+                      </HStack>
+                    </Reserved>
+                  </>
                 ) : null}
                 <CheckInRatings
                   ratings={checkIn.ratings}
@@ -244,7 +251,23 @@ export function PlannedWorkoutSheet({
   );
 }
 
+// Hidden, it keeps its space, but can't be seen, tapped or read out
+function Reserved({ hidden, children }: { hidden: boolean; children: ReactNode }) {
+  return (
+    <View
+      style={hidden ? styles.hidden : null}
+      pointerEvents={hidden ? "none" : "auto"}
+      aria-hidden={hidden}
+      accessibilityElementsHidden={hidden}
+      importantForAccessibility={hidden ? "no-hide-descendants" : "auto"}
+    >
+      {children}
+    </View>
+  );
+}
+
 const styles = StyleSheet.create({
+  hidden: { opacity: 0 },
   scroll: { width: "100%" },
   content: { gap: spacing[3], paddingBottom: spacing[3] },
   // Outside the scroll, so Start is in reach however long the list is

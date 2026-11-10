@@ -15,7 +15,9 @@ import {
   noAlternativeLabel,
   plannedSetsLabel,
   setTargetLabel,
+  straightToLabel,
   supersetLetter,
+  supersetNote,
   workoutExerciseSummary,
   workoutTimesLabel,
   workoutWhenLabel,
@@ -137,6 +139,12 @@ describe("setsSummary", () => {
     expect(setsSummary([hold(45)])).toBe("45 s");
   });
 
+  it("gives timed Sets of a minute or more in minutes, each in full when it has seconds over (#109)", () => {
+    const hold = (seconds: number): Set => ({ kind: "timed", seconds, loggedAt });
+    expect(setsSummary([hold(1200)])).toBe("20 min");
+    expect(setsSummary([hold(90), hold(75)])).toBe("1 min 30 s, 1 min 15 s");
+  });
+
   it("is empty with no Sets", () => {
     expect(setsSummary([])).toBe("");
   });
@@ -181,6 +189,14 @@ describe("setTargetLabel", () => {
     ["a two-word band level", { unit: "band", level: "extra_heavy", reps: 12 }, "Extra heavy band × 12"],
   ] as const)("reads %s the way a Set does", (_name, target, label) => {
     expect(setTargetLabel(target)).toBe(label);
+  });
+
+  it("reads a timed target of a minute or more in minutes, as the walk's 20 minutes", () => {
+    expect(setTargetLabel({ unit: "seconds", seconds: 1200 })).toBe("20 min");
+    expect(setTargetLabel({ unit: "seconds", seconds: 60 })).toBe("1 min");
+    expect(setTargetLabel({ unit: "seconds", seconds: 90 })).toBe("1 min 30 s");
+    expect(setTargetLabel({ unit: "seconds", seconds: 59 })).toBe("59 s");
+    expect(plannedSetsLabel({ sets: 1, target: { unit: "seconds", seconds: 1200 } })).toBe("1 set · 20 min");
   });
 
   it("shows a load the profile has as it is, without floating-point noise", () => {
@@ -266,6 +282,11 @@ describe("describeSet", () => {
     expect(describeSet({ kind: "bodyweight", reps: 12, loggedAt })).toBe("12 reps");
     expect(describeSet({ kind: "timed", seconds: 45, loggedAt })).toBe("45 s");
   });
+
+  it("reads a timed Set of a minute or more in minutes, as its target does (#109)", () => {
+    expect(describeSet({ kind: "timed", seconds: 1200, loggedAt })).toBe("20 min");
+    expect(describeSet({ kind: "timed", seconds: 90, loggedAt })).toBe("1 min 30 s");
+  });
 });
 
 describe("setParts", () => {
@@ -281,5 +302,40 @@ describe("setParts", () => {
 describe("supersetLetter", () => {
   it("names the Workout's supersets A, B, C in order", () => {
     expect([0, 1, 2].map(supersetLetter)).toEqual(["A", "B", "C"]);
+  });
+});
+
+describe("straightToLabel", () => {
+  it("names the other Exercise exactly as the library does", () => {
+    expect(straightToLabel("Barbell Romanian deadlift")).toBe("No rest: straight to Barbell Romanian deadlift");
+  });
+});
+
+describe("supersetNote", () => {
+  // A chin-up (120 s Sets, 90 s rest) with a lateral raise (60 s Sets, 45 s rest)
+  const member = (slug: string, logged: number, planned: number) => ({
+    slug,
+    sets: Array<Set>(logged).fill({ kind: "bodyweight", reps: 8, loggedAt: "2026-11-09T10:00:00Z" }),
+    planned: { sets: planned, target: { unit: "reps" as const, reps: 8 } },
+  });
+  const note = (chinUp: [number, number], raise: [number, number]) =>
+    supersetNote([member("chin-up", ...chinUp), member("dumbbell-lateral-raise", ...raise)]);
+
+  it("gives the longer of the two rests after each round", () => {
+    expect(note([0, 3], [0, 3])).toBe("No rest between them, then 90 s rest");
+  });
+
+  it("says when the one with more Sets will rest its own time", () => {
+    expect(note([0, 1], [0, 3])).toBe("No rest between them, then 90 s rest. Once Chin-up is done, 45 s");
+  });
+
+  it("keeps the pair's rest until the round both are in is over", () => {
+    expect(note([1, 1], [0, 3])).toBe("No rest between them, then 90 s rest. Once Chin-up is done, 45 s");
+  });
+
+  it("gives the one left its own rest once the other is done", () => {
+    expect(note([1, 1], [1, 3])).toBe("Chin-up is done: 45 s rest between Sets");
+    expect(note([1, 1], [2, 3])).toBe("Chin-up is done: 45 s rest between Sets");
+    expect(note([1, 1], [3, 3])).toBe("Chin-up is done: 45 s rest between Sets");
   });
 });

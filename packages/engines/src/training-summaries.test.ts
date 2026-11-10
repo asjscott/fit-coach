@@ -109,6 +109,16 @@ describe("historyByWeek", () => {
     expect(historyByWeek([walk]).flatMap((week) => ids(week.workouts))).toEqual(["walk"]);
   });
 
+  it("leaves a Recovery Workout out of the week's Workout count, while still listing it", () => {
+    const walk = { ...workout("walk", "2026-10-27T15:00:00.000Z"), workoutExercises: [recoveryExercise] };
+    const [withTraining] = historyByWeek([workout("mon", "2026-10-26T15:00:00.000Z"), walk]);
+    expect(withTraining!.workoutCount).toBe(1);
+    expect(ids(withTraining!.workouts)).toEqual(["walk", "mon"]);
+
+    const [walkOnly] = historyByWeek([walk]);
+    expect(walkOnly!.workoutCount).toBe(0);
+  });
+
   it("groups Workouts into Monday-to-Sunday weeks, newest first, with each week's Workouts and Volume", () => {
     const weeks = historyByWeek([
       workout("tue-13-oct", "2026-10-13T14:00:00.000Z", 400), // Tue 13 Oct, 07:00 local

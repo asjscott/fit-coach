@@ -1,6 +1,14 @@
 import type { Set } from "@fit/shared";
 import { describe, expect, it } from "vitest";
-import { extendRest, restAfterSet, restSeconds, restSecondsLeft, startRest, type Rest } from "./rest-timer";
+import {
+  extendRest,
+  pairRestPlan,
+  restAfterSet,
+  restSeconds,
+  restSecondsLeft,
+  startRest,
+  type Rest,
+} from "./rest-timer";
 
 const at = (iso: string) => new Date(iso);
 
@@ -61,6 +69,70 @@ describe("restAfterSet", () => {
   it("rests as usual once the other Exercise has no Sets left", () => {
     expect(secondsOf(restAfterSet(workout(4, 3, 4), "press", now))).toBe(90);
     expect(secondsOf(restAfterSet(workout(3, 4, 3), "row", now))).toBe(60);
+  });
+
+  // Seen in check S2: a 1-Set chin-up (120 s Sets, 90 s rest) paired with 3 Sets of lateral raise (60 s, 45 s rest)
+  describe("once one Exercise of a pair has all its Sets", () => {
+    const chinUpWithLateralRaise = (chinUpSets: number, lateralRaiseSets: number, chinUpFirst = true) => {
+      const chinUp = workoutExercise("chin-up", "chin-up", chinUpSets, 1, "raise");
+      const raise = workoutExercise("raise", "dumbbell-lateral-raise", lateralRaiseSets, 3, "chin-up");
+      return { workoutExercises: chinUpFirst ? [chinUp, raise] : [raise, chinUp] };
+    };
+
+    it.each([true, false])("rests the pair's 90 s after round 1, then the lateral raise's own 45 s", (chinUpFirst) => {
+      expect(restAfterSet(chinUpWithLateralRaise(1, 0, chinUpFirst), "chin-up", now)).toBeNull();
+      expect(secondsOf(restAfterSet(chinUpWithLateralRaise(1, 1, chinUpFirst), "raise", now))).toBe(90);
+      expect(secondsOf(restAfterSet(chinUpWithLateralRaise(1, 2, chinUpFirst), "raise", now))).toBe(45);
+      expect(secondsOf(restAfterSet(chinUpWithLateralRaise(1, 3, chinUpFirst), "raise", now))).toBe(45);
+    });
+
+    it("rests the pair's 90 s when the lateral raise goes first in round 1", () => {
+      expect(restAfterSet(chinUpWithLateralRaise(0, 1), "raise", now)).toBeNull();
+      expect(secondsOf(restAfterSet(chinUpWithLateralRaise(1, 1), "chin-up", now))).toBe(90);
+    });
+  });
+
+  describe("in the Recovery Workout", () => {
+    const timed: Set = { kind: "timed", seconds: 45, loggedAt: now.toISOString() };
+    const recovery = {
+      workoutExercises: [
+        { id: "walk", slug: "walk", loadType: "timed" as const, sets: [{ ...timed, seconds: 1200 }] },
+        { id: "stretch", slug: "hip-flexor-stretch", loadType: "timed" as const, sets: [timed] },
+      ],
+    };
+
+    it("doesn't rest after the walk, which goes straight on to the stretches", () => {
+      expect(restAfterSet(recovery, "walk", now)).toBeNull();
+    });
+
+    it("rests as usual between a stretch's Sets", () => {
+      expect(secondsOf(restAfterSet(recovery, "stretch", now))).toBe(70);
+    });
+  });
+});
+
+describe("pairRestPlan", () => {
+  // A chin-up (120 s Sets, 90 s rest) with a lateral raise (60 s Sets, 45 s rest)
+  const member = (slug: string, logged: number, planned: number) => ({
+    slug,
+    sets: Array<Set>(logged).fill({ kind: "bodyweight", reps: 8, loggedAt: "2026-11-09T10:00:00Z" }),
+    planned: { sets: planned, target: { unit: "reps" as const, reps: 8 } },
+  });
+  const plan = (chinUp: [number, number], raise: [number, number]) =>
+    pairRestPlan([member("chin-up", ...chinUp), member("dumbbell-lateral-raise", ...raise)]);
+
+  it("rests the longer of the two after each round, with nothing more when both have as many Sets", () => {
+    expect(plan([0, 3], [0, 3])).toEqual({ pairSeconds: 90 });
+  });
+
+  it("says which has fewer Sets, and the other's own rest for once it's done", () => {
+    expect(plan([0, 1], [0, 3])).toEqual({ pairSeconds: 90, fewer: { slug: "chin-up", otherSeconds: 45 } });
+  });
+
+  it("isn't done with the one with fewer Sets until the round it's in is over", () => {
+    expect(plan([1, 1], [0, 3]).done).toBeUndefined();
+    expect(plan([1, 1], [1, 3]).done).toBe("chin-up");
+    expect(plan([1, 1], [3, 3]).done).toBe("chin-up");
   });
 });
 

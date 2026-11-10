@@ -1,6 +1,8 @@
 import type { BuiltInEquipment, InProgressWorkoutExercise, Set, SetTarget, SetValues, Workout } from "@fit/shared";
+import { pairRestPlan } from "@fit/engines";
 import { getCalendars } from "expo-localization";
 import { bandLevelLabels } from "../equipment/loads";
+import { exerciseName } from "./library";
 
 // How Workouts and Sets read on screen
 
@@ -137,14 +139,16 @@ export function elapsedClockLabel(ms: number) {
 }
 
 // A Workout Exercise's Sets on one line, each unit said once where it can be: "18 kg × 10, 10, 8",
-// "16 kg × 10, 18 kg × 8", "12, 10 reps", "45, 40 s". Empty with no Sets
+// "16 kg × 10, 18 kg × 8", "12, 10 reps", "45, 40 s", "1 min 30 s, 1 min 15 s". Empty with no Sets
 export function setsSummary(sets: readonly Set[]) {
   const parts = sets.map(setParts);
   const first = parts[0];
   if (!first) return "";
-  // Everything about a Set but its last number, e.g. 18 "kg ×" for weighted Sets, or "reps"
+  // Everything about a Set but its last number, e.g. 18 "kg ×" for weighted Sets, or "reps". Only a weight is said
+  // once before the numbers: "1 min 30, 15 s" would misread
   const frame = (set: [number, string][]) => JSON.stringify([...set.slice(0, -1), set.at(-1)?.[1]]);
-  if (!parts.every((set) => frame(set) === frame(first))) return sets.map(describeSet).join(", ");
+  const sharesFrame = parts.every((set) => frame(set) === frame(first));
+  if (!sharesFrame || (first.length > 1 && sets[0]?.kind !== "external")) return sets.map(describeSet).join(", ");
   const lead = first.slice(0, -1).map(([value, unit]) => `${value} ${unit} `);
   const unit = first.at(-1)?.[1];
   return `${lead.join("")}${parts.map((set) => set.at(-1)?.[0]).join(", ")}${unit ? ` ${unit}` : ""}`;
@@ -153,8 +157,9 @@ export function setsSummary(sets: readonly Set[]) {
 // Previous Sets as a reference while logging: "Last: 18 kg × 10, 10, 8"
 export const previousSetsLabel = (sets: readonly Set[]) => `Last: ${setsSummary(sets)}`;
 
-// A Set's target as a Set reads: "20 kg × 8", "12 reps", "40 s", "Medium band × 12". A profile's loads are summed, so a
-// kg can carry floating-point noise, unlike a logged Set's
+// A Set's target as a Set reads: "20 kg × 8", "12 reps", "40 s", "Medium band × 12". A timed target of a minute or more
+// reads in minutes, as the walk's "20 min" (#109). A profile's loads are summed, so a kg can carry floating-point noise,
+// unlike a logged Set's
 export function setTargetLabel(target: SetTarget) {
   switch (target.unit) {
     case "kg":
@@ -207,8 +212,15 @@ export function setParts(set: Set | SetValues): [number, string][] {
     case "bodyweight":
       return [[set.reps, "reps"]];
     case "timed":
-      return [[set.seconds, "s"]];
+      return durationParts(set.seconds);
   }
+}
+
+// A minute or more reads in minutes, as the walk's "20 min" (#109): "45 s", "1 min 30 s"
+function durationParts(seconds: number): [number, string][] {
+  if (seconds < 60) return [[seconds, "s"]];
+  const over = seconds % 60;
+  return [[Math.floor(seconds / 60), "min"], ...(over ? [[over, "s"] as [number, string]] : [])];
 }
 
 // A Set as its Load Type records it: "16 kg × 10"; add " per side" for a one-sided Exercise
@@ -219,3 +231,16 @@ export const describeSet = (set: Set | SetValues) =>
 
 // A superset's letter by its place among the Workout's supersets, from 0: A makes A1 and A2, as gym programmes write them
 export const supersetLetter = (index: number) => String.fromCharCode(65 + index);
+
+// The superset box's banner mid-round (#96). The name is the library's, as it is (#111)
+export const straightToLabel = (name: string) => `No rest: straight to ${name}`;
+
+// The superset box's note on its rests, as pairRestPlan gives them (#111)
+export function supersetNote(pair: Parameters<typeof pairRestPlan>[0]) {
+  const { pairSeconds, fewer, done } = pairRestPlan(pair);
+  const pairNote = `No rest between them, then ${pairSeconds} s rest`;
+  if (!fewer) return pairNote;
+  const name = exerciseName(fewer.slug);
+  if (done === fewer.slug) return `${name} is done: ${fewer.otherSeconds} s rest between Sets`;
+  return fewer.otherSeconds === pairSeconds ? pairNote : `${pairNote}. Once ${name} is done, ${fewer.otherSeconds} s`;
+}

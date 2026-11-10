@@ -1,6 +1,8 @@
 import { describe, expect, it, vi } from "vitest";
 import {
+  checkInLighterRow,
   showsCheckIn,
+  supersetWithLabel,
   todayCard,
   todayLoggedLine,
   todayPlan,
@@ -202,5 +204,32 @@ describe("showsCheckIn", () => {
 
   it("waits until the phone has read today's check-in", () => {
     expect(showsCheckIn({ ...base, checkIn: "unread" })).toBe(false);
+  });
+});
+
+describe("checkInLighterRow", () => {
+  const full = { lighter: false, fullWorkout: false, canBeLighter: true };
+
+  it("isn't there when no check-in could make the Workout lighter", () => {
+    expect(checkInLighterRow({ ...full, canBeLighter: false })).toEqual({ reserved: false, note: false, chip: false });
+  });
+
+  it("keeps the row's space while the Workout is full, so a rating that makes it lighter doesn't move the chips (#113)", () => {
+    expect(checkInLighterRow(full)).toEqual({ reserved: true, note: false, chip: false });
+  });
+
+  it("shows the note and Full workout in that space once the check-in makes the Workout lighter", () => {
+    expect(checkInLighterRow({ ...full, lighter: true })).toEqual({ reserved: true, note: true, chip: true });
+  });
+
+  it("keeps the note's space while Full workout is chosen, so the chip stays under the finger", () => {
+    expect(checkInLighterRow({ ...full, fullWorkout: true })).toEqual({ reserved: true, note: false, chip: true });
+  });
+});
+
+describe("supersetWithLabel", () => {
+  it("names the partner exactly as the library does", () => {
+    expect(supersetWithLabel("Barbell Romanian deadlift")).toBe("Superset with Barbell Romanian deadlift");
+    expect(supersetWithLabel("Prone Y-T-W raise")).toBe("Superset with Prone Y-T-W raise");
   });
 });
