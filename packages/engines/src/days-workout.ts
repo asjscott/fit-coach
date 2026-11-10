@@ -1,10 +1,10 @@
 import {
   BuiltInEquipment,
   type AlternativeExercise,
+  type DayLength,
   type Goal,
   type PlannedExercise,
   type PlannedWorkout,
-  type WorkoutLength,
 } from "@fit/shared";
 import { readinessShare, type CheckIn } from "./check-in";
 import { exerciseBySlug } from "./data/exercises";
@@ -13,7 +13,8 @@ import { secondsForSets, TYPICAL_SECONDS_PER_SET, WARM_UP_SECONDS } from "./work
 
 // What the user can change for one Workout. Local to the phone: nothing here reaches the stored plan
 export type DayChoices = {
-  workoutLength: WorkoutLength;
+  // Can be Quick, unlike the usual Workout Length
+  workoutLength: DayLength;
   // Absent on the primary Equipment Profile
   equipment?: BuiltInEquipment;
   // The Alternative Exercise the user prefers, by the slug of the planned Exercise it replaces

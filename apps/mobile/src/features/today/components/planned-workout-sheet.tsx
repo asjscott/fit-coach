@@ -1,5 +1,5 @@
 import type { CheckIn, DayExercise } from "@fit/engines";
-import type { BuiltInEquipment, WorkoutLength } from "@fit/shared";
+import type { BuiltInEquipment, DayLength } from "@fit/shared";
 import { useRef } from "react";
 import { StyleSheet, View } from "react-native";
 import {
@@ -15,7 +15,7 @@ import { Heading } from "@/components/heading";
 import { LoadingButton } from "@/components/loading-button";
 import { HStack } from "@/components/stack";
 import { Text } from "@/components/text";
-import { workoutLengthOptions } from "@/features/user/components/form/fields/user-workout-length-field";
+import { dayLengthOptions } from "@/features/user/components/form/fields/user-workout-length-field";
 import { builtInEquipmentLabels, noAlternativeLabel, plannedSetsLabel } from "@/features/workouts/format";
 import { exerciseName, libraryExercise } from "@/features/workouts/library";
 import { spacing, useTheme } from "@/theme";
@@ -29,8 +29,8 @@ type PlannedWorkoutSheetProps = {
   plannedExercises: DayExercise[];
   estimatedSeconds: number;
   dropped: string[];
-  workoutLength: WorkoutLength;
-  onChooseLength: (workoutLength: WorkoutLength) => void;
+  workoutLength: DayLength;
+  onChooseLength: (workoutLength: DayLength) => void;
   equipment: BuiltInEquipment | undefined;
   equipmentChoices: BuiltInEquipment[];
   onChooseEquipment: (equipment?: BuiltInEquipment) => void;
@@ -96,8 +96,8 @@ export function PlannedWorkoutSheet({
                 </Text>
               ) : null}
             </View>
-            <HStack spacing={2}>
-              {workoutLengthOptions.map(({ value, label }) => (
+            <HStack spacing={2} wrap="wrap">
+              {dayLengthOptions.map(({ value, label }) => (
                 <Chip
                   key={value}
                   label={label}
