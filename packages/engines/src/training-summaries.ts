@@ -1,6 +1,6 @@
 import type { Set as LoggedSet, PreviousSets } from "@fit/shared";
 import { EXERCISES } from "./data/exercises";
-import { trainingWorkouts } from "./recovery-workout";
+import { isRecoveryWorkout, trainingWorkouts } from "./recovery-workout";
 
 // Training summaries: pure functions that sum up Workouts for Today, History, the In-progress Workout and Finish.
 // - One Workout: workoutVolume, setCount, summarizeWorkout
@@ -61,6 +61,7 @@ export type HistoryWeek<W extends FinishedWorkoutSets = FinishedWorkoutSets> = {
   start: Date;
   // Newest first
   workouts: W[];
+  // A Recovery Workout is listed but isn't training, so it's left out of the count
   workoutCount: number;
   volumeKg: number;
 };
@@ -79,7 +80,7 @@ export function historyByWeek<W extends FinishedWorkoutSets>(workouts: readonly 
       weeks.push(week);
     }
     week.workouts.push(workout);
-    week.workoutCount += 1;
+    if (!isRecoveryWorkout(workout)) week.workoutCount += 1;
     week.volumeKg += workoutVolume(workout);
   }
   return weeks;
