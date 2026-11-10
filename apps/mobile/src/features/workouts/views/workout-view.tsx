@@ -116,6 +116,7 @@ function InProgress({ workout }: { workout: InProgressWorkout }) {
                   position={i}
                   count={workoutExercises.length}
                   onNextTest={nextTestId ? () => choose(nextTestId) : undefined}
+                  onNextExercise={nextPlanned ? () => choose(nextPlanned) : undefined}
                 />
               </View>
             ) : (

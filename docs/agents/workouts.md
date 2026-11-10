@@ -205,7 +205,8 @@ Schemas: packages/shared/src/planned-workouts.ts
   `trainingWorkouts` leaves it out of This Week, the Rest Day, `finishedToday` and `planWorkout`; `creditsPerSet` gives
   a Recovery Exercise nothing, and the planner never picks one. It links to no plan, POST /workouts doesn't rebuild
   after one, and on the phone it neither makes the plan stale nor sets `awaitingNextPlan`, so the same plan stays on
-  offer. Recovery Exercises have no Pattern and no strength ratio, so no Working Level. `recovery` also needs
+  offer. The walk is one Set (#109, `takesOneSet`): `restAfterSet` gives no rest after it, and the logging screen
+  offers "Next exercise" rather than a Set 2 (`takesAnotherSet`). Recovery Exercises have no Pattern and no strength ratio, so no Working Level. `recovery` also needs
   `seed:exercises` re-run, as `ballistic` did.
 - **Build and tune with the simulation.** Scores tie often, as many Exercises share budgeted credits. The planner is
   deterministic, so ties fall to last week's Exercises, then the longest Sets, then the slug, never library order.

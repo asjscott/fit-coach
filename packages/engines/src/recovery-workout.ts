@@ -13,6 +13,14 @@ export const RECOVERY_WORKOUT: readonly Pick<PlannedExercise, "slug" | "sets" | 
   })),
 ];
 
+// The walk is one 20-minute Set (#109): no rest after it, straight on to the stretches, and no Set 2. Every other
+// Exercise rests between Sets and takes Sets past its target
+export const takesOneSet = (slug: string) => slug === "walk";
+
+// Whether the logging screen offers a next Set: not once the walk has its one
+export const takesAnotherSet = ({ slug, sets }: { slug: string; sets: readonly unknown[] }) =>
+  !takesOneSet(slug) || sets.length === 0;
+
 // What it takes to tell a Recovery Workout, however it came to be logged
 type LoggedWorkout = { workoutExercises: readonly { slug: string; sets: readonly unknown[] }[] };
 
