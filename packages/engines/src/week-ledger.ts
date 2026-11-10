@@ -1,5 +1,6 @@
 import type { Exercise, Muscle, Workout } from "@fit/shared";
 import { exerciseBySlug } from "./data/exercises";
+import type { LoggedWorkoutExercise } from "./recovery-workout";
 
 // Credited Sets per Muscle; a Muscle with none is absent
 export type MuscleCredits = Partial<Record<Muscle, number>>;
@@ -8,9 +9,7 @@ export type MuscleCredits = Partial<Record<Muscle, number>>;
 export type LedgerWeek = { monday: string; timeZone: string };
 
 // What the Week Ledger needs from a finished Workout, however it came to be logged
-export type LedgerWorkout = Pick<Workout, "id" | "startedAt"> & {
-  workoutExercises: readonly { slug: string; sets: readonly unknown[] }[];
-};
+export type LedgerWorkout = Pick<Workout, "id" | "startedAt"> & { workoutExercises: readonly LoggedWorkoutExercise[] };
 
 const SECONDARY_CREDIT = 0.5;
 

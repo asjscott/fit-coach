@@ -54,10 +54,12 @@ export function pairSeconds(a: { slug: string; sets: number }, b: { slug: string
   );
 }
 
-// On the In-progress Workout a pair is linked both ways by planned.supersetWith, so it lasts only while both are there
-type PairMember = Pick<InProgressWorkoutExercise, "id" | "planned"> & { sets: readonly unknown[] };
+// An In-progress Workout Exercise's plan and how many Sets it has, whatever they are
+export type PlannedProgress = Pick<InProgressWorkoutExercise, "id" | "planned"> & { sets: readonly unknown[] };
+type PairMember = PlannedProgress;
 
-// The Workout Exercise this one is paired with, while both are in the Workout
+// The Workout Exercise this one is paired with, while both are in the Workout. A pair is linked both ways by
+// planned.supersetWith, so it lasts only while both are there
 export const supersetPartner = <T extends PairMember>(workoutExercises: readonly T[], workoutExercise: PairMember) =>
   workoutExercises.find(
     ({ id, planned }) => id === workoutExercise.planned?.supersetWith && planned?.supersetWith === workoutExercise.id,

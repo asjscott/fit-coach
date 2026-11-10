@@ -1,4 +1,4 @@
-import type { InProgressWorkoutExercise } from "@fit/shared";
+import type { PlannedProgress } from "@fit/engines";
 import { useState } from "react";
 
 // Which Workout Exercise is current: the one expanded for logging on the In-progress Workout
@@ -25,9 +25,7 @@ export function currentWorkoutExercise({ ids, seenIds, chosenId, nextId }: Selec
 }
 
 // The first Exercise of a Workout started from a plan still short of its target Sets
-export function nextPlannedExercise(
-  workoutExercises: readonly (Pick<InProgressWorkoutExercise, "id" | "planned"> & { sets: readonly unknown[] })[],
-) {
+export function nextPlannedExercise(workoutExercises: readonly PlannedProgress[]) {
   return workoutExercises.find(({ sets, planned }) => planned && sets.length < planned.sets)?.id;
 }
 
