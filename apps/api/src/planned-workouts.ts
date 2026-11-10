@@ -67,15 +67,16 @@ async function rebuildPlannedWorkout(clerkUserId: string, user: OnboardedUser) {
     daysPerWeek: user.daysPerWeek,
   });
 
-  // The Muscles held back aren't stored yet
-  const { weekStart, plannedExercises, cue } = built;
+  // The Muscles held back are stored as the recovering reason
+  const { weekStart, plannedExercises, cue, reasons } = built;
   const plan = { weekStart, plannedExercises, ...(cue && { cue }) };
   const builtFrom = planInputsKey(inputs);
   await client.withSession((session) =>
     session.withTransaction(async () => {
       const current = await plannedWorkouts.findOne({ clerkUserId, status: "current" }, { session });
       if (current && current.builtFrom === builtFrom && isSamePlan(current, plan)) {
-        await plannedWorkouts.updateOne({ _id: current._id }, { $set: { builtAt: now } }, { session });
+        // The same Exercises can have new reasons, such as the day's recovery, which update in place
+        await plannedWorkouts.updateOne({ _id: current._id }, { $set: { builtAt: now, reasons } }, { session });
         return;
       }
       await plannedWorkouts.updateMany(
@@ -87,6 +88,7 @@ async function rebuildPlannedWorkout(clerkUserId: string, user: OnboardedUser) {
       await plannedWorkouts.insertOne(
         {
           ...plan,
+          reasons,
           id: randomUUID(),
           status: "current",
           clerkUserId,
@@ -131,6 +133,15 @@ export async function rebuildAfterUpload(
   await rebuildPlannedWorkout(clerkUserId, user);
 }
 
-function toPlannedWorkout({ id, status, weekStart, createdAt, plannedExercises, cue }: WithId<PlannedWorkoutDoc>) {
-  return PlannedWorkout.parse({ id, status, weekStart, createdAt: createdAt.toISOString(), plannedExercises, cue });
+function toPlannedWorkout({
+  id,
+  status,
+  weekStart,
+  createdAt,
+  plannedExercises,
+  cue,
+  reasons,
+}: WithId<PlannedWorkoutDoc>) {
+  const createdAtIso = createdAt.toISOString();
+  return PlannedWorkout.parse({ id, status, weekStart, createdAt: createdAtIso, plannedExercises, cue, reasons });
 }

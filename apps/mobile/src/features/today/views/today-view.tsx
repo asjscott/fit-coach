@@ -33,6 +33,7 @@ import { useCheckIn } from "../hooks/use-check-in";
 import { useDaysWorkout } from "../hooks/use-days-workout";
 import { useDismissedOffer } from "../hooks/use-dismissed-offer";
 import { usePlannedWorkout } from "../hooks/use-planned-workout";
+import { planReasonLines } from "../plan-reasons";
 import {
   showsCheckIn,
   todayCard,
@@ -134,6 +135,7 @@ export default function TodayView() {
     today ? `Next Workout: ${estimatedTimeLabel(today.estimatedSeconds)} · ${action}` : "";
   const openSheet = () => setSheetIsOpen(true);
   const connectNote = plan === "connect" ? "Connect to plan your next Workout" : null;
+  const reasonLines = planReasonLines(plannedWorkout?.reasons, now);
 
   return (
     <Screen scroll="screen" edges={["top"]}>
@@ -176,6 +178,7 @@ export default function TodayView() {
           headline="Time to train."
           line={todayPlanLine(today.plannedExercises, today.estimatedSeconds, today.lighter)}
         >
+          {reasonLines.length ? <Text color="onAccent">{reasonLines[0]}</Text> : null}
           {plannedWorkout?.cue ? <Text color="onAccent">{plannedWorkout.cue}</Text> : null}
           <LoadingButton
             label="Start workout"
@@ -252,6 +255,7 @@ export default function TodayView() {
           isOpen={sheetIsOpen}
           onClose={() => setSheetIsOpen(false)}
           cue={plannedWorkout?.cue}
+          reasons={reasonLines}
           plannedExercises={today.plannedExercises}
           estimatedSeconds={today.estimatedSeconds}
           dropped={today.dropped}

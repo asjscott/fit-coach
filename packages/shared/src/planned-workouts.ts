@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { BandLevel, BuiltInEquipment } from "./equipment";
+import { Muscle } from "./exercises";
 
 const reps = z.number().int().positive();
 
@@ -34,6 +35,30 @@ export const PlannedExercise = AlternativeExercise.extend({
 });
 export type PlannedExercise = z.infer<typeof PlannedExercise>;
 
+// Why the Coach planned what it did, as codes the phone words and M8's summary reads. Muscles, not groups: the phone
+// words them as their groups (MUSCLE_GROUPS)
+export const PlanReason = z.discriminatedUnion("code", [
+  // Tired Muscles whose Exercises the recovery filter left out, and the day of the last Set for them in the user's
+  // timezone
+  z.object({ code: z.literal("recovering"), muscles: z.array(Muscle).min(1), lastSetOn: z.iso.date() }),
+  // The week's budget was met before this Workout, so it's extra
+  z.object({ code: z.literal("budget-met") }),
+  // The group or groups of Muscles furthest behind their budget this week
+  z.object({ code: z.literal("behind"), muscles: z.array(Muscle).min(1) }),
+]);
+export type PlanReason = z.infer<typeof PlanReason>;
+
+// The groups reasons name, in the order a tie between them is settled
+export const MuscleGroup = z.enum(["legs", "back", "chest", "shoulders", "core"]);
+export type MuscleGroup = z.infer<typeof MuscleGroup>;
+export const MUSCLE_GROUPS: Record<MuscleGroup, readonly Muscle[]> = {
+  legs: ["quads", "hamstrings", "glutes"],
+  back: ["lats", "upper_back"],
+  chest: ["chest"],
+  shoulders: ["side_delts"],
+  core: ["abs"],
+};
+
 // One is current at a time; the others are kept, so a Workout started from one can still link to it (ADR 0003)
 export const PlannedWorkoutStatus = z.enum(["current", "finished", "replaced"]);
 export type PlannedWorkoutStatus = z.infer<typeof PlannedWorkoutStatus>;
@@ -48,5 +73,7 @@ export const PlannedWorkout = z.object({
   plannedExercises: z.array(PlannedExercise).min(1),
   // A cue for the whole Workout, for the user's Goal
   cue: z.string().optional(),
+  // In the order the phone shows them; a plan stored before reasons has none, and shows no line
+  reasons: z.array(PlanReason).optional(),
 });
 export type PlannedWorkout = z.infer<typeof PlannedWorkout>;

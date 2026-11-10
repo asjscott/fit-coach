@@ -609,6 +609,54 @@ describe("planWorkout", () => {
     });
   });
 
+  describe("the reasons", () => {
+    // Tuesday evening in New York, the day before Wednesday noon
+    const tuesdayEvening = "2026-11-03T23:00:00.000Z";
+    const legDay = {
+      id: "leg-day",
+      startedAt: tuesdayEvening,
+      workoutExercises: [{ slug: "goblet-squat", sets: loggedSets(6, tuesdayEvening) }],
+    };
+    const reasons = (more: Partial<PlanWorkoutInput> = {}) =>
+      plan({ equipmentProfile: fullHomeGym, workingLevels: [], assessment, ...more }).reasons;
+    const back = { code: "behind", muscles: ["lats", "upper_back"] };
+
+    it("says the Muscles held back are recovering, from the day of their last Set, before the group furthest behind", () => {
+      expect(reasons({ workouts: [legDay] })).toEqual([
+        { code: "recovering", muscles: ["quads", "glutes"], lastSetOn: "2026-11-03" },
+        // Legs are recovering, so the furthest behind of the rest, on a tie the first of Back, Chest, Shoulders, Core
+        back,
+      ]);
+    });
+
+    it("says the Workout is extra once the week's budget is met", () => {
+      const workouts = [
+        week({
+          "goblet-squat": 20,
+          "dumbbell-romanian-deadlift": 20,
+          "one-arm-dumbbell-row": 20,
+          "dumbbell-floor-press": 20,
+          "dumbbell-lateral-raise": 20,
+          plank: 20,
+        }),
+      ];
+      expect(plan({ workouts, workingLevels: withBench }).reasons).toEqual([{ code: "budget-met" }]);
+    });
+
+    it("names the group furthest behind its budget this week", () => {
+      const workouts = [week({ "goblet-squat": 6, "dumbbell-floor-press": 6, "dumbbell-lateral-raise": 4, plank: 4 })];
+      expect(plan({ workouts, workingLevels: withBench }).reasons).toEqual([back]);
+    });
+
+    it("gives none in a week with nothing done yet, when every group is as far behind", () => {
+      expect(reasons()).toEqual([]);
+    });
+
+    it("gives the same reasons in the same order for the same inputs", () => {
+      expect(reasons({ workouts: [legDay] })).toEqual(reasons({ workouts: [legDay] }));
+    });
+  });
+
   describe("the cue", () => {
     it("tells an athletic user to lift fast", () => {
       expect(plan({ goal: "athletic" }).cue).toBe("Lift as fast as you can on the way up");

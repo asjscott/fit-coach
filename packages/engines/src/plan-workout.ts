@@ -14,6 +14,7 @@ import { withAlternatives, type Candidate } from "./alternative-exercises";
 import { exerciseBySlug, EXERCISES } from "./data/exercises";
 import { BUILT_IN_EQUIPMENT, isAvailable, isSafeFor, matchesBuiltIn, type ProfileWithLoads } from "./equipment";
 import { muscleFatigue, tiredMuscles, type FatigueWorkout } from "./fatigue";
+import { planReasons } from "./plan-reasons";
 import { scoreExercise, type WeekSoFar } from "./plan-score";
 import { trainingWorkouts } from "./recovery-workout";
 import {
@@ -62,7 +63,8 @@ export type PlanWorkoutInput = {
 
 // What the planner decides; the API gives it an id and a status when it saves it. heldBack is the tired Muscles
 // whose Exercises the recovery filter left out of the plan
-export type WorkoutPlan = Pick<PlannedWorkout, "weekStart" | "plannedExercises" | "cue"> & { heldBack: Muscle[] };
+export type WorkoutPlan = Pick<PlannedWorkout, "weekStart" | "plannedExercises" | "cue"> &
+  Required<Pick<PlannedWorkout, "reasons">> & { heldBack: Muscle[] };
 
 // A Set's target from a stored Working Level, or null when it can't be prescribed on this equipment
 function targetFrom(
@@ -331,10 +333,12 @@ export function planWorkout(input: PlanWorkoutInput): WorkoutPlan {
     required: requiredPick(candidates, thisWeek, { goal, budget, ledger }),
   };
   const selected = selectExercises(selection, ledger);
+  const held = heldBack(candidates, selected, tired);
   return {
     weekStart: monday,
     plannedExercises: withAlternatives(selected, builtInCandidates(input, thisWeek, lastWeek)),
     ...(goal === "athletic" && { cue: ATHLETIC_CUE }),
-    heldBack: heldBack(candidates, selected, tired),
+    heldBack: held,
+    reasons: planReasons({ heldBack: held, workouts, ledger, budget, timeZone }),
   };
 }
