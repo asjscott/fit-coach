@@ -632,3 +632,30 @@ describe("progressWorkingLevel: Misses", () => {
     expect(progress(gobletSquat(14, 10, { misses: 1 }), sets, extra)).toBeNull();
   });
 });
+
+// Stories 67, 68, ADR 0007: the deload week's lighter Sets leave every Working Level as it is
+describe("progressWorkingLevel: the deload week", () => {
+  const deload = { deloadWeek: true };
+
+  // Story 67
+  it("moves nothing when every Set reaches the target", () => {
+    expect(progress(gobletSquat(14, 9), [lifted(14, 12), lifted(14, 12)], deload)).toBeNull();
+  });
+
+  // Story 67
+  it("doesn't take the deload week's lighter load as a new base", () => {
+    expect(progress(gobletSquat(14, 9), [lifted(12, 9), lifted(12, 9)], deload)).toBeNull();
+  });
+
+  // Story 68
+  it("neither adds a Miss nor ends the run of Misses", () => {
+    const level = gobletSquat(14, 10, { misses: 1 });
+    expect(progress(level, [lifted(14, 6), lifted(14, 6)], deload)).toBeNull();
+    expect(progress(level, [lifted(14, 10), lifted(14, 10)], deload)).toBeNull();
+  });
+
+  it("leaves a Ballistic Exercise's count of Workouts since its last load up untouched", () => {
+    const swing = level("kettlebell-swing", { unit: "kg", kg: 16, reps: 8, workoutsSinceLoadUp: 2 });
+    expect(progress(swing, [lifted(16, 8), lifted(16, 8)], { ...deload, equipmentProfile: KETTLEBELLS })).toBeNull();
+  });
+});

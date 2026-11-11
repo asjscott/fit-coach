@@ -77,6 +77,9 @@ const laterWorkoutsOnly: ProgressionRule = ({ level: { movedBy }, workout }) =>
 // Story 40: an Assessment Workout sets Working Levels, so it doesn't progress them
 const notAnAssessment: ProgressionRule = ({ workout }) => (workout.assessment ? UNMOVED : undefined);
 
+// Stories 67, 68: the deload week's lighter Sets move nothing, and neither add a Miss nor end the run of Misses (#137)
+const notInTheDeloadWeek: ProgressionRule = ({ deloadWeek }) => (deloadWeek ? UNMOVED : undefined);
+
 // Story 38, 39: one Set decides nothing, unless the Exercise was done as one Set
 const atLeastTwoSets: ProgressionRule = ({ sets, plannedSets }) =>
   sets.length >= Math.min(2, plannedSets ?? 2) ? undefined : UNMOVED;
@@ -267,15 +270,16 @@ const bandLadder: ProgressionRule = (judgement) => {
   return moved(judgement, { reps: level.reps + 1 }, { code: "target-up" });
 };
 
-// In order: the first to decide wins. Where later tickets' rules go: the deload week (#137) after notAnAssessment,
-// returning UNMOVED so the run of Misses stays as it is. RPE 10 (#133, rpeTenHolds) comes after missesBringItDown and
-// before the ladders, so an RPE of 10 holds every Exercise, though a Miss with RPE 10 is still a Miss. Jumps, Ballistic
-// Exercises and carries (#136) come between them: a Ballistic Exercise still Misses and handles RPE 10 itself, so the
-// Workout counts towards its 3, and a carry moves by its load whatever the RPE. Every rule that moves a level through
-// moved() ends its run of Misses
+// In order: the first to decide wins. The deload week (#137) comes right after notAnAssessment and returns UNMOVED, so
+// a Miss isn't added, the run of Misses stays as it is and a Ballistic Exercise's count of Workouts since its last load
+// up isn't touched. RPE 10 (#133, rpeTenHolds) comes after missesBringItDown and before the ladders, so an RPE of 10
+// holds every Exercise, though a Miss with RPE 10 is still a Miss. Jumps, Ballistic Exercises and carries (#136) sit
+// between them: a Ballistic Exercise still Misses and handles RPE 10 itself, so the Workout counts towards its 3, and a
+// carry moves by its load whatever the RPE. Every rule that moves a level through moved() ends its run of Misses
 const RULES: readonly ProgressionRule[] = [
   laterWorkoutsOnly,
   notAnAssessment,
+  notInTheDeloadWeek,
   atLeastTwoSets,
   missesBringItDown,
   jumpsNeverMove,

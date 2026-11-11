@@ -1053,6 +1053,83 @@ describe("planWorkout", () => {
     });
   });
 
+  // ADR 0007: the Block's 5th week keeps its Sets and lightens the work
+  describe("the deload week", () => {
+    const deload = (more: Partial<PlanWorkoutInput> = {}) => plan({ deloadWeek: true, ...more });
+    const targetOf = (slug: string, more?: Partial<PlanWorkoutInput>) =>
+      deload(more).plannedExercises.find((exercise) => exercise.slug === slug)?.target;
+
+    // User story 64
+    it("keeps the same Exercises and Sets", () => {
+      const shape = ({ plannedExercises }: ReturnType<typeof plan>) =>
+        plannedExercises.map(({ slug, sets }) => ({ slug, sets }));
+      expect(shape(deload())).toEqual(shape(plan()));
+    });
+
+    // User story 64
+    it("prescribes loads 10% lighter, rounded down to a Load Step, for the same target reps", () => {
+      expect(targetOf("goblet-squat")).toEqual({ unit: "kg", kg: 17.5, reps: 8 });
+      expect(targetOf("dumbbell-romanian-deadlift")).toEqual({ unit: "kg", kg: 25, reps: 8 });
+      expect(targetOf("one-arm-dumbbell-row")).toEqual({ unit: "kg", kg: 15, reps: 8 });
+    });
+
+    it("prescribes the lightest load the profile has when 10% lighter is below it", () => {
+      const workingLevels = [...levels, kg("dumbbell-lateral-raise", 2.5)];
+      expect(targetOf("dumbbell-lateral-raise", { workingLevels })).toEqual({ unit: "kg", kg: 2.5, reps: 8 });
+    });
+
+    it("rounds down to 0.5 kg when the loads aren't known", () => {
+      const equipmentProfile: ProfileWithLoads = { tags: ["dumbbells"], loads: {} };
+      expect(targetOf("goblet-squat", { equipmentProfile })).toEqual({ unit: "kg", kg: 18, reps: 8 });
+    });
+
+    // User story 65
+    it("prescribes a bodyweight target at 70%, rounded down to a whole rep, at least 5", () => {
+      expect(targetOf("push-up")).toEqual({ unit: "reps", reps: 8 });
+      const workingLevels = [...levels, reps("push-up", 6)];
+      expect(targetOf("push-up", { workingLevels })).toEqual({ unit: "reps", reps: 5 });
+    });
+
+    it("never prescribes more than the usual target to reach the least", () => {
+      const workingLevels: WorkingLevel[] = [
+        ...levels.filter(({ slug }) => slug !== "push-up" && slug !== "plank"),
+        reps("push-up", 3),
+        { slug: "plank", unit: "seconds", seconds: 10, ...fresh },
+      ];
+      expect(targetOf("push-up", { workingLevels })).toEqual({ unit: "reps", reps: 3 });
+      expect(targetOf("plank", { workingLevels })).toEqual({ unit: "seconds", seconds: 10 });
+    });
+
+    // User story 65
+    it("prescribes a band target at 70% of its reps on the same band, at least 5", () => {
+      const workingLevels: WorkingLevel[] = [
+        { slug: "dumbbell-lateral-raise", unit: "band", level: "medium", reps: 12, ...fresh },
+      ];
+      const equipmentProfile: ProfileWithLoads = { tags: ["loop_bands"], loads: {} };
+      expect(targetOf("dumbbell-lateral-raise", { workingLevels, equipmentProfile })).toEqual({
+        unit: "band",
+        level: "medium",
+        reps: 8,
+      });
+    });
+
+    // User story 66
+    it("prescribes a timed target at 70%, rounded down to 5 seconds, at least 15", () => {
+      expect(targetOf("plank")).toEqual({ unit: "seconds", seconds: 25 });
+      const workingLevels: WorkingLevel[] = [...levels, { slug: "plank", unit: "seconds", seconds: 20, ...fresh }];
+      expect(targetOf("plank", { workingLevels })).toEqual({ unit: "seconds", seconds: 15 });
+    });
+
+    it("lightens the Alternative Exercises too", () => {
+      const alternativesOf = (planned: ReturnType<typeof plan>) =>
+        planned.plannedExercises.flatMap(({ alternatives }) => Object.values(alternatives ?? {}).flat());
+      const bodyweightReps = (planned: ReturnType<typeof plan>) =>
+        alternativesOf(planned).flatMap(({ target }) => (target.unit === "reps" ? [target.reps] : []));
+      expect(bodyweightReps(plan())).toEqual([12, 12, 10, 10]);
+      expect(bodyweightReps(deload())).toEqual([8, 8, 7, 7]);
+    });
+  });
+
   describe("Recovery Exercises", () => {
     const recovery = EXERCISES.filter((exercise) => exercise.recovery).map(({ slug }) => slug);
     const recoveryLevels: WorkingLevel[] = recovery.map((slug) => ({ slug, unit: "seconds", seconds: 45, ...fresh }));

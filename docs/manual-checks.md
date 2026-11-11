@@ -224,6 +224,15 @@ On the installed PWA against staging, after the Assessment. Route tests cover th
 - [ ] **DP2** Log 2 or more Sets of a weighted Exercise at a different weight from the one prescribed. Next time it's planned, its target is that weight at the fewest reps you did, with "From the weight you lifted last time."
   - iOS: Result: · Notes:
 
+## Deload week and the retest (#137)
+
+On the installed PWA against staging, in the 5th week of a Block: the week starting 4 Mondays after the Monday of the week the Assessment's B was done. Route tests cover the rules; these are for the screen.
+
+- [ ] **DL1** In the deload week, open the Next Workout sheet on Today: the Exercises and Sets are as usual, weighted targets about 10% lighter (on a real dumbbell, plate or stack step), and bodyweight, band and timed targets about 70% of last week's (never under 5 reps or 15 s unless they were already). Below the plan, a "Retake the Assessment" section explains that only the Exercises it tests, and any not done this Block, get new levels, with Start assessment A. The wording reads well and doesn't feel pushy.
+  - iOS: Result: · Notes:
+- [ ] **DL2** Dismiss the retest with the ×: it stays gone for the rest of the week. On the Monday after, the plan is back to the usual loads and there's no retest. Or, instead, take A and B in the deload week: the Results open as usual, and next week an Exercise you trained this Block but the Assessment didn't test keeps the target it had reached.
+  - iOS: Result: · Notes:
+
 ## RPE on the last Set (#133)
 
 On the installed PWA against staging, after the Assessment. Route tests cover the hold; the web build walked the chips with the in-memory API; these are for the phone.

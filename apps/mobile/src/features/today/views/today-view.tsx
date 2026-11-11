@@ -70,7 +70,8 @@ export default function TodayView() {
   const { resumeWorkout, forgotten, setForgotten } = useResumeWorkout();
   const { isLoaded, isStale, pending, syncing } = logbook;
   const { workouts, error } = useHistory();
-  const daysPerWeek = useCurrentUser().user?.profile.daysPerWeek;
+  const { user } = useCurrentUser();
+  const daysPerWeek = user?.profile.daysPerWeek;
   const unit = useWeightUnit();
   const { latest: latestAssessment } = useLatestAssessment();
   const { plannedWorkout: latestPlan, stale: planIsStale } = usePlannedWorkout();
@@ -135,6 +136,8 @@ export default function TodayView() {
           now,
           tests,
           dismissed,
+          // As the server has it, whose Block the deload week is in
+          timeZone: user?.timeZone ?? "UTC",
         });
   const leadingOffer = offer?.kind === "start" && plan === "none" && !logbook.workout ? offer : null;
   const card = todayCard({

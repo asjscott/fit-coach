@@ -30,6 +30,11 @@ const HEADLINES: Record<AssessmentPart, string> = {
   B: "One more test to go.",
 };
 
+// The deload week's retake (#137): what it keeps, so the user knows the Block's progress is safe
+const RETAKE_LABEL = "Retake the Assessment";
+const RETAKE_LINE =
+  "Your deload week is a good time to check your strength. Only the Exercises it tests, and any you didn't do this Block, get new levels.";
+
 const untestedNote = (untested: TestedPattern[]) =>
   `No test suits your injuries and equipment for ${patternsInWords(untested)}, so ${untested.length > 1 ? "they're" : "it's"} estimated from your other results.`;
 
@@ -68,8 +73,8 @@ export function AssessmentCard({
   );
 }
 
-// Today's Assessment offer: start A or B (and redo a stale A), why it's unavailable, "Results once synced", or open
-// the Results. Every offer can be dismissed. Starting needs no Workout in progress
+// Today's Assessment offer: start A or B (and redo a stale A), why it's unavailable, "Results once synced", open
+// the Results, or retake it in the deload week. Every offer can be dismissed. Starting needs no Workout in progress
 export function AssessmentSection({ offer, onDismiss }: { offer: AssessmentOffer; onDismiss: () => void }) {
   const { workout } = useLogbook();
   const { start, starting } = useStartAssessment();
@@ -91,7 +96,7 @@ export function AssessmentSection({ offer, onDismiss }: { offer: AssessmentOffer
     <View style={{ gap: spacing[2] }}>
       <View style={styles.header}>
         <SectionLabel style={styles.label}>
-          {offer.kind === "start" ? `Assessment ${offer.part}` : "Assessment"}
+          {offer.kind === "start" ? `Assessment ${offer.part}` : offer.kind === "retake" ? RETAKE_LABEL : "Assessment"}
         </SectionLabel>
         <Pressable onPress={onDismiss} accessibilityRole="button" accessibilityLabel="Dismiss" hitSlop={12}>
           <Icon name="x" size={18} />
@@ -108,6 +113,18 @@ export function AssessmentSection({ offer, onDismiss }: { offer: AssessmentOffer
         />
       ) : offer.kind === "syncing" ? (
         <SyncingNote />
+      ) : offer.kind === "retake" ? (
+        <>
+          <Text size="sm" color="muted">
+            {RETAKE_LINE}
+          </Text>
+          {offer.untested.length > 0 ? (
+            <Text size="sm" color="muted">
+              {untestedNote(offer.untested)}
+            </Text>
+          ) : null}
+          {startButton("A", "Start assessment A")}
+        </>
       ) : offer.kind === "unavailable" ? (
         <Text size="sm" color="muted">
           No Assessment test suits your injuries and equipment. Log Manual Workouts with the Exercises you can do.

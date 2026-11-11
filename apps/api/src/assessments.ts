@@ -1,5 +1,13 @@
 import { randomUUID } from "node:crypto";
-import { assess, migrateWorkingLevel, pairToAssess, type LegacyWorkingLevel } from "@fit/engines";
+import {
+  assess,
+  BLOCK_WEEKS,
+  keptByRetake,
+  migrateWorkingLevel,
+  pairToAssess,
+  type LegacyWorkingLevel,
+} from "@fit/engines";
+import type { ClientSession } from "mongodb";
 import { Assessment, LatestAssessment, WorkingLevel, type WorkingLevelMover, type Workout } from "@fit/shared";
 import { client, db } from "./db";
 import { equipmentProfilesOf, findUser, type OnboardedUser } from "./users";
@@ -12,7 +20,8 @@ type AssessmentDoc = Omit<Assessment, "createdAt" | "bStartedAt"> & {
   bStartedAt: Date;
 };
 
-// One document per user and slug; the newest Assessment (by when its B started) overwrites all of them
+// One document per user and slug; the newest Assessment (by when its B started) sets them, keeping on a retake the
+// last Block's progress (#137)
 type WorkingLevelDoc = WorkingLevel & { clerkUserId: string; assessmentId: string };
 
 export const assessments = db.collection<AssessmentDoc>("assessments");
@@ -24,6 +33,14 @@ export async function ensureAssessmentIndexes() {
   await assessments.createIndex({ clerkUserId: 1, aWorkoutId: 1 }, { unique: true });
   await assessments.createIndex({ clerkUserId: 1, bWorkoutId: 1 }, { unique: true });
   await workingLevels.createIndex({ clerkUserId: 1, slug: 1 }, { unique: true });
+}
+
+// The last Block's Workouts, and a day either side of its Mondays in any timezone: keptByRetake narrows them down
+const RETAKE_LOOKBACK_MS = (BLOCK_WEEKS * 7 + 1) * 24 * 60 * 60 * 1000;
+
+// Whether the user had an Assessment before this one, so that this one is a retake
+async function isRetake(clerkUserId: string, id: string, session: ClientSession) {
+  return (await assessments.countDocuments({ clerkUserId, id: { $ne: id } }, { session, limit: 1 })) > 0;
 }
 
 // For every uploaded Workout, retries included: stores the Assessment and Working Levels of a pair it completes. One
@@ -76,11 +93,37 @@ export async function assessIfPaired(clerkUserId: string, workout: Workout, user
         { sort: { bStartedAt: -1 }, projection: { id: 1 }, session },
       );
       if (newest?.id !== id) return;
-      // A retake replaces every Working Level, even one for an Exercise the new Assessment leaves out
-      await workingLevels.deleteMany({ clerkUserId }, { session });
-      if (result.workingLevels.length) {
+      // A retake keeps the last Block's progress (#137): the levels of Exercises it didn't test that have Sets logged
+      // in that Block stay. Every other level is replaced, or goes when the new Assessment leaves its Exercise out
+      const kept = (await isRetake(clerkUserId, id, session))
+        ? keptByRetake({
+            workouts: await workouts
+              .find(
+                {
+                  clerkUserId,
+                  startedAt: {
+                    $gte: new Date(Date.parse(a.startedAt) - RETAKE_LOOKBACK_MS),
+                    $lt: new Date(a.startedAt),
+                  },
+                },
+                { projection: { startedAt: 1, assessment: 1, workoutExercises: 1 }, session },
+              )
+              .toArray()
+              .then((docs) => docs.map((doc) => ({ ...doc, startedAt: doc.startedAt.toISOString() }))),
+            assessment: result.assessment,
+            aStartedAt: a.startedAt,
+            timeZone: user.timeZone,
+          })
+        : new Set<string>();
+      const stored = await workingLevels
+        .find({ clerkUserId, slug: { $in: [...kept] } }, { projection: { slug: 1 }, session })
+        .toArray();
+      const keptSlugs = stored.map(({ slug }) => slug);
+      await workingLevels.deleteMany({ clerkUserId, slug: { $nin: keptSlugs } }, { session });
+      const replaced = result.workingLevels.filter(({ slug }) => !keptSlugs.includes(slug));
+      if (replaced.length) {
         await workingLevels.insertMany(
-          result.workingLevels.map((level) => ({ ...level, clerkUserId, assessmentId: id })),
+          replaced.map((level) => ({ ...level, clerkUserId, assessmentId: id })),
           { session },
         );
       }

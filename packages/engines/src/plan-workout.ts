@@ -13,7 +13,15 @@ import {
 } from "@fit/shared";
 import { withAlternatives, type Candidate } from "./alternative-exercises";
 import { exerciseBySlug, EXERCISES } from "./data/exercises";
-import { builtInEquipment, isAvailable, isSafeFor, matchesBuiltIn, type ProfileWithLoads } from "./equipment";
+import {
+  availableLoadsKg,
+  builtInEquipment,
+  isAvailable,
+  isSafeFor,
+  loadAtOrBelowKg,
+  matchesBuiltIn,
+  type ProfileWithLoads,
+} from "./equipment";
 import { muscleFatigue, tiredMuscles, type FatigueWorkout } from "./fatigue";
 import { isJump, JUMP_SETS, jumpCandidates, jumpsForWorkout } from "./jumps";
 import { planReasons } from "./plan-reasons";
@@ -65,7 +73,7 @@ export type PlanWorkoutInput = {
   unit: WeightUnit;
   // The one-time "Include jumps" switch on the Profile, off by default (#105)
   includeJumps?: boolean;
-  // The Block's deload week (weekOfBlock). Only jumps read it so far, at half their contacts
+  // The Block's deload week (weekOfBlock): the same Sets, lighter (deloaded), and jumps at half their contacts
   deloadWeek?: boolean;
 };
 
@@ -92,6 +100,43 @@ function targetFrom(
       return { unit: "seconds", seconds: level.seconds };
     case "band":
       return { unit: "band", level: level.level, reps: level.reps };
+  }
+}
+
+// The deload week's lighter work (ADR 0007, stories 64–66), with the same Sets: loads this much lighter, rounded down
+// to a Load Step, and reps and seconds targets at DELOAD_TARGET, rounded down to a whole rep (at least 5) or to 5
+// seconds (at least 15), but never above the usual target. Jumps halve their contacts instead (jumps.ts)
+const DELOAD_LOAD = 0.9;
+const DELOAD_TARGET = 0.7;
+const DELOAD_MIN_REPS = 5;
+const DELOAD_SECONDS_STEP = 5;
+const DELOAD_MIN_SECONDS = 15;
+
+const deloadedReps = (reps: number) => Math.min(reps, Math.max(DELOAD_MIN_REPS, Math.floor(reps * DELOAD_TARGET)));
+const deloadedSeconds = (seconds: number) =>
+  Math.min(
+    seconds,
+    Math.max(DELOAD_MIN_SECONDS, Math.floor((seconds * DELOAD_TARGET) / DELOAD_SECONDS_STEP) * DELOAD_SECONDS_STEP),
+  );
+
+// The load at or below 10% lighter that the profile has, or its lightest when none is that light; to 0.5 kg below it
+// when the profile's loads aren't known
+function deloadedKg(kg: number, exercise: Exercise, equipmentProfile: ProfileWithLoads) {
+  const lighter = kg * DELOAD_LOAD;
+  const loads = availableLoadsKg(exercise, equipmentProfile);
+  if (!loads.length) return Math.floor(lighter * 2) / 2;
+  return loads[0]! > lighter ? loads[0]! : loadAtOrBelowKg(lighter, loads);
+}
+
+function deloaded(target: SetTarget, exercise: Exercise, equipmentProfile: ProfileWithLoads): SetTarget {
+  switch (target.unit) {
+    case "kg":
+      return { ...target, kg: deloadedKg(target.kg, exercise, equipmentProfile) };
+    case "reps":
+    case "band":
+      return { ...target, reps: deloadedReps(target.reps) };
+    case "seconds":
+      return { ...target, seconds: deloadedSeconds(target.seconds) };
   }
 }
 
@@ -153,7 +198,14 @@ function possibleExercises(input: PlanWorkoutInput): Candidate[] {
     )
       return [];
     const target = targetFrom(level, exercise, equipmentProfile);
-    return target ? [{ exercise, target, outgrown: level.outgrown }] : [];
+    if (!target) return [];
+    return [
+      {
+        exercise,
+        target: input.deloadWeek ? deloaded(target, exercise, equipmentProfile) : target,
+        outgrown: level.outgrown,
+      },
+    ];
   });
   return withChanges(possible, levels);
 }
