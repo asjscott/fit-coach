@@ -11,7 +11,7 @@ screens (apps/mobile/src/features/workouts/views)
   └─ LogbookProvider (logbook-provider.tsx): one Logbook per app, its state, and finish → toast
        ├─ Logbook (packages/engines/src/logbook.ts): every rule with no UI; the main test seam
        │    ├─ DeviceStorage: device-storage.ts (phone, SQLite) / device-storage.web.ts (web, localStorage)
-       │    ├─ WorkoutUploader: POST /workouts through useApi
+       │    ├─ WorkoutUploader: POST /workouts and PUT /check-ins/:date through useApi
        │    ├─ PreviousSetsSource: GET /workouts/previous-sets?slug= through useApi (4 s timeout)
        │    └─ PlannedWorkoutSource: POST /planned-workouts/current through useApi
        └─ useSyncTriggers: sync() on foreground and on reconnect (expo-network)
@@ -154,7 +154,9 @@ Phone
   ├─ usePlannedWorkout (features/today/hooks): the copy, asking the server on every Today visit
   ├─ useDaysWorkout: the user's choices over daysWorkout (days-workout.ts), held in memory until Start
   ├─ useCheckIn: today's check-in (stored-check-in.ts, key today.checkIn, by local date), passed to daysWorkout with
-  │  the usual choices. readinessShare (check-in.ts) trims the lowest-priority Sets after the Length cut, unless the
+  │  the usual choices. Each check-in is also queued on the Logbook (queueCheckIn, key logbook:pending-check-ins, one
+  │  per date) and uploaded by sync() after the Pending Workouts, retried the same way, to PUT /check-ins/:date
+  │  (apps/api/src/check-ins.ts, routes/check-ins.ts; GET /check-ins/:date reads one back). Readiness never waits on it. readinessShare (check-in.ts) trims the lowest-priority Sets after the Length cut, unless the
   │  user picks Full workout. Card: check-in-card.tsx, shown by showsCheckIn (today-status.ts)
   ├─ Today (features/today/views/today-view.tsx): one card for the day (`todayCard` in today-status.ts, drawn by today-card.tsx), and planned-workout-sheet.tsx with the Exercises, targets, Length and equipment
   │  (rest-day.ts). todayPlan (today-status.ts) gates both: a plan, stale or not, and no In-progress Workout
@@ -210,6 +212,10 @@ Schemas: packages/shared/src/planned-workouts.ts
   offer. The walk is one Set (#109, `takesOneSet`): `restAfterSet` gives no rest after it, and the logging screen
   offers "Next exercise" rather than a Set 2 (`takesAnotherSet`). Recovery Exercises have no Pattern and no strength ratio, so no Working Level. `recovery` also needs
   `seed:exercises` re-run, as `ballistic` did.
+- **A Check-in is stored once per user per local date** (#125), the phone's date, sent in the URL. The server keeps the
+  one with the latest `checkedInAt`, so a retry or a late upload of an earlier one changes nothing, and the PUT answers
+  with the Check-in the date now has. The phone's queue keeps only the newest per date, and one replaced mid-upload
+  still goes up next. Sign-out clears the queue; a failed Check-in never holds up a Pending Workout.
 - **Build and tune with the simulation.** Scores tie often, as many Exercises share budgeted credits. The planner is
   deterministic, so ties fall to last week's Exercises, then the longest Sets, then the slug, never library order.
   `plan-outcomes.test.ts` pins what a user should see, with the library in either order: run it after any tuning.

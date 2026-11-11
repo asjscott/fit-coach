@@ -142,6 +142,8 @@ npx expo run:android --variant release --device
 
 - [ ] **C5** The next day the check-in is gone: the card is back (if there's a plan) and the Workout is full.
   - iOS: Result: · Android: Result: · Notes:
+- [ ] **C6** (#125) In airplane mode, check in on Today: the Day's Workout follows the Readiness straight away, as online. Change the check-in once, still offline. Turn airplane mode off and bring the app to the foreground. The `checkIns` collection in the staging database has one document for today, with the changed ratings, not the first.
+  - iOS: Result: · Android: Result: · Notes:
 
 ## Supersets (#96)
 
