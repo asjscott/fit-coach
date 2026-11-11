@@ -9,6 +9,7 @@
     "build": "tsup",
     "start": "node dist/server.js",
     "typecheck": "tsc --noEmit",
+    "test": "vitest run",
     "seed:exercises": "tsx --env-file=.env scripts/seed-exercises.ts"
   },
   "keywords": [],
@@ -30,6 +31,7 @@
     "mongodb-memory-server": "^10.4.3",
     "tsup": "^9.0.0",
     "tsx": "^4.23.15",
-    "typescript": "~6.0.3"
+    "typescript": "~6.0.3",
+    "vitest": "^5.0.5"
   }
 }
