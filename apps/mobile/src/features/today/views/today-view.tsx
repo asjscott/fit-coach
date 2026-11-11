@@ -26,6 +26,7 @@ import { spacing } from "@/theme";
 import { AssessmentCard, AssessmentSection } from "../components/assessment-section";
 import { LastWorkoutSection } from "../components/last-workout-section";
 import { PlannedWorkoutSheet } from "../components/planned-workout-sheet";
+import { PrNote } from "../components/pr-note";
 import { ThisWeekSection } from "../components/this-week-section";
 import { TodayCard, TodayCardLink } from "../components/today-card";
 import { CheckInCard } from "../components/check-in-card";
@@ -33,6 +34,7 @@ import { useCheckIn } from "../hooks/use-check-in";
 import { useDaysWorkout } from "../hooks/use-days-workout";
 import { useDismissedOffer } from "../hooks/use-dismissed-offer";
 import { usePlannedWorkout } from "../hooks/use-planned-workout";
+import { usePrNote } from "../hooks/use-pr-note";
 import { planReasonLines } from "../plan-reasons";
 import {
   RECOVERY_INSTEAD,
@@ -67,6 +69,7 @@ export default function TodayView() {
   const { dismissed, dismiss } = useDismissedOffer();
   const tests = useChosenTests();
   const [sheetIsOpen, setSheetIsOpen] = useState(false);
+  const prNote = usePrNote();
   useRefreshHistory();
 
   const plan = todayPlan({
@@ -141,6 +144,11 @@ export default function TodayView() {
       <Text size="sm" weight="semiBold" color="muted" style={{ marginBottom: spacing[3] }}>
         {now.toLocaleDateString([], { weekday: "long", day: "numeric", month: "long" })}
       </Text>
+      {prNote.shown.length ? (
+        <View style={{ marginBottom: spacing[3] }}>
+          <PrNote shown={prNote.shown} now={now} onDismiss={prNote.dismiss} />
+        </View>
+      ) : null}
       {card === "loading" ? <Spinner /> : null}
       {card === "resume" && logbook.workout ? (
         <TodayCard

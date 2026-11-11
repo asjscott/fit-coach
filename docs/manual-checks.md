@@ -166,6 +166,15 @@ Needs `pnpm --filter @fit/api seed:exercises` run once from the main checkout (i
 - [ ] **R1** On a Rest Day, the "Rest today." card has a "Recovery workout instead" link. Tap it: a Workout opens with a 20-minute walk, then hip flexor stretch, open book, cat-cow and world's greatest stretch at 2 × 45 s each, logged on the normal timed-Set screen. The walk's target reads "1 set · 20 min". Log it: no rest timer starts, and in place of a Set 2 there's "Next exercise", which opens the hip flexor stretch. A stretch's Set still starts its usual rest (1:10), and still offers a Set 3 after its 2.
   - iOS: Result: · Android: Result: · Notes:
 
+## PRs (#130)
+
+On the installed PWA against staging, once an Exercise has a Workout behind it (the first Workout on an Exercise is only a baseline). The web build walked both checks with the in-memory API; these are for the phone.
+
+- [ ] **PR1** With signal, beat an Exercise's best (more kg at the same reps, or more reps) and Save workout. The toast reads "Workout saved. New PR: …" with "See workout", which opens the Workout in History showing "New PR · …" under that Exercise. Today shows no PR note for it.
+  - iOS: Result: · Notes:
+- [ ] **PR2** In airplane mode, beat a best again and save. Turn airplane mode off and open the app: once it uploads, Today shows a green note naming the PRs with "See workout". Close and reopen the app: the note is gone, and the Workout's History row says "New PR".
+  - iOS: Result: · Notes:
+
 ## Your call
 
 Not a bug, but it needs your judgement once you've done some Workouts. Details in `docs/research/planner-simulation.md`.

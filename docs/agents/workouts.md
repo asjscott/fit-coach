@@ -214,6 +214,29 @@ Schemas: packages/shared/src/planned-workouts.ts
   deterministic, so ties fall to last week's Exercises, then the longest Sets, then the slug, never library order.
   `plan-outcomes.test.ts` pins what a user should see, with the library in either order: run it after any tuning.
 
+## PRs (#130)
+
+```text
+findPrs (packages/engines/src/prs.ts): pure. A Workout's PRs, one per Exercise, against the user's earlier Workouts;
+  prMeasure says what an Exercise's PR measures (e1rm, load for 8 reps, reps, seconds) or null (carry, Recovery,
+  unknown slug)
+API: recordPrs (apps/api/src/workouts.ts), called by POST /workouts after assessIfPaired. Stored on the workout doc as
+  `prs`, returned on Workout.prs by POST and GET /workouts (routes/prs.test.ts)
+Phone
+  ├─ Logbook.sync keeps an upload's PRs under logbook:unseen-prs; unseenPrs / markPrsSeen
+  ├─ Finish: FinishOutcome.prs, celebrated by toastWhenUploaded (upload-toast.ts) and marked seen
+  ├─ Today: usePrNote + pr-note.tsx, a late upload's PRs, marked seen as soon as shown
+  └─ History: the row's "New PR" and the detail's "New PR · …" per Exercise (prLabel, prsHeadline in format.ts)
+```
+
+- **Found once.** `recordPrs` stores `prs` on the first upload (`[]` when none) and a retry returns what's stored, so
+  a PR is never found twice. Any `prs` a phone sends are dropped.
+- **Measured against Workouts that started before it**, so a past or late Workout counts from its own day. A later
+  Workout's stored PRs aren't revisited when an earlier one arrives late.
+- **e1RM uses the reps logged**, not reps + (10 − RPE), so an Assessment's RPE-rated Sets count as lifted.
+- **The Finish flow owns its Workout's PRs**: the provider keeps them out of `unseenPrs` while that upload is under
+  way (`celebrating`), so Today's note never shows what the toast is about to.
+
 ## Route tests (#123)
 
 `pnpm --filter @fit/api test` runs the API's route tests (`apps/api/src/routes/*.test.ts`, Vitest). Each test file

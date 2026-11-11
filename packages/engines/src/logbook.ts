@@ -1,6 +1,7 @@
 import {
   InProgressWorkout,
   PlannedWorkout,
+  Pr,
   Workout,
   type AssessmentPart,
   type BodyProfile,
@@ -44,9 +45,9 @@ export async function readStoredCopy<T>(storage: DeviceStorage, key: string, sch
   return json === null ? null : (schema.safeParse(JSON.parse(json)).data ?? null);
 }
 
-// Resolves once the server has the Workout; rejects on any failure
+// Resolves once the server has the Workout, with the PRs it found on it (none when void); rejects on any failure
 export type WorkoutUploader = {
-  upload(workout: Workout): Promise<void>;
+  upload(workout: Workout): Promise<Pr[] | void>;
 };
 
 // The server's Previous Sets for an Exercise: null when no Workout on the server has it; rejects
@@ -60,6 +61,10 @@ export type PreviousSetsSource = {
 export type PlannedWorkoutSource = {
   current(): Promise<PlannedWorkout | null>;
 };
+
+// PRs an upload found that the user hasn't been shown yet, by Workout (#130)
+export const UnseenPrs = z.object({ workoutId: z.string(), startedAt: z.iso.datetime(), prs: z.array(Pr).min(1) });
+export type UnseenPrs = z.infer<typeof UnseenPrs>;
 
 // The latest Planned Workout the phone has (ADR 0003). Stale from a Workout finishing until the plan that counts it
 // arrives, so Today never shows a plan the phone knows is out of date. A Recovery Workout changes no plan, so it never
@@ -114,6 +119,7 @@ function targetDraft(loadType: LoadType, target: SetTarget): SetValues | null {
 const IN_PROGRESS_KEY = "logbook:in-progress";
 const PENDING_KEY = "logbook:pending";
 const PLANNED_WORKOUT_KEY = "logbook:planned-workout";
+const UNSEEN_PRS_KEY = "logbook:unseen-prs";
 
 // awaitingNextPlan: a Workout has uploaded since this plan was built, so the server has a newer one for the phone
 const StoredPlannedWorkout = z.object({ plannedWorkout: PlannedWorkout, awaitingNextPlan: z.boolean() });
@@ -176,6 +182,8 @@ export function createLogbook({
     const { plannedWorkout, awaitingNextPlan } = stored;
     return { plannedWorkout, stale: awaitingNextPlan || trainingWorkouts(await readPending()).length > 0 };
   }
+
+  const readUnseenPrs = async () => (await readStoredCopy(storage, UNSEEN_PRS_KEY, UnseenPrs.array())) ?? [];
 
   // Shared by overlapping sync() calls, so no Workout is uploaded twice at once
   let syncing: Promise<void> | null = null;
@@ -509,7 +517,21 @@ export function createLogbook({
         await storage.removeItem(IN_PROGRESS_KEY);
         await storage.removeItem(PENDING_KEY);
         await storage.removeItem(PLANNED_WORKOUT_KEY);
+        await storage.removeItem(UNSEEN_PRS_KEY);
       }),
+
+    // PRs uploads found that haven't been shown, oldest upload first: the Finish screen's to celebrate when the upload
+    // is immediate, otherwise a note on Today
+    unseenPrs: () => serially(readUnseenPrs),
+
+    // Once shown, a Workout's PRs are never shown again but in History
+    markPrsSeen: (workoutIds: string[]) =>
+      serially(async () =>
+        storage.setItem(
+          UNSEEN_PRS_KEY,
+          JSON.stringify((await readUnseenPrs()).filter((unseen) => !workoutIds.includes(unseen.workoutId))),
+        ),
+      ),
 
     // Uploads each Pending Workout, removing it from the phone only once the server has it.
     // A failed upload leaves that Workout pending and moves on to the next; once all have
@@ -524,8 +546,9 @@ export function createLogbook({
           let workout: Workout | undefined;
           while ((workout = (await serially(readPending)).find((p) => !tried.has(p.id)))) {
             tried.add(workout.id);
+            let prs: Pr[] | void;
             try {
-              await uploader.upload(workout);
+              prs = await uploader.upload(workout);
             } catch (err) {
               failures.push(err);
               continue;
@@ -533,8 +556,12 @@ export function createLogbook({
             // A Recovery Workout changes no plan, so the copy stays current
             const changesPlan = !isRecoveryWorkout(workout);
             if (changesPlan) uploadCount += 1;
-            const { id } = workout;
+            const { id, startedAt } = workout;
             await serially(async () => {
+              if (prs?.length) {
+                const unseen = (await readUnseenPrs()).filter((u) => u.workoutId !== id);
+                await storage.setItem(UNSEEN_PRS_KEY, JSON.stringify([...unseen, { workoutId: id, startedAt, prs }]));
+              }
               await writePending((await readPending()).filter((p) => p.id !== id));
               const stored = await readPlannedWorkout();
               if (stored && changesPlan) await writePlannedWorkout({ ...stored, awaitingNextPlan: true });

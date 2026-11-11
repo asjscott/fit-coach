@@ -3,6 +3,7 @@ import type {
   EquipmentProfile,
   PlannedExercise,
   PlannedWorkout,
+  Pr,
   PreviousSets,
   SetValues,
   UserProfile,
@@ -39,7 +40,7 @@ function memoryStorage(): DeviceStorage {
 // Records what reached the server
 function fakeUploader() {
   const uploaded: Workout[] = [];
-  return { uploaded, upload: async (workout: Workout) => void uploaded.push(workout) };
+  return { uploaded, upload: async (workout: Workout): Promise<Pr[] | void> => void uploaded.push(workout) };
 }
 
 // The server's answer for each Exercise; Exercises not listed have none
@@ -1778,5 +1779,45 @@ describe("the Planned Workout on the phone", () => {
     await logbook.clear();
 
     expect(await logbook.plannedWorkout()).toEqual({ plannedWorkout: null, stale: false });
+  });
+});
+
+// PRs found at upload (#130, spec #119 stories 78 and 79): the phone keeps those it hasn't shown, for a note on Today
+describe("Logbook: PRs from an upload", () => {
+  const pr: Pr = { slug: "plank", measure: "seconds", best: 60, previous: 45 };
+
+  it("keeps the PRs an upload finds, with their Workout, until they're seen", async () => {
+    const { logbook, uploader } = setup();
+    uploader.upload = async () => [pr];
+    const finished = await finishPlank(logbook, "09:00");
+
+    await logbook.sync();
+
+    expect(await logbook.unseenPrs()).toEqual([{ workoutId: finished.id, startedAt: finished.startedAt, prs: [pr] }]);
+    await logbook.markPrsSeen([finished.id]);
+    expect(await logbook.unseenPrs()).toEqual([]);
+  });
+
+  it("keeps nothing for an upload with no PRs", async () => {
+    const { logbook, uploader } = setup();
+    uploader.upload = async () => [];
+    await finishPlank(logbook, "09:00");
+
+    await logbook.sync();
+
+    expect(await logbook.unseenPrs()).toEqual([]);
+  });
+
+  it("keeps unseen PRs through a restart, and forgets them on signing out", async () => {
+    const storage = memoryStorage();
+    const { logbook, uploader } = setup(storage);
+    uploader.upload = async () => [pr];
+    await finishPlank(logbook, "09:00");
+    await logbook.sync();
+
+    const rebuilt = setup(storage);
+    expect(await rebuilt.logbook.unseenPrs()).toHaveLength(1);
+    await rebuilt.logbook.clear();
+    expect(await rebuilt.logbook.unseenPrs()).toEqual([]);
   });
 });

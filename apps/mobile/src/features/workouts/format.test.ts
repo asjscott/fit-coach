@@ -6,6 +6,8 @@ import {
   elapsedClockLabel,
   elapsedLabel,
   previousSetsLabel,
+  prLabel,
+  prsHeadline,
   setParts,
   setsSummary,
   timeLabel,
@@ -337,5 +339,42 @@ describe("supersetNote", () => {
     expect(note([1, 1], [1, 3])).toBe("Chin-up is done: 45 s rest between Sets");
     expect(note([1, 1], [2, 3])).toBe("Chin-up is done: 45 s rest between Sets");
     expect(note([1, 1], [3, 3])).toBe("Chin-up is done: 45 s rest between Sets");
+  });
+});
+
+// PRs found at upload (#130): what each kind of best reads as, and the line that celebrates them
+describe("prLabel", () => {
+  it("gives a weighted Exercise's estimated one-rep maximum to the tenth of a kg", () => {
+    expect(prLabel({ slug: "goblet-squat", measure: "e1rm", best: 21.33, previous: 18.67 })).toBe(
+      "Estimated max 21.3 kg, up from 18.7 kg",
+    );
+  });
+
+  it("gives a weighted Ballistic Exercise's load for 8 reps", () => {
+    expect(prLabel({ slug: "kettlebell-swing", measure: "load", best: 20, previous: 16 })).toBe(
+      "20 kg for 8 reps, up from 16 kg",
+    );
+  });
+
+  it("gives the most reps or seconds in a Set", () => {
+    expect(prLabel({ slug: "push-up", measure: "reps", best: 14, previous: 12 })).toBe("14 reps, up from 12");
+    expect(prLabel({ slug: "plank", measure: "seconds", best: 50, previous: 45 })).toBe("50 s, up from 45 s");
+  });
+});
+
+describe("prsHeadline", () => {
+  it("names the Exercise of a single PR", () => {
+    expect(prsHeadline([{ slug: "goblet-squat", measure: "e1rm", best: 21, previous: 18 }])).toBe(
+      "New PR: Goblet squat",
+    );
+  });
+
+  it("counts several and names each", () => {
+    expect(
+      prsHeadline([
+        { slug: "goblet-squat", measure: "e1rm", best: 21, previous: 18 },
+        { slug: "plank", measure: "seconds", best: 50, previous: 45 },
+      ]),
+    ).toBe("2 new PRs: Goblet squat, Plank");
   });
 });

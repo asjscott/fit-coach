@@ -1,4 +1,4 @@
-import type { Exercise, Pr, PrMeasure, Set, Workout } from "@fit/shared";
+import type { Exercise, Set as LoggedSet, Pr, PrMeasure, Workout } from "@fit/shared";
 import { exerciseBySlug } from "./data/exercises";
 import { e1rm, MAX_E1RM_REPS } from "./e1rm";
 
@@ -21,7 +21,7 @@ export function prMeasure(exercise: Exercise | undefined): PrMeasure | null {
 const rounded = (value: number) => Math.round(value * 100) / 100;
 
 // What one Set is worth by this measure, or null when it doesn't count towards it
-function setValue(set: Set, measure: PrMeasure): number | null {
+function setValue(set: LoggedSet, measure: PrMeasure): number | null {
   if (set.kind === "external") {
     if (measure === "e1rm") return set.reps <= MAX_E1RM_REPS ? rounded(e1rm(set.kg, set.reps)) : null;
     if (measure === "load") return set.reps >= BALLISTIC_PR_REPS ? set.kg : null;
