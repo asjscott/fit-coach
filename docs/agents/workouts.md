@@ -384,6 +384,10 @@ it("stores an upload once however often it's retried", async () => {
   set `assessment` or `plannedWorkoutId`; Sets (`lifted`, `repsDone`, `held`); and `assessmentPair()`, a dumbbell
   user's A and B. Times count back from now, so a Workout lands in the plan's current week; `assessmentPair` starts 50
   and 26 hours ago.
+- **Uploading and reading back what an upload did** is in `apps/api/src/test/uploads.ts`, for progression's route
+  tests: `assessedUser(api)` (assessed two weeks ago, so later Workouts can sit in an earlier week and be rested),
+  `at(startedHoursAgo, exercises, extra)`, `upload`, `workingLevels`, `currentPlan` and `plannedExercise`. Use these
+  rather than copying them into a test file.
 - **The server reads the clock**, and plans are due on a new day in the user's timezone (UTC for test users), so build
   times from now rather than fixed dates.
 - **Name tests in GLOSSARY.md terms and say which user story or issue they pin**, as `routes/workouts.test.ts` does.
