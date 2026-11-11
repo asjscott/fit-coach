@@ -4,7 +4,7 @@ import type { FastifyInstance } from "fastify";
 import { requireAuth, userIdOf } from "./auth";
 
 // Errors go to Sentry when SENTRY_DSN is set, tagged with SENTRY_ENVIRONMENT (production or staging). Without a DSN,
-// as locally, nothing is reported. See "Error reporting" in docs/agents/workouts.md
+// as locally and in the route tests, nothing is reported. See "Error reporting" in docs/agents/workouts.md
 export function initErrorReporting() {
   const config = errorReportingConfig({ dsn: process.env.SENTRY_DSN, environment: process.env.SENTRY_ENVIRONMENT });
   if (!config) return;

@@ -214,12 +214,50 @@ Schemas: packages/shared/src/planned-workouts.ts
   deterministic, so ties fall to last week's Exercises, then the longest Sets, then the slug, never library order.
   `plan-outcomes.test.ts` pins what a user should see, with the library in either order: run it after any tuning.
 
+## Route tests (#123)
+
+`pnpm --filter @fit/api test` runs the API's route tests (`apps/api/src/routes/*.test.ts`, Vitest). Each test file
+starts the whole API (`buildApp` in `apps/api/src/app.ts`, which `server.ts` listens on) against its own in-memory
+MongoDB replica set, with Clerk switched off as in `dev:local`, and sends requests with Fastify's `inject`, so nothing
+listens on a port and nothing reaches Clerk. The first run downloads the MongoDB binary, as `dev:local` does.
+
+To write one:
+
+```ts
+import { useRouteTestApi } from "../test/route-test-api";
+import { lifted, workout } from "../test/workouts";
+
+const api = useRouteTestApi(); // once per file, at the top: starts the API before its tests, stops it after
+
+it("stores an upload once however often it's retried", async () => {
+  const user = await api.signIn(); // a new account, onboarded with dumbbells at home
+  const finished = workout(2, [{ slug: "goblet-squat", sets: [lifted(14, 10), lifted(14, 9)] }]);
+  expect((await user.post("/workouts", finished)).statusCode).toBe(201);
+});
+```
+
+- **Every `signIn()` is a new account**, so tests in a file share the database but never each other's data. Pass
+  `profile`, `equipmentProfile` or `onboarded: false` for another user. `user.get/post/patch/put/delete` return
+  `{ statusCode, body }`, the body parsed.
+- **Read results through routes, never the database.** What the Coach prescribes is `POST /planned-workouts/current`,
+  Working Levels are `GET /assessments/latest`, History is `GET /workouts`. A result no route shows isn't something a
+  route test can pin; say so in the test rather than reading the collection.
+- **Fixtures** are in `apps/api/src/test/workouts.ts`: `workout(startedHoursAgo, exercises, extra)`, where `extra` can
+  set `assessment` or `plannedWorkoutId`; Sets (`lifted`, `repsDone`, `held`); and `assessmentPair()`, a dumbbell
+  user's A and B. Times count back from now, so a Workout lands in the plan's current week; `assessmentPair` starts 50
+  and 26 hours ago.
+- **The server reads the clock**, and plans are due on a new day in the user's timezone (UTC for test users), so build
+  times from now rather than fixed dates.
+- **Name tests in GLOSSARY.md terms and say which user story or issue they pin**, as `routes/workouts.test.ts` does.
+- **Never import `db.ts` or a module that does at the top of a test file.** The database client reads `MONGODB_URI` when
+  it loads, so the harness sets it before importing the app. Reach the server only through `api.signIn()`.
+
 ## Error reporting (#122)
 
 Errors on the web app and the API go to Sentry, tagged with the deploy's environment. Without a DSN nothing is
 reported, so local runs, tests and CI need nothing set.
 
-- **API:** `src/error-reporting.ts`, called at the top of `server.ts`. Sentry's Fastify integration reports errors
+- **API:** `src/error-reporting.ts`. `server.ts` starts Sentry; `buildApp` adds the user hook and the test route. Sentry's Fastify integration reports errors
   thrown in a route (5xx only) and uncaught exceptions. A `preHandler` hook adds the Clerk user id on the request's own
   scope.
 - **Web app:** `src/features/error-reporting/error-reporting.web.ts` reports uncaught errors and unhandled rejections.
