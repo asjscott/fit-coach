@@ -14,12 +14,14 @@ The rerun asked for by spec #77 and ticket #87. The percentages in `exercise-sel
 
 **Update, 2026-11-11:** rerun with progression (#138): the lifter reaches every target and the real rules move the Working Levels between Workouts. Nothing a gym plans changed. See [Progression](#progression), which adds each Muscle's credit from primary credit and in total.
 
+**Update, 2026-11-11:** rerun after spec #119's review fixes: the cap never gives way (Bodyweight only now stays within it), jumps keep to it, and build_muscle has a weekly back squat by rule. See [Review fixes](#review-fixes-spec-119). The tables for Full gym, intermediate, the library's gaps and Progression are this rerun's.
+
 To reproduce: `pnpm --filter @fit/engines simulate` (`packages/engines/scripts/simulate-plans.ts`) prints every table.
 
 ## Result
 
-- **With progression (#138), Working Levels move and nothing a gym plans changes.** No Muscle plans over the 130% cap through primary credit on either gym, but 164 Muscle and combination pairs are over 160% in total, so the cap comes back for a decision, and Bodyweight only still plans over the cap. See [Progression](#progression).
-- **Since #101, calves in the budget cost build_muscle its back squat**: 0 Sets at 4 days Standard on every gym, where the planner gave 3, as the one-sided squats credit calves and back squat doesn't. The bullets below are from before #101 and the 130% cap. See [The library's gaps](#the-librarys-gaps).
+- **After spec #119's review, no Muscle plans over the 130% cap through primary credit on any profile, Bodyweight only included** (130% at most, from 472%), as a week the cap has filled gets the Recovery Workout instead of a new week's Workout. 166 Muscle and combination pairs are over 160% in total, so the cap still comes back for a decision. See [Review fixes](#review-fixes-spec-119).
+- **build_muscle has its back squat back**: 3 Sets a week at 4 and 6 days Standard on a Full gym, by the weekly rule athletic has (#100). Calves in the budget (#101) had cost it, as the one-sided squats credit calves and back squat doesn't. The bullets below are from before #101 and the 130% cap. See [The library's gaps](#the-librarys-gaps).
 
 - **Back squat and barbell bench now show up on a Full gym for build_muscle and recomp, after adding a barbell factor of 1.02 to the score.** At 4 days Standard, build_muscle gets 6 Sets of each and recomp gets 3 of back squat and 6 of bench. Neither opens a Standard Workout at 4 days, and at 6 days they sometimes do.
 - **lose_fat and athletic still get little.** At 4 days Standard, lose_fat gets none of either, as its time tilt outweighs 1.02. That's accepted as a known limit of spec #77. Athletic got no back squat at 4 days Standard, as the one-sided dumbbell squats outscore it. A weekly rule (#100) now gives it at least 3 Sets in every simulated combination, 6 at 4 days Standard, and bench stays at 3 to 6.
@@ -37,28 +39,28 @@ To reproduce: `pnpm --filter @fit/engines simulate` (`packages/engines/scripts/s
 
 ## Full gym, intermediate
 
-| Goal         | Days | Length   | Sets | Minutes | Loaded % | Bands % | Back squat Sets | Bench Sets | Of budget | Short of budget                                                                                                  |
-| ------------ | ---- | -------- | ---- | ------- | -------- | ------- | --------------- | ---------- | --------- | ---------------------------------------------------------------------------------------------------------------- |
-| build_muscle | 4    | standard | 87   | 176     | 77       | 0       | 0 (0)           | 6 (0)      | 113–150%  | none                                                                                                             |
-| build_muscle | 3    | standard | 65   | 132     | 78       | 0       | 0 (0)           | 5 (0)      | 89–139%   | side_delts 8/9, calves 4.5/5                                                                                     |
-| build_muscle | 4    | long     | 116  | 238     | 71       | 6       | 0 (0)           | 3 (0)      | 83–265%   | calves 5/6                                                                                                       |
-| build_muscle | 2    | short    | 26   | 57      | 77       | 0       | 0 (0)           | 3 (0)      | 25–100%   | quads 7.5/12, hamstrings 7.5/12, chest 3/12, lats 6/12, upper_back 9/12, side_delts 3.5/8, abs 6/8, calves 4.5/5 |
-| build_muscle | 6    | standard | 139  | 267     | 74       | 4       | 0 (0)           | 6 (3)      | 113–227%  | none                                                                                                             |
-| recomp       | 4    | standard | 87   | 175     | 79       | 3       | 3 (0)           | 6 (0)      | 121–206%  | none                                                                                                             |
-| recomp       | 3    | standard | 72   | 134     | 82       | 8       | 3 (0)           | 6 (0)      | 104–200%  | none                                                                                                             |
-| recomp       | 4    | long     | 109  | 238     | 86       | 10      | 6 (3)           | 7 (0)      | 121–263%  | none                                                                                                             |
-| recomp       | 2    | short    | 24   | 58      | 88       | 0       | 3 (0)           | 3 (0)      | 41–82%    | quads 4.5/11, hamstrings 6/11, glutes 9/11, chest 6/11, lats 6/11, upper_back 9/11, side_delts 3/6, abs 4.5/6    |
-| recomp       | 6    | standard | 131  | 266     | 76       | 5       | 3 (0)           | 9 (3)      | 122–275%  | none                                                                                                             |
-| lose_fat     | 4    | standard | 106  | 178     | 82       | 20      | 0 (0)           | 0 (0)      | 121–238%  | none                                                                                                             |
-| lose_fat     | 3    | standard | 83   | 133     | 80       | 22      | 0 (0)           | 0 (0)      | 104–229%  | none                                                                                                             |
-| lose_fat     | 4    | long     | 130  | 238     | 78       | 22      | 0 (0)           | 0 (0)      | 89–381%   | quads 12.5/14                                                                                                    |
-| lose_fat     | 2    | short    | 31   | 58      | 81       | 19      | 0 (0)           | 0 (0)      | 55–123%   | quads 7.5/11, hamstrings 7.5/11, chest 6/11, lats 7/11, upper_back 10/11, side_delts 4.5/6                       |
-| lose_fat     | 6    | standard | 148  | 268     | 73       | 17      | 0 (0)           | 0 (0)      | 117–335%  | none                                                                                                             |
-| athletic     | 4    | standard | 87   | 178     | 80       | 0       | 3 (3)           | 5 (0)      | 83–156%   | calves 5/6                                                                                                       |
-| athletic     | 3    | standard | 61   | 132     | 84       | 0       | 3 (3)           | 5 (0)      | 83–129%   | quads 13/14, hamstrings 12.5/14, side_delts 7.5/9                                                                |
-| athletic     | 4    | long     | 118  | 237     | 74       | 6       | 3 (3)           | 6 (0)      | 88–270%   | quads 14/16, calves 5.5/6                                                                                        |
-| athletic     | 2    | short    | 23   | 59      | 87       | 0       | 3 (3)           | 2 (0)      | 17–100%   | quads 6/12, hamstrings 7.5/12, chest 2/12, lats 6/12, upper_back 9/12, side_delts 1.5/8, abs 6/8, calves 3/5     |
-| athletic     | 6    | standard | 136  | 266     | 76       | 4       | 3 (0)           | 3 (3)      | 94–242%   | quads 19.5/20, calves 7.5/8                                                                                      |
+| Goal         | Days | Length   | Sets | Minutes | Loaded % | Bands % | Back squat Sets | Bench Sets | Of budget | Short of budget                                                                                                |
+| ------------ | ---- | -------- | ---- | ------- | -------- | ------- | --------------- | ---------- | --------- | -------------------------------------------------------------------------------------------------------------- |
+| build_muscle | 4    | standard | 87   | 178     | 78       | 0       | 3 (3)           | 6 (0)      | 100–163%  | none                                                                                                           |
+| build_muscle | 3    | standard | 60   | 132     | 90       | 0       | 3 (3)           | 6 (0)      | 78–136%   | quads 12/14, hamstrings 12/14, side_delts 7/9                                                                  |
+| build_muscle | 4    | long     | 115  | 240     | 76       | 6       | 3 (3)           | 6 (0)      | 97–255%   | hamstrings 15.5/16                                                                                             |
+| build_muscle | 2    | short    | 23   | 59      | 87       | 0       | 3 (3)           | 3 (0)      | 25–100%   | quads 7.5/12, hamstrings 6/12, chest 3/12, lats 6/12, upper_back 7.5/12, side_delts 2/8, abs 6/8, calves 1.5/5 |
+| build_muscle | 6    | standard | 134  | 266     | 78       | 7       | 3 (3)           | 8 (3)      | 113–200%  | none                                                                                                           |
+| recomp       | 4    | standard | 87   | 175     | 79       | 3       | 3 (0)           | 6 (0)      | 121–206%  | none                                                                                                           |
+| recomp       | 3    | standard | 72   | 134     | 82       | 8       | 3 (0)           | 6 (0)      | 104–200%  | none                                                                                                           |
+| recomp       | 4    | long     | 109  | 238     | 86       | 10      | 6 (3)           | 7 (0)      | 121–263%  | none                                                                                                           |
+| recomp       | 2    | short    | 24   | 58      | 88       | 0       | 3 (0)           | 3 (0)      | 41–82%    | quads 4.5/11, hamstrings 6/11, glutes 9/11, chest 6/11, lats 6/11, upper_back 9/11, side_delts 3/6, abs 4.5/6  |
+| recomp       | 6    | standard | 131  | 266     | 76       | 5       | 3 (0)           | 9 (3)      | 122–275%  | none                                                                                                           |
+| lose_fat     | 4    | standard | 106  | 178     | 82       | 20      | 0 (0)           | 0 (0)      | 121–238%  | none                                                                                                           |
+| lose_fat     | 3    | standard | 83   | 133     | 80       | 22      | 0 (0)           | 0 (0)      | 104–229%  | none                                                                                                           |
+| lose_fat     | 4    | long     | 130  | 238     | 78       | 22      | 0 (0)           | 0 (0)      | 89–381%   | quads 12.5/14                                                                                                  |
+| lose_fat     | 2    | short    | 31   | 58      | 81       | 19      | 0 (0)           | 0 (0)      | 55–123%   | quads 7.5/11, hamstrings 7.5/11, chest 6/11, lats 7/11, upper_back 10/11, side_delts 4.5/6                     |
+| lose_fat     | 6    | standard | 148  | 268     | 73       | 17      | 0 (0)           | 0 (0)      | 117–335%  | none                                                                                                           |
+| athletic     | 4    | standard | 87   | 178     | 80       | 0       | 3 (3)           | 5 (0)      | 83–156%   | calves 5/6                                                                                                     |
+| athletic     | 3    | standard | 61   | 132     | 84       | 0       | 3 (3)           | 5 (0)      | 83–129%   | quads 13/14, hamstrings 12.5/14, side_delts 7.5/9                                                              |
+| athletic     | 4    | long     | 118  | 237     | 74       | 6       | 3 (3)           | 6 (0)      | 88–270%   | quads 14/16, calves 5.5/6                                                                                      |
+| athletic     | 2    | short    | 23   | 59      | 87       | 0       | 3 (3)           | 2 (0)      | 17–100%   | quads 6/12, hamstrings 7.5/12, chest 2/12, lats 6/12, upper_back 9/12, side_delts 1.5/8, abs 6/8, calves 3/5   |
+| athletic     | 6    | standard | 136  | 266     | 76       | 4       | 3 (0)           | 3 (3)      | 94–242%   | quads 19.5/20, calves 7.5/8                                                                                    |
 
 ## At 4 days Standard, the other cases
 
@@ -66,17 +68,17 @@ Back squat Sets, then bench Sets, a week.
 
 | Goal         | Full gym, novice | Full home gym, intermediate | Full home gym, novice |
 | ------------ | ---------------- | --------------------------- | --------------------- |
-| build_muscle | 0, 6             | 0, 6                        | 0, 6                  |
+| build_muscle | 3, 6             | 3, 6                        | 3, 6                  |
 | recomp       | 3, 6             | 3, 6                        | 3, 6                  |
 | lose_fat     | 0, 0             | 0, 4                        | 0, 4                  |
 | athletic     | 3, 5             | 3, 5                        | 3, 5                  |
 
 A week of build_muscle, intermediate, on a Full gym:
 
-- Deadlift ×3, Dumbbell lateral raise ×3, Dumbbell step up ×3, Renegade row ×3, Pull up ×3, Barbell bench press ×3, Archer push up ×3
-- Dumbbell step up ×3, Dumbbell single leg romanian deadlift ×3, Barbell overhead press ×3, Pull up ×3, Renegade row ×3, Barbell bench press ×3, Dumbbell lateral raise ×3
-- Deadlift ×3, Dumbbell bulgarian split squat ×3, Landmine press ×3, Archer push up ×3, Chest supported dumbbell row ×3, Cable knee extension ×3, Nordic hamstring curl ×1
-- Barbell overhead press ×3, Nordic hamstring curl ×4, Landmine press ×4, Dumbbell overhead press ×3, Lat pulldown ×3, Cable knee extension ×3, Calf raise ×3, Side plank ×3
+- Back squat ×3, Deadlift ×3, Barbell bench press ×3, Renegade row ×3, Pull up ×3, Dumbbell lateral raise ×3, Calf raise ×3, Nordic hamstring curl ×2
+- Dumbbell step up ×3, Archer push up ×3, Barbell overhead press ×3, Deadlift ×3, Renegade row ×3, Barbell bench press ×3, Dumbbell lateral raise ×2
+- Dumbbell step up ×3, Chest supported dumbbell row ×4, Landmine press ×4, Dumbbell bulgarian split squat ×3, Pull up ×3, Nordic hamstring curl ×4
+- Landmine press ×4, Barbell overhead press ×3, Lat pulldown ×4, Dumbbell overhead press ×3, Farmers carry ×1, Cable knee extension ×4, Side plank ×4
 
 ## The recovery filter
 
@@ -185,9 +187,9 @@ Sets a week of each, and calves' credited Sets, intermediate:
 
 | Profile         | Goal         | Days | Length   | calf-raise | nordic-hamstring-curl | dumbbell-curl | dumbbell-overhead-triceps-extension | cable-knee-extension | table-row | Calves |
 | --------------- | ------------ | ---- | -------- | ---------- | --------------------- | ------------- | ----------------------------------- | -------------------- | --------- | ------ |
-| Full gym        | build_muscle | 4    | standard | 3          | 5                     | 0             | 0                                   | 6                    | 0         | 7.5    |
-| Full gym        | build_muscle | 4    | long     | 0          | 7                     | 0             | 0                                   | 7                    | 0         | 5      |
-| Full gym        | build_muscle | 6    | standard | 3          | 11                    | 0             | 0                                   | 10                   | 0         | 9      |
+| Full gym        | build_muscle | 4    | standard | 3          | 6                     | 0             | 0                                   | 4                    | 0         | 6      |
+| Full gym        | build_muscle | 4    | long     | 3          | 6                     | 0             | 0                                   | 7                    | 0         | 6.5    |
+| Full gym        | build_muscle | 6    | standard | 3          | 11                    | 0             | 0                                   | 8                    | 0         | 9      |
 | Full gym        | recomp       | 4    | standard | 0          | 5                     | 0             | 0                                   | 6                    | 0         | 0      |
 | Full gym        | recomp       | 4    | long     | 0          | 8                     | 0             | 0                                   | 4                    | 0         | 0      |
 | Full gym        | recomp       | 6    | standard | 0          | 11                    | 0             | 0                                   | 11                   | 0         | 0      |
@@ -197,9 +199,9 @@ Sets a week of each, and calves' credited Sets, intermediate:
 | Full gym        | athletic     | 4    | standard | 0          | 4                     | 0             | 0                                   | 7                    | 0         | 5      |
 | Full gym        | athletic     | 4    | long     | 0          | 7                     | 0             | 0                                   | 7                    | 0         | 5.5    |
 | Full gym        | athletic     | 6    | standard | 3          | 9                     | 0             | 0                                   | 9                    | 0         | 7.5    |
-| Full home gym   | build_muscle | 4    | standard | 3          | 5                     | 0             | 0                                   | 0                    | 0         | 7.5    |
-| Full home gym   | build_muscle | 4    | long     | 0          | 7                     | 0             | 0                                   | 0                    | 0         | 5      |
-| Full home gym   | build_muscle | 6    | standard | 4          | 12                    | 0             | 0                                   | 0                    | 0         | 8.5    |
+| Full home gym   | build_muscle | 4    | standard | 3          | 6                     | 0             | 0                                   | 0                    | 0         | 6      |
+| Full home gym   | build_muscle | 4    | long     | 3          | 7                     | 0             | 0                                   | 0                    | 0         | 6.5    |
+| Full home gym   | build_muscle | 6    | standard | 6          | 11                    | 0             | 0                                   | 0                    | 0         | 9      |
 | Full home gym   | recomp       | 4    | standard | 0          | 6                     | 0             | 0                                   | 0                    | 0         | 0      |
 | Full home gym   | recomp       | 4    | long     | 0          | 8                     | 0             | 0                                   | 0                    | 0         | 0      |
 | Full home gym   | recomp       | 6    | standard | 0          | 11                    | 0             | 0                                   | 0                    | 0         | 0      |
@@ -209,18 +211,18 @@ Sets a week of each, and calves' credited Sets, intermediate:
 | Full home gym   | athletic     | 4    | standard | 0          | 4                     | 0             | 0                                   | 0                    | 0         | 5      |
 | Full home gym   | athletic     | 4    | long     | 3          | 8                     | 0             | 0                                   | 0                    | 0         | 7      |
 | Full home gym   | athletic     | 6    | standard | 4          | 12                    | 0             | 0                                   | 0                    | 0         | 8.5    |
-| Bodyweight only | build_muscle | 4    | standard | 0          | 0                     | 0             | 0                                   | 0                    | 8         | 10     |
-| Bodyweight only | build_muscle | 4    | long     | 0          | 0                     | 0             | 0                                   | 0                    | 8         | 10     |
-| Bodyweight only | build_muscle | 6    | standard | 0          | 0                     | 0             | 0                                   | 0                    | 12        | 13.5   |
-| Bodyweight only | recomp       | 4    | standard | 0          | 0                     | 0             | 0                                   | 0                    | 8         | 10     |
-| Bodyweight only | recomp       | 4    | long     | 0          | 0                     | 0             | 0                                   | 0                    | 8         | 10     |
-| Bodyweight only | recomp       | 6    | standard | 0          | 0                     | 0             | 0                                   | 0                    | 11        | 13.8   |
-| Bodyweight only | lose_fat     | 4    | standard | 0          | 0                     | 0             | 0                                   | 0                    | 8         | 10     |
-| Bodyweight only | lose_fat     | 4    | long     | 0          | 0                     | 0             | 0                                   | 0                    | 8         | 8.5    |
-| Bodyweight only | lose_fat     | 6    | standard | 0          | 0                     | 0             | 0                                   | 0                    | 11        | 12     |
-| Bodyweight only | athletic     | 4    | standard | 0          | 0                     | 0             | 0                                   | 0                    | 8         | 10     |
-| Bodyweight only | athletic     | 4    | long     | 0          | 0                     | 0             | 0                                   | 0                    | 8         | 10     |
-| Bodyweight only | athletic     | 6    | standard | 0          | 0                     | 0             | 0                                   | 0                    | 12        | 13.5   |
+| Bodyweight only | build_muscle | 4    | standard | 0          | 0                     | 0             | 0                                   | 0                    | 8         | 4.5    |
+| Bodyweight only | build_muscle | 4    | long     | 0          | 0                     | 0             | 0                                   | 0                    | 8         | 5      |
+| Bodyweight only | build_muscle | 6    | standard | 0          | 0                     | 0             | 0                                   | 0                    | 12        | 4.5    |
+| Bodyweight only | recomp       | 4    | standard | 0          | 0                     | 0             | 0                                   | 0                    | 8         | 1.5    |
+| Bodyweight only | recomp       | 4    | long     | 0          | 0                     | 0             | 0                                   | 0                    | 8         | 3      |
+| Bodyweight only | recomp       | 6    | standard | 0          | 0                     | 0             | 0                                   | 0                    | 11        | 2      |
+| Bodyweight only | lose_fat     | 4    | standard | 0          | 0                     | 0             | 0                                   | 0                    | 8         | 1.5    |
+| Bodyweight only | lose_fat     | 4    | long     | 0          | 0                     | 0             | 0                                   | 0                    | 8         | 1.5    |
+| Bodyweight only | lose_fat     | 6    | standard | 0          | 0                     | 0             | 0                                   | 0                    | 11        | 1.5    |
+| Bodyweight only | athletic     | 4    | standard | 0          | 0                     | 0             | 0                                   | 0                    | 8         | 4.5    |
+| Bodyweight only | athletic     | 4    | long     | 0          | 0                     | 0             | 0                                   | 0                    | 8         | 5      |
+| Bodyweight only | athletic     | 6    | standard | 0          | 0                     | 0             | 0                                   | 0                    | 12        | 4.5    |
 
 - **Calves reach their min of 4 everywhere but 2 days Short** for athletic and build_muscle (`plan-outcomes.test.ts`, either library order), mostly from the 0.5 credit of step-ups, split squats and lunges. The calf raise itself comes in for build_muscle at 4 days Standard (3 Sets) and at 6 days. Athletic at 4 days Standard gets 5 of 6, and at 2 days Short 3 of 5.
 - **The table row gives Bodyweight only lats work**: 8 Sets a week at 4 days, 12 at 6, the variety cap's limit for the only lats Exercise there. Lats rise from 0 to 8 of 14 to 16.
@@ -236,7 +238,7 @@ What calves cost. Back squat and bench Sets a week at 4 days Standard, the same 
 | recomp       | 3, 6 → 3, 6            | 3, 6 → 3, 6      | 3, 6 → 3, 6                 | 3, 6 → 3, 6           |
 | athletic     | 3, 5 → 3, 5            | 3, 5 → 3, 5      | 3, 6 → 3, 5                 | 3, 6 → 3, 5           |
 
-- **build_muscle loses its back squat**, 3 Sets to 0 on every gym; athletic keeps its weekly 3 by rule. Step-ups, split squats and lunges credit calves 0.5 and back squat doesn't, so once calves are budgeted they outscore it, and the cap leaves room for only one squat pick. The same library without calves in the budget keeps back squat at 3. recomp and lose_fat, which don't budget calves, don't change. `plan-outcomes.test.ts` marks build_muscle at 4 and 6 days Standard as a known loss (`it.fails`, so it fails once back squat is back), and accepts athletic's 2 days Short at 1.5 on side delts (was 2).
+- **build_muscle loses its back squat**, 3 Sets to 0 on every gym; athletic keeps its weekly 3 by rule. Step-ups, split squats and lunges credit calves 0.5 and back squat doesn't, so once calves are budgeted they outscore it, and the cap leaves room for only one squat pick. The same library without calves in the budget keeps back squat at 3. recomp and lose_fat, which don't budget calves, don't change. `plan-outcomes.test.ts` marked build_muscle at 4 and 6 days Standard as a known loss until spec #119's review gave it a weekly back squat (see [Review fixes](#review-fixes-spec-119)), and accepts athletic's 2 days Short at 1.5 on side delts (was 2).
 
 ## Progression
 
@@ -245,32 +247,33 @@ Ticket #138, closing spec #119's simulation check. The simulated lifter now gets
 - **Nothing a gym plans changes.** Every table above for Full gym and Full home gym came out the same with progression on: the planner picks Exercises by credit and time, not load, and four weeks are too few for an Exercise to be outgrown and swapped for its harder variant. Bodyweight only's calves for recomp at 6 days Standard moved from 13.5 to 13.8 (in the table above).
 - **Loads and reps move as the rules say.** A barbell lift does 6 reps up to 10, then one Load Step up at the reps Epley predicts there: deadlift 92.5 kg × 6 to 95 kg × 10 over 8 Workouts. A dumbbell Exercise whose next Load Step Epley says is out of reach climbs past 12 towards 20 (lateral raise 5 kg × 8 to 5 kg × 15). Bands step up a band at 15 reps, a timed hold climbs 5 seconds a Workout to 60, a weighted Ballistic Exercise goes up a Load Step every 3rd Workout with no RPE logged (kettlebell swing 24 to 28 kg), and carries hold their load. Bodyweight Exercises seeded at 15 reps (archer push-up, pike push-up) are outgrown and stay at 15 where their harder variant isn't planned.
 - **No Muscle plans over the 130% cap through primary credit** on either gym, for either lifter, in any of the combinations below, and `plan-outcomes.test.ts` keeps pinning it with progression on. Primary credit reaches 130% at most.
-- **Total credit is over 160% on 164 Muscle and combination pairs**, the same 164 as before progression: abs (52), upper back (49), side delts (46) and glutes (17), all mostly from secondary credit. The highest is lose_fat abs at 4 days Long, 381 to 400%. Spec #119 says that brings the cap back for a decision.
-- **Bodyweight only plans over the cap through primary credit**, as it did before progression (#101 left it out of the cap test). Its few Exercises can't fill a Workout without going over, so the cap gives way. Progression makes recomp and lose_fat slightly worse at 6 days Long (glutes 82 to 85 of 18 for recomp, novice, from week 3), as an outgrown Exercise such as the incline push-up gives way to its harder variant and the week fills with more glute bridges.
-- **build_muscle still loses its back squat**: 0 Sets a week at 4 and 6 days Standard on a Full gym, as before. Dumbbell step-ups (6) and Bulgarian split squats (3) take the squat picks.
+- **Total credit was over 160% on 164 Muscle and combination pairs**, the same 164 as before progression: abs (52), upper back (49), side delts (46) and glutes (17), all mostly from secondary credit. The highest is lose_fat abs at 4 days Long, 381 to 400%. Spec #119 says that brings the cap back for a decision. 166 after the review fixes (the table below).
+- **Bodyweight only planned over the cap through primary credit**, as it did before progression (#101 left it out of the cap test), until spec #119's review (see [Review fixes](#review-fixes-spec-119)). Its few Exercises can't fill a Workout without going over, so the cap gives way. Progression makes recomp and lose_fat slightly worse at 6 days Long (glutes 82 to 85 of 18 for recomp, novice, from week 3), as an outgrown Exercise such as the incline push-up gives way to its harder variant and the week fills with more glute bridges.
+- **build_muscle still lost its back squat** with progression: 0 Sets a week at 4 and 6 days Standard on a Full gym. Dumbbell step-ups (6) and Bulgarian split squats (3) took the squat picks. The review fixes give it back (the tables here are after them).
 
 A lifter who reaches every target, build_muscle:
 
-| Exercise                              | Workouts | First target | Last target  |
-| ------------------------------------- | -------- | ------------ | ------------ |
-| deadlift                              | 8        | 92.5 kg × 6  | 95 kg × 10   |
-| dumbbell-lateral-raise                | 8        | 5 kg × 8     | 5 kg × 15    |
-| dumbbell-step-up                      | 8        | 12.5 kg × 8  | 12.5 kg × 15 |
-| renegade-row                          | 8        | 8 kg × 8     | 8 kg × 15    |
-| pull-up                               | 8        | 3 reps       | 10 reps      |
-| barbell-bench-press                   | 8        | 62.5 kg × 6  | 65 kg × 10   |
-| archer-push-up                        | 8        | 15 reps      | 15 reps      |
-| dumbbell-single-leg-romanian-deadlift | 4        | 17.5 kg × 8  | 17.5 kg × 11 |
-| barbell-overhead-press                | 8        | 40 kg × 6    | 42.5 kg × 9  |
-| dumbbell-bulgarian-split-squat        | 4        | 15 kg × 8    | 15 kg × 11   |
-| landmine-press                        | 8        | 20 kg × 6    | 22.5 kg × 7  |
-| chest-supported-dumbbell-row          | 4        | 12.5 kg × 8  | 12.5 kg × 11 |
-| cable-knee-extension                  | 8        | 15 kg × 8    | 15 kg × 15   |
-| nordic-hamstring-curl                 | 8        | 6 reps       | 13 reps      |
-| dumbbell-overhead-press               | 4        | 15 kg × 8    | 15 kg × 11   |
-| lat-pulldown                          | 4        | 45 kg × 8    | 45 kg × 11   |
-| calf-raise                            | 4        | 22.5 kg × 8  | 22.5 kg × 11 |
-| side-plank                            | 4        | 30 s         | 45 s         |
+| Exercise                       | Workouts | First target | Last target  |
+| ------------------------------ | -------- | ------------ | ------------ |
+| back-squat                     | 4        | 77.5 kg × 6  | 77.5 kg × 9  |
+| deadlift                       | 8        | 92.5 kg × 6  | 95 kg × 10   |
+| barbell-bench-press            | 8        | 62.5 kg × 6  | 65 kg × 10   |
+| renegade-row                   | 8        | 8 kg × 8     | 8 kg × 15    |
+| pull-up                        | 8        | 3 reps       | 10 reps      |
+| dumbbell-lateral-raise         | 8        | 5 kg × 8     | 5 kg × 15    |
+| calf-raise                     | 4        | 22.5 kg × 8  | 22.5 kg × 11 |
+| nordic-hamstring-curl          | 8        | 6 reps       | 13 reps      |
+| dumbbell-step-up               | 8        | 12.5 kg × 8  | 12.5 kg × 15 |
+| archer-push-up                 | 4        | 15 reps      | 15 reps      |
+| barbell-overhead-press         | 8        | 40 kg × 6    | 42.5 kg × 9  |
+| chest-supported-dumbbell-row   | 4        | 12.5 kg × 8  | 12.5 kg × 11 |
+| landmine-press                 | 8        | 20 kg × 6    | 22.5 kg × 7  |
+| dumbbell-bulgarian-split-squat | 4        | 15 kg × 8    | 15 kg × 11   |
+| lat-pulldown                   | 4        | 45 kg × 8    | 45 kg × 11   |
+| dumbbell-overhead-press        | 4        | 15 kg × 8    | 15 kg × 11   |
+| farmers-carry                  | 4        | 35 kg × 8    | 35 kg × 8    |
+| cable-knee-extension           | 4        | 15 kg × 8    | 15 kg × 11   |
+| side-plank                     | 4        | 30 s         | 45 s         |
 
 The other Goals' tables are printed by the script. Each Muscle's credited Sets against its Weekly Budget in the heaviest of weeks 2 to 4, from primary credit alone, then in total:
 
@@ -278,11 +281,11 @@ The other Goals' tables are printed by the script. Each Muscle's credited Sets a
 
 | Goal         | Days | Length   | quads     | hamstrings | glutes    | chest     | lats      | upper_back | side_delts | abs      | calves   |
 | ------------ | ---- | -------- | --------- | ---------- | --------- | --------- | --------- | ---------- | ---------- | -------- | -------- |
-| build_muscle | 4    | standard | 94 / 113  | 88 / 116   | 113 / 138 | 119 / 119 | 113 / 113 | 94 / 150   | 60 / 120   | 0 / 150  | 50 / 125 |
-| build_muscle | 3    | standard | 86 / 107  | 86 / 118   | 129 / 139 | 114 / 114 | 107 / 107 | 86 / 132   | 67 / 89    | 0 / 117  | 0 / 90   |
-| build_muscle | 4    | long     | 88 / 109  | 106 / 128  | 106 / 150 | 125 / 125 | 125 / 125 | 63 / 213   | 70 / 200   | 0 / 265  | 0 / 83   |
-| build_muscle | 2    | short    | 50 / 63   | 50 / 63    | 100 / 100 | 25 / 25   | 50 / 50   | 50 / 75    | 25 / 44    | 0 / 75   | 0 / 90   |
-| build_muscle | 6    | standard | 110 / 125 | 100 / 123  | 105 / 153 | 130 / 130 | 125 / 125 | 75 / 175   | 54 / 154   | 0 / 227  | 38 / 113 |
+| build_muscle | 4    | standard | 100 / 119 | 75 / 103   | 113 / 144 | 106 / 106 | 125 / 125 | 100 / 163  | 50 / 115   | 0 / 160  | 50 / 100 |
+| build_muscle | 3    | standard | 64 / 86   | 64 / 86    | 129 / 129 | 107 / 107 | 100 / 100 | 64 / 136   | 44 / 78    | 0 / 117  | 60 / 120 |
+| build_muscle | 4    | long     | 106 / 125 | 75 / 97    | 100 / 141 | 119 / 119 | 119 / 119 | 94 / 206   | 80 / 210   | 0 / 255  | 50 / 108 |
+| build_muscle | 2    | short    | 50 / 63   | 50 / 50    | 100 / 100 | 25 / 25   | 50 / 50   | 50 / 63    | 25 / 25    | 0 / 75   | 0 / 30   |
+| build_muscle | 6    | standard | 100 / 115 | 100 / 123  | 105 / 150 | 130 / 130 | 130 / 130 | 70 / 178   | 54 / 150   | 0 / 200  | 38 / 113 |
 | recomp       | 4    | standard | 107 / 129 | 100 / 121  | 129 / 161 | 129 / 129 | 129 / 129 | 64 / 168   | 88 / 169   | 0 / 206  | –        |
 | recomp       | 3    | standard | 100 / 125 | 83 / 104   | 117 / 146 | 125 / 125 | 125 / 125 | 75 / 167   | 100 / 171  | 43 / 200 | –        |
 | recomp       | 4    | long     | 93 / 121  | 114 / 125  | 121 / 164 | 129 / 129 | 129 / 129 | 64 / 229   | 88 / 250   | 38 / 263 | –        |
@@ -303,11 +306,11 @@ The other Goals' tables are printed by the script. Each Muscle's credited Sets a
 
 | Goal         | Days | Length   | quads     | hamstrings | glutes    | chest     | lats      | upper_back | side_delts | abs      | calves   |
 | ------------ | ---- | -------- | --------- | ---------- | --------- | --------- | --------- | ---------- | ---------- | -------- | -------- |
-| build_muscle | 4    | standard | 100 / 119 | 81 / 109   | 113 / 138 | 119 / 119 | 125 / 125 | 94 / 159   | 60 / 125   | 0 / 160  | 0 / 100  |
-| build_muscle | 3    | standard | 86 / 107  | 79 / 111   | 129 / 136 | 100 / 100 | 114 / 114 | 93 / 136   | 67 / 83    | 0 / 106  | 0 / 120  |
-| build_muscle | 4    | long     | 88 / 109  | 106 / 128  | 106 / 141 | 125 / 125 | 125 / 125 | 63 / 213   | 80 / 195   | 0 / 255  | 0 / 83   |
-| build_muscle | 2    | short    | 50 / 63   | 50 / 63    | 100 / 100 | 25 / 25   | 50 / 50   | 50 / 75    | 25 / 44    | 0 / 75   | 0 / 90   |
-| build_muscle | 6    | standard | 110 / 125 | 90 / 113   | 90 / 148  | 120 / 120 | 120 / 120 | 75 / 180   | 62 / 162   | 0 / 235  | 38 / 94  |
+| build_muscle | 4    | standard | 94 / 113  | 75 / 103   | 113 / 150 | 113 / 113 | 119 / 119 | 100 / 156  | 50 / 110   | 0 / 165  | 50 / 100 |
+| build_muscle | 3    | standard | 79 / 100  | 64 / 86    | 129 / 129 | 107 / 107 | 107 / 107 | 64 / 139   | 44 / 78    | 0 / 117  | 60 / 120 |
+| build_muscle | 4    | long     | 106 / 125 | 75 / 97    | 100 / 144 | 113 / 113 | 119 / 119 | 94 / 206   | 80 / 210   | 0 / 260  | 50 / 108 |
+| build_muscle | 2    | short    | 50 / 63   | 50 / 50    | 100 / 100 | 25 / 25   | 50 / 50   | 50 / 63    | 25 / 25    | 0 / 75   | 0 / 30   |
+| build_muscle | 6    | standard | 90 / 105  | 115 / 130  | 105 / 150 | 125 / 125 | 125 / 125 | 75 / 175   | 62 / 158   | 0 / 196  | 38 / 113 |
 | recomp       | 4    | standard | 107 / 129 | 100 / 121  | 129 / 161 | 114 / 114 | 129 / 129 | 64 / 168   | 88 / 169   | 0 / 188  | –        |
 | recomp       | 3    | standard | 100 / 125 | 83 / 104   | 117 / 146 | 125 / 125 | 125 / 125 | 75 / 167   | 100 / 171  | 43 / 200 | –        |
 | recomp       | 4    | long     | 93 / 121  | 114 / 125  | 121 / 175 | 129 / 129 | 129 / 129 | 64 / 229   | 100 / 256  | 38 / 275 | –        |
@@ -328,11 +331,11 @@ The other Goals' tables are printed by the script. Each Muscle's credited Sets a
 
 | Goal         | Days | Length   | quads    | hamstrings | glutes    | chest     | lats      | upper_back | side_delts | abs      | calves   |
 | ------------ | ---- | -------- | -------- | ---------- | --------- | --------- | --------- | ---------- | ---------- | -------- | -------- |
-| build_muscle | 4    | standard | 75 / 84  | 69 / 106   | 113 / 141 | 119 / 119 | 125 / 125 | 94 / 156   | 60 / 125   | 0 / 170  | 50 / 125 |
-| build_muscle | 3    | standard | 64 / 86  | 86 / 118   | 129 / 139 | 100 / 100 | 114 / 114 | 93 / 146   | 67 / 100   | 0 / 122  | 0 / 90   |
-| build_muscle | 4    | long     | 63 / 75  | 88 / 119   | 106 / 153 | 125 / 125 | 119 / 119 | 81 / 200   | 80 / 215   | 0 / 265  | 0 / 83   |
-| build_muscle | 2    | short    | 50 / 63  | 50 / 63    | 100 / 100 | 25 / 25   | 50 / 50   | 50 / 75    | 25 / 44    | 0 / 75   | 0 / 90   |
-| build_muscle | 6    | standard | 60 / 75  | 90 / 113   | 90 / 140  | 130 / 130 | 110 / 118 | 75 / 168   | 62 / 165   | 23 / 238 | 50 / 106 |
+| build_muscle | 4    | standard | 75 / 94  | 75 / 103   | 113 / 156 | 100 / 100 | 125 / 125 | 100 / 163  | 50 / 125   | 0 / 180  | 50 / 100 |
+| build_muscle | 3    | standard | 64 / 86  | 79 / 100   | 129 / 136 | 107 / 107 | 107 / 107 | 64 / 139   | 44 / 78    | 0 / 117  | 60 / 120 |
+| build_muscle | 4    | long     | 63 / 84  | 88 / 109   | 106 / 153 | 113 / 113 | 119 / 119 | 94 / 203   | 70 / 190   | 0 / 270  | 50 / 108 |
+| build_muscle | 2    | short    | 67 / 79  | 50 / 58    | 117 / 117 | 17 / 17   | 50 / 50   | 50 / 63    | 38 / 38    | 0 / 75   | 0 / 50   |
+| build_muscle | 6    | standard | 75 / 90  | 85 / 115   | 105 / 155 | 125 / 125 | 110 / 118 | 60 / 165   | 69 / 173   | 23 / 223 | 75 / 113 |
 | recomp       | 4    | standard | 64 / 86  | 107 / 129  | 129 / 164 | 121 / 121 | 107 / 107 | 64 / 171   | 88 / 188   | 0 / 200  | –        |
 | recomp       | 3    | standard | 75 / 100 | 83 / 108   | 125 / 158 | 125 / 125 | 100 / 100 | 50 / 138   | 86 / 179   | 0 / 186  | –        |
 | recomp       | 4    | long     | 64 / 93  | 114 / 125  | 121 / 179 | 121 / 121 | 100 / 100 | 43 / 196   | 100 / 269  | 0 / 319  | –        |
@@ -353,11 +356,11 @@ The other Goals' tables are printed by the script. Each Muscle's credited Sets a
 
 | Goal         | Days | Length   | quads    | hamstrings | glutes    | chest     | lats      | upper_back | side_delts | abs      | calves   |
 | ------------ | ---- | -------- | -------- | ---------- | --------- | --------- | --------- | ---------- | ---------- | -------- | -------- |
-| build_muscle | 4    | standard | 75 / 94  | 63 / 100   | 113 / 138 | 119 / 119 | 113 / 113 | 94 / 169   | 60 / 135   | 0 / 175  | 0 / 100  |
-| build_muscle | 3    | standard | 64 / 86  | 86 / 118   | 129 / 139 | 100 / 100 | 114 / 114 | 93 / 150   | 67 / 106   | 0 / 128  | 0 / 120  |
-| build_muscle | 4    | long     | 81 / 94  | 75 / 116   | 106 / 156 | 125 / 125 | 125 / 125 | 81 / 216   | 70 / 190   | 0 / 300  | 0 / 83   |
-| build_muscle | 2    | short    | 50 / 63  | 50 / 63    | 100 / 100 | 25 / 25   | 50 / 50   | 50 / 75    | 25 / 44    | 0 / 75   | 0 / 90   |
-| build_muscle | 6    | standard | 60 / 75  | 90 / 113   | 90 / 145  | 130 / 130 | 125 / 125 | 70 / 173   | 54 / 169   | 0 / 246  | 38 / 94  |
+| build_muscle | 4    | standard | 75 / 94  | 75 / 103   | 113 / 156 | 100 / 100 | 125 / 125 | 100 / 163  | 50 / 125   | 0 / 180  | 50 / 100 |
+| build_muscle | 3    | standard | 64 / 86  | 79 / 100   | 129 / 136 | 107 / 107 | 107 / 107 | 64 / 139   | 44 / 78    | 0 / 117  | 60 / 120 |
+| build_muscle | 4    | long     | 63 / 84  | 88 / 109   | 106 / 153 | 113 / 113 | 119 / 119 | 94 / 203   | 70 / 190   | 0 / 270  | 50 / 108 |
+| build_muscle | 2    | short    | 67 / 79  | 50 / 58    | 117 / 117 | 17 / 17   | 50 / 50   | 50 / 63    | 38 / 38    | 0 / 75   | 0 / 50   |
+| build_muscle | 6    | standard | 65 / 80  | 85 / 110   | 95 / 148  | 125 / 125 | 110 / 118 | 60 / 175   | 54 / 162   | 23 / 242 | 38 / 100 |
 | recomp       | 4    | standard | 64 / 86  | 107 / 129  | 129 / 164 | 121 / 121 | 107 / 107 | 64 / 171   | 88 / 188   | 0 / 200  | –        |
 | recomp       | 3    | standard | 75 / 100 | 83 / 108   | 125 / 158 | 125 / 125 | 100 / 100 | 50 / 138   | 86 / 179   | 0 / 186  | –        |
 | recomp       | 4    | long     | 64 / 93  | 114 / 125  | 121 / 179 | 121 / 121 | 100 / 100 | 43 / 196   | 100 / 269  | 0 / 319  | –        |
@@ -374,16 +377,25 @@ The other Goals' tables are printed by the script. Each Muscle's credited Sets a
 | athletic     | 2    | short    | 50 / 63  | 50 / 63    | 100 / 100 | 17 / 17   | 50 / 50   | 50 / 75    | 0 / 19     | 0 / 75   | 0 / 60   |
 | athletic     | 6    | standard | 60 / 75  | 90 / 105   | 90 / 145  | 130 / 130 | 105 / 105 | 60 / 168   | 54 / 177   | 0 / 262  | 38 / 94  |
 
-Muscles over 160% in total: 164
+Muscles over 160% in total: 166
 
-Bodyweight only, left out of the cap tables: of the 30 runs per Goal (both lifters, 2 to 6 days, every Length), how many have a week with a Muscle over 130% through primary credit, how many weeks, and the highest:
+Bodyweight only, now in the cap test too: of the 30 runs per Goal (both lifters, 2 to 6 days, every Length), how many have a week with a Muscle over 130% through primary credit, how many weeks, and the highest:
 
-| Goal         | Runs over | Weeks over | Highest                                          |
-| ------------ | --------- | ---------- | ------------------------------------------------ |
-| build_muscle | 14 of 30  | 56         | 340% (intermediate, 6 days long, week 1, glutes) |
-| recomp       | 19 of 30  | 76         | 472% (novice, 6 days long, week 3, glutes)       |
-| lose_fat     | 20 of 30  | 80         | 456% (novice, 6 days long, week 3, glutes)       |
-| athletic     | 14 of 30  | 56         | 340% (intermediate, 6 days long, week 1, glutes) |
+| Goal         | Runs over | Weeks over | Highest                                       |
+| ------------ | --------- | ---------- | --------------------------------------------- |
+| build_muscle | 0 of 30   | 0          | 130% (novice, 6 days standard, week 1, chest) |
+| recomp       | 0 of 30   | 0          | 129% (novice, 4 days short, week 1, chest)    |
+| lose_fat     | 0 of 30   | 0          | 129% (novice, 4 days short, week 1, chest)    |
+| athletic     | 0 of 30   | 0          | 130% (novice, 6 days standard, week 1, chest) |
+
+## Review fixes (spec #119)
+
+Rerun after the fixes from spec #119's code review, on the planner as it now is.
+
+- **The cap never gives way.** When nothing fits under it, the plan used to be rebuilt as a new week's, without the Week Ledger, which is how Bodyweight only reached 472% of glutes' budget through primary credit. The Week Ledger now always counts, and a week with nothing left to add gets the Recovery Workout, which credits nothing (the smallest Workout within the cap if it ever didn't fit). Bodyweight only's highest primary credit is now 130%, and `plan-outcomes.test.ts` pins every profile at 130% or under. Its weeks now end with Recovery Workouts once the cap is reached, so its calves, which recomp and lose_fat don't budget, fall from 8.5–13.8 to 1.5–3 credited Sets a week, and build_muscle and athletic's to 4.5–5, still at their min of 4.
+- **Jumps keep to the cap** like every other pick, at their 0.5 credit a Set. No simulated week changed.
+- **build_muscle gets a weekly back squat** by athletic's rule (#100): back squat, else goblet squat, first in its Workout until the week has had 3 Sets. 3 Sets a week at 4 and 6 days Standard on a Full gym (it was 0), and on every gym at 4 days Standard. It costs the 2 days Short week calves, at 1.5 of 5 (was 4.5), as athletic's costs side delts, and `plan-outcomes.test.ts` accepts 1.5 there for both. At 3 days Standard quads and hamstrings fall just short of budget (12/14).
+- **Total credit over 160%** is on 166 Muscle and combination pairs (was 164): abs (53), upper back (51), side delts (45) and glutes (17). The highest is still lose_fat abs at 4 days Long, 400%.
 
 ## Why the tables can't fix it
 

@@ -246,7 +246,7 @@ Schemas: packages/shared/src/planned-workouts.ts
 - **Jumps come only from the jump rule** (#105, `jumps.ts`): athletic, `UserProfile.includeJumps` on, the squat tested
   rather than estimated, and no knee or ankle injury (`avoidWith`). `possibleExercises` leaves them out, so the score
   never picks one; `jumpsForWorkout` puts 2 of them, 3 Sets each, first in the first 2 Workouts of the week, one that
-  goes up and one forward or sideways. A jump has no Working Level: its target is `{ unit: "reps" }` holding its
+  goes up and one forward or sideways, as far as the 130% cap allows. A jump has no Working Level: its target is `{ unit: "reps" }` holding its
   contacts (`STRENGTH_RATIOS` kind `contacts`), halved when `PlanWorkoutInput.deloadWeek`, which the API sets from
   `weekOfBlock`. It's logged as a bodyweight Set whose reps are contacts, which the phone labels so (`isJumpSlug`). On a
   built-in choice a jump only stands in for a jump (`alternativeOptions`). The six jumps also need `seed:exercises`.
@@ -254,12 +254,16 @@ Schemas: packages/shared/src/planned-workouts.ts
   one with the latest `checkedInAt`, so a retry or a late upload of an earlier one changes nothing, and the PUT answers
   with the Check-in the date now has. The phone's queue keeps only the newest per date, and one replaced mid-upload
   still goes up next. Sign-out clears the queue; a failed Check-in never holds up a Pending Workout.
-- **The 130% cap never gives way, but for an empty plan** (#128, `WEEKLY_CAP` in `weekly-budget.ts`). A pick is left
-  out when a primary Muscle with a budget would go over 1.3 × its budget, counting the Week Ledger (secondary credit
-  included) and the Sets already planned. So the plan can end well short of Long, and the Day's Workout's
-  `estimatedSeconds` is the honest time. Only when the cap leaves nothing at all is the plan built as a new week's would
-  be, since a stored plan needs an Exercise. `pnpm --filter @fit/engines simulate` prints each Muscle's share of its
+- **The 130% cap never gives way** (#128, `WEEKLY_CAP` in `weekly-budget.ts`). A pick, jumps and the required picks
+  included, is left out when a primary Muscle with a budget would go over 1.3 × its budget, counting the Week Ledger
+  (secondary credit included) and the Sets already planned. So the plan can end well short of Long, and the Day's
+  Workout's `estimatedSeconds` is the honest time. When the cap leaves nothing at all, the plan is the Recovery Workout
+  (`whenCapped`), which credits nothing, its Exercises standing as themselves on every built-in choice; were it not to
+  fit the equipment, injuries or time, one Set of the best Exercise within the cap. A stored plan needs an Exercise. `pnpm --filter @fit/engines simulate` prints each Muscle's share of its
   budget from primary credit and in total; `plan-outcomes.test.ts` pins the primary side.
+- **A heavy two-legged squat once a week for athletic and build_muscle** (`requiredSquat`, #100 and spec #119's
+  review): back squat, else goblet squat, first in the Workout until the week has had 3 Sets of it, as both Goals score
+  one-sided leg work above it (athletic's own one-sided pick, `requiredPick`, comes first).
 - **Build and tune with the simulation.** Scores tie often, as many Exercises share budgeted credits. The planner is
   deterministic, so ties fall to last week's Exercises, then the longest Sets, then the slug, never library order.
   `plan-outcomes.test.ts` pins what a user should see, with the library in either order: run it after any tuning.
