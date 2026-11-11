@@ -22,7 +22,7 @@ import { CurrentExerciseBox } from "../components/current-exercise-box";
 import { SupersetBox } from "../components/superset-box";
 import { WorkoutExerciseRow } from "../components/workout-exercise-row";
 import { nextPlannedExercise, useCurrentWorkoutExercise } from "../current-workout-exercise";
-import { elapsedClockLabel, kgLabel, supersetLetter, timeLabel } from "../format";
+import { elapsedClockLabel, kgLabel, relativeDateLabel, supersetLetter, timeLabel } from "../format";
 import { useHasEnded } from "../hooks/use-has-ended";
 import { useLeaveWorkout } from "../hooks/use-leave-workout";
 import { useStartWorkout } from "../hooks/use-open-workout";
@@ -70,6 +70,7 @@ function InProgress({ workout }: { workout: InProgressWorkout }) {
             <WorkoutTitle
               title={workout.assessment ? `Assessment ${workout.assessment}` : "Workout"}
               startedAt={workout.startedAt}
+              pastStart={workout.pastStart}
             />
           ),
           headerRight: () => (
@@ -175,15 +176,15 @@ function InProgress({ workout }: { workout: InProgressWorkout }) {
   );
 }
 
-// "Workout" (or "Assessment A") over its start time, in the header
-function WorkoutTitle({ title, startedAt }: { title: string; startedAt: string }) {
+// "Workout" (or "Assessment A") over its start time, in the header, or the earlier day it's logged for (#129)
+function WorkoutTitle({ title, startedAt, pastStart }: { title: string; startedAt: string; pastStart?: string }) {
   return (
     <View style={styles.title}>
       <Text accessibilityRole="header" style={styles.titleText}>
         {title}
       </Text>
       <Text size="xs" color="muted">
-        Started {timeLabel(startedAt)}
+        {pastStart ? `Done ${relativeDateLabel(pastStart)}` : `Started ${timeLabel(startedAt)}`}
       </Text>
     </View>
   );

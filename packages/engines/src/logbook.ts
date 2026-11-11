@@ -1,7 +1,9 @@
 import {
   InProgressWorkout,
   PlannedWorkout,
+  PAST_WORKOUT_DAYS,
   Workout,
+  WorkoutUpload,
   type AssessmentPart,
   type BodyProfile,
   type EquipmentProfile,
@@ -71,13 +73,39 @@ export type WorkoutTimes = { startedAt: Date; endedAt: Date };
 
 export type FinishResult = { status: "pending"; workout: Workout } | { status: "nothing-to-save" };
 
-// A change the Logbook refused; the message is fit to show the user
-export class LogbookError extends Error {}
+// A change the Logbook refused; the message is fit to show the user. field names the value at fault, when it's one of
+// the times a screen shows
+export class LogbookError extends Error {
+  constructor(
+    message: string,
+    readonly field?: keyof WorkoutTimes,
+  ) {
+    super(message);
+  }
+}
 
 function parseOrThrow<T>(schema: z.ZodType<T>, value: unknown): T {
   const parsed = schema.safeParse(value);
-  if (!parsed.success) throw new LogbookError(parsed.error.issues[0].message);
+  if (!parsed.success) {
+    const [{ message, path }] = parsed.error.issues;
+    const field = path[0] === "startedAt" || path[0] === "endedAt" ? path[0] : undefined;
+    throw new LogbookError(message, field);
+  }
   return parsed.data;
+}
+
+const HOUR_MS = 60 * 60 * 1000;
+const DAY_MS = 24 * HOUR_MS;
+
+// A Workout logged afterwards is taken as an hour long until the user edits its times
+const PAST_WORKOUT_LENGTH_MS = HOUR_MS;
+
+// The times Finish starts from: the start and now for a Workout logged live, or for one logged afterwards its own
+// day's start and an hour later
+export function finishTimes({ startedAt, pastStart }: InProgressWorkout, now: Date): WorkoutTimes {
+  if (!pastStart) return { startedAt: new Date(startedAt), endedAt: now };
+  const start = new Date(pastStart);
+  return { startedAt: start, endedAt: new Date(Math.min(start.getTime() + PAST_WORKOUT_LENGTH_MS, now.getTime())) };
 }
 
 // A Workout left this long after its last Set was probably forgotten, not still going
@@ -229,8 +257,9 @@ export function createLogbook({
   ): Promise<FinishResult> {
     const withSets = workoutExercises.filter(({ sets }) => sets.length > 0);
     if (withSets.length === 0) return { status: "nothing-to-save" };
-    if (endedAt > now) throw new LogbookError("The end can't be in the future");
-    const workout = parseOrThrow(Workout, {
+    if (endedAt > now) throw new LogbookError("The end can't be in the future", "endedAt");
+    // The server's rule, so a Workout the phone keeps Pending always uploads
+    const workout = parseOrThrow(WorkoutUpload, {
       id,
       startedAt: startedAt.toISOString(),
       endedAt: endedAt.toISOString(),
@@ -280,10 +309,19 @@ export function createLogbook({
   return {
     inProgress: () => serially(read),
 
-    start: (now: Date) =>
+    // A Manual Workout, logged live or, given pastStart, afterwards for any time in the last 7 days (#129)
+    start: (now: Date, pastStart?: Date) =>
       serially(async () => {
         if (await read()) throw new LogbookError("A Workout is already in progress");
-        const workout: InProgressWorkout = { id: newId(), startedAt: now.toISOString(), workoutExercises: [] };
+        if (pastStart && (pastStart > now || now.getTime() - pastStart.getTime() > PAST_WORKOUT_DAYS * DAY_MS)) {
+          throw new LogbookError(`A past Workout can start up to ${PAST_WORKOUT_DAYS} days ago`);
+        }
+        const workout: InProgressWorkout = {
+          id: newId(),
+          startedAt: now.toISOString(),
+          ...(pastStart && { pastStart: pastStart.toISOString() }),
+          workoutExercises: [],
+        };
         await write(workout);
         return workout;
       }),
@@ -459,13 +497,13 @@ export function createLogbook({
     finish: ({ startedAt, endedAt, now }: WorkoutTimes & { now: Date }) =>
       serially(async () => finishAs(await readOrThrow(), { startedAt, endedAt, now })),
 
-    // For a forgotten Workout: finishes with the last Set's time as the end
+    // For a forgotten Workout: finishes with the last Set's time as the end, or on its own day if logged afterwards
     finishAtLastSet: () =>
       serially(async (): Promise<FinishResult> => {
         const workout = await readOrThrow();
-        const endedAt = lastSetAt(workout);
-        if (!endedAt) return { status: "nothing-to-save" };
-        return finishAs(workout, { startedAt: new Date(workout.startedAt), endedAt, now: endedAt });
+        const lastSet = lastSetAt(workout);
+        if (!lastSet) return { status: "nothing-to-save" };
+        return finishAs(workout, { ...finishTimes(workout, lastSet), now: lastSet });
       }),
 
     // The finished Workouts still waiting to upload, oldest first

@@ -43,6 +43,14 @@ Schemas shared by app and API: packages/shared/src/workouts.ts
   rule in `stepLoadKg`, `packages/engines/src/equipment.ts`), staying put past the lightest or heaviest, and by 2 kg
   when the loads aren't known. `set-entry.ts` only parses the typed text, steps reps (1) and seconds (5), and names
   the kg step for screen readers (`kgStepLabel`: "Next heavier weight", or "Plus 2 kg" when the loads aren't known).
+- **A past Workout starts up to 7 days before its last Set** (#129). `WorkoutUpload` (`@fit/shared`) is the rule, and
+  both POST /workouts (400) and the Logbook's finish use it, so a Pending Workout always uploads. It counts back from
+  the Sets, not the clock, so an upload that comes days late isn't refused; `Workout` itself doesn't have the rule, so
+  History never fails on an older one. A Manual Workout logged afterwards ("Log a past workout" on Today,
+  `pastWorkoutDays`) keeps `pastStart` on the In-progress Workout, while `startedAt` stays when logging began, so the
+  clock and the forgotten check follow the logging. `finishTimes` gives Finish its first times: `pastStart` and an
+  hour later, with Edit times open. Its Sets are logged now, so Fatigue counts a Set from its `loggedAt` but never
+  after its Workout's `endedAt` (`creditingSets`); the Week Ledger already goes by `startedAt`.
 - **The rest timer lives in memory on the LogbookProvider** (#95), not in the Logbook or storage: it belongs to the
   Workout, so it follows the user between Exercises and to Today, and a force-quit loses it. Only Log set starts or
   restarts it; Finish, Discard and sign-out end it. Its length and countdown are pure (`rest-timer.ts` in

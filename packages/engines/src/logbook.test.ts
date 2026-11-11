@@ -13,6 +13,7 @@ import { EXERCISES } from "./data/exercises";
 import { daysWorkout, equipmentChoices } from "./days-workout";
 import {
   createLogbook,
+  finishTimes,
   LogbookError,
   type DeviceStorage,
   type PlannedWorkoutSource,
@@ -245,11 +246,108 @@ describe("Logbook", () => {
       const plank = await logbook.addWorkoutExercise(exercise("plank"));
       await logbook.logSet(plank.id, { kind: "timed", seconds: 60 }, at("09:05"));
 
-      await expect(logbook.finish({ startedAt, endedAt, now: at("10:00") })).rejects.toThrow(new LogbookError(message));
+      await expect(logbook.finish({ startedAt, endedAt, now: at("10:00") })).rejects.toThrow(
+        new LogbookError(message, "endedAt"),
+      );
       await logbook.sync();
 
       expect(uploader.uploaded).toEqual([]);
       expect(await logbook.inProgress()).not.toBeNull();
+    });
+
+    // #129: Edit times allows any start in the last 7 days, and names the start as what's wrong
+    it("rejects a start more than 7 days back, naming the start", async () => {
+      const { logbook, uploader } = setup();
+      await logbook.start(at("09:00"));
+      const plank = await logbook.addWorkoutExercise(exercise("plank"));
+      await logbook.logSet(plank.id, { kind: "timed", seconds: 60 }, at("09:05"));
+
+      const finishing = logbook.finish({
+        startedAt: new Date("2026-10-17T09:00:00.000Z"),
+        endedAt: new Date("2026-10-17T10:00:00.000Z"),
+        now: at("09:10"),
+      });
+
+      await expect(finishing).rejects.toThrow(new LogbookError("The start can't be more than 7 days ago", "startedAt"));
+      await logbook.sync();
+      expect(uploader.uploaded).toEqual([]);
+    });
+
+    it("keeps a start 7 days back", async () => {
+      const { logbook, uploader } = setup();
+      await logbook.start(at("09:00"));
+      const plank = await logbook.addWorkoutExercise(exercise("plank"));
+      await logbook.logSet(plank.id, { kind: "timed", seconds: 60 }, at("09:05"));
+
+      await logbook.finish({
+        startedAt: new Date("2026-10-17T09:05:00.000Z"),
+        endedAt: new Date("2026-10-17T10:00:00.000Z"),
+        now: at("09:10"),
+      });
+      await logbook.sync();
+
+      expect(uploader.uploaded[0]?.startedAt).toBe("2026-10-17T09:05:00.000Z");
+    });
+  });
+
+  // #129, user story 24: a Workout not logged live, started for an earlier day, so it doesn't look like a skip
+  describe("a Manual Workout for an earlier day", () => {
+    const tuesdayEvening = new Date("2026-10-20T18:00:00.000Z");
+
+    it("finishes on its own day, an hour long unless the times are edited", async () => {
+      const { logbook, uploader } = setup();
+      const workout = await logbook.start(at("09:00"), tuesdayEvening);
+      const plank = await logbook.addWorkoutExercise(exercise("plank"));
+      await logbook.logSet(plank.id, { kind: "timed", seconds: 60 }, at("09:05"));
+
+      const times = finishTimes(workout, at("09:10"));
+      await logbook.finish({ ...times, now: at("09:10") });
+      await logbook.sync();
+
+      expect(times).toEqual({ startedAt: tuesdayEvening, endedAt: new Date("2026-10-20T19:00:00.000Z") });
+      expect(uploader.uploaded[0]).toMatchObject({
+        startedAt: "2026-10-20T18:00:00.000Z",
+        endedAt: "2026-10-20T19:00:00.000Z",
+      });
+    });
+
+    it("isn't forgotten for having started days ago", async () => {
+      const { logbook } = setup();
+      await logbook.start(at("09:00"), tuesdayEvening);
+
+      expect(await logbook.isStale(at("10:00"))).toBe(false);
+    });
+
+    it("finishes on its own day when it was forgotten", async () => {
+      const { logbook, uploader } = setup();
+      await logbook.start(at("09:00"), tuesdayEvening);
+      const plank = await logbook.addWorkoutExercise(exercise("plank"));
+      await logbook.logSet(plank.id, { kind: "timed", seconds: 60 }, at("09:05"));
+
+      await logbook.finishAtLastSet();
+      await logbook.sync();
+
+      expect(uploader.uploaded[0]).toMatchObject({
+        startedAt: "2026-10-20T18:00:00.000Z",
+        endedAt: "2026-10-20T19:00:00.000Z",
+      });
+    });
+
+    it.each([
+      ["more than 7 days back", new Date("2026-10-17T08:59:00.000Z")],
+      ["in the future", at("09:01")],
+    ])("can't start %s", async (_, startedAt) => {
+      const { logbook } = setup();
+
+      await expect(logbook.start(at("09:00"), startedAt)).rejects.toThrow(LogbookError);
+      expect(await logbook.inProgress()).toBeNull();
+    });
+
+    it("finishes a live Workout from its start to now", async () => {
+      const { logbook } = setup();
+      const workout = await logbook.start(at("09:00"));
+
+      expect(finishTimes(workout, at("09:40"))).toEqual({ startedAt: at("09:00"), endedAt: at("09:40") });
     });
   });
 

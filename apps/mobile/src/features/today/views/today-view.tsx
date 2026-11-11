@@ -12,11 +12,13 @@ import { useChosenTests } from "@/features/assessment/hooks/use-chosen-tests";
 import { useLatestAssessment } from "@/features/assessment/hooks/use-latest-assessment";
 import { useCurrentUser } from "@/features/user/current-user-provider";
 import { ForgottenWorkoutModal } from "@/features/workouts/components/forgotten-workout-modal";
+import { PastWorkoutSheet } from "@/features/workouts/components/past-workout-sheet";
 import { elapsedLabel, estimatedTimeLabel } from "@/features/workouts/format";
 import { useHistory } from "@/features/workouts/history-provider";
 import {
   useResumeWorkout,
   useStartPlannedWorkout,
+  useStartPastWorkout,
   useStartRecoveryWorkout,
   useStartWorkout,
 } from "@/features/workouts/hooks/use-open-workout";
@@ -45,6 +47,9 @@ import {
   todayState,
 } from "../today-status";
 
+// A Workout not logged live, so it doesn't look like a skip (#129)
+const LOG_PAST = "Log a past workout";
+
 const WHY_REST: Record<RestDayReason, string> = {
   "days-per-week-reached": "You've reached your days per week.",
   "trained-today": "You've trained today.",
@@ -58,6 +63,8 @@ export default function TodayView() {
   const { startWorkout, starting } = useStartWorkout();
   const { startPlannedWorkout, startingPlan } = useStartPlannedWorkout();
   const { startRecoveryWorkout } = useStartRecoveryWorkout();
+  const { startPastWorkout } = useStartPastWorkout();
+  const [pastSheetIsOpen, setPastSheetIsOpen] = useState(false);
   const { resumeWorkout, forgotten, setForgotten } = useResumeWorkout();
   const { isLoaded, isStale, pending, syncing } = logbook;
   const { workouts, error } = useHistory();
@@ -87,6 +94,11 @@ export default function TodayView() {
 
   const handleManual = async () => {
     if (await startWorkout()) router.push("/workout");
+  };
+
+  // A Manual Workout logged afterwards, for an earlier day (#129)
+  const handleStartPast = async (pastStart: Date) => {
+    if (await startPastWorkout(pastStart)) router.push("/workout");
   };
 
   // Leaves the plan as it is: the Recovery Workout links to none, so the plan is offered again afterwards
@@ -207,6 +219,7 @@ export default function TodayView() {
             loading={starting}
             onPress={handleManual}
           />
+          <TodayCardLink label={LOG_PAST} color="onAccent" size="sm" onPress={() => setPastSheetIsOpen(true)} />
         </TodayCard>
       ) : null}
       {showsCheckIn({ card, hasDaysWorkout: !!today, checkIn: checkInState }) ? (
@@ -236,8 +249,12 @@ export default function TodayView() {
             disabled={startingPlan}
             onPress={handleManual}
           />
+          <View style={{ marginTop: spacing[3], alignItems: "center" }}>
+            <TodayCardLink label={LOG_PAST} color="muted" size="sm" onPress={() => setPastSheetIsOpen(true)} />
+          </View>
         </View>
       )}
+      <PastWorkoutSheet isOpen={pastSheetIsOpen} onClose={() => setPastSheetIsOpen(false)} onPick={handleStartPast} />
       {offer && !leadingOffer ? (
         <View style={{ marginTop: spacing[5] }}>
           <AssessmentSection offer={offer} onDismiss={() => dismiss(offerKey(offer))} />
