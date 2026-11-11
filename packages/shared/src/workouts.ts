@@ -56,6 +56,18 @@ export const WorkoutExercise = z
   .refine(setsMatchLoadType, setsMatchLoadTypeError);
 export type WorkoutExercise = z.infer<typeof WorkoutExercise>;
 
+// A PR (GLOSSARY.md) the server found on a Workout's upload, one per Exercise: the new best and the one it beat. e1rm
+// and load are kg (load being the heaviest for 8 reps, on a weighted Ballistic Exercise); reps and seconds are a Set's
+export const PrMeasure = z.enum(["e1rm", "load", "reps", "seconds"]);
+export type PrMeasure = z.infer<typeof PrMeasure>;
+export const Pr = z.object({
+  slug: workoutExerciseFields.slug,
+  measure: PrMeasure,
+  best: z.number().positive(),
+  previous: z.number().positive(),
+});
+export type Pr = z.infer<typeof Pr>;
+
 // The Planned Workout a Workout was started from, kept however its Exercises change. Absent on a Manual Workout
 const plannedWorkoutId = z.uuid().optional();
 
@@ -68,6 +80,8 @@ export const Workout = z
     assessment: AssessmentPart.optional(),
     plannedWorkoutId,
     workoutExercises: z.array(WorkoutExercise).min(1),
+    // Set by the server once the upload has looked for them, and ignored when a phone sends them
+    prs: z.array(Pr).optional(),
   })
   .refine((workout) => Date.parse(workout.endedAt) > Date.parse(workout.startedAt), {
     error: "The end must be after the start",
