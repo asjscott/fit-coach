@@ -223,6 +223,12 @@ Schemas: packages/shared/src/planned-workouts.ts
   one with the latest `checkedInAt`, so a retry or a late upload of an earlier one changes nothing, and the PUT answers
   with the Check-in the date now has. The phone's queue keeps only the newest per date, and one replaced mid-upload
   still goes up next. Sign-out clears the queue; a failed Check-in never holds up a Pending Workout.
+- **The 130% cap never gives way, but for an empty plan** (#128, `WEEKLY_CAP` in `weekly-budget.ts`). A pick is left
+  out when a primary Muscle with a budget would go over 1.3 × its budget, counting the Week Ledger (secondary credit
+  included) and the Sets already planned. So the plan can end well short of Long, and the Day's Workout's
+  `estimatedSeconds` is the honest time. Only when the cap leaves nothing at all is the plan built as a new week's would
+  be, since a stored plan needs an Exercise. `pnpm --filter @fit/engines simulate` prints each Muscle's share of its
+  budget from primary credit and in total; `plan-outcomes.test.ts` pins the primary side.
 - **Build and tune with the simulation.** Scores tie often, as many Exercises share budgeted credits. The planner is
   deterministic, so ties fall to last week's Exercises, then the longest Sets, then the slug, never library order.
   `plan-outcomes.test.ts` pins what a user should see, with the library in either order: run it after any tuning.

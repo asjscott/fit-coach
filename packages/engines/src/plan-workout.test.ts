@@ -257,6 +257,63 @@ describe("planWorkout", () => {
     });
   });
 
+  describe("the 130% cap", () => {
+    // build_muscle at 4 days: 16 for the main Muscles, so a cap of 20.8; 10 for side_delts and abs, so 13
+    const slugsWith = (sets: Record<string, number>) => slugs({ workouts: [week(sets)], workingLevels: withBench });
+    const primaryOf = (slug: string) => exerciseBySlug(slug)!.muscles.primary;
+
+    // Story 14
+    it("adds no Exercise that would take one of its primary Muscles over the cap", () => {
+      // Quads and glutes at 20: one more Set of anything for them makes 21
+      const chosen = slugsWith({ "goblet-squat": 20 });
+      expect(
+        chosen.filter((slug) => primaryOf(slug).some((muscle) => muscle === "quads" || muscle === "glutes")),
+      ).toEqual([]);
+      expect(chosen).not.toContain("dumbbell-romanian-deadlift");
+    });
+
+    it("still adds an Exercise for a Muscle with room left under the cap", () => {
+      // side_delts at 10, their budget: a pick of 3 Sets of lateral raise makes 13, the cap
+      expect(slugsWith({ "dumbbell-lateral-raise": 10 })).toContain("dumbbell-lateral-raise");
+    });
+
+    // Story 15
+    it("counts secondary credit towards a Muscle's total", () => {
+      // Overhead press credits upper_back 0.5 a Set: 41 Sets make 20.5, so a row's Sets would go over, though lats
+      // have had nothing
+      expect(slugsWith({ "dumbbell-overhead-press": 41 })).not.toContain("one-arm-dumbbell-row");
+    });
+
+    it("never blocks an Exercise by its secondary Muscles", () => {
+      // Abs at the cap of 13 keep out plank, whose primary is abs, but not push-up, which credits them as secondary
+      const chosen = slugsWith({ plank: 13 });
+      expect(chosen).not.toContain("plank");
+      expect(chosen).toContain("push-up");
+    });
+
+    // Stories 16 and 17
+    describe("with the week nearly met", () => {
+      // Every budgeted Muscle at its cap but side_delts
+      const nearlyMet = {
+        "goblet-squat": 20,
+        "dumbbell-romanian-deadlift": 20,
+        "one-arm-dumbbell-row": 20,
+        "dumbbell-floor-press": 20,
+        plank: 13,
+      };
+      const { plannedExercises } = plan({ workouts: [week(nearlyMet)], workingLevels: withBench });
+
+      it("gives a shorter Workout rather than filler", () => {
+        expect(plannedExercises).toMatchObject([{ slug: "dumbbell-lateral-raise", sets: 4 }]);
+      });
+
+      it("ends short of its Length, and the Day's Workout gives the real estimate", () => {
+        // 5 minutes of warm-up and 4 Sets of 60 s, on a Standard day of 45 minutes
+        expect(daysWorkout({ plannedExercises }, { workoutLength: "standard" }).estimatedSeconds).toBe(300 + 240);
+      });
+    });
+  });
+
   describe("a Weekly Budget already met", () => {
     const met = {
       "goblet-squat": 20,
@@ -265,8 +322,8 @@ describe("planWorkout", () => {
       "dumbbell-floor-press": 20,
     };
 
-    it("still gives a Workout, as a new week would", () => {
-      const workouts = [week({ ...met, "dumbbell-lateral-raise": 20 })];
+    it("still gives a Workout, as a new week would, once every Muscle is at the cap", () => {
+      const workouts = [week({ ...met, "dumbbell-lateral-raise": 20, plank: 20 })];
       const planned = plan({ workouts, workingLevels: withBench }).plannedExercises;
       expect(planned).toEqual(plan({ workingLevels: withBench }).plannedExercises);
       expect(planned.length).toBeGreaterThan(0);
@@ -357,11 +414,12 @@ describe("planWorkout", () => {
     });
 
     it("plans around the Sets logged this week", () => {
-      // 16 Sets of goblet squat fill quads and glutes, so it's no longer first
+      // 16 Sets of goblet squat fill quads and glutes, so it's no longer first. Once Romanian deadlift adds to glutes,
+      // the 130% cap keeps it out
       const workouts = [logged("w1", "goblet-squat", 16)];
       const chosen = slugs({ workouts });
       expect(chosen[0]).toBe("one-arm-dumbbell-row");
-      expect(chosen.indexOf("goblet-squat")).toBeGreaterThan(chosen.indexOf("push-up"));
+      expect(chosen).not.toContain("goblet-squat");
     });
 
     it("gives each Exercise once", () => {
@@ -644,6 +702,21 @@ describe("planWorkout", () => {
       });
     });
 
+    it("takes the day from a secondary Set for a Muscle no Set worked as primary", () => {
+      // Four Exercises credit abs as secondary, 8 in all and still over the limit the next noon, while none of their
+      // primary Muscles is. With push-ups earlier in the week, abs are at the cap of 13, so no abs Exercise comes back
+      const secondaryAbs = {
+        id: "secondary-abs",
+        startedAt: tuesdayEvening,
+        workoutExercises: ["goblet-squat", "push-up", "pull-up", "suitcase-carry"].map((slug) => ({
+          slug,
+          sets: loggedSets(4, tuesdayEvening),
+        })),
+      };
+      const recovering = reasons({ workouts: [secondaryAbs, logged("push-ups", "push-up", 10)] })[0];
+      expect(recovering).toEqual({ code: "recovering", muscles: ["abs"], lastSetOn: "2026-11-03" });
+    });
+
     it("says the Workout is extra once This Week reaches the days per week", () => {
       expect(plan({ workouts: earlierWorkouts(4), daysPerWeek: 4 }).reasons).toEqual([{ code: "budget-met" }]);
     });
@@ -707,6 +780,12 @@ describe("planWorkout", () => {
 
     it("isn't given to another Goal", () => {
       expect(onFullGym({ goal: "build_muscle" }).filter(isOneSidedLegExercise)).toEqual([]);
+    });
+
+    // Story 14
+    it("waits while quads and glutes are at the 130% cap", () => {
+      // Two-legged squats only, so it's still needed this week: quads and glutes at 20 of a cap of 20.8
+      expect(athletic({ workouts: [week({ "goblet-squat": 20 })] }).filter(isOneSidedLegExercise)).toEqual([]);
     });
 
     it("is needed once a week", () => {

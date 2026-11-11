@@ -1,4 +1,4 @@
-import { Muscle, MUSCLE_GROUPS, MuscleGroup, muscleGroupsOf, type PlanReason } from "@fit/shared";
+import { Muscle, MUSCLE_GROUPS, MuscleGroup, muscleGroupsOf, type Exercise, type PlanReason } from "@fit/shared";
 import { creditingSets, type FatigueWorkout } from "./fatigue";
 import { localDateOf, type MuscleCredits } from "./week-ledger";
 import type { WeeklyBudget } from "./weekly-budget";
@@ -17,12 +17,19 @@ type ReasonsInput = {
   timeZone: string;
 };
 
-// The day, in the user's timezone, of the last Set that worked any of the Muscles as primary: the Sets that tired them
+// The day, in the user's timezone, of the last Set that worked any of the Muscles as primary: the Sets that tired them.
+// Muscles only secondary credit tired, which no Set worked as primary, take the last Set that credited them at all
 function lastSetOn(muscles: readonly Muscle[], workouts: readonly FatigueWorkout[], timeZone: string) {
-  let last = "";
-  for (const { exercise, loggedAt } of creditingSets(workouts)) {
-    if (loggedAt > last && exercise.muscles.primary.some((muscle) => muscles.includes(muscle))) last = loggedAt;
-  }
+  const lastWorking = (worked: (exercise: Exercise) => readonly Muscle[]) => {
+    let last = "";
+    for (const { exercise, loggedAt } of creditingSets(workouts)) {
+      if (loggedAt > last && worked(exercise).some((muscle) => muscles.includes(muscle))) last = loggedAt;
+    }
+    return last;
+  };
+  const last =
+    lastWorking(({ muscles }) => muscles.primary) ||
+    lastWorking(({ muscles }) => [...muscles.primary, ...muscles.secondary]);
   return localDateOf(new Date(last), timeZone);
 }
 
