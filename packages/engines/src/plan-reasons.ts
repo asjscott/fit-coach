@@ -17,13 +17,18 @@ type ReasonsInput = {
   timeZone: string;
 };
 
-// The day, in the user's timezone, of the last Set that worked any of the Muscles as primary: the Sets that tired them
+// The day, in the user's timezone, of the last Set that worked any of the Muscles as primary: the Sets that tired them.
+// Secondary credit alone can tire a Muscle too, so with no such Set it's the last Set that credited any of them
 function lastSetOn(muscles: readonly Muscle[], workouts: readonly FatigueWorkout[], timeZone: string) {
-  let last = "";
+  let lastPrimary = "";
+  let lastCredited = "";
   for (const { exercise, loggedAt } of creditingSets(workouts)) {
-    if (loggedAt > last && exercise.muscles.primary.some((muscle) => muscles.includes(muscle))) last = loggedAt;
+    const { primary, secondary } = exercise.muscles;
+    if (loggedAt > lastPrimary && primary.some((muscle) => muscles.includes(muscle))) lastPrimary = loggedAt;
+    if (loggedAt > lastCredited && [...primary, ...secondary].some((muscle) => muscles.includes(muscle)))
+      lastCredited = loggedAt;
   }
-  return localDateOf(new Date(last), timeZone);
+  return localDateOf(new Date(lastPrimary || lastCredited), timeZone);
 }
 
 // How much of a group's budget is still to do this week, as a share of it
