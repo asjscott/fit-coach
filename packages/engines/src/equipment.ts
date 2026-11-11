@@ -27,10 +27,19 @@ export function expandTags(tags: EquipmentTag[]): Set<EquipmentTag> {
   return owned;
 }
 
-// A cable or machine with no step stored steps by DEFAULT_CABLE_STEP in the user's unit, as a new profile would
-export function withLoadStepDefaults<Profile extends ProfileWithLoads>(profile: Profile, unit: WeightUnit): Profile {
-  if (!profile.tags.includes("cable_machine") || profile.loads.cable_machine) return profile;
-  return { ...profile, loads: { ...profile.loads, cable_machine: { stepKg: toKg(DEFAULT_CABLE_STEP[unit], unit) } } };
+// The free weights a profile can list. A gym listing none of them has Full gym's
+const FREE_WEIGHT_LOADS = ["dumbbells", "kettlebells", "barbell"] as const;
+
+// The loads a profile has where it lists none of its own, in the user's unit. A profile with all of Full gym's
+// equipment and no free weights listed, such as the gym a user onboards with, has Full gym's loads. A cable or machine
+// with no step stored steps by DEFAULT_CABLE_STEP, as a new profile would
+export function withDefaultLoads<Profile extends ProfileWithLoads>(profile: Profile, unit: WeightUnit): Profile {
+  const isUnlistedGym = matchesBuiltIn(profile, "full_gym") && FREE_WEIGHT_LOADS.every((tag) => !profile.loads[tag]);
+  const loads = { ...(isUnlistedGym && FULL_GYM_LOADS[unit]), ...profile.loads };
+  if (profile.tags.includes("cable_machine") && !loads.cable_machine) {
+    loads.cable_machine = { stepKg: toKg(DEFAULT_CABLE_STEP[unit], unit) };
+  }
+  return { ...profile, loads };
 }
 
 const ALL_BAND_LEVELS = { levels: BandLevel.options };
@@ -57,14 +66,15 @@ const FULL_GYM_LOADS: Record<WeightUnit, EquipmentProfile["loads"]> = {
 
 // The equipment behind each built-in choice: Full gym has every tag and the standard loads of the user's unit
 export function builtInEquipment(choice: BuiltInEquipment, unit: WeightUnit): ProfileWithLoads {
-  if (choice === "bodyweight_only") return { tags: [], loads: {} };
-  return withLoadStepDefaults({ tags: EquipmentTag.options, loads: FULL_GYM_LOADS[unit] }, unit);
+  return withDefaultLoads({ tags: BUILT_IN_TAGS[choice], loads: {} }, unit);
 }
+
+const BUILT_IN_TAGS: Record<BuiltInEquipment, EquipmentTag[]> = { full_gym: EquipmentTag.options, bodyweight_only: [] };
 
 // True when a profile has exactly the equipment of a built-in choice, so choosing it would change nothing
 export function matchesBuiltIn(profile: Pick<EquipmentProfile, "tags">, choice: BuiltInEquipment): boolean {
   const owned = expandTags(profile.tags);
-  const builtIn = expandTags(builtInEquipment(choice, "kg").tags);
+  const builtIn = expandTags(BUILT_IN_TAGS[choice]);
   return owned.size === builtIn.size && [...owned].every((tag) => builtIn.has(tag));
 }
 
@@ -180,6 +190,13 @@ export function isSafeFor(exercise: Pick<Exercise, "avoidWith">, injuries: Injur
 
 // A load as the user would lift it: the nearest of the loads (the lighter on a tie), or to the nearest 0.5 kg when
 // the loads aren't known
+// The heaviest of the loads at or below kg, or kg itself when none is that light (or the loads aren't known), so that
+// a barbell Exercise under the empty bar stays under it (#70) and a dumbbell one rounds up only when prescribed. Loads
+// sorted lightest first, as availableLoadsKg gives them
+export function loadAtOrBelowKg(kg: number, loadsKg: readonly number[]): number {
+  return loadsKg.filter((load) => load <= kg + SAME_LOAD_KG).at(-1) ?? kg;
+}
+
 export function roundToLoadKg(kg: number, loadsKg: number[]): number {
   if (!loadsKg.length) return Math.round(kg * 2) / 2;
   return loadsKg.reduce((best, load) => (Math.abs(load - kg) < Math.abs(best - kg) ? load : best));

@@ -6,7 +6,7 @@ import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { LoadsForm, pruneLoads, toLoadsForm } from "@/features/equipment/loads";
 import {
-  asksForLoads,
+  loadTagsAsked,
   EquipmentByGroup,
   groupTags,
   selectedTags,
@@ -76,7 +76,7 @@ export function useUserOnboarding() {
 
     // Drop weights for equipment no longer selected, so a stale half-filled answer can't block saving
     const { trainingSetup, equipment, loads } = getValues();
-    const tags = asksForLoads(trainingSetup) ? selectedTags(trainingSetup, equipment) : [];
+    const tags = loadTagsAsked(trainingSetup, selectedTags(trainingSetup, equipment));
     setValue("loads", pruneLoads(loads, tags));
 
     setStage(stage + 1);

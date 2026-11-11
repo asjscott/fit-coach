@@ -9,7 +9,7 @@ import {
   type WorkingLevelMover,
 } from "@fit/shared";
 import { EXERCISES, exerciseBySlug } from "./data/exercises";
-import { availableLoadsKg, isAvailable, ownedOptions, type ProfileWithLoads } from "./equipment";
+import { availableLoadsKg, isAvailable, loadAtOrBelowKg, ownedOptions, type ProfileWithLoads } from "./equipment";
 import { epleyLoadKg, epleyReps } from "./e1rm";
 import { STRENGTH_RATIOS } from "./strength-ratios";
 
@@ -54,12 +54,6 @@ export function repRange(
 const startingReps = (exercise: Exercise) => repRange(exercise, "kg")?.min ?? CARRY_REPS;
 
 // ─── Loads ───
-
-// The heaviest of the loads at or below kg, or kg itself when none is that light (or the loads aren't known), so that
-// a barbell Exercise under the empty bar stays under it (#70) and a dumbbell one rounds up only when prescribed
-export function loadAtOrBelowKg(kg: number, loadsKg: readonly number[]): number {
-  return loadsKg.filter((load) => load <= kg + 1e-9).at(-1) ?? kg;
-}
 
 // Every load any of the profiles offers for the Exercise, lightest first
 const loadsInAny = (exercise: Exercise, profiles: readonly ProfileWithLoads[]) =>

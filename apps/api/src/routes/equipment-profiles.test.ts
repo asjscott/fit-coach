@@ -1,4 +1,4 @@
-import { toKg, type EquipmentProfileInput, type User } from "@fit/shared";
+import { EquipmentTag, toKg, type EquipmentProfileInput, type User } from "@fit/shared";
 import { describe, expect, it } from "vitest";
 import { useRouteTestApi } from "../test/route-test-api";
 
@@ -56,6 +56,22 @@ describe("an Equipment Profile's cable and machine step", () => {
 
     expect(created.statusCode).toBe(201);
     expect(cableStepOf(created)).toEqual({ stepKg: 2.5 });
+  });
+
+  // User story 20
+  it("gives a gym listing no weights of its own Full gym's pound loads", async () => {
+    const gym = { ...GYM_WITH_CABLES, tags: EquipmentTag.options, loads: {} };
+    const user = await api.signIn({ equipmentProfile: gym });
+
+    const [profile] = ((await user.get("/user")).body as User).equipmentProfiles;
+    expect(profile.loads.barbell?.barKg).toBe(toKg(45, "lb"));
+    expect(profile.loads.dumbbells).toEqual({
+      kind: "adjustable",
+      minKg: toKg(5, "lb"),
+      maxKg: toKg(100, "lb"),
+      stepKg: toKg(5, "lb"),
+    });
+    expect(profile.loads.cable_machine).toEqual({ stepKg: toKg(10, "lb") });
   });
 
   it("refuses a step of nothing", async () => {

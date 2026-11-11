@@ -1,4 +1,4 @@
-import { loadInUnit, toKg, type EquipmentTag } from "@fit/shared";
+import { EquipmentTag, loadInUnit, toKg } from "@fit/shared";
 import { describe, expect, it } from "vitest";
 import { EXERCISES } from "./data/exercises";
 import {
@@ -7,7 +7,7 @@ import {
   isAvailable,
   isSafeFor,
   nextLoadKg,
-  withLoadStepDefaults,
+  withDefaultLoads,
   type ProfileWithLoads,
 } from "./equipment";
 
@@ -166,21 +166,36 @@ describe("builtInEquipment, Full gym in the user's unit", () => {
 });
 
 // User stories 21 and 23: a profile's cable and machine step is 10 lb or 5 kg until the user sets one
-describe("withLoadStepDefaults", () => {
+describe("withDefaultLoads", () => {
   const cable: ProfileWithLoads = { tags: ["cable_machine"], loads: {} };
 
   it("gives a cable or machine with no stored step 10 lb in pounds and 5 kg in kg", () => {
-    expect(withLoadStepDefaults(cable, "lb").loads.cable_machine).toEqual({ stepKg: lb(10) });
-    expect(withLoadStepDefaults(cable, "kg").loads.cable_machine).toEqual({ stepKg: 5 });
+    expect(withDefaultLoads(cable, "lb").loads.cable_machine).toEqual({ stepKg: lb(10) });
+    expect(withDefaultLoads(cable, "kg").loads.cable_machine).toEqual({ stepKg: 5 });
   });
 
   it("keeps a step the user set", () => {
     const set: ProfileWithLoads = { ...cable, loads: { cable_machine: { stepKg: lb(15) } } };
-    expect(withLoadStepDefaults(set, "kg")).toEqual(set);
+    expect(withDefaultLoads(set, "kg")).toEqual(set);
   });
 
   it("adds no step to a profile without a cable or machine", () => {
     const dumbbells: ProfileWithLoads = { tags: ["dumbbells"], loads: {} };
-    expect(withLoadStepDefaults(dumbbells, "lb")).toEqual(dumbbells);
+    expect(withDefaultLoads(dumbbells, "lb")).toEqual(dumbbells);
+  });
+
+  // User story 20: a gym the user didn't list weights for has Full gym's loads, so the Coach prescribes loads that exist
+  it("gives a profile with all of Full gym's equipment and no weights listed Full gym's loads in the user's unit", () => {
+    const gym: ProfileWithLoads = { tags: EquipmentTag.options, loads: {} };
+    expect(withDefaultLoads(gym, "lb")).toEqual(builtInEquipment("full_gym", "lb"));
+    expect(withDefaultLoads(gym, "kg")).toEqual(builtInEquipment("full_gym", "kg"));
+  });
+
+  it("keeps a gym's own weights and step", () => {
+    const gym: ProfileWithLoads = {
+      tags: EquipmentTag.options,
+      loads: { dumbbells: { kind: "fixed", weightsKg: [10, 20] }, cable_machine: { stepKg: lb(15) } },
+    };
+    expect(withDefaultLoads(gym, "lb")).toEqual(gym);
   });
 });
