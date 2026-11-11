@@ -118,6 +118,11 @@ function WorkoutRow({ workout, now }: { workout: Row; now: Date }) {
             Waiting to sync
           </Text>
         ) : null}
+        {workout.prs?.length ? (
+          <Text size="xs" weight="semiBold" color="success">
+            {workout.prs.length === 1 ? "New PR" : `${workout.prs.length} new PRs`}
+          </Text>
+        ) : null}
       </View>
       <View style={{ alignItems: "flex-end" }}>
         <Text size="xl" weight="bold">
