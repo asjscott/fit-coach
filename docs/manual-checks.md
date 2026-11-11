@@ -200,10 +200,10 @@ Needs `pnpm --filter @fit/api seed:exercises` run once from the main checkout (i
 
 ## Load Steps (#127)
 
-- [ ] **L1** On a gym profile in lb, Today's dumbbell targets are 5 lb steps (25, 30, 35 lb), barbell ones are 45 lb plus pound plates (135, 140 lb) and cable ones are 10 lb steps. On the logging screen the stepper moves 25 → 30 lb on dumbbells, 135 → 140 lb on a barbell and 100 → 110 lb on a cable. Switch to kg on Profile: the targets become 2.5 kg dumbbells, a 20 kg bar and 5 kg cable steps.
+- [ ] **LS1** On a gym profile in lb, Today's dumbbell targets are 5 lb steps (25, 30, 35 lb), barbell ones are 45 lb plus pound plates (135, 140 lb) and cable ones are 10 lb steps. On the logging screen the stepper moves 25 → 30 lb on dumbbells, 135 → 140 lb on a barbell and 100 → 110 lb on a cable. Switch to kg on Profile: the targets become 2.5 kg dumbbells, a 20 kg bar and 5 kg cable steps.
   - iOS: Result: · Android: Result: · Notes:
 
-- [ ] **L2** Edit the gym profile (Profile → Training): a stage asks only for "Cable and machine step (lb)", filled with 10. Change it to 15 and save: Today's cable targets and the cable stepper now move in 15 lb steps. On a home profile with a cable machine selected, the same field shows on the weights stage next to the other equipment.
+- [ ] **LS2** Edit the gym profile (Profile → Training): a stage asks only for "Cable and machine step (lb)", filled with 10. Change it to 15 and save: Today's cable targets and the cable stepper now move in 15 lb steps. On a home profile with a cable machine selected, the same field shows on the weights stage next to the other equipment.
   - iOS: Result: · Android: Result: · Notes:
 
 ## PRs (#130)
