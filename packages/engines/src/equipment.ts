@@ -97,7 +97,7 @@ const MAX_BARBELL_KG = 300;
 // the sums exact
 const QUARTERS = 4;
 // Loads entered in pounds are stored as their exact kg, which sums of them can miss by a rounding error
-const SAME_LOAD_KG = 1e-6;
+const ROUNDING_ERROR_KG = 1e-6;
 
 const inQuarters = (kg: number, unit: WeightUnit) => fromKg(kg, unit) * QUARTERS;
 const isWholeQuarters = (kg: number, unit: WeightUnit) =>
@@ -146,7 +146,7 @@ export function availableLoadsKg(exercise: Pick<Exercise, "equipmentOptions">, p
       return [];
     })
     .sort((a, b) => a - b);
-  return loads.filter((load, i) => i === 0 || load - loads[i - 1] > SAME_LOAD_KG);
+  return loads.filter((load, i) => i === 0 || load - loads[i - 1] > ROUNDING_ERROR_KG);
 }
 
 // By slug, for callers that hold only a Workout Exercise; empty when either the Exercise or the profile is unknown
@@ -164,8 +164,8 @@ export const UNKNOWN_LOADS_STEP_KG = 2;
 // The next of the loads up or down from kg, which needn't be one of them; undefined past the heaviest or lightest
 function nextOf(kg: number, direction: StepDirection, loadsKg: number[]): number | undefined {
   return direction === 1
-    ? loadsKg.find((load) => load > kg + SAME_LOAD_KG)
-    : loadsKg.filter((load) => load < kg - SAME_LOAD_KG).at(-1);
+    ? loadsKg.find((load) => load > kg + ROUNDING_ERROR_KG)
+    : loadsKg.filter((load) => load < kg - ROUNDING_ERROR_KG).at(-1);
 }
 
 // Past the lightest or heaviest load there's nothing to step to, so kg stays put rather than leaving the equipment
@@ -194,7 +194,7 @@ export function isSafeFor(exercise: Pick<Exercise, "avoidWith">, injuries: Injur
 // a barbell Exercise under the empty bar stays under it (#70) and a dumbbell one rounds up only when prescribed. Loads
 // sorted lightest first, as availableLoadsKg gives them
 export function loadAtOrBelowKg(kg: number, loadsKg: readonly number[]): number {
-  return loadsKg.filter((load) => load <= kg + SAME_LOAD_KG).at(-1) ?? kg;
+  return loadsKg.filter((load) => load <= kg + ROUNDING_ERROR_KG).at(-1) ?? kg;
 }
 
 export function roundToLoadKg(kg: number, loadsKg: number[]): number {

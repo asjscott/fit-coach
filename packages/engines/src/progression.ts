@@ -57,8 +57,9 @@ type ProgressionRule = (judgement: Judgement) => Outcome | undefined;
 // All the user had: no more reps
 const MAX_RPE = RPE_SCALE[RPE_SCALE.length - 1];
 
-// A load logged in the other unit is its exact kg, a hair off the profile's own
-const SAME_LOAD_KG = 0.01;
+// A load logged in the other unit is its exact kg, a hair off the profile's own: loads this close are the same load
+const OTHER_UNIT_TOLERANCE_KG = 0.01;
+const sameLoad = (a: number, b: number) => Math.abs(a - b) <= OTHER_UNIT_TOLERANCE_KG;
 
 // The level as this Workout leaves it, recording the Workout as the one that last moved it and why it changed
 function moved({ level, workout }: Judgement, changes: Partial<WorkingLevel>, change: ProgressionChange | null) {
@@ -73,6 +74,9 @@ const repsOf = (set: Set) => ("reps" in set ? set.reps : 0);
 const fewestReps = (sets: readonly Set[]) => Math.min(...sets.map(repsOf));
 const lowestKg = (sets: readonly Set[]) =>
   Math.min(...sets.map((set) => (set.kind === "external" ? set.kg : Infinity)));
+
+// Were the judged Sets lifted at the weighted level's load? Otherwise that load is a new base
+const atLevelLoad = ({ level, sets }: Judgement) => level.unit === "kg" && sameLoad(lowestKg(sets), level.kg);
 
 // ─── The rules ───
 
@@ -104,11 +108,12 @@ const secondsOf = (set: Set) => ("seconds" in set ? set.seconds : 0);
 
 // Whether the judged Sets are a Miss; undefined when they can't be one: a weighted level lifted at another load (a new
 // base), a carry, which has no target reps, or a jump, which never moves
-function isMiss({ level, exercise, sets }: Judgement): boolean | undefined {
+function isMiss(judgement: Judgement): boolean | undefined {
+  const { level, exercise, sets } = judgement;
   if (isJump(exercise)) return undefined;
   switch (level.unit) {
     case "kg":
-      if (!repRange(exercise, level.unit) || Math.abs(lowestKg(sets) - level.kg) > SAME_LOAD_KG) return undefined;
+      if (!repRange(exercise, level.unit) || !atLevelLoad(judgement)) return undefined;
       return level.reps - average(sets.map(repsOf)) > MISS_REPS;
     case "seconds":
       return level.seconds - average(sets.map(secondsOf)) > MISS_SECONDS;
@@ -173,7 +178,7 @@ const ballisticByLoad: ProgressionRule = (judgement) => {
   const range = repRange(exercise, level.unit);
   if (!exercise.ballistic || level.unit !== "kg" || !range) return undefined;
   const workouts = (level.workoutsSinceLoadUp ?? 0) + 1;
-  if (Math.abs(lowestKg(sets) - level.kg) > SAME_LOAD_KG) {
+  if (!atLevelLoad(judgement)) {
     return moved(judgement, { kg: lowestKg(sets), reps: range.max, workoutsSinceLoadUp: 0 }, { code: "new-base" });
   }
   const held = { reps: range.max, workoutsSinceLoadUp: workouts };
@@ -190,7 +195,7 @@ const ballisticByLoad: ProgressionRule = (judgement) => {
 const carriesMoveByLoad: ProgressionRule = (judgement) => {
   const { level, exercise, sets } = judgement;
   if (level.unit !== "kg" || repRange(exercise, level.unit)) return undefined;
-  if (Math.abs(lowestKg(sets) - level.kg) <= SAME_LOAD_KG) return moved(judgement, {}, null);
+  if (atLevelLoad(judgement)) return moved(judgement, {}, null);
   return moved(judgement, { kg: lowestKg(sets) }, { code: "new-base" });
 };
 
@@ -202,7 +207,7 @@ const rpeTenHolds: ProgressionRule = (judgement) =>
 // Story 37: a load other than the one prescribed becomes the new base, at the fewest reps lifted there
 const newBase: ProgressionRule = (judgement) => {
   const { level, sets } = judgement;
-  if (level.unit !== "kg" || Math.abs(lowestKg(sets) - level.kg) <= SAME_LOAD_KG) return undefined;
+  if (level.unit !== "kg" || atLevelLoad(judgement)) return undefined;
   return moved(judgement, { kg: lowestKg(sets), reps: fewestReps(sets) }, { code: "new-base" });
 };
 
@@ -312,9 +317,9 @@ function judge(input: ProgressionInput): Judgement {
   const { sets } = workoutExercise;
   if (level.unit !== "kg" || !sets.some((set) => set.kind === "external")) return { ...input, sets };
   const lowest = lowestKg(sets);
-  const atLowest = sets.filter((set) => set.kind === "external" && Math.abs(set.kg - lowest) <= SAME_LOAD_KG);
+  const atLowest = sets.filter((set) => set.kind === "external" && sameLoad(set.kg, lowest));
   const prescribed = roundToLoadKg(level.kg, availableLoadsKg(exercise, equipmentProfile));
-  const kg = Math.abs(lowest - prescribed) <= SAME_LOAD_KG ? prescribed : level.kg;
+  const kg = sameLoad(lowest, prescribed) ? prescribed : level.kg;
   return { ...input, level: { ...level, kg }, sets: atLowest };
 }
 

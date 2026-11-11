@@ -1,6 +1,7 @@
 import type { Exercise, Set as LoggedSet, Pr, PrMeasure, Workout } from "@fit/shared";
 import { exerciseBySlug } from "./data/exercises";
 import { e1rm, MAX_E1RM_REPS } from "./e1rm";
+import { isCarry } from "./working-levels";
 
 type WorkoutWithExercises = Pick<Workout, "workoutExercises">;
 
@@ -11,7 +12,7 @@ const BALLISTIC_PR_REPS = 8;
 // Exercise, which isn't training, and an Exercise the library doesn't know
 export function prMeasure(exercise: Exercise | undefined): PrMeasure | null {
   if (!exercise || exercise.recovery) return null;
-  if (exercise.patterns.some(({ pattern }) => pattern === "carry")) return null;
+  if (isCarry(exercise)) return null;
   if (exercise.loadType === "bodyweight") return "reps";
   if (exercise.loadType === "timed") return "seconds";
   return exercise.ballistic ? "load" : "e1rm";
@@ -34,9 +35,9 @@ function setValue(set: LoggedSet, measure: PrMeasure): number | null {
 // The best Set of an Exercise across these Workouts by this measure, or null when none counts
 function bestOf(workouts: WorkoutWithExercises[], slug: string, measure: PrMeasure): number | null {
   const values = workouts
-    .flatMap((w) => w.workoutExercises)
-    .filter((we) => we.slug === slug)
-    .flatMap((we) => we.sets.map((set) => setValue(set, measure)))
+    .flatMap(({ workoutExercises }) => workoutExercises)
+    .filter((workoutExercise) => workoutExercise.slug === slug)
+    .flatMap(({ sets }) => sets.map((set) => setValue(set, measure)))
     .filter((value) => value !== null);
   return values.length ? Math.max(...values) : null;
 }
@@ -44,7 +45,7 @@ function bestOf(workouts: WorkoutWithExercises[], slug: string, measure: PrMeasu
 // The PRs a Workout sets, one per Exercise, against the user's Workouts that started before it. An Exercise with no
 // best before this Workout sets a baseline, not a PR. Assessment Workouts count like any other
 export function findPrs(workout: WorkoutWithExercises, earlier: WorkoutWithExercises[]): Pr[] {
-  const slugs = [...new Set(workout.workoutExercises.map((we) => we.slug))];
+  const slugs = [...new Set(workout.workoutExercises.map(({ slug }) => slug))];
   return slugs.flatMap((slug) => {
     const measure = prMeasure(exerciseBySlug(slug));
     if (!measure) return [];
