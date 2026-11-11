@@ -283,12 +283,18 @@ Schema: ProgressionChange (packages/shared/src/progression.ts), on WorkingLevel.
 - **Only a later Workout moves a level**: `laterWorkoutsOnly` compares `startedAt` with `movedBy`, so a retry, a late
   Pending Workout or a past Workout never moves it twice or backwards. A judged Workout records itself even when
   nothing changed; an unjudged one (UNMOVED) records nothing.
-- **Ballistic Exercises and carries don't move yet** (`notYetProgressed`); they come with #136. Jumps never move.
+- **Ballistic Exercises and carries** (#136: `jumpsNeverMove`, `ballisticByLoad`, `carriesMoveByLoad`, after
+  `missesBringItDown`, before `rpeTenHolds`): a jump never moves. A weighted Ballistic Exercise stays at 8 reps and
+  takes a Load Step (`load-up`) when every Set reaches 8 and the last Set's RPE is 7 or lower, or with no RPE on the
+  3rd Workout since its load last went up. That count is `workoutsSinceLoadUp` on the kg Working Level (optional,
+  absent = 0; every judged Workout adds 1, a step up or new base resets it); it handles RPE 10 itself so the Workout
+  still counts. It still Misses. A carry (kg level with no `repRange`) moves only to a different logged load
+  (`new-base`, reps kept), whatever the RPE, and never Misses.
 - **Ladders** (#135: `bodyweightLadder`, `timedLadder`, `bandLadder`, last in `RULES`): +1 rep to 15, +5 seconds to
   60, then `outgrown` (the planner gives the `progression` variant, whose level is seeded like any other). A band
   level climbs 10–15 reps, then steps to the next band the primary profile lists (`ownedBandLevels`) at 10, and at the
   heaviest climbs to 20 then is outgrown. A band Set's logged kg is ignored: the level's band is assumed.
-- **Misses** (#134, `missesBringItDown`, before `notYetProgressed`): judged Sets averaging more than 2 reps (10
+- **Misses** (#134, `missesBringItDown`, before the #136 rules): judged Sets averaging more than 2 reps (10
   seconds) short of target add to the level's `misses` and hold it; the second in a row drops a weighted level one
   Load Step to the bottom of the range (`load-down`), or the target 2 reps when that step is over 12% lighter or there
   isn't one (`target-down`), and a bodyweight or band target 2 reps or a timed one 10 seconds, never to an easier

@@ -391,17 +391,127 @@ describe("progressWorkingLevel: band ladders", () => {
   });
 });
 
-// Spec #119: Ballistic Exercises and carries get their rules from #136; until then they stay where they are
-describe("progressWorkingLevel: Exercises without progression yet", () => {
+// Kettlebells at home: 8 to 24 kg in 4 kg steps
+const KETTLEBELLS: ProfileWithLoads = {
+  tags: ["kettlebells"],
+  loads: { kettlebells: { weightsKg: [8, 12, 16, 20, 24] } },
+};
+
+// Stories 60–62, spec #119 "Ballistic Exercises": a fixed 8 reps, moving only by load, carefully
+describe("progressWorkingLevel: Ballistic Exercises", () => {
+  const swing = (kg: number, extra: Partial<WorkingLevel> = {}) =>
+    level("kettlebell-swing", { unit: "kg", kg, reps: 8, ...extra });
+  const swings = (workingLevel: WorkingLevel, sets: Set[]) =>
+    progress(workingLevel, sets, { equipmentProfile: KETTLEBELLS });
+
+  // Story 61
+  it("goes up a Load Step, still at 8 reps, when every Set reaches 8 and the last Set's RPE is 7 or lower", () => {
+    expect(swings(swing(16), [lifted(16, 8), lifted(16, 8), lifted(16, 8, 7)])).toEqual({
+      level: swing(20, { movedBy: movedByThisWorkout, workoutsSinceLoadUp: 0, change: { code: "load-up" } }),
+      change: { code: "load-up" },
+    });
+  });
+
   it.each([
-    [
-      "a weighted Ballistic Exercise",
-      level("kettlebell-swing", { unit: "kg", kg: 16, reps: 8 }),
-      [lifted(16, 8), lifted(16, 8)],
-    ],
-    ["a carry", level("farmers-carry", { unit: "kg", kg: 20, reps: 8 }), [lifted(24, 8), lifted(24, 8)]],
-  ])("leaves %s unmoved", (_, workingLevel, sets) => {
-    expect(progress(workingLevel, sets)).toBeNull();
+    ["RPE 8", 8],
+    ["RPE 9", 9],
+  ])("holds the load at %s, counting the Workout", (_, rpe) => {
+    expect(swings(swing(16), [lifted(16, 8), lifted(16, 8, rpe)])).toEqual({
+      level: swing(16, { movedBy: movedByThisWorkout, workoutsSinceLoadUp: 1 }),
+      change: null,
+    });
+  });
+
+  it("holds the load at RPE 10, with its reason", () => {
+    expect(swings(swing(16), [lifted(16, 8), lifted(16, 8, 10)])).toMatchObject({
+      level: { kg: 16, reps: 8, workoutsSinceLoadUp: 1 },
+      change: { code: "rpe-10" },
+    });
+  });
+
+  it("holds the load when a Set falls short of 8, however easy", () => {
+    expect(swings(swing(16), [lifted(16, 8), lifted(16, 7, 6)])).toMatchObject({
+      level: { kg: 16, reps: 8, workoutsSinceLoadUp: 1 },
+      change: null,
+    });
+  });
+
+  // Story 61: with no RPE logged, at most once every 3 Workouts
+  it("goes up a Load Step with no RPE logged only on the 3rd Workout since the load last went up", () => {
+    const first = swings(swing(16), [lifted(16, 8), lifted(16, 8)]);
+    expect(first).toMatchObject({ level: { kg: 16, workoutsSinceLoadUp: 1 }, change: null });
+    const second = swings(swing(16, { workoutsSinceLoadUp: 1 }), [lifted(16, 8), lifted(16, 8)]);
+    expect(second).toMatchObject({ level: { kg: 16, workoutsSinceLoadUp: 2 }, change: null });
+    const third = swings(swing(16, { workoutsSinceLoadUp: 2 }), [lifted(16, 8), lifted(16, 8)]);
+    expect(third).toMatchObject({ level: { kg: 20, reps: 8, workoutsSinceLoadUp: 0 }, change: { code: "load-up" } });
+  });
+
+  it("counts Workouts held by RPE towards the 3", () => {
+    expect(swings(swing(16, { workoutsSinceLoadUp: 2 }), [lifted(16, 8), lifted(16, 8)])).toMatchObject({
+      change: { code: "load-up" },
+    });
+  });
+
+  it("holds at the heaviest kettlebell the profile has", () => {
+    expect(swings(swing(24), [lifted(24, 8), lifted(24, 8, 6)])).toMatchObject({
+      level: { kg: 24, reps: 8, outgrown: false },
+      change: null,
+    });
+  });
+
+  it("makes a load other than the one prescribed the new base, at 8 reps, starting the count again", () => {
+    expect(swings(swing(16, { workoutsSinceLoadUp: 2 }), [lifted(20, 8), lifted(20, 6)])).toMatchObject({
+      level: { kg: 20, reps: 8, workoutsSinceLoadUp: 0 },
+      change: { code: "new-base" },
+    });
+  });
+
+  it("still counts a Miss, and the second in a row brings it down a Load Step", () => {
+    expect(swings(swing(16), [lifted(16, 5), lifted(16, 5)])).toMatchObject({ level: { kg: 16, misses: 1 } });
+    expect(swings(swing(16, { misses: 1 }), [lifted(16, 5), lifted(16, 5)])).toMatchObject({
+      change: { code: "target-down" },
+    });
+  });
+
+  // Story 62
+  it("never moves a jump, a bodyweight Ballistic Exercise, however the Sets went", () => {
+    const jump = level("box-jump", { unit: "reps", reps: 5 });
+    expect(progress(jump, [repsDone(5), { ...repsDone(5), rpe: 6 }])).toBeNull();
+    expect(progress(jump, [repsDone(9), repsDone(9)])).toBeNull();
+  });
+});
+
+// Story 63, spec #119 "Carries": only a different logged load moves a carry
+describe("progressWorkingLevel: carries", () => {
+  const carry = (kg: number, extra: Partial<WorkingLevel> = {}) =>
+    level("farmers-carry", { unit: "kg", kg, reps: 8, ...extra });
+
+  it("moves to a different load the user logs, keeping its reps", () => {
+    expect(progress(carry(20), [lifted(24, 30), lifted(24, 25)])).toEqual({
+      level: carry(24, { movedBy: movedByThisWorkout, change: { code: "new-base" } }),
+      change: { code: "new-base" },
+    });
+  });
+
+  it("leaves the load and reps as they are at the same load, however many reps, recording the Workout", () => {
+    expect(progress(carry(20), [lifted(20, 30), lifted(20, 40)])).toEqual({
+      level: carry(20, { movedBy: movedByThisWorkout }),
+      change: null,
+    });
+  });
+
+  it("never counts a Miss, however few reps", () => {
+    expect(progress(carry(20, { misses: 0 }), [lifted(20, 1), lifted(20, 1)])).toMatchObject({
+      level: { kg: 20, reps: 8, misses: 0 },
+      change: null,
+    });
+  });
+
+  it("moves to a different load even when the last Set was RPE 10", () => {
+    expect(progress(carry(20), [lifted(16, 8), lifted(16, 8, 10)])).toMatchObject({
+      level: { kg: 16, reps: 8 },
+      change: { code: "new-base" },
+    });
   });
 });
 

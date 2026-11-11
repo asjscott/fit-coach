@@ -71,7 +71,16 @@ const progress = {
 // level and reps. The load is one the user's equipment has, or unrounded when none is light enough; it's rounded to
 // the primary Equipment Profile's loads when prescribed or shown
 export const WorkingLevel = z.discriminatedUnion("unit", [
-  z.object({ slug, unit: z.literal("kg"), kg: z.number().positive(), reps: z.number().int().positive(), ...progress }),
+  z.object({
+    slug,
+    unit: z.literal("kg"),
+    kg: z.number().positive(),
+    reps: z.number().int().positive(),
+    // A weighted Ballistic Exercise's Workouts judged since its load last went up (#136): with no RPE logged, its load
+    // goes up at most once every 3 of them. Absent until a Workout judges it, which counts as 0
+    workoutsSinceLoadUp: z.number().int().nonnegative().optional(),
+    ...progress,
+  }),
   z.object({ slug, unit: z.literal("reps"), reps: z.number().int().positive(), ...progress }),
   z.object({ slug, unit: z.literal("seconds"), seconds: z.number().positive(), ...progress }),
   z.object({ slug, unit: z.literal("band"), level: BandLevel, reps: z.number().int().positive(), ...progress }),
