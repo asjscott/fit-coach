@@ -1,6 +1,6 @@
 import type { WithId } from "mongodb";
-import { previousSets } from "@fit/engines";
-import { Workout, type PreviousSets, type WorkoutsQuery } from "@fit/shared";
+import { findPrs, previousSets } from "@fit/engines";
+import { Workout, type PreviousSets, type Pr, type WorkoutsQuery } from "@fit/shared";
 import { db } from "./db";
 
 // The shape of a workout document in MongoDB: the Workout with its Workout Exercises
@@ -25,8 +25,11 @@ export async function ensureWorkoutIndexes() {
   await workouts.createIndex({ clerkUserId: 1, assessment: 1, startedAt: -1 });
 }
 
-// Idempotent on the Workout id: returns the stored Workout if this user already uploaded it
-export async function createWorkout(clerkUserId: string, workout: Workout) {
+// Idempotent on the Workout id: returns the stored Workout if this user already uploaded it. PRs are the server's to
+// find, so any the phone sends are dropped
+export async function createWorkout(clerkUserId: string, sent: Workout) {
+  const workout = { ...sent };
+  delete workout.prs;
   const result = await workouts.findOneAndUpdate(
     { clerkUserId, id: workout.id },
     {
@@ -42,6 +45,28 @@ export async function createWorkout(clerkUserId: string, workout: Workout) {
   );
   if (!result.value) throw new Error("Failed to create workout");
   return { workout: result.value, created: !result.lastErrorObject?.updatedExisting };
+}
+
+// The Workout's PRs, found the first time this is called for it and stored against it, so a retried upload returns the
+// same PRs rather than finding them again. Measured against the user's Workouts that started before it, so a past
+// Workout counts from its own day
+export async function recordPrs(clerkUserId: string, workout: WithId<WorkoutDoc>): Promise<Pr[]> {
+  if (workout.prs) return workout.prs;
+  const slugs = [...new Set(workout.workoutExercises.map((we) => we.slug))];
+  const earlier = await workouts
+    .find(
+      { clerkUserId, "workoutExercises.slug": { $in: slugs }, startedAt: { $lt: workout.startedAt } },
+      { projection: { workoutExercises: 1 } },
+    )
+    .toArray();
+  const prs = findPrs(workout, earlier);
+  // Only if no other upload of this Workout stored them first: then its PRs are the ones kept
+  const stored = await workouts.findOneAndUpdate(
+    { _id: workout._id, prs: { $exists: false } },
+    { $set: { prs } },
+    { returnDocument: "after" },
+  );
+  return stored?.prs ?? (await workouts.findOne({ _id: workout._id }))?.prs ?? prs;
 }
 
 // Where a page starts: after the Workout at (before, beforeId) in newest-first order. With
@@ -90,6 +115,7 @@ export function toWorkout({
   assessment,
   plannedWorkoutId,
   workoutExercises,
+  prs,
 }: WithId<WorkoutDoc>): Workout {
   return Workout.parse({
     id,
@@ -98,5 +124,6 @@ export function toWorkout({
     ...(assessment && { assessment }),
     ...(plannedWorkoutId && { plannedWorkoutId }),
     workoutExercises,
+    ...(prs && { prs }),
   });
 }

@@ -40,7 +40,7 @@ import {
   type WeeklyBudget,
 } from "./weekly-budget";
 import { asDone } from "./working-level-sections";
-import { MAX_REPS, seedWorkingLevels, WORKING_LEVEL_REPS } from "./working-levels";
+import { seedWorkingLevels } from "./working-levels";
 import { secondsForSets } from "./workout-length";
 
 // Always the Long version: the day's Workout cuts it to length (daysWorkout)
@@ -85,7 +85,7 @@ function targetFrom(
     case undefined:
       return null;
     case "kg":
-      return { unit: "kg", kg: level.kg, reps: WORKING_LEVEL_REPS };
+      return { unit: "kg", kg: level.kg, reps: level.reps };
     case "reps":
       return { unit: "reps", reps: level.reps };
     case "seconds":
@@ -114,17 +114,13 @@ function workingLevelsFor({ workingLevels, assessment, equipmentProfile }: PlanW
   return levels;
 }
 
-const atRepCap = ({ exercise, target }: Candidate) =>
-  exercise.loadType === "bodyweight" && target.unit === "reps" && target.reps >= MAX_REPS;
-
-// A bodyweight Exercise at the rep cap has no reps left to add, so it gives way to its progression if the user can do
-// that. Band and weighted Exercises go up by level or load instead
-function withoutRepCapped(candidates: readonly Candidate[]) {
+// An Exercise whose Working Level has outgrown it, such as a bodyweight seed above 15 reps, gives way to its
+// progression if the user can do that, and otherwise stays at the top of what it prescribes
+function withoutOutgrown(candidates: readonly Candidate[]) {
   const slugs = new Set(candidates.map(({ exercise }) => exercise.slug));
-  return candidates.filter((candidate) => {
-    const { progression } = candidate.exercise;
-    return !(atRepCap(candidate) && progression && slugs.has(progression));
-  });
+  return candidates.filter(
+    ({ exercise: { progression }, outgrown }) => !(outgrown && progression && slugs.has(progression)),
+  );
 }
 
 // Variety across the week, not within a Workout. It gives way when it would leave nothing, since a user who has run
@@ -157,7 +153,7 @@ function possibleExercises(input: PlanWorkoutInput): Candidate[] {
     )
       return [];
     const target = targetFrom(level, exercise, equipmentProfile);
-    return target ? [{ exercise, target }] : [];
+    return target ? [{ exercise, target, outgrown: level.outgrown }] : [];
   });
 }
 
@@ -169,7 +165,7 @@ function pickableExercises(
   lastWeek: readonly LedgerWorkout[],
   daysPerWeek: number,
 ): Candidate[] {
-  const varied = [...withinVarietyCap(withoutRepCapped(possible), thisWeek, daysPerWeek)].sort(byTieOrder);
+  const varied = [...withinVarietyCap(withoutOutgrown(possible), thisWeek, daysPerWeek)].sort(byTieOrder);
   const trainedLastWeek = new Set(lastWeek.flatMap(({ workoutExercises }) => workoutExercises.map(({ slug }) => slug)));
   const isLastWeeks = ({ exercise }: Candidate) => trainedLastWeek.has(exercise.slug);
   return [...varied.filter(isLastWeeks), ...varied.filter((candidate) => !isLastWeeks(candidate))];

@@ -48,6 +48,14 @@ Schemas shared by app and API: packages/shared/src/workouts.ts
   them, so a load a hair off the one shown never sticks, staying put past the lightest or heaviest, and by 5 lb or 2 kg
   when the loads aren't known. `set-entry.ts` also parses the typed text, steps reps (1) and seconds (5), and names the
   load step for screen readers (`loadStepLabel`: "Next heavier weight", or "Plus 5 lb" when the loads aren't known).
+- **A past Workout starts up to 7 days before its last Set** (#129). `WorkoutUpload` (`@fit/shared`) is the rule, and
+  both POST /workouts (400) and the Logbook's finish use it, so a Pending Workout always uploads. It counts back from
+  the Sets, not the clock, so an upload that comes days late isn't refused; `Workout` itself doesn't have the rule, so
+  History never fails on an older one. A Manual Workout logged afterwards ("Log a past workout" on Today,
+  `pastWorkoutDays`) keeps `pastStart` on the In-progress Workout, while `startedAt` stays when logging began, so the
+  clock and the forgotten check follow the logging. `finishTimes` gives Finish its first times: `pastStart` and an
+  hour later, with Edit times open. Its Sets are logged now, so Fatigue counts a Set from its `loggedAt` but never
+  after its Workout's `endedAt` (`creditingSets`); the Week Ledger already goes by `startedAt`.
 - **The rest timer lives in memory on the LogbookProvider** (#95), not in the Logbook or storage: it belongs to the
   Workout, so it follows the user between Exercises and to Today, and a force-quit loses it. Only Log set starts or
   restarts it; Finish, Discard and sign-out end it. Its length and countdown are pure (`rest-timer.ts` in
@@ -89,7 +97,8 @@ Server (apps/api/src/assessments.ts assessIfPaired, called by POST /workouts in 
   │  its latestAssessmentWorkout
   └─ assess (packages/engines/src/assess.ts): top Sets, maximums, Reference Strengths, estimates
        ├─ ratio table: packages/engines/src/strength-ratios.ts (one entry per library Exercise)
-       ├─ Working Levels: packages/engines/src/working-levels.ts seedWorkingLevels
+       ├─ Working Levels: packages/engines/src/working-levels.ts seedWorkingLevels; the shape is WorkingLevel in
+       │  packages/shared/src/assessments.ts, the rep ranges repRange beside the seeding
        └─ Epley both ways: packages/engines/src/e1rm.ts
 GET /assessments/latest (routes/assessments.ts) → features/assessment/hooks/use-latest-assessment.ts
 Results: features/assessment/views/assessment-results-view.tsx (route assessment-results), grouped by
@@ -130,6 +139,13 @@ Schemas: packages/shared/src/assessments.ts; Set.rpe and Workout.assessment in w
 - **Results round a Working Level to what the user can lift** (`roundToLoadKg`): the nearest load the profile offers,
   or the nearest 0.5 kg when the loads aren't known. An Exercise that needs a barbell is left out when its Working Level
   is under the empty bar, the profile's own or an assumed 20 kg (#70). The stored Working Level isn't changed.
+- **A weighted Working Level is a load and a target reps** (#131), seeded at the heaviest load the user's Equipment
+  Profiles have at or below what Epley gives for the bottom of the range with 2 in reserve, or left unrounded when none
+  is that light, so a barbell lift under the bar stays out (#70). Each level also has `movedBy` (the Assessment's B, or
+  null when the planner works one out), `misses`, and `outgrown`: a bodyweight seed above 15 reps is stored at 15 and
+  outgrown, and the planner gives an outgrown Exercise's place to its `progression` when it can (`withoutOutgrown`).
+- **Levels stored before #131 are converted at startup** (`migrateWorkingLevels` in `apps/api/src/assessments.ts`,
+  rule in `migrateWorkingLevel`): any level without `misses`. It's idempotent, and makes the user's current plan due.
 - **Stored Assessments without a field the schema later required** (`referenceStrength`, `maximum`, `bStartedAt`)
   fail to parse in `findLatestAssessment`: dev data only, so drop the collection.
 
@@ -237,6 +253,29 @@ Schemas: packages/shared/src/planned-workouts.ts
 - **Build and tune with the simulation.** Scores tie often, as many Exercises share budgeted credits. The planner is
   deterministic, so ties fall to last week's Exercises, then the longest Sets, then the slug, never library order.
   `plan-outcomes.test.ts` pins what a user should see, with the library in either order: run it after any tuning.
+
+## PRs (#130)
+
+```text
+findPrs (packages/engines/src/prs.ts): pure. A Workout's PRs, one per Exercise, against the user's earlier Workouts;
+  prMeasure says what an Exercise's PR measures (e1rm, load for 8 reps, reps, seconds) or null (carry, Recovery,
+  unknown slug)
+API: recordPrs (apps/api/src/workouts.ts), called by POST /workouts after assessIfPaired. Stored on the workout doc as
+  `prs`, returned on Workout.prs by POST and GET /workouts (routes/prs.test.ts)
+Phone
+  ├─ Logbook.sync keeps an upload's PRs under logbook:unseen-prs; unseenPrs / markPrsSeen
+  ├─ Finish: FinishOutcome.prs, celebrated by toastWhenUploaded (upload-toast.ts) and marked seen
+  ├─ Today: usePrNote + pr-note.tsx, a late upload's PRs, marked seen as soon as shown
+  └─ History: the row's "New PR" and the detail's "New PR · …" per Exercise (prLabel, prsHeadline in format.ts)
+```
+
+- **Found once.** `recordPrs` stores `prs` on the first upload (`[]` when none) and a retry returns what's stored, so
+  a PR is never found twice. Any `prs` a phone sends are dropped.
+- **Measured against Workouts that started before it**, so a past or late Workout counts from its own day. A later
+  Workout's stored PRs aren't revisited when an earlier one arrives late.
+- **e1RM uses the reps logged**, not reps + (10 − RPE), so an Assessment's RPE-rated Sets count as lifted.
+- **The Finish flow owns its Workout's PRs**: the provider keeps them out of `unseenPrs` while that upload is under
+  way (`celebrating`), so Today's note never shows what the toast is about to.
 
 ## Route tests (#123)
 

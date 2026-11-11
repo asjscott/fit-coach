@@ -10,8 +10,18 @@ const dumbbells: ProfileWithLoads = {
   loads: { dumbbells: { kind: "adjustable", minKg: 2.5, maxKg: 40, stepKg: 2.5 } },
 };
 
-const kg = (slug: string, level: number): WorkingLevel => ({ slug, unit: "kg", kg: level });
-const reps = (slug: string, level: number): WorkingLevel => ({ slug, unit: "reps", reps: level });
+// A Working Level no Workout has moved yet
+const fresh = { movedBy: null, misses: 0, outgrown: false };
+const kg = (slug: string, level: number, target = 8): WorkingLevel => ({
+  slug,
+  unit: "kg",
+  kg: level,
+  reps: target,
+  ...fresh,
+});
+const reps = (slug: string, level: number): WorkingLevel => ({ slug, unit: "reps", reps: level, ...fresh });
+// A bodyweight Working Level past the top of its ladder, as a seed above 15 reps is
+const outgrown = (slug: string): WorkingLevel => ({ slug, unit: "reps", reps: 15, ...fresh, outgrown: true });
 
 // All fit a dumbbell profile
 const levels: WorkingLevel[] = [
@@ -20,7 +30,7 @@ const levels: WorkingLevel[] = [
   kg("one-arm-dumbbell-row", 18),
   reps("push-up", 12),
   kg("dumbbell-lateral-raise", 6),
-  { slug: "plank", unit: "seconds", seconds: 40.4 },
+  { slug: "plank", unit: "seconds", seconds: 40.4, ...fresh },
 ];
 
 const plan = (more: Partial<PlanWorkoutInput> = {}) =>
@@ -367,11 +377,12 @@ describe("planWorkout", () => {
       plan({ assessment, ...more }).plannedExercises.find((exercise) => exercise.slug === slug);
 
     it("is worked out from the Reference Strengths, for a profile added after the Assessment", () => {
-      // Back squat's maximum is the Reference Strength, and 100 ÷ (1 + 10/30) is 75 kg for 8 reps
+      // Back squat's maximum is the Reference Strength. A barbell lift starts at 6 reps, the bottom of its 6–10 range,
+      // with 2 in reserve: 100 ÷ (1 + 8/30) is 78.9 kg, and the heaviest bar load at or below it is 77.5 kg (#131)
       expect(planned("back-squat", { equipmentProfile: rack, workingLevels: [] })?.target).toEqual({
         unit: "kg",
-        kg: 75,
-        reps: 8,
+        kg: 77.5,
+        reps: 6,
       });
     });
 
@@ -381,13 +392,14 @@ describe("planWorkout", () => {
     });
 
     it("replaces a stored Working Level this profile can't do that way", () => {
-      // Stored in kg from a dumbbell profile; with only bands, a lateral raise is prescribed by band
+      // Stored in kg from a dumbbell profile; with only bands, a lateral raise is prescribed by band, at the bottom of
+      // the 10–15 band range
       const equipmentProfile: ProfileWithLoads = { tags: ["loop_bands"], loads: { loop_bands: { levels: ["heavy"] } } };
       const workingLevels = [kg("dumbbell-lateral-raise", 6)];
       expect(planned("dumbbell-lateral-raise", { equipmentProfile, workingLevels })?.target).toEqual({
         unit: "band",
         level: "heavy",
-        reps: 12,
+        reps: 10,
       });
     });
 
@@ -473,34 +485,35 @@ describe("planWorkout", () => {
     });
   });
 
-  describe("a bodyweight Exercise at the 20-rep cap", () => {
+  // #131: a bodyweight seed above 15 reps starts on the harder variant
+  describe("a bodyweight Exercise its Working Level has outgrown", () => {
     const withLevels = (...more: WorkingLevel[]) =>
       slugs({ workingLevels: [...levels.filter(({ slug }) => slug !== "push-up"), ...more] });
 
     it("gives way to its progression", () => {
-      const chosen = withLevels(reps("push-up", 20), reps("decline-push-up", 12));
+      const chosen = withLevels(outgrown("push-up"), reps("decline-push-up", 12));
       expect(chosen).toContain("decline-push-up");
       expect(chosen).not.toContain("push-up");
     });
 
-    it("stays below the cap", () => {
-      expect(withLevels(reps("push-up", 19), reps("decline-push-up", 12))).toContain("push-up");
+    it("stays at the top of the ladder until it's outgrown", () => {
+      expect(withLevels(reps("push-up", 15), reps("decline-push-up", 12))).toContain("push-up");
     });
 
     it("stays when its progression can't be done", () => {
       // Goblet squat needs a weight this profile doesn't have
-      const workingLevels = [reps("bodyweight-squat", 20), kg("goblet-squat", 20)];
+      const workingLevels = [outgrown("bodyweight-squat"), kg("goblet-squat", 20)];
       const chosen = slugs({ workingLevels, equipmentProfile: { tags: [], loads: {} } });
       expect(chosen).toContain("bodyweight-squat");
     });
 
     it("stays when its progression conflicts with an injury", () => {
-      const workingLevels = [reps("bodyweight-squat", 20), kg("goblet-squat", 20)];
+      const workingLevels = [outgrown("bodyweight-squat"), kg("goblet-squat", 20)];
       expect(slugs({ workingLevels, injuries: ["knee"] })).toContain("bodyweight-squat");
     });
 
-    it("goes up the ladder past a progression at the cap too", () => {
-      const chosen = withLevels(reps("push-up", 20), reps("decline-push-up", 20), reps("archer-push-up", 8));
+    it("goes up the ladder past a progression it has outgrown too", () => {
+      const chosen = withLevels(outgrown("push-up"), outgrown("decline-push-up"), reps("archer-push-up", 8));
       expect(chosen).toContain("archer-push-up");
       expect(chosen).not.toContain("push-up");
       expect(chosen).not.toContain("decline-push-up");
@@ -900,7 +913,7 @@ describe("planWorkout", () => {
     const planned = (slug: string, more?: Parameters<typeof plan>[0]) =>
       plan(more).plannedExercises.find((exercise) => exercise.slug === slug);
 
-    it("prescribes a weighted Exercise's Working Level at the nearest load the profile has, for 8 reps", () => {
+    it("prescribes a weighted Exercise's Working Level at the nearest load the profile has, for its target reps", () => {
       expect(planned("goblet-squat")?.target).toEqual({ unit: "kg", kg: 20, reps: 8 });
     });
 
@@ -947,7 +960,7 @@ describe("planWorkout", () => {
 
     it("prescribes a band Exercise's level and reps", () => {
       const workingLevels: WorkingLevel[] = [
-        { slug: "dumbbell-lateral-raise", unit: "band", level: "medium", reps: 12 },
+        { slug: "dumbbell-lateral-raise", unit: "band", level: "medium", reps: 12, ...fresh },
       ];
       const equipmentProfile: ProfileWithLoads = { tags: ["loop_bands"], loads: {} };
       expect(planned("dumbbell-lateral-raise", { workingLevels, equipmentProfile })?.target).toEqual({
@@ -960,7 +973,7 @@ describe("planWorkout", () => {
 
   describe("Recovery Exercises", () => {
     const recovery = EXERCISES.filter((exercise) => exercise.recovery).map(({ slug }) => slug);
-    const recoveryLevels: WorkingLevel[] = recovery.map((slug) => ({ slug, unit: "seconds", seconds: 45 }));
+    const recoveryLevels: WorkingLevel[] = recovery.map((slug) => ({ slug, unit: "seconds", seconds: 45, ...fresh }));
 
     it("never picks one, even with a Working Level for it", () => {
       const planned = [...slugs({ workingLevels: [...levels, ...recoveryLevels] }), ...onFullGym()];
@@ -1062,14 +1075,14 @@ describe("planWorkout", () => {
     });
 
     it("keeps an Exercise possible on the equipment even when a guard would stop the Coach picking it there", () => {
-      // Rep-capped: bodyweight squat's progression, goblet squat, needs a weight the primary lacks, so the plan keeps it
-      // at 20 reps. Full gym has the weight, but the Exercise is still possible there, so it stays
+      // Outgrown: bodyweight squat's progression, goblet squat, needs a weight the primary lacks, so the plan keeps it
+      // at 15 reps. Full gym has the weight, but the Exercise is still possible there, so it stays
       const squat = planned("bodyweight-squat", {
         equipmentProfile: { tags: [], loads: {} },
-        workingLevels: [reps("bodyweight-squat", 20), kg("goblet-squat", 20)],
+        workingLevels: [outgrown("bodyweight-squat"), kg("goblet-squat", 20)],
         assessment: { bodyWeightKg: 75, patterns: {} },
       });
-      expect(squat?.alternatives?.full_gym).toEqual([{ slug: "bodyweight-squat", target: { unit: "reps", reps: 20 } }]);
+      expect(squat?.alternatives?.full_gym).toEqual([{ slug: "bodyweight-squat", target: { unit: "reps", reps: 15 } }]);
     });
 
     it("works out a target the Assessment didn't store", () => {

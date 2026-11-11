@@ -1,4 +1,4 @@
-import { LogbookError, summarizeWorkout } from "@fit/engines";
+import { finishTimes, LogbookError, summarizeWorkout } from "@fit/engines";
 import { useState } from "react";
 import { StyleSheet, View } from "react-native";
 import { LoadingButton } from "@/components/loading-button";
@@ -20,16 +20,19 @@ import { toastWhenUploaded } from "../upload-toast";
 import { useWeightUnit } from "@/features/user/current-user-provider";
 
 // Leads with what the user did, with Save workout as the one-tap main action. The times start as Start and now,
-// behind Edit times for backfilled and forgotten Workouts
+// behind Edit times for backfilled and forgotten Workouts. A Workout logged afterwards for an earlier day starts on that
+// day, an hour long, with its times open to edit (#129)
 export default function FinishView() {
   const unit = useWeightUnit();
   const { workout, finish } = useLogbook();
   const { showToast } = useToast();
   const { colors } = useTheme();
   // Kept to the second, so a short Workout isn't rounded down to start and end in the same minute
-  const [startedAt, setStartedAt] = useState(() => (workout ? new Date(workout.startedAt) : new Date()));
-  const [endedAt, setEndedAt] = useState(() => new Date());
-  const [isEditingTimes, setIsEditingTimes] = useState(false);
+  const [initialTimes] = useState(() => workout && finishTimes(workout, new Date()));
+  const [startedAt, setStartedAt] = useState(() => initialTimes?.startedAt ?? new Date());
+  const [endedAt, setEndedAt] = useState(() => initialTimes?.endedAt ?? new Date());
+  const [isEditingTimes, setIsEditingTimes] = useState(() => !!workout?.pastStart);
+  const [startError, setStartError] = useState<string>();
   const [endError, setEndError] = useState<string>();
   const [finishing, setFinishing] = useState(false);
   const [confirmingDiscard, setConfirmingDiscard] = useState(false);
@@ -56,6 +59,7 @@ export default function FinishView() {
 
   const changeTime = (set: (date: Date) => void) => (date: Date) => {
     set(date);
+    setStartError(undefined);
     setEndError(undefined);
   };
 
@@ -64,7 +68,7 @@ export default function FinishView() {
       setConfirmingDiscard(true);
       return;
     }
-    toastWhenUploaded(showToast, outcome.uploaded, workout.assessment);
+    toastWhenUploaded(showToast, outcome, workout.assessment);
     leaveWorkout();
   };
 
@@ -73,9 +77,10 @@ export default function FinishView() {
     try {
       showOutcome(await finish({ startedAt, endedAt }));
     } catch (err) {
-      // Both time rules are about the end: before the start, or in the future
+      // The time rules: a start more than 7 days back, an end before the start or in the future
       if (err instanceof LogbookError) {
-        setEndError(err.message);
+        if (err.field === "startedAt") setStartError(err.message);
+        else setEndError(err.message);
         setIsEditingTimes(true);
       } else showToast("Couldn't finish", { error: err });
     } finally {
@@ -99,7 +104,7 @@ export default function FinishView() {
       </View>
       {isEditingTimes && (
         <Stack spacing={3} style={styles.timeFields}>
-          <DateTimeField label="Start" value={startedAt} onChange={changeTime(setStartedAt)} />
+          <DateTimeField label="Start" value={startedAt} onChange={changeTime(setStartedAt)} error={startError} />
           <DateTimeField label="End" value={endedAt} onChange={changeTime(setEndedAt)} error={endError} />
         </Stack>
       )}

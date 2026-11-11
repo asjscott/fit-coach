@@ -152,6 +152,11 @@ A Workout pairs Exercises only when it wouldn't otherwise fit its Length, so cho
 - [ ] **S1** P9's timing check on a paired Workout: start one whose sheet shows at least one superset, note its "About N min", and run it in full with a timer, resting as the timer says and skipping nothing. A pair is timed at Sets × (the longer Exercise's Set + 30 s): does the real time come out within a few minutes of the estimate?
   - iOS: Result: · Android: Result: · Notes:
 
+## Past Workouts (#129)
+
+- [ ] **W1** On Today, tap "Log a past workout" under Start manual workout: a sheet asks "Which day was it?" with Yesterday and the five weekdays before it. Pick one: the Workout opens with "Done <that day>" under its title. Log a Set or two and tap Finish: the times read that day, an hour long, with Edit times already open. Set a start 8 days back and Save: "The start can't be more than 7 days ago" shows under Start. Set it back within the week and Save: in History the Workout sits on its own day, and This Week counts it only if that day is in this week. On the installed web app, check that the date and time inputs are easy to use on the iPhone.
+  - iOS: Result: · Android: Result: · Notes:
+
 ## Sentry (#122)
 
 Needs Sentry set up and staging deployed with its variables: see "Error reporting" in `docs/agents/workouts.md`. Run these on the installed web app on the iPhone, against staging, signed in with a test account.
@@ -192,6 +197,15 @@ Needs `pnpm --filter @fit/api seed:exercises` run once from the main checkout (i
 
 - [ ] **U1** An existing account shows every load in lb with nothing chosen: Profile's "Weights in" has lb picked, and Today's plan, the logging screen (target, Last, Sets, stepper), History, a Workout's detail, Volume everywhere and the Equipment Profile's weights all read in lb. Log a Set of 25 lb: it reads 25 lb in the Set row, History and as Last next time, never 24.9. Pick kg on Profile: the same screens switch to kg, and the 25 lb Set reads 11.5 kg. With the loads unknown (a gym profile), the load stepper moves by 5 lb or 2 kg.
   - iOS: Result: · Android: Result: · Notes:
+
+## PRs (#130)
+
+On the installed PWA against staging, once an Exercise has a Workout behind it (the first Workout on an Exercise is only a baseline). The web build walked both checks with the in-memory API; these are for the phone.
+
+- [ ] **PR1** With signal, beat an Exercise's best (more kg at the same reps, or more reps) and Save workout. The toast reads "Workout saved. New PR: …" with "See workout", which opens the Workout in History showing "New PR · …" under that Exercise. Today shows no PR note for it.
+  - iOS: Result: · Notes:
+- [ ] **PR2** In airplane mode, beat a best again and save. Turn airplane mode off and open the app: once it uploads, Today shows a green note naming the PRs with "See workout". Close and reopen the app: the note is gone, and the Workout's History row says "New PR".
+  - iOS: Result: · Notes:
 
 ## Your call
 

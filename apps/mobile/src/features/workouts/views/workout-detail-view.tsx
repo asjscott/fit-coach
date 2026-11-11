@@ -1,5 +1,5 @@
 import { summarizeWorkout } from "@fit/engines";
-import type { Workout, WorkoutExercise } from "@fit/shared";
+import type { Pr, Workout, WorkoutExercise } from "@fit/shared";
 import { Stack as NavStack, router, useLocalSearchParams } from "expo-router";
 import { useEffect, useState } from "react";
 import { StyleSheet, View } from "react-native";
@@ -14,7 +14,7 @@ import { useToast } from "@/contexts/toast-context";
 import { spacing, useTheme } from "@/theme";
 import { errorMessage } from "@/utils/error-message";
 import { SetRow } from "../components/set-row";
-import { dateLabel, timeStat, volumeLabel, workoutTimesLabel } from "../format";
+import { dateLabel, prLabel, timeStat, volumeLabel, workoutTimesLabel } from "../format";
 import { useHistory } from "../history-provider";
 import { exerciseName, libraryExercise } from "../library";
 import { useLogbook } from "../logbook-provider";
@@ -123,7 +123,16 @@ function WorkoutDetail({ workout, note, onDelete }: WorkoutDetailProps) {
         <Stat {...timeStat(summary.durationMs)} label="Time" />
       </View>
       {workout.workoutExercises.map((workoutExercise, i) => (
-        <WorkoutExerciseSection key={`${workoutExercise.slug}-${i}`} workoutExercise={workoutExercise} />
+        <WorkoutExerciseSection
+          key={`${workoutExercise.slug}-${i}`}
+          workoutExercise={workoutExercise}
+          // Once per Exercise, on its first Workout Exercise when it was done twice
+          pr={
+            workout.workoutExercises.findIndex((we) => we.slug === workoutExercise.slug) === i
+              ? workout.prs?.find((pr) => pr.slug === workoutExercise.slug)
+              : undefined
+          }
+        />
       ))}
       <ConfirmModal
         isOpen={confirming}
@@ -137,12 +146,25 @@ function WorkoutDetail({ workout, note, onDelete }: WorkoutDetailProps) {
   );
 }
 
-function WorkoutExerciseSection({ workoutExercise: { slug, sets } }: { workoutExercise: WorkoutExercise }) {
+// The Exercise with its Sets, and the PR the upload found on it (#130)
+function WorkoutExerciseSection({
+  workoutExercise: { slug, sets },
+  pr,
+}: {
+  workoutExercise: WorkoutExercise;
+  pr: Pr | undefined;
+}) {
   const { colors } = useTheme();
   const unilateral = libraryExercise(slug)?.unilateral;
+  const unit = useWeightUnit();
   return (
     <View style={[styles.exercise, { borderColor: colors.line }]}>
       <Text weight="semiBold">{exerciseName(slug)}</Text>
+      {pr ? (
+        <Text size="sm" weight="semiBold" color="success">
+          New PR · {prLabel(pr, unit)}
+        </Text>
+      ) : null}
       {sets.map((set, i) => (
         <SetRow key={set.loggedAt + i} set={set} index={i} unilateral={unilateral} />
       ))}

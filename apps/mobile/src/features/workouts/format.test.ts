@@ -6,6 +6,8 @@ import {
   elapsedClockLabel,
   elapsedLabel,
   previousSetsLabel,
+  prLabel,
+  prsHeadline,
   setParts,
   setsSummary,
   timeLabel,
@@ -394,5 +396,48 @@ describe("loads in the user's unit", () => {
     expect(weightLabel(16.8, "kg")).toBe("16.8 kg");
     expect(weightLabel(16.8, "lb")).toBe("37 lb");
     expect(weightLabel(20, "lb")).toBe("44.1 lb");
+  });
+});
+
+// PRs found at upload (#130): what each kind of best reads as, and the line that celebrates them
+describe("prLabel", () => {
+  it("gives a weighted Exercise's estimated one-rep maximum to the tenth of a kg", () => {
+    expect(prLabel({ slug: "goblet-squat", measure: "e1rm", best: 21.33, previous: 18.67 }, "kg")).toBe(
+      "Estimated max 21.3 kg, up from 18.7 kg",
+    );
+  });
+
+  it("gives a weighted Ballistic Exercise's load for 8 reps", () => {
+    expect(prLabel({ slug: "kettlebell-swing", measure: "load", best: 20, previous: 16 }, "kg")).toBe(
+      "20 kg for 8 reps, up from 16 kg",
+    );
+  });
+
+  it("gives a weight in the user's unit (#126)", () => {
+    expect(prLabel({ slug: "goblet-squat", measure: "e1rm", best: 20, previous: 16.8 }, "lb")).toBe(
+      "Estimated max 44.1 lb, up from 37 lb",
+    );
+  });
+
+  it("gives the most reps or seconds in a Set", () => {
+    expect(prLabel({ slug: "push-up", measure: "reps", best: 14, previous: 12 }, "kg")).toBe("14 reps, up from 12");
+    expect(prLabel({ slug: "plank", measure: "seconds", best: 50, previous: 45 }, "kg")).toBe("50 s, up from 45 s");
+  });
+});
+
+describe("prsHeadline", () => {
+  it("names the Exercise of a single PR", () => {
+    expect(prsHeadline([{ slug: "goblet-squat", measure: "e1rm", best: 21, previous: 18 }])).toBe(
+      "New PR: Goblet squat",
+    );
+  });
+
+  it("counts several and names each", () => {
+    expect(
+      prsHeadline([
+        { slug: "goblet-squat", measure: "e1rm", best: 21, previous: 18 },
+        { slug: "plank", measure: "seconds", best: 50, previous: 45 },
+      ]),
+    ).toBe("2 new PRs: Goblet squat, Plank");
   });
 });
