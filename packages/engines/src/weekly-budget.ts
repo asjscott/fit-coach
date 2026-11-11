@@ -26,6 +26,9 @@ export const MAX_SETS_PER_EXERCISE = 4;
 // Soft limits: credited Sets a Muscle takes from one Workout, and the fewest Workouts its budget is spread over
 export const MUSCLE_CAP_PER_WORKOUT = 10;
 export const MIN_WORKOUTS_PER_MUSCLE = 2;
+// The most of its Weekly Budget a Muscle plans in a week, counted from the Week Ledger and the Sets already planned. Past
+// about 130% the research finds no use for more Sets: see docs/adr/0007-progression-and-deload.md
+export const WEEKLY_CAP = 1.3;
 // The recovery filter: a logged Set's fatigue fades in a straight line to nothing over this many hours, and an
 // Exercise is left out while any of its primary Muscles is over the limit, in credited Sets (fatigue.ts)
 export const FATIGUE_HOURS = 48;

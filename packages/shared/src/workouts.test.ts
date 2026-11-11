@@ -58,9 +58,10 @@ describe("Workout", () => {
     expect(parsed.workoutExercises[0]).toEqual(gobletSquat);
   });
 
-  it("rejects a weight that isn't in 0.25 kg steps", () => {
-    const awkward = { ...gobletSquat, sets: [{ kind: "external", kg: 22.3, reps: 10, loggedAt }] };
-    expect(Workout.safeParse(workout([awkward])).success).toBe(false);
+  // User story 19: a load entered in pounds is stored as its exact kg, so 25 lb never comes back as 24.9
+  it("keeps a weight entered in pounds as its exact kg", () => {
+    const pounds = { ...gobletSquat, sets: [{ kind: "external", kg: 11.33980925, reps: 10, loggedAt }] };
+    expect(Workout.parse(workout([pounds])).workoutExercises[0].sets[0]).toMatchObject({ kg: 11.33980925 });
   });
 
   it("keeps a Set's RPE", () => {

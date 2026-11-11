@@ -1,6 +1,15 @@
 // Weeks of Workouts through the real planner, for the simulation and the plan outcome tests
-import type { Goal, WorkoutLength } from "@fit/shared";
-import { BUILT_IN_EQUIPMENT, daysWorkout, planWorkout, type ProfileWithLoads } from "../src";
+import type { Goal, Muscle, WorkoutLength } from "@fit/shared";
+import {
+  addCredits,
+  BUILT_IN_EQUIPMENT,
+  creditsPerSet,
+  daysWorkout,
+  exerciseBySlug,
+  planWorkout,
+  type MuscleCredits,
+  type ProfileWithLoads,
+} from "../src";
 
 export const GOALS: Goal[] = ["build_muscle", "recomp", "lose_fat", "athletic"];
 const TIME_ZONE = "America/New_York";
@@ -29,18 +38,16 @@ const FULL_HOME_GYM: ProfileWithLoads = {
     dumbbells: { kind: "adjustable", minKg: 2.5, maxKg: 40, stepKg: 2.5 },
   },
 };
-export const PROFILES = {
-  "Full gym": BUILT_IN_EQUIPMENT.full_gym,
-  "Full home gym": FULL_HOME_GYM,
-  "Bodyweight only": BUILT_IN_EQUIPMENT.bodyweight_only,
-};
+export const PROFILES = { "Full gym": BUILT_IN_EQUIPMENT.full_gym, "Full home gym": FULL_HOME_GYM };
+// Bodyweight only too, for the table row (#101); the gym tables leave it out
+export const EVERY_PROFILE = { ...PROFILES, "Bodyweight only": BUILT_IN_EQUIPMENT.bodyweight_only };
 
 export type Run = {
   goal: Goal;
   days: number;
   length: WorkoutLength;
   lifter: keyof typeof LIFTERS;
-  profile: keyof typeof PROFILES;
+  profile: keyof typeof EVERY_PROFILE;
   // The "Include jumps" switch on, with the squat tested so jumps can be given (#105)
   jumps?: boolean;
 };
@@ -77,7 +84,7 @@ export function simulate({ goal, days, length, lifter, profile, jumps = false }:
         workouts: workouts.slice(-14),
         now,
         timeZone: TIME_ZONE,
-        equipmentProfile: PROFILES[profile],
+        equipmentProfile: EVERY_PROFILE[profile],
         injuries: [],
         workingLevels: [],
         assessment: assessmentOf(lifter, jumps),
@@ -96,4 +103,22 @@ export function simulate({ goal, days, length, lifter, profile, jumps = false }:
     weeks.push(thisWeek);
   }
   return weeks;
+}
+
+// A simulated week's credited Sets per Muscle: in total, as the Week Ledger counts them, or from primary credit alone
+export function weekCredits(
+  week: readonly { exercises: readonly { slug: string; sets: number }[] }[],
+  counted: "total" | "primary",
+): MuscleCredits {
+  return week
+    .flatMap(({ exercises }) => exercises)
+    .reduce<MuscleCredits>((total, { slug, sets }) => {
+      const exercise = exerciseBySlug(slug)!;
+      const credits = creditsPerSet(exercise);
+      if (counted === "primary") {
+        const primary = new Set<Muscle>(exercise.muscles.primary);
+        for (const muscle of Object.keys(credits) as Muscle[]) if (!primary.has(muscle)) delete credits[muscle];
+      }
+      return addCredits(total, credits, sets);
+    }, {});
 }

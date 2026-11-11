@@ -142,6 +142,8 @@ npx expo run:android --variant release --device
 
 - [ ] **C5** The next day the check-in is gone: the card is back (if there's a plan) and the Workout is full.
   - iOS: Result: · Android: Result: · Notes:
+- [ ] **C6** (#125) In airplane mode, check in on Today: the Day's Workout follows the Readiness straight away, as online. Change the check-in once, still offline. Turn airplane mode off and bring the app to the foreground. The `checkIns` collection in the staging database has one document for today, with the changed ratings, not the first.
+  - iOS: Result: · Android: Result: · Notes:
 
 ## Supersets (#96)
 
@@ -184,6 +186,11 @@ Needs `pnpm --filter @fit/api seed:exercises` run once from the main checkout (i
 - [ ] **J1** Profile shows an "Include jumps" switch under Training, off, and only while the Goal is athletic. Turn it on, then open Today: the plan's sheet opens with two jumps, each "3 sets · N contacts" (for example "3 sets · 10 contacts"), one that goes up (pogo hop, squat or countermovement jump, box jump) and one that goes forward or sideways (broad jump or lateral bound). Start the Workout: the jumps come first. Log a jump Set: the stepper says "contacts", with no weight field, and the logged Set uploads. Turn the switch off: Today's plan has no jumps. Turning it back on, or a knee injury in the profile, also works as expected.
   - iOS: Result: · Android: Result: · Notes:
 - [ ] **J2** Over a week with the switch on: the first 2 Workouts have jumps and the rest don't, and the second jump Workout has different jumps from the first. On a Quick Workout the jumps stay, all 3 Sets each, and something else is cut.
+  - iOS: Result: · Android: Result: · Notes:
+
+## Units (#126)
+
+- [ ] **U1** An existing account shows every load in lb with nothing chosen: Profile's "Weights in" has lb picked, and Today's plan, the logging screen (target, Last, Sets, stepper), History, a Workout's detail, Volume everywhere and the Equipment Profile's weights all read in lb. Log a Set of 25 lb: it reads 25 lb in the Set row, History and as Last next time, never 24.9. Pick kg on Profile: the same screens switch to kg, and the 25 lb Set reads 11.5 kg. With the loads unknown (a gym profile), the load stepper moves by 5 lb or 2 kg.
   - iOS: Result: · Android: Result: · Notes:
 
 ## Library gaps (#101)

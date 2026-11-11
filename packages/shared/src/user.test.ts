@@ -78,6 +78,22 @@ describe("User", () => {
   });
 });
 
+// User story 18: every load shows in the unit the user chose, lb by default
+describe("User's unit", () => {
+  it("is lb for a user who has never chosen, new or existing", () => {
+    expect(User.parse(user).unit).toBe("lb");
+  });
+
+  it("keeps the unit the user chose", () => {
+    expect(User.parse({ ...user, unit: "kg" }).unit).toBe("kg");
+  });
+
+  it("can be changed, to lb or kg only", () => {
+    expect(UserUpdate.safeParse({ unit: "kg" }).success).toBe(true);
+    expect(UserUpdate.safeParse({ unit: "stone" }).success).toBe(false);
+  });
+});
+
 describe("UserUpdate", () => {
   it("lets a user change Workout Length alone", () => {
     expect(UserUpdate.parse({ profile: { workoutLength: "long" } }).profile).toEqual({ workoutLength: "long" });

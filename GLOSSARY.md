@@ -93,7 +93,7 @@ The Workout on offer today: the Planned Workout on the Workout Length and equipm
 _Avoid_: Today's session, adjusted plan
 
 **Weekly Budget**:
-How many credited Sets each of the budgeted Muscles should get in a week, set by the user's Goal and days per week. Workout Length decides how much of it is delivered, not the budget itself. Eight Muscles are budgeted for every Goal, and calves too for athletic and build_muscle; other Muscles aren't budgeted.
+How many credited Sets each of the budgeted Muscles should get in a week, set by the user's Goal and days per week. Workout Length decides how much of it is delivered, not the budget itself. Eight Muscles are budgeted for every Goal, and calves too for athletic and build_muscle; other Muscles aren't budgeted. The Coach plans a Muscle up to a cap of about 130% of its budget, counted from the Week Ledger and the Sets already planned: it adds no Exercise that would take one of its primary Muscles over it, while secondary credit counts towards a Muscle's total but never keeps an Exercise out.
 _Avoid_: Weekly target, quota, weekly volume
 
 **Week Ledger**:
@@ -121,7 +121,7 @@ An Exercise the Coach suggests in place of a planned one that can't be done on F
 _Avoid_: Substitute, swap, replacement
 
 **Workout Length**:
-How long the user wants a Workout to take, 5 minutes of warm-up included: Short (30 minutes), Standard (45) or Long (60), or Quick (20), which is only for one Workout. They choose their usual one during onboarding, can change it in Profile, and can change it for a single Workout. A user with none stored counts as Standard.
+The most the user wants a Workout to take, 5 minutes of warm-up included: Short (30 minutes), Standard (45) or Long (60), or Quick (20), which is only for one Workout. It's a most, not a target: once nothing is left to add under the 130% cap, the Workout ends short of it, and Today shows the real estimate. They choose their usual one during onboarding, can change it in Profile, and can change it for a single Workout. A user with none stored counts as Standard.
 _Avoid_: Mode, session type
 
 **Recovery Workout**:

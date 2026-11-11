@@ -34,6 +34,7 @@ import {
   MIN_WORKOUTS_PER_MUSCLE,
   MUSCLE_CAP_PER_WORKOUT,
   SETS_PER_PICK,
+  WEEKLY_CAP,
   weeklyBudget,
   type WeeklyBudget,
 } from "./weekly-budget";
@@ -210,6 +211,16 @@ const setsToAdd = ({ sets }: Draft, candidate: Candidate) =>
 
 const creditsOf = ({ exercise }: Candidate) => Object.entries(creditsPerSet(exercise)) as [Muscle, number][];
 
+// Would the pick keep each of the Exercise's primary Muscles within the cap? Its week counts the Week Ledger, secondary
+// credit included, and the Sets already planned. Secondary Muscles may go over, so compound lifts aren't starved
+const withinCap = (candidate: Candidate, draft: Draft, budget: WeeklyBudget, weekSoFar: MuscleCredits) =>
+  candidate.exercise.muscles.primary.every((muscle) => {
+    const budgeted = budget[muscle];
+    if (budgeted === undefined) return true;
+    const planned = (weekSoFar[muscle] ?? 0) + (draft.credits[muscle] ?? 0);
+    return planned + setsToAdd(draft, candidate) <= budgeted * WEEKLY_CAP;
+  });
+
 // Does the Exercise credit a Muscle still short of what this stage of the fill order wants for it?
 const helpsStage = (candidate: Candidate, stage: WeeklyBudget, ledger: MuscleCredits) =>
   creditsOf(candidate).some(([muscle]) => (ledger[muscle] ?? 0) < (stage[muscle] ?? 0));
@@ -283,16 +294,22 @@ type Selection = {
   required?: Candidate;
 };
 
-// The next pick that fits the time, by fill order and then score. The limits give way once nothing within them helps,
-// then the recovery filter as a last resort, and a 4th Set waits for a stage to run out of new Exercises
+// The next pick that fits the time and the cap, by fill order and then score. The limits give way once nothing within
+// them helps, then the recovery filter as a last resort, and a 4th Set waits for a stage to run out of new Exercises.
+// The cap never gives way
 function nextPick(
   { candidates, stages, goal, budget, limitOf, isRested }: Selection,
   draft: Draft,
   ledger: MuscleCredits,
+  weekSoFar: MuscleCredits,
 ) {
   const open = candidates.filter((candidate) => {
     const sets = setsToAdd(draft, candidate);
-    return sets > 0 && candidate.exercise.secondsPerSet * sets <= draft.secondsLeft;
+    return (
+      sets > 0 &&
+      candidate.exercise.secondsPerSet * sets <= draft.secondsLeft &&
+      withinCap(candidate, draft, budget, weekSoFar)
+    );
   });
   const withinLimits = open.filter((candidate) =>
     creditsOf(candidate).every(
@@ -312,9 +329,9 @@ function nextPick(
   return undefined;
 }
 
-// Picks until the time runs out, each pick counting towards the budget before the next. Jumps go first, then the
-// required pick. Once the week's budget is met, the rest is picked as a new week's would be, so a user who trains
-// anyway still gets a balanced Workout
+// Picks until the time or the cap runs out, each pick counting towards the budget before the next. Jumps go first,
+// then the required pick. Once the week's budget is met, the rest is picked as a new week's would be, up to the cap, so
+// a user who trains anyway still gets a balanced Workout. With nothing left to add, the plan ends short of its Length
 function selectExercises(selection: Selection, weekSoFar: MuscleCredits): PlannedExercise[] {
   const draft: Draft = { sets: new Map(), fourthSetAfter: new Map(), credits: {}, secondsLeft: WORKOUT_SECONDS };
   let ledger = weekSoFar;
@@ -327,11 +344,15 @@ function selectExercises(selection: Selection, weekSoFar: MuscleCredits): Planne
   }
   let budgetMet = false;
   for (;;) {
-    let pick = (draft.sets.size === selection.jumps.length && selection.required) || nextPick(selection, draft, ledger);
+    const { required } = selection;
+    // The required pick keeps to the cap too
+    const requiredNow =
+      draft.sets.size === selection.jumps.length && required && withinCap(required, draft, selection.budget, weekSoFar);
+    let pick = (requiredNow && required) || nextPick(selection, draft, ledger, weekSoFar);
     if (!pick && !budgetMet) {
       budgetMet = true;
       ledger = draft.credits;
-      pick = nextPick(selection, draft, ledger);
+      pick = nextPick(selection, draft, ledger, weekSoFar);
     }
     if (!pick) {
       return [...draft.sets].map(([candidate, sets]) => {
@@ -385,7 +406,10 @@ export function planWorkout(input: PlanWorkoutInput): WorkoutPlan {
       requiredPick(candidates, thisWeek, { goal, budget, ledger }) ??
       requiredSquat(candidates, thisWeek, goal, isRested),
   };
-  const selected = selectExercises(selection, ledger);
+  // A week with every Muscle at the cap still gives a Workout, built as a new week's would be, so a user who trains
+  // anyway gets a balanced one. The plan always has an Exercise
+  const capped = selectExercises(selection, ledger);
+  const selected = capped.length ? capped : selectExercises(selection, {});
   const held = heldBack(candidates, selected, tired);
   return {
     weekStart: monday,

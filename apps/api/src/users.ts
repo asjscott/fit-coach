@@ -9,7 +9,9 @@ import {
   User,
   UserProfile,
   type UserUpdate,
+  type WeightUnit,
   type WorkoutLength,
+  DEFAULT_WEIGHT_UNIT,
 } from "@fit/shared";
 import type { z } from "zod";
 import { db } from "./db";
@@ -23,6 +25,8 @@ type UserDoc = {
   equipmentProfiles: EquipmentProfile[];
   // Absent until the phone first sends it
   timeZone?: string;
+  // The unit loads show in; absent until the user chooses, which means DEFAULT_WEIGHT_UNIT. Loads are stored in kg
+  unit?: WeightUnit;
 };
 
 export const users = db.collection<UserDoc>("users");
@@ -48,6 +52,7 @@ export type OnboardedUser = {
   injuries: InjuryTag[];
   workoutLength: WorkoutLength;
   timeZone: string;
+  unit: WeightUnit;
   // The "Include jumps" switch, off until the user turns it on (#105)
   includeJumps: boolean;
 } & TrainingPlanProfile;
@@ -68,6 +73,7 @@ export async function findOnboardedUser(clerkUserId: string): Promise<OnboardedU
     includeJumps: user.profile.includeJumps ?? false,
     workoutLength: usualWorkoutLength(user.profile),
     timeZone: user.timeZone ?? "UTC",
+    unit: user.unit ?? DEFAULT_WEIGHT_UNIT,
   };
 }
 
@@ -82,8 +88,9 @@ export async function createUser(clerkUserId: string) {
   return { user: result.value, created: !result.lastErrorObject?.updatedExisting };
 }
 
-// Merges profile fields into the stored profile and sets the timezone when given; null if the user doesn't exist
-export async function updateUser(clerkUserId: string, { profile = {}, timeZone }: UserUpdate) {
+// Merges profile fields into the stored profile and sets the timezone and unit when given; null if the user doesn't
+// exist
+export async function updateUser(clerkUserId: string, { profile = {}, timeZone, unit }: UserUpdate) {
   // $literal stops string values beginning with "$" being read as field paths
   const user = await users.findOneAndUpdate(
     { clerkUserId },
@@ -92,6 +99,7 @@ export async function updateUser(clerkUserId: string, { profile = {}, timeZone }
         $set: {
           profile: { $mergeObjects: ["$profile", { $literal: profile }] },
           ...(timeZone && { timeZone: { $literal: timeZone } }),
+          ...(unit && { unit: { $literal: unit } }),
         },
       },
     ],
@@ -191,5 +199,6 @@ export function toUser(user: WithId<UserDoc>): User {
     onboardedAt: user.onboardedAt?.toISOString() ?? null,
     equipmentProfiles: user.equipmentProfiles ?? [],
     ...(user.timeZone && { timeZone: user.timeZone }),
+    unit: user.unit ?? DEFAULT_WEIGHT_UNIT,
   });
 }

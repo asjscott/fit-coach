@@ -12,7 +12,7 @@ import {
   weeklyBudget,
   type MuscleCredits,
 } from "../src";
-import { GOALS, LIFTERS, PROFILES, simulate, type Run } from "./simulate-weeks";
+import { EVERY_PROFILE, GOALS, LIFTERS, PROFILES, simulate, weekCredits, type Run } from "./simulate-weeks";
 
 const round = (value: number) => Math.round(value * 10) / 10;
 
@@ -150,7 +150,7 @@ const GAP_COMBINATIONS: [number, WorkoutLength][] = [
 console.log("\n### The library's gaps: Sets a week of each, and calves' credited Sets, intermediate\n");
 console.log(`| Profile | Goal | Days | Length | ${LIBRARY_GAPS.join(" | ")} | Calves |`);
 console.log(`| --- | --- | --- | --- |${LIBRARY_GAPS.map(() => " --- |").join("")} --- |`);
-for (const profile of Object.keys(PROFILES) as (keyof typeof PROFILES)[]) {
+for (const profile of Object.keys(EVERY_PROFILE) as (keyof typeof EVERY_PROFILE)[]) {
   for (const goal of GOALS) {
     for (const [days, length] of GAP_COMBINATIONS) {
       const weeks = simulate({ goal, days, length, lifter: "intermediate", profile }).slice(1);
@@ -213,3 +213,31 @@ for (const [days, length] of COMBINATIONS) {
     console.log(`| ${cells.join(" | ")} | ${s.short.join(", ") || "none"} |`);
   }
 }
+
+// The 130% cap: each budgeted Muscle's credited Sets as a share of its budget, from primary credit alone and in total,
+// in the heaviest of the 3 weeks. Primary stays within 130%; a total over 160% sends the cap back for a decision
+const MUSCLES = Object.keys(weeklyBudget("build_muscle", 4)) as Muscle[];
+const shareOf = (credit: number | undefined, budget: number) => Math.round(((credit ?? 0) / budget) * 100);
+let overTotal = 0;
+for (const profile of Object.keys(PROFILES) as (keyof typeof PROFILES)[]) {
+  for (const lifter of Object.keys(LIFTERS) as (keyof typeof LIFTERS)[]) {
+    console.log(`\n### Credit against the Weekly Budget, primary / total %: ${profile}, ${lifter}\n`);
+    console.log(`| Goal | Days | Length | ${MUSCLES.join(" | ")} |`);
+    console.log(`| --- | --- | --- |${MUSCLES.map(() => " --- |").join("")}`);
+    for (const goal of GOALS) {
+      for (const [days, length] of COMBINATIONS) {
+        const budget = weeklyBudget(goal, days);
+        const weeks = simulate({ goal, days, length, lifter, profile }).slice(1);
+        const cells = MUSCLES.map((muscle) => {
+          if (!budget[muscle]) return "–";
+          const most = (counted: "primary" | "total") =>
+            Math.max(...weeks.map((week) => shareOf(weekCredits(week, counted)[muscle], budget[muscle]!)));
+          if (most("total") > 160) overTotal++;
+          return `${most("primary")} / ${most("total")}`;
+        });
+        console.log(`| ${goal} | ${days} | ${length} | ${cells.join(" | ")} |`);
+      }
+    }
+  }
+}
+console.log(`\nMuscles over 160% in total: ${overTotal}`);
