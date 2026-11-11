@@ -65,6 +65,9 @@ const laterWorkoutsOnly: ProgressionRule = ({ level: { movedBy }, workout }) =>
 // Story 40: an Assessment Workout sets Working Levels, so it doesn't progress them
 const notAnAssessment: ProgressionRule = ({ workout }) => (workout.assessment ? UNMOVED : undefined);
 
+// Stories 67, 68: the deload week's lighter Sets move nothing, and neither add a Miss nor end the run of Misses (#137)
+const notInTheDeloadWeek: ProgressionRule = ({ deloadWeek }) => (deloadWeek ? UNMOVED : undefined);
+
 // Story 38, 39: one Set decides nothing, unless the Exercise was done as one Set
 const atLeastTwoSets: ProgressionRule = ({ sets, plannedSets }) =>
   sets.length >= Math.min(2, plannedSets ?? 2) ? undefined : UNMOVED;
@@ -175,6 +178,7 @@ const doubleProgression: ProgressionRule = (judgement) => {
 const RULES: readonly ProgressionRule[] = [
   laterWorkoutsOnly,
   notAnAssessment,
+  notInTheDeloadWeek,
   atLeastTwoSets,
   missesBringItDown,
   notYetProgressed,

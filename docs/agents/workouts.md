@@ -141,7 +141,8 @@ Schemas: packages/shared/src/assessments.ts; Set.rpe and Workout.assessment in w
 - **POST /workouts is refused (403) before onboarding**, so pairing always has the weight and gender `assess` needs.
   The app never offers logging before then: `(app)/_layout.tsx` sends a user who isn't onboarded to onboarding.
 - **"Newest" is by the B's `startedAt` (`Assessment.bStartedAt`), not server time.** Every Assessment is stored, but
-  only the newest replaces the Working Levels; `GET /assessments/latest` and Today's retake check use the same order.
+  only the newest sets the Working Levels (a retake keeps the last Block's progress, #137); `GET /assessments/latest`
+  and Today's retake check use the same order.
 - **The Assessment is a snapshot**: deleting its Workouts from History leaves it and the Results link.
 - **Bodyweight maximums use Epley uncapped** (`epley`), because the Working Level inverts it (`epleyReps`) and the
   round trip must give the tested Exercise back its reps; `e1rm` refuses more than 12 reps.
@@ -293,6 +294,22 @@ Schema: ProgressionChange (packages/shared/src/progression.ts), on WorkingLevel.
   (one Set, an Assessment, and the deload week). A new base at another load is never a Miss. Jumps and carries have none.
 - **A load other than the prescribed one** (the level rounded to the primary profile's loads) becomes the new base at
   the fewest reps lifted there.
+
+## The deload week and the retest (#137, ADR 0007)
+
+- **Which week**: `weekOfBlock` (packages/engines/src/block.ts), from the latest Assessment, in the user's timezone.
+  The API passes `deloadWeek` to `planWorkout` (planned-workouts.ts) and to progression (progression.ts, by the
+  Workout's `startedAt`).
+- **The plan** (`deloaded` in plan-workout.ts): the same Sets; weighted targets 10% lighter, rounded down to a load
+  the profile has (its lightest when none is that light, 0.5 kg when its loads aren't known); reps and band targets
+  at 70%, rounded down, at least 5; timed at 70%, rounded down to 5 seconds, at least 15; never above the usual
+  target. Alternative Exercises too. Jumps halve their contacts instead (jumps.ts).
+- **Progression**: `notInTheDeloadWeek` returns UNMOVED, so nothing moves and the run of Misses stays.
+- **Today**: `assessmentOffer` gives `{ kind: "retake", deloadWeek }` in the deload week (keyed by the week's Monday, so
+  a dismissal lasts the week); `AssessmentSection` shows "Retake the Assessment" with Start assessment A.
+- **The retake** (`assessIfPaired`): when the user had an Assessment before, `keptByRetake` (block.ts) names the
+  Exercises it didn't test that have Sets logged in non-Assessment Workouts in the `BLOCK_WEEKS` weeks up to its A.
+  Their stored levels stay; every other level is replaced by the new Assessment's, or goes.
 
 ## PRs (#130)
 
