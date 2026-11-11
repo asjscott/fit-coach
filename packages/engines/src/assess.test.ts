@@ -322,8 +322,15 @@ describe("assess", () => {
 
     expect(assessment.patterns.core).toMatchObject({ slug: "plank", topSet: { seconds: 90 }, maximum: 90 });
     expect(assessment.patterns.core?.referenceStrength).toBe(90);
-    // A side plank and a hollow hold are each half a plank
-    expect(levelOf(workingLevels, "plank")).toEqual({ slug: "plank", unit: "seconds", seconds: 90, ...setByB });
+    // Above 60 seconds it has outgrown the plank, as a bodyweight seed above 15 reps has (story 54). A side plank and
+    // a hollow hold are each half a plank
+    expect(levelOf(workingLevels, "plank")).toEqual({
+      slug: "plank",
+      unit: "seconds",
+      seconds: 60,
+      ...setByB,
+      outgrown: true,
+    });
     expect(levelOf(workingLevels, "side-plank")).toEqual({
       slug: "side-plank",
       unit: "seconds",

@@ -11,7 +11,14 @@ import {
 import { epley, epleyReps } from "./e1rm";
 import { availableLoadsKg, nextLoadKg, roundToLoadKg, type ProfileWithLoads } from "./equipment";
 import { isJump } from "./jumps";
-import { BODYWEIGHT_TOP_REPS, MAX_REPS, ownedBandLevels, repRange, type RepRange } from "./working-levels";
+import {
+  BODYWEIGHT_TOP_REPS,
+  MAX_REPS,
+  ownedBandLevels,
+  repRange,
+  TIMED_TOP_SECONDS,
+  type RepRange,
+} from "./working-levels";
 
 // Everything progression judges one Workout Exercise by (ADR 0007, #132)
 export type ProgressionInput = {
@@ -228,8 +235,6 @@ const doubleProgression: ProgressionRule = (judgement) => {
   return moved(judgement, { outgrown: true }, outgrown);
 };
 
-// The top of the timed ladder: at this many seconds on every Set, the Exercise moves to its harder variant
-export const TIMED_TOP_SECONDS = 60;
 // A timed target goes up this much at a time
 const TIMED_STEP_SECONDS = 5;
 

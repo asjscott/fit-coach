@@ -25,6 +25,8 @@ export const BAND_REP_RANGE: RepRange = { min: 10, max: 15 };
 export const BALLISTIC_REP_RANGE: RepRange = { min: 8, max: 8 };
 // A bodyweight target climbs to this, then the Exercise moves to its harder variant
 export const BODYWEIGHT_TOP_REPS = 15;
+// The top of the timed ladder: at this many seconds on every Set, the Exercise moves to its harder variant
+export const TIMED_TOP_SECONDS = 60;
 // The most reps any target climbs to, such as a weighted one at the heaviest load the profile has
 export const MAX_REPS = 20;
 // A carry has no range, as its reps mean nothing; it's prescribed this many, as before ranges, and only a different
@@ -111,6 +113,12 @@ const bodyweightLevel = (reps: number) => ({
   outgrown: reps > BODYWEIGHT_TOP_REPS,
 });
 
+// The same for a timed target, at the top of the timed ladder
+const timedLevel = (seconds: number) => ({
+  seconds: Math.min(seconds, TIMED_TOP_SECONDS),
+  outgrown: seconds > TIMED_TOP_SECONDS,
+});
+
 type Shape = WorkingLevel extends infer L ? (L extends WorkingLevel ? Omit<L, "movedBy" | "misses"> : never) : never;
 
 function shapeOf(
@@ -139,7 +147,7 @@ function shapeOf(
     case "bodyweight":
       return { slug, unit: "reps", ...bodyweightLevel(bodyweightReps(maximum, bodyWeightKg * entry.share)) };
     case "timed":
-      return { slug, unit: "seconds", seconds: maximum, outgrown: false };
+      return { slug, unit: "seconds", ...timedLevel(maximum) };
   }
 }
 
@@ -164,7 +172,8 @@ export type LegacyWorkingLevel =
 const clamp = (value: number, { min, max }: RepRange) => Math.min(max, Math.max(min, value));
 
 // A stored Working Level in the new shape: a weighted one at the heaviest load the profiles have at or below its kg,
-// at the bottom of its range; band reps clamped into 10–15; bodyweight reps capped at 15, outgrown above it. movedBy
+// at the bottom of its range; band reps clamped into 10–15; bodyweight reps capped at 15 and seconds at 60, outgrown
+// above them. movedBy
 // is the Assessment's B that set it
 export function migrateWorkingLevel(
   legacy: LegacyWorkingLevel,
@@ -185,6 +194,6 @@ export function migrateWorkingLevel(
     case "reps":
       return { ...legacy, ...progress, ...bodyweightLevel(legacy.reps) };
     case "seconds":
-      return { ...legacy, ...progress };
+      return { ...legacy, ...progress, ...timedLevel(legacy.seconds) };
   }
 }

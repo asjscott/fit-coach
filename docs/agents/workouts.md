@@ -153,7 +153,7 @@ Schemas: packages/shared/src/assessments.ts; Set.rpe and Workout.assessment in w
   Profiles have at or below what Epley gives for the bottom of the range with 2 in reserve, or left unrounded when none
   is that light, so a barbell lift under the bar stays out (#70). Each level also has `movedBy` (the Assessment's B, or
   null when the planner works one out), `misses`, and `outgrown`: a bodyweight seed above 15 reps is stored at 15 and
-  outgrown, and the planner gives an outgrown Exercise's place to its `progression` when it can (`withoutOutgrown`).
+  outgrown, as is a timed seed above 60 seconds at 60 (`TIMED_TOP_SECONDS`), and the planner gives an outgrown Exercise's place to its `progression` when it can (`withoutOutgrown`).
 - **Levels stored before #131 are converted at startup** (`migrateWorkingLevels` in `apps/api/src/assessments.ts`,
   rule in `migrateWorkingLevel`): any level without `misses`. It's idempotent, and makes the user's current plan due.
 - **Stored Assessments without a field the schema later required** (`referenceStrength`, `maximum`, `bStartedAt`)
