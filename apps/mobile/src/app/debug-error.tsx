@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Text } from "react-native";
 import { useApi } from "@/api";
+import { errorMessage } from "@/utils/error-message";
 
 // Throws on purpose, so a deploy can be checked end to end from the phone: open /debug-error signed in, and Sentry
 // should get one error from the web app and one from the API's GET /debug/error, both under that deploy's
@@ -16,7 +17,7 @@ export default function DebugError() {
     });
     api("/debug/error").then(
       () => setApiResult("the API didn't throw"),
-      (err: unknown) => setApiResult(`the API answered: ${err instanceof Error ? err.message : String(err)}`),
+      (err: unknown) => setApiResult(`the API answered: ${errorMessage(err)}`),
     );
     return () => clearTimeout(timer);
   }, [api]);
