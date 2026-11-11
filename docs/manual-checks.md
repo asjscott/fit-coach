@@ -166,6 +166,11 @@ Needs `pnpm --filter @fit/api seed:exercises` run once from the main checkout (i
 - [ ] **R1** On a Rest Day, the "Rest today." card has a "Recovery workout instead" link. Tap it: a Workout opens with a 20-minute walk, then hip flexor stretch, open book, cat-cow and world's greatest stretch at 2 × 45 s each, logged on the normal timed-Set screen. The walk's target reads "1 set · 20 min". Log it: no rest timer starts, and in place of a Set 2 there's "Next exercise", which opens the hip flexor stretch. A stretch's Set still starts its usual rest (1:10), and still offers a Set 3 after its 2.
   - iOS: Result: · Android: Result: · Notes:
 
+## Units (#126)
+
+- [ ] **U1** An existing account shows every load in lb with nothing chosen: Profile's "Weights in" has lb picked, and Today's plan, the logging screen (target, Last, Sets, stepper), History, a Workout's detail, Volume everywhere and the Equipment Profile's weights all read in lb. Log a Set of 25 lb: it reads 25 lb in the Set row, History and as Last next time, never 24.9. Pick kg on Profile: the same screens switch to kg, and the 25 lb Set reads 11.5 kg. With the loads unknown (a gym profile), the load stepper moves by 5 lb or 2 kg.
+  - iOS: Result: · Android: Result: · Notes:
+
 ## Your call
 
 Not a bug, but it needs your judgement once you've done some Workouts. Details in `docs/research/planner-simulation.md`.

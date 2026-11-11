@@ -29,6 +29,7 @@ import {
 } from "../today-status";
 import { CheckInRatings } from "./check-in-card";
 import { TodayCardLink } from "./today-card";
+import { useWeightUnit } from "@/features/user/current-user-provider";
 
 type SheetCheckIn = {
   ratings: CheckIn;
@@ -90,6 +91,7 @@ export function PlannedWorkoutSheet({
   onStart,
   onStartRecovery,
 }: PlannedWorkoutSheetProps) {
+  const unit = useWeightUnit();
   const { colors } = useTheme();
   // iOS can't present the Workout until the sheet has gone
   const startOnClosed = useRef<(() => void) | null>(null);
@@ -199,7 +201,7 @@ export function PlannedWorkoutSheet({
                 <View key={slug} style={[styles.exercise, { borderTopColor: colors.line }]}>
                   <Text>{exerciseName(slug)}</Text>
                   <Text size="sm" color="muted">
-                    {plannedSetsLabel({ sets, target }, libraryExercise(slug)?.unilateral)}
+                    {plannedSetsLabel({ sets, target }, unit, libraryExercise(slug)?.unilateral)}
                   </Text>
                   {supersetWith ? (
                     <Text size="sm" color="muted">

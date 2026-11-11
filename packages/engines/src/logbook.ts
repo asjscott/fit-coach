@@ -100,12 +100,10 @@ const LOAD_TYPE_OF_TARGET: Record<SetTarget["unit"], LoadType> = {
 const plannedLoadType = ({ slug, target }: PlannedExercise) =>
   exerciseBySlug(slug)?.loadType ?? LOAD_TYPE_OF_TARGET[target.unit];
 
-// A Set's values from its target, or null when the target can't fill them, like a band level where kg is logged. A
-// target's kg is only as round as the profile's loads, and a Set's must be in 0.25 kg steps
+// A Set's values from its target, or null when the target can't fill them, like a band level where kg is logged. The
+// kg is kept as it is: the phone shows it in the user's unit, and a load in pounds is on no kg step (#126)
 function targetDraft(loadType: LoadType, target: SetTarget): SetValues | null {
-  if (loadType === "external" && target.unit === "kg") {
-    return { kind: "external", kg: Math.round(target.kg * 4) / 4, reps: target.reps };
-  }
+  if (loadType === "external" && target.unit === "kg") return { kind: "external", kg: target.kg, reps: target.reps };
   if (loadType === "bodyweight" && "reps" in target) return { kind: "bodyweight", reps: target.reps };
   if (loadType === "timed" && target.unit === "seconds") return { kind: "timed", seconds: target.seconds };
   return null;

@@ -13,6 +13,7 @@ import { exerciseName, libraryExercise } from "../library";
 import { ExerciseBox, ExerciseLogging } from "./current-exercise-box";
 import { RestTimer } from "./rest-timer";
 import { WorkoutExerciseMenu } from "./workout-exercise-menu";
+import { useWeightUnit } from "@/features/user/current-user-provider";
 
 export type SupersetBoxProps = {
   // The pair, in the Workout's order
@@ -30,6 +31,7 @@ export type SupersetBoxProps = {
 // with no rest between them, and the rest after the pair's second Set is the longer of the two. Once the one with fewer
 // Sets is done, the other rests its own time, as the note says
 export function SupersetBox({ pair, letter, currentId, onChoose }: SupersetBoxProps) {
+  const unit = useWeightUnit();
   const { colors } = useTheme();
   const [first, second] = pair;
   const loggedSets = first.sets.length + second.sets.length;
@@ -55,11 +57,11 @@ export function SupersetBox({ pair, letter, currentId, onChoose }: SupersetBoxPr
         const { id, slug, sets, planned } = workoutExercise;
         const unilateral = libraryExercise(slug)?.unilateral;
         const done = !!planned && sets.length >= planned.sets;
-        const setsSoFar = sets.map(describeSet).join(", ");
+        const setsSoFar = sets.map((set) => describeSet(set, unit)).join(", ");
         const summary = done
           ? `Done · ${setsSoFar}`
           : open && planned
-            ? `Target: ${plannedSetsLabel(planned, unilateral)}`
+            ? `Target: ${plannedSetsLabel(planned, unit, unilateral)}`
             : `${sets.length} of ${planned?.sets ?? 0} sets${sets.length ? ` · ${setsSoFar}` : ""}`;
         const label = `${letter}${i + 1}`;
         return (

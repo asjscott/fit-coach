@@ -6,9 +6,10 @@ import { Icon } from "@/components/icons";
 import { SectionLabel } from "@/components/section-label";
 import { Stat } from "@/components/stat";
 import { Text } from "@/components/text";
-import { kgLabel, relativeDateLabel, setsSummary, timeStat } from "@/features/workouts/format";
+import { relativeDateLabel, setsSummary, timeStat, volumeLabel } from "@/features/workouts/format";
 import { exerciseName } from "@/features/workouts/library";
 import { spacing, useTheme } from "@/theme";
+import { useWeightUnit } from "@/features/user/current-user-provider";
 
 const ROW_HEIGHT = 44;
 
@@ -23,6 +24,7 @@ export function LastWorkoutSection({
   isOffline: boolean;
   now: Date;
 }) {
+  const unit = useWeightUnit();
   const { colors } = useTheme();
 
   if (!workout) {
@@ -50,7 +52,7 @@ export function LastWorkoutSection({
       <View style={styles.stats}>
         <Stat value={time.value} unit={time.unit} label="Time" />
         <Stat value={String(summary.sets)} label="Sets" />
-        <Stat value={kgLabel(summary.volumeKg)} unit="kg" label="Volume" />
+        <Stat value={volumeLabel(summary.volumeKg, unit)} unit={unit} label="Volume" />
       </View>
       {workout.isPending ? (
         <Text size="xs" weight="semiBold" color="muted" style={{ marginBottom: spacing[2] }}>
@@ -63,7 +65,7 @@ export function LastWorkoutSection({
             {exerciseName(exercise.slug)}
           </Text>
           <Text color="muted" weight="medium" numberOfLines={1} style={{ flexShrink: 1 }}>
-            {setsSummary(exercise.sets)}
+            {setsSummary(exercise.sets, unit)}
           </Text>
         </View>
       ))}

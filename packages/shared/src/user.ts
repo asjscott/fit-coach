@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { EquipmentProfile } from "./equipment";
+import { DEFAULT_WEIGHT_UNIT, WeightUnit } from "./units";
 
 export const Goal = z.enum(["lose_fat", "build_muscle", "recomp", "athletic"]);
 export type Goal = z.infer<typeof Goal>;
@@ -49,6 +50,8 @@ export const User = z.object({
   equipmentProfiles: z.array(EquipmentProfile),
   // The phone's IANA timezone, so the server's weeks match Today's (ADR 0003); absent until the phone first sends it
   timeZone: z.string().optional(),
+  // The unit every load shows in; a user who has never chosen gets the default
+  unit: WeightUnit.default(DEFAULT_WEIGHT_UNIT),
 });
 export type User = z.infer<typeof User>;
 
@@ -65,5 +68,6 @@ function isTimeZone(timeZone: string) {
 export const UserUpdate = z.strictObject({
   profile: UserProfile.partial().optional(),
   timeZone: z.string().refine(isTimeZone, { error: "Unknown timezone" }).optional(),
+  unit: WeightUnit.optional(),
 });
 export type UserUpdate = z.infer<typeof UserUpdate>;

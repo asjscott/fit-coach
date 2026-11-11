@@ -1,5 +1,6 @@
 import { restDay, summarizeWorkout, type FinishedWorkoutSets, type RestDayReason } from "@fit/engines";
-import { estimatedTimeLabel, kgLabel, timeStat } from "../workouts/format";
+import type { WeightUnit } from "@fit/shared";
+import { estimatedTimeLabel, timeStat, volumeLabel } from "../workouts/format";
 
 // What Today knows about the user's Workouts: History loading, loaded (with or without any Workouts yet), or
 // unavailable offline, when only the Pending Workouts on the phone are known (ADR 0001)
@@ -85,15 +86,17 @@ export function todayCard({
 
 const counted = (n: number, noun: string) => `${n} ${noun}${n === 1 ? "" : "s"}`;
 
-// What the day's Workouts came to: "18 Sets · 44 min · 6,240 kg"
-export function todayLoggedLine(workouts: readonly FinishedWorkoutSets[]) {
+// What the day's Workouts came to, Volume in the user's unit: "18 Sets · 44 min · 6,240 kg"
+export function todayLoggedLine(workouts: readonly FinishedWorkoutSets[], weightUnit: WeightUnit) {
   const summaries = workouts.map(summarizeWorkout);
   const total = (field: "sets" | "durationMs" | "volumeKg") => summaries.reduce((sum, s) => sum + s[field], 0);
   const { value, unit } = timeStat(total("durationMs"));
   const volumeKg = total("volumeKg");
-  return [counted(total("sets"), "Set"), `${value} ${unit}`, ...(volumeKg ? [`${kgLabel(volumeKg)} kg`] : [])].join(
-    " · ",
-  );
+  return [
+    counted(total("sets"), "Set"),
+    `${value} ${unit}`,
+    ...(volumeKg ? [`${volumeLabel(volumeKg, weightUnit)} ${weightUnit}`] : []),
+  ].join(" · ");
 }
 
 // The plan's sheet says it on its own, and the day's card at the end of todayPlanLine

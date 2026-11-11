@@ -10,7 +10,7 @@ import { Spinner } from "@/components/spinner";
 import { Text } from "@/components/text";
 import { useChosenTests } from "@/features/assessment/hooks/use-chosen-tests";
 import { useLatestAssessment } from "@/features/assessment/hooks/use-latest-assessment";
-import { useCurrentUser } from "@/features/user/current-user-provider";
+import { useCurrentUser, useWeightUnit } from "@/features/user/current-user-provider";
 import { ForgottenWorkoutModal } from "@/features/workouts/components/forgotten-workout-modal";
 import { elapsedLabel, estimatedTimeLabel } from "@/features/workouts/format";
 import { useHistory } from "@/features/workouts/history-provider";
@@ -62,6 +62,7 @@ export default function TodayView() {
   const { isLoaded, isStale, pending, syncing } = logbook;
   const { workouts, error } = useHistory();
   const daysPerWeek = useCurrentUser().user?.profile.daysPerWeek;
+  const unit = useWeightUnit();
   const { latest: latestAssessment } = useLatestAssessment();
   const { plannedWorkout: latestPlan, stale: planIsStale } = usePlannedWorkout();
   const { dismissed, dismiss } = useDismissedOffer();
@@ -155,7 +156,7 @@ export default function TodayView() {
         <AssessmentCard offer={leadingOffer} onDismiss={() => dismiss(offerKey(leadingOffer))} />
       ) : null}
       {card === "done" ? (
-        <TodayCard tone="success" headline="Done for today." line={todayLoggedLine(finished)}>
+        <TodayCard tone="success" headline="Done for today." line={todayLoggedLine(finished, unit)}>
           {today ? <TodayCardLink label={nextWorkout("Train again")} color="accent" onPress={openSheet} /> : null}
           {connectNote ? <Text color="muted">{connectNote}</Text> : null}
         </TodayCard>
