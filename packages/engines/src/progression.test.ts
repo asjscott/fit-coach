@@ -182,6 +182,51 @@ describe("progressWorkingLevel: the Sets it judges", () => {
   });
 });
 
+// Stories 43–44, ADR 0007: an RPE of 10 on the last Set holds the load and the target
+describe("progressWorkingLevel: RPE on the last Set", () => {
+  const held = { movedBy: movedByThisWorkout, change: { code: "rpe-10" as const } };
+
+  // Story 44
+  it("holds the load at the top of the range when the last Set was RPE 10", () => {
+    expect(progress(gobletSquat(20, 12), [lifted(20, 12), lifted(20, 12), lifted(20, 12, 10)])).toEqual({
+      level: gobletSquat(20, 12, held),
+      change: { code: "rpe-10" },
+    });
+  });
+
+  it("holds the target when every Set reached it and the last was RPE 10", () => {
+    expect(progress(gobletSquat(14, 9), [lifted(14, 9), lifted(14, 9, 10)])).toEqual({
+      level: gobletSquat(14, 9, held),
+      change: { code: "rpe-10" },
+    });
+  });
+
+  it("holds the prescribed load when the last Set, at another load, was RPE 10", () => {
+    expect(progress(gobletSquat(14, 10), [lifted(16, 9), lifted(16, 9, 10)])).toMatchObject({
+      level: { kg: 14, reps: 10 },
+      change: { code: "rpe-10" },
+    });
+  });
+
+  it("goes by the last Set logged, not the last at the load it judges", () => {
+    const sets = [lifted(14, 12), lifted(14, 12), lifted(16, 6, 10)];
+    expect(progress(gobletSquat(14, 11), sets)).toMatchObject({
+      level: { kg: 14, reps: 11 },
+      change: { code: "rpe-10" },
+    });
+  });
+
+  it.each([
+    ["an RPE of 9 on the last Set", [lifted(14, 9), lifted(14, 9, 9)]],
+    ["an RPE of 10 on an earlier Set", [lifted(14, 9, 10), lifted(14, 9)]],
+  ])("progresses as usual after %s", (_, sets) => {
+    expect(progress(gobletSquat(14, 9), sets)).toMatchObject({
+      level: { kg: 14, reps: 10 },
+      change: { code: "target-up" },
+    });
+  });
+});
+
 // Spec #119: the other kinds of Exercise get their rules from #133–#136; until then they stay where they are
 describe("progressWorkingLevel: Exercises without double progression yet", () => {
   const level = (slug: string, shape: object) =>

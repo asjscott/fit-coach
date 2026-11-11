@@ -57,6 +57,8 @@ export function progressionChangeLine(change: ProgressionChange | undefined): st
       return `Ready for this after ${exerciseName(change.from)}.`;
     case "held-at-top":
       return "Held at 20 reps: no heavier weight or harder variant here.";
+    case "rpe-10":
+      return "Held: your last Set was RPE 10, all you had.";
     case "outgrown":
     case undefined:
       return null;

@@ -21,6 +21,8 @@ describe("progressionChangeLine", () => {
     [{ code: "new-base" }, "From the weight you lifted last time."],
     [{ code: "harder-variant", from: "goblet-squat" }, "Ready for this after Goblet squat."],
     [{ code: "held-at-top" }, "Held at 20 reps: no heavier weight or harder variant here."],
+    // Story 44
+    [{ code: "rpe-10" }, "Held: your last Set was RPE 10, all you had."],
   ] as const)("words %o", (change, line) => {
     expect(progressionChangeLine(change)).toBe(line);
   });

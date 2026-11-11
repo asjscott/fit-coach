@@ -1,4 +1,12 @@
-import type { Exercise, ProgressionChange, Set, WorkingLevel, Workout, WorkoutExercise } from "@fit/shared";
+import {
+  RPE_SCALE,
+  type Exercise,
+  type ProgressionChange,
+  type Set,
+  type WorkingLevel,
+  type Workout,
+  type WorkoutExercise,
+} from "@fit/shared";
 import { epley, epleyReps } from "./e1rm";
 import { availableLoadsKg, nextLoadKg, roundToLoadKg, type ProfileWithLoads } from "./equipment";
 import { isJump } from "./jumps";
@@ -38,6 +46,9 @@ const UNMOVED = "unmoved";
 type Outcome = Progression | typeof UNMOVED;
 type ProgressionRule = (judgement: Judgement) => Outcome | undefined;
 
+// All the user had: no more reps
+const MAX_RPE = RPE_SCALE[RPE_SCALE.length - 1];
+
 // A load logged in the other unit is its exact kg, a hair off the profile's own
 const SAME_LOAD_KG = 0.01;
 
@@ -75,6 +86,11 @@ const notYetProgressed: ProgressionRule = ({ level, exercise }) =>
     ? UNMOVED
     : undefined;
 
+// Stories 43, 44: an RPE of 10 on the Exercise's last Set logged, whatever its load, holds the load and the target, so a
+// Set that was all the user had never pushes them on. The Workout still counts as the one that last moved the level
+const rpeTenHolds: ProgressionRule = (judgement) =>
+  judgement.workoutExercise.sets.at(-1)?.rpe === MAX_RPE ? moved(judgement, {}, { code: "rpe-10" }) : undefined;
+
 // Story 37: a load other than the one prescribed becomes the new base, at the fewest reps lifted there
 const newBase: ProgressionRule = (judgement) => {
   const { level, sets } = judgement;
@@ -108,13 +124,14 @@ const doubleProgression: ProgressionRule = (judgement) => {
 };
 
 // In order: the first to decide wins. Where later tickets' rules go: the deload week (#137) after notAnAssessment;
-// RPE 10 (#133) and Misses (#134) before newBase; ladders (#135) and Ballistic Exercises and carries (#136) in place of
+// RPE 10 (#133, rpeTenHolds) and Misses (#134) before newBase; ladders (#135) and Ballistic Exercises and carries (#136) in place of
 // notYetProgressed
 const RULES: readonly ProgressionRule[] = [
   laterWorkoutsOnly,
   notAnAssessment,
   atLeastTwoSets,
   notYetProgressed,
+  rpeTenHolds,
   newBase,
   doubleProgression,
 ];
