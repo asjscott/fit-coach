@@ -1,6 +1,6 @@
 // Runs weeks of Workouts through the real planner: docs/research/planner-simulation.md records the results.
 // pnpm --filter @fit/engines simulate
-import type { Muscle, WorkoutLength } from "@fit/shared";
+import type { Muscle, SetTarget, WorkoutLength } from "@fit/shared";
 import {
   addCredits,
   builtInEquipment,
@@ -241,3 +241,66 @@ for (const profile of Object.keys(PROFILES) as (keyof typeof PROFILES)[]) {
   }
 }
 console.log(`\nMuscles over 160% in total: ${overTotal}`);
+
+// Bodyweight only, left out of the cap tables: the weeks with a Muscle over the 130% cap through primary credit alone
+console.log("\n### Bodyweight only over the cap through primary credit, both lifters, every day and Length\n");
+console.log("| Goal | Runs over | Weeks over | Highest |");
+console.log("| --- | --- | --- | --- |");
+for (const goal of GOALS) {
+  let runs = 0;
+  let weeksOver = 0;
+  let highest = { share: 0, at: "" };
+  for (const lifter of Object.keys(LIFTERS) as (keyof typeof LIFTERS)[]) {
+    for (const days of DAYS) {
+      for (const length of LENGTHS) {
+        const budget = weeklyBudget(goal, days);
+        const weeks = simulate({ goal, days, length, lifter, profile: "Bodyweight only" });
+        const over = weeks.filter((week, index) => {
+          const primary = weekCredits(week, "primary");
+          const shares = (Object.entries(budget) as [Muscle, number][]).map(([muscle, budgeted]) => ({
+            muscle,
+            share: shareOf(primary[muscle], budgeted),
+          }));
+          for (const { muscle, share } of shares) {
+            if (share > highest.share) {
+              highest = { share, at: `${lifter}, ${days} days ${length}, week ${index + 1}, ${muscle}` };
+            }
+          }
+          return shares.some(({ share }) => share > 130);
+        }).length;
+        weeksOver += over;
+        if (over) runs++;
+      }
+    }
+  }
+  const cells = [goal, `${runs} of ${2 * DAYS.length * LENGTHS.length}`, weeksOver];
+  console.log(`| ${cells.join(" | ")} | ${highest.share}% (${highest.at}) |`);
+}
+
+// Progression (#138): the lifter reaches every target, so the rules move each Working Level. Each Exercise's target the
+// first and last time it's planned in the four weeks, and how many Workouts it's planned in
+function targetOf(target: SetTarget) {
+  switch (target.unit) {
+    case "kg":
+      return `${target.kg} kg × ${target.reps}`;
+    case "reps":
+      return `${target.reps} reps`;
+    case "seconds":
+      return `${target.seconds} s`;
+    case "band":
+      return `${target.level} band × ${target.reps}`;
+  }
+}
+for (const goal of GOALS) {
+  console.log(`\n### Working Levels over four weeks: ${goal}, Full gym, intermediate, 4 days, Standard\n`);
+  console.log("| Exercise | Workouts | First target | Last target |");
+  console.log("| --- | --- | --- | --- |");
+  const planned = new Map<string, SetTarget[]>();
+  const run: Run = { goal, days: 4, length: "standard", lifter: "intermediate", profile: "Full gym" };
+  for (const { exercises } of simulate(run).flat()) {
+    for (const { slug, target } of exercises) planned.set(slug, [...(planned.get(slug) ?? []), target]);
+  }
+  for (const [slug, targets] of planned) {
+    console.log(`| ${slug} | ${targets.length} | ${targetOf(targets[0]!)} | ${targetOf(targets.at(-1)!)} |`);
+  }
+}
