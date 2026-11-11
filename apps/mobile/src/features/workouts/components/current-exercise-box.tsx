@@ -1,5 +1,5 @@
 import { exerciseLoadsKg, isRatedTest, takesAnotherSet, takesNoMoreSets } from "@fit/engines";
-import { RPE_SCALE, type InProgressWorkoutExercise, type LoadType, type SetValues } from "@fit/shared";
+import { RPE_SCALE, type InProgressWorkoutExercise, type LoadType, type Set, type SetValues } from "@fit/shared";
 import { useState, type ReactNode } from "react";
 import { StyleSheet, View } from "react-native";
 import { Alert, AlertIcon, AlertText } from "@/components/alert";
@@ -14,6 +14,7 @@ import { usePrimaryEquipmentProfile, useWeightUnit } from "@/features/user/curre
 import { fonts, radii, spacing, useTheme } from "@/theme";
 import { errorMessage } from "@/utils/error-message";
 import { plannedSetsLabel, previousSetsLabel } from "../format";
+import { offersLastSetRpe, withRpe } from "../last-set-rpe";
 import { exerciseName, isJumpSlug, libraryExercise } from "../library";
 import { useLogbook } from "../logbook-provider";
 import { protocolNote } from "../protocol-note";
@@ -82,6 +83,7 @@ export function ExerciseLogging({
   const { id, slug, loadType, sets, previousSets, planned } = workoutExercise;
   const unilateral = libraryExercise(slug)?.unilateral ?? false;
   const editingSet = editingIndex === null ? undefined : sets[editingIndex];
+  const lastSet = sets.at(-1);
   const nextNumber = sets.length + 1;
   // In an Assessment Workout every Exercise is a test, and the Logbook says what it asks for next
   const protocol =
@@ -147,6 +149,20 @@ export function ExerciseLogging({
         </View>
       ) : null}
 
+      {lastSet && editingIndex === null && workout && offersLastSetRpe(workout, workoutExercise) ? (
+        <LastSetRpe
+          set={lastSet}
+          number={sets.length}
+          onRate={async (rpe) => {
+            try {
+              await editSet(id, sets.length - 1, withRpe(lastSet, rpe));
+            } catch (err) {
+              showToast(errorMessage(err), { error: err });
+            }
+          }}
+        />
+      ) : null}
+
       {editingSet && editingIndex !== null ? (
         <SetEntry
           key={`edit-${editingIndex}`}
@@ -208,6 +224,36 @@ export function ExerciseLogging({
   );
 }
 
+// The optional RPE for the Exercise's last Set so far (#133): one tap on a chip rates it, a tap on the chosen one takes
+// it off, and logging on without one skips it
+function LastSetRpe({
+  set,
+  number,
+  onRate,
+}: {
+  set: Set;
+  number: number;
+  onRate: (rpe: number | undefined) => Promise<void>;
+}) {
+  return (
+    <Stack spacing={2} style={styles.entry}>
+      <Text size="sm" color="muted">
+        {`How hard was set ${number}? Optional: 10 is no more reps`}
+      </Text>
+      <HStack spacing={2}>
+        {RPE_SCALE.map((choice) => (
+          <Chip
+            key={choice}
+            label={String(choice)}
+            selected={set.rpe === choice}
+            onPress={() => void onRate(set.rpe === choice ? undefined : choice)}
+          />
+        ))}
+      </HStack>
+    </Stack>
+  );
+}
+
 type SetEntryProps = {
   heading: string;
   loadType: LoadType;
@@ -250,7 +296,8 @@ function SetEntry({
     }
     setSaving(true);
     try {
-      await onSubmit(asksRpe ? { ...result.values, rpe } : result.values);
+      // A Set being corrected keeps the RPE it was rated at, though only a test asks for it here
+      await onSubmit(rpe === undefined ? result.values : { ...result.values, rpe });
     } catch (err) {
       showToast(errorMessage(err), { error: err });
     } finally {

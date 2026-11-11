@@ -1,5 +1,6 @@
 import {
   BandLevel,
+  RPE_SCALE,
   type Exercise,
   type ProgressionChange,
   type Set,
@@ -45,6 +46,9 @@ type Judgement = ProgressionInput & { sets: Set[] };
 const UNMOVED = "unmoved";
 type Outcome = Progression | typeof UNMOVED;
 type ProgressionRule = (judgement: Judgement) => Outcome | undefined;
+
+// All the user had: no more reps
+const MAX_RPE = RPE_SCALE[RPE_SCALE.length - 1];
 
 // A load logged in the other unit is its exact kg, a hair off the profile's own
 const SAME_LOAD_KG = 0.01;
@@ -142,6 +146,11 @@ const notYetProgressed: ProgressionRule = ({ level, exercise }) =>
     ? UNMOVED
     : undefined;
 
+// Stories 43, 44: an RPE of 10 on the Exercise's last Set logged, whatever its load, holds the load and the target, so a
+// Set that was all the user had never pushes them on. The Workout still counts as the one that last moved the level
+const rpeTenHolds: ProgressionRule = (judgement) =>
+  judgement.workoutExercise.sets.at(-1)?.rpe === MAX_RPE ? moved(judgement, {}, { code: "rpe-10" }) : undefined;
+
 // Story 37: a load other than the one prescribed becomes the new base, at the fewest reps lifted there
 const newBase: ProgressionRule = (judgement) => {
   const { level, sets } = judgement;
@@ -226,16 +235,17 @@ const bandLadder: ProgressionRule = (judgement) => {
 };
 
 // In order: the first to decide wins. Where later tickets' rules go: the deload week (#137) after notAnAssessment,
-// returning UNMOVED so the run of Misses stays as it is; RPE 10 (#133) after missesBringItDown, as a Miss with RPE 10
-// is still a Miss; Ballistic Exercises and carries (#136) in place of notYetProgressed, after missesBringItDown, which
-// brings bodyweight, band and timed levels down too. The ladders (#135) come last, after the weighted rules. Every rule
-// that moves a level through moved() ends its run of Misses
+// returning UNMOVED so the run of Misses stays as it is; RPE 10 (#133, rpeTenHolds) after missesBringItDown and before the
+// ladders, so an RPE of 10 holds every Exercise, though a Miss with RPE 10 is still a Miss; Ballistic Exercises and
+// carries (#136) in place of notYetProgressed, after missesBringItDown, which brings bodyweight, band and timed levels
+// down too. Every rule that moves a level through moved() ends its run of Misses
 const RULES: readonly ProgressionRule[] = [
   laterWorkoutsOnly,
   notAnAssessment,
   atLeastTwoSets,
   missesBringItDown,
   notYetProgressed,
+  rpeTenHolds,
   newBase,
   doubleProgression,
   bodyweightLadder,

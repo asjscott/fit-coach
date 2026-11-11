@@ -27,6 +27,8 @@ describe("progressionChangeLine", () => {
     [{ code: "harder-variant", from: "goblet-squat" }, "Ready for this after Goblet squat."],
     // Stories 35, 55: at 20 reps, 15 reps or 60 seconds
     [{ code: "held-at-top" }, "Held at the top: no heavier weight or harder variant here."],
+    // Story 44
+    [{ code: "rpe-10" }, "Held: your last Set was RPE 10, all you had."],
   ] as const)("words %o", (change, line) => {
     expect(progressionChangeLine(change)).toBe(line);
   });

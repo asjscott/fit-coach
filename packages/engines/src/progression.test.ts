@@ -186,6 +186,75 @@ const level = (slug: string, shape: object) =>
   ({ slug, movedBy: LAST_MOVER, misses: 0, outgrown: false, ...shape }) as WorkingLevel;
 const repsDone = (reps: number): Set => ({ kind: "bodyweight", reps, loggedAt: THIS_WORKOUT.startedAt });
 const held = (seconds: number): Set => ({ kind: "timed", seconds, loggedAt: THIS_WORKOUT.startedAt });
+
+// Stories 43–44, ADR 0007: an RPE of 10 on the last Set holds the load and the target
+describe("progressWorkingLevel: RPE on the last Set", () => {
+  const held = { movedBy: movedByThisWorkout, change: { code: "rpe-10" as const } };
+
+  // Story 44
+  it("holds the load at the top of the range when the last Set was RPE 10", () => {
+    expect(progress(gobletSquat(20, 12), [lifted(20, 12), lifted(20, 12), lifted(20, 12, 10)])).toEqual({
+      level: gobletSquat(20, 12, held),
+      change: { code: "rpe-10" },
+    });
+  });
+
+  it("holds the target when every Set reached it and the last was RPE 10", () => {
+    expect(progress(gobletSquat(14, 9), [lifted(14, 9), lifted(14, 9, 10)])).toEqual({
+      level: gobletSquat(14, 9, held),
+      change: { code: "rpe-10" },
+    });
+  });
+
+  it("holds the prescribed load when the last Set, at another load, was RPE 10", () => {
+    expect(progress(gobletSquat(14, 10), [lifted(16, 9), lifted(16, 9, 10)])).toMatchObject({
+      level: { kg: 14, reps: 10 },
+      change: { code: "rpe-10" },
+    });
+  });
+
+  it("goes by the last Set logged, not the last at the load it judges", () => {
+    const sets = [lifted(14, 12), lifted(14, 12), lifted(16, 6, 10)];
+    expect(progress(gobletSquat(14, 11), sets)).toMatchObject({
+      level: { kg: 14, reps: 11 },
+      change: { code: "rpe-10" },
+    });
+  });
+
+  it.each([
+    ["an RPE of 9 on the last Set", [lifted(14, 9), lifted(14, 9, 9)]],
+    ["an RPE of 10 on an earlier Set", [lifted(14, 9, 10), lifted(14, 9)]],
+  ])("progresses as usual after %s", (_, sets) => {
+    expect(progress(gobletSquat(14, 9), sets)).toMatchObject({
+      level: { kg: 14, reps: 10 },
+      change: { code: "target-up" },
+    });
+  });
+
+  // Stories 44, 46: a Miss is a Miss however hard the last Set felt
+  it("still counts a Miss when the last Set was RPE 10", () => {
+    expect(progress(gobletSquat(14, 10), [lifted(14, 7), lifted(14, 7, 10)])).toMatchObject({
+      level: { kg: 14, reps: 10, misses: 1 },
+      change: null,
+    });
+  });
+
+  it("ends a run of Misses when it holds", () => {
+    expect(progress(gobletSquat(14, 10, { misses: 1 }), [lifted(14, 10), lifted(14, 10, 10)])).toMatchObject({
+      level: { kg: 14, reps: 10, misses: 0 },
+      change: { code: "rpe-10" },
+    });
+  });
+
+  // Spec: an RPE of 10 holds every Exercise, ahead of the ladders
+  it("holds a bodyweight ladder when the last Set was RPE 10", () => {
+    const pushUps = level("push-up", { unit: "reps", reps: 10 });
+    expect(progress(pushUps, [repsDone(10), { ...repsDone(12), rpe: 10 }])).toEqual({
+      level: { ...pushUps, movedBy: movedByThisWorkout, change: { code: "rpe-10" } },
+      change: { code: "rpe-10" },
+    });
+  });
+});
 // A band Exercise's Sets are logged without the band: it's the one its Working Level names (story 59)
 const banded = (reps: number): Set => lifted(1, reps);
 

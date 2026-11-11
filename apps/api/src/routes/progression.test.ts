@@ -95,6 +95,30 @@ describe("double progression at upload (#132)", () => {
   });
 });
 
+// Stories 43, 44: an optional RPE on the last Set, where 10 holds the load and the target (#133)
+describe("RPE on the last Set at upload (#133)", () => {
+  it("holds the load and the target when the last Set was RPE 10, for the next Planned Workout", async () => {
+    const user = await assessedUser();
+    // Every Set reached the row's 14 kg × 8, which would put the target up, but the last was all the user had
+    const row = { slug: "one-arm-dumbbell-row", sets: [lifted(14, 8), lifted(14, 8), lifted(14, 8, 10)] };
+    await upload(user, at(100, [row]));
+
+    expect((await workingLevels(user)).get(row.slug)).toMatchObject({ kg: 14, reps: 8, change: { code: "rpe-10" } });
+    expect(await plannedExercise(user, row.slug)).toMatchObject({
+      target: { unit: "kg", kg: 14, reps: 8 },
+      change: { code: "rpe-10" },
+    });
+  });
+
+  it("progresses as usual when the last Set's RPE is short of 10", async () => {
+    const user = await assessedUser();
+    const row = { slug: "one-arm-dumbbell-row", sets: [lifted(14, 8), lifted(14, 8), lifted(14, 8, 9)] };
+    await upload(user, at(100, [row]));
+
+    expect((await workingLevels(user)).get(row.slug)).toMatchObject({ kg: 14, reps: 9 });
+  });
+});
+
 // Stories 26, 82: only a Workout that started after the one that last moved a level moves it
 describe("uploads that never move a level twice or backwards (#132)", () => {
   const reachingNine = [lifted(12, 9), lifted(12, 9)];
