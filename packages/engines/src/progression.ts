@@ -1,8 +1,16 @@
-import type { Exercise, ProgressionChange, Set, WorkingLevel, Workout, WorkoutExercise } from "@fit/shared";
+import {
+  BandLevel,
+  type Exercise,
+  type ProgressionChange,
+  type Set,
+  type WorkingLevel,
+  type Workout,
+  type WorkoutExercise,
+} from "@fit/shared";
 import { epley, epleyReps } from "./e1rm";
 import { availableLoadsKg, nextLoadKg, roundToLoadKg, type ProfileWithLoads } from "./equipment";
 import { isJump } from "./jumps";
-import { MAX_REPS, repRange, type RepRange } from "./working-levels";
+import { BODYWEIGHT_TOP_REPS, MAX_REPS, ownedBandLevels, repRange, type RepRange } from "./working-levels";
 
 // Everything progression judges one Workout Exercise by (ADR 0007, #132)
 export type ProgressionInput = {
@@ -128,10 +136,9 @@ const missesBringItDown: ProgressionRule = (judgement) => {
   return moved(judgement, { ...changes, misses: 0 }, change);
 };
 
-// Until #135 and #136 give them their rules: bodyweight, timed and band ladders, Ballistic Exercises and carries. A
-// jump never moves (#105)
+// Until #136 gives them their rules: Ballistic Exercises and carries. A jump never moves (#105)
 const notYetProgressed: ProgressionRule = ({ level, exercise }) =>
-  level.unit !== "kg" || exercise.ballistic || isJump(exercise) || !repRange(exercise, level.unit)
+  exercise.ballistic || isJump(exercise) || (level.unit === "kg" && !repRange(exercise, level.unit))
     ? UNMOVED
     : undefined;
 
@@ -167,11 +174,62 @@ const doubleProgression: ProgressionRule = (judgement) => {
   return moved(judgement, { reps: level.reps + 1 }, { code: "target-up" });
 };
 
+// The top of the timed ladder: at this many seconds on every Set, the Exercise moves to its harder variant
+export const TIMED_TOP_SECONDS = 60;
+// A timed target goes up this much at a time
+const TIMED_STEP_SECONDS = 5;
+
+const outgrown: ProgressionChange = { code: "outgrown" };
+
+// Stories 53, 55: every Set at the target puts a bodyweight one up 1 rep, to 15. At 15 on every Set, the Exercise is
+// outgrown: the planner gives its harder variant, seeded from Reference Strength, if the profile can do it, or holds it
+const bodyweightLadder: ProgressionRule = (judgement) => {
+  const { level, sets } = judgement;
+  if (level.unit !== "reps") return undefined;
+  const fewest = fewestReps(sets);
+  if (fewest >= BODYWEIGHT_TOP_REPS) return moved(judgement, { reps: BODYWEIGHT_TOP_REPS, outgrown: true }, outgrown);
+  if (fewest < level.reps) return moved(judgement, {}, null);
+  return moved(judgement, { reps: Math.min(level.reps + 1, BODYWEIGHT_TOP_REPS) }, { code: "target-up" });
+};
+
+// Stories 54, 55: as the bodyweight ladder, 5 seconds at a time to 60. A seeded target is judged by the whole seconds
+// it's prescribed as
+const timedLadder: ProgressionRule = (judgement) => {
+  const { level, sets } = judgement;
+  if (level.unit !== "seconds") return undefined;
+  const fewest = Math.min(...sets.map(secondsOf));
+  if (fewest >= TIMED_TOP_SECONDS) return moved(judgement, { seconds: TIMED_TOP_SECONDS, outgrown: true }, outgrown);
+  const target = Math.round(level.seconds);
+  if (fewest < target) return moved(judgement, {}, null);
+  return moved(
+    judgement,
+    { seconds: Math.min(target + TIMED_STEP_SECONDS, TIMED_TOP_SECONDS) },
+    { code: "seconds-up" },
+  );
+};
+
+// Stories 58, 59: a band Exercise's double progression, its Sets assumed to use the band its level names. Every Set at
+// the target puts it up 1 rep; every Set at the top of the range (15) steps to the next band the profile has, at the
+// bottom of the range. At the heaviest band, the reps climb to 20 and then the Exercise is outgrown, as at the
+// heaviest load
+const bandLadder: ProgressionRule = (judgement) => {
+  const { level, exercise, equipmentProfile, sets } = judgement;
+  const range = repRange(exercise, level.unit);
+  if (level.unit !== "band" || !range) return undefined;
+  const fewest = fewestReps(sets);
+  if (fewest < level.reps) return moved(judgement, {}, null);
+  const rank = (band: BandLevel) => BandLevel.options.indexOf(band);
+  const heavier = ownedBandLevels(exercise, [equipmentProfile]).find((band) => rank(band) > rank(level.level));
+  if (fewest >= range.max && heavier) return moved(judgement, { level: heavier, reps: range.min }, { code: "load-up" });
+  if (level.reps >= MAX_REPS) return moved(judgement, { outgrown: true }, outgrown);
+  return moved(judgement, { reps: level.reps + 1 }, { code: "target-up" });
+};
+
 // In order: the first to decide wins. Where later tickets' rules go: the deload week (#137) after notAnAssessment,
 // returning UNMOVED so the run of Misses stays as it is; RPE 10 (#133) after missesBringItDown, as a Miss with RPE 10
-// is still a Miss; ladders (#135) and Ballistic Exercises and carries (#136) in place of notYetProgressed, after
-// missesBringItDown, which brings bodyweight, band and timed levels down too. Every rule that moves a level through
-// moved() ends its run of Misses
+// is still a Miss; Ballistic Exercises and carries (#136) in place of notYetProgressed, after missesBringItDown, which
+// brings bodyweight, band and timed levels down too. The ladders (#135) come last, after the weighted rules. Every rule
+// that moves a level through moved() ends its run of Misses
 const RULES: readonly ProgressionRule[] = [
   laterWorkoutsOnly,
   notAnAssessment,
@@ -180,6 +238,9 @@ const RULES: readonly ProgressionRule[] = [
   notYetProgressed,
   newBase,
   doubleProgression,
+  bodyweightLadder,
+  timedLadder,
+  bandLadder,
 ];
 
 // The Sets judged: for a weighted level those at the lowest load used, with the level at that load. A level lifted at
