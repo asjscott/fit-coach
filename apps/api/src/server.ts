@@ -10,9 +10,12 @@ import { workoutRoutes } from "./routes/workouts";
 import { HealthResponse } from "@fit/shared";
 import { registerAuth } from "./auth";
 import { pingDb } from "./db";
+import { initErrorReporting, registerTestErrorRoute, reportRouteErrorsWithUser } from "./error-reporting";
 import { ensurePlannedWorkoutIndexes } from "./planned-workouts";
 import { ensureUserIndexes, migrateUsers } from "./users";
 import { ensureWorkoutIndexes } from "./workouts";
+
+initErrorReporting();
 
 const app = Fastify({ logger: true });
 
@@ -30,6 +33,8 @@ await app.register(cors, {
 
 await registerAuth(app);
 
+reportRouteErrorsWithUser(app);
+
 await ensureUserIndexes().catch((err) => app.log.error(err, "Failed to create user indexes"));
 
 await ensureWorkoutIndexes().catch((err) => app.log.error(err, "Failed to create workout indexes"));
@@ -45,6 +50,7 @@ await app.register(exerciseRoutes);
 await app.register(workoutRoutes);
 await app.register(assessmentRoutes);
 await app.register(plannedWorkoutRoutes);
+registerTestErrorRoute(app);
 
 app.get("/health", async () => {
   return HealthResponse.parse({

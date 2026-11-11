@@ -214,6 +214,47 @@ Schemas: packages/shared/src/planned-workouts.ts
   deterministic, so ties fall to last week's Exercises, then the longest Sets, then the slug, never library order.
   `plan-outcomes.test.ts` pins what a user should see, with the library in either order: run it after any tuning.
 
+## Error reporting (#122)
+
+Errors on the web app and the API go to Sentry, tagged with the deploy's environment. Without a DSN nothing is
+reported, so local runs, tests and CI need nothing set.
+
+- **API:** `src/error-reporting.ts`, called at the top of `server.ts`. Sentry's Fastify integration reports errors
+  thrown in a route (5xx only) and uncaught exceptions. A `preHandler` hook adds the Clerk user id on the request's own
+  scope.
+- **Web app:** `src/features/error-reporting/error-reporting.web.ts` reports uncaught errors and unhandled rejections.
+  The root layout sets the Clerk user id. The native build gets the no-op `error-reporting.ts`.
+- **Personal data:** nothing but the Clerk user id. `@fit/shared`'s `MINIMAL_DATA_COLLECTION` turns off user info,
+  cookies, headers, bodies, query strings and local variables, and `withoutPersonalData` strips the same again in
+  `beforeSend`. The web app also drops console and tap breadcrumbs.
+- **Test errors:** `/debug-error` on the web app throws one, and calls the API's `GET /debug/error` (signed in only),
+  which throws another, so one page checks both sides of a deploy. Checks E1–E3 in `docs/manual-checks.md`.
+
+### Setting it up (a human, once)
+
+1. In Sentry (free tier), create a project for the API (platform Node.js) and one for the web app (React). Each
+   project's DSN is under **Project settings → Client Keys**. A DSN is not a secret, but it stays out of the repo.
+2. Set these on each deploy. The environment is `production` or `staging`; unset, events say `development`.
+
+   | Where                             | Variable                         | Value                 |
+   | --------------------------------- | -------------------------------- | --------------------- |
+   | Render, production API service    | `SENTRY_DSN`                     | the API project's DSN |
+   | Render, production API service    | `SENTRY_ENVIRONMENT`             | `production`          |
+   | Render, staging API service       | `SENTRY_DSN`                     | the API project's DSN |
+   | Render, staging API service       | `SENTRY_ENVIRONMENT`             | `staging`             |
+   | Cloudflare Pages, Production      | `EXPO_PUBLIC_SENTRY_DSN`         | the web project's DSN |
+   | Cloudflare Pages, Production      | `EXPO_PUBLIC_SENTRY_ENVIRONMENT` | `production`          |
+   | Cloudflare Pages, Preview (`dev`) | `EXPO_PUBLIC_SENTRY_DSN`         | the web project's DSN |
+   | Cloudflare Pages, Preview (`dev`) | `EXPO_PUBLIC_SENTRY_ENVIRONMENT` | `staging`             |
+
+   The web app's are read at build time, so redeploy after setting them. Render's `RENDER_GIT_COMMIT` becomes the
+   API's release.
+
+3. Run E1–E3 in `docs/manual-checks.md`.
+
+Web stack traces point into the minified bundle: they show the file and line, but not the source. Uploading source
+maps would fix that and isn't set up.
+
 ## Running things
 
 - API without the real database or Clerk: `pnpm --filter @fit/api dev:local` (in-memory MongoDB replica set; `X-Dev-User` header

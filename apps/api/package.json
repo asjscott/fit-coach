@@ -20,6 +20,7 @@
     "@fastify/cors": "^11.3.1",
     "@fit/engines": "workspace:*",
     "@fit/shared": "workspace:*",
+    "@sentry/node": "~11.10.0",
     "fastify": "^5.12.7",
     "fastify-type-provider-zod": "^7.0.0",
     "mongodb": "^7.7.0",
