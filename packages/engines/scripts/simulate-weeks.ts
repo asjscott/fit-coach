@@ -1,6 +1,15 @@
 // Weeks of Workouts through the real planner, for the simulation and the plan outcome tests
-import type { Goal, WorkoutLength } from "@fit/shared";
-import { BUILT_IN_EQUIPMENT, daysWorkout, planWorkout, type ProfileWithLoads } from "../src";
+import type { Goal, Muscle, WorkoutLength } from "@fit/shared";
+import {
+  addCredits,
+  BUILT_IN_EQUIPMENT,
+  creditsPerSet,
+  daysWorkout,
+  exerciseBySlug,
+  planWorkout,
+  type MuscleCredits,
+  type ProfileWithLoads,
+} from "../src";
 
 export const GOALS: Goal[] = ["build_muscle", "recomp", "lose_fat", "athletic"];
 const TIME_ZONE = "America/New_York";
@@ -79,4 +88,22 @@ export function simulate({ goal, days, length, lifter, profile }: Run) {
     weeks.push(thisWeek);
   }
   return weeks;
+}
+
+// A simulated week's credited Sets per Muscle: in total, as the Week Ledger counts them, or from primary credit alone
+export function weekCredits(
+  week: readonly { exercises: readonly { slug: string; sets: number }[] }[],
+  counted: "total" | "primary",
+): MuscleCredits {
+  return week
+    .flatMap(({ exercises }) => exercises)
+    .reduce<MuscleCredits>((total, { slug, sets }) => {
+      const exercise = exerciseBySlug(slug)!;
+      const credits = creditsPerSet(exercise);
+      if (counted === "primary") {
+        const primary = new Set<Muscle>(exercise.muscles.primary);
+        for (const muscle of Object.keys(credits) as Muscle[]) if (!primary.has(muscle)) delete credits[muscle];
+      }
+      return addCredits(total, credits, sets);
+    }, {});
 }

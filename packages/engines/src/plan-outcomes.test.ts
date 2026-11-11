@@ -1,12 +1,13 @@
 import { beforeAll, describe, expect, it, vi } from "vitest";
 
-import type { Muscle } from "@fit/shared";
+import type { Goal, Muscle } from "@fit/shared";
 import { addCredits, creditsPerSet, exerciseBySlug, weeklyBudget, type MuscleCredits } from "./index";
 
 type Simulation = typeof import("../scripts/simulate-weeks");
 type Run = import("../scripts/simulate-weeks").Run;
 
 const GOAL_NAMES = ["build_muscle", "recomp", "lose_fat", "athletic"] as const;
+const LENGTHS = ["short", "standard", "long"] as const;
 const fullGym = { lifter: "intermediate", profile: "Full gym" } as const;
 
 // What a user sees over a month, so a change to the score or tables that loses them fails here. Each passes whatever
@@ -16,6 +17,9 @@ describe.each([
   ["the library reversed", true],
 ])("plan outcomes, with %s", (_, reversed) => {
   let simulate: Simulation["simulate"];
+  let weekCredits: Simulation["weekCredits"];
+  let PROFILES: Simulation["PROFILES"];
+  let LIFTERS: Simulation["LIFTERS"];
 
   beforeAll(async () => {
     vi.resetModules();
@@ -25,7 +29,7 @@ describe.each([
         return { ...library, EXERCISES: [...library.EXERCISES].reverse() };
       });
     } else vi.doUnmock("./data/exercises");
-    ({ simulate } = await import("../scripts/simulate-weeks"));
+    ({ simulate, weekCredits, PROFILES, LIFTERS } = await import("../scripts/simulate-weeks"));
   });
 
   // Average over the weeks after the first, once a week's Exercises carry on from the last
@@ -77,6 +81,30 @@ describe.each([
 
   it.each(GOAL_NAMES)("%s at 2 days Short stays where the floor's limit says", (goal) => {
     expect(lowestMuscle({ ...fullGym, goal, days: 2, length: "short" })).toBeGreaterThanOrEqual(belowFloor[goal]);
+  });
+
+  // Story 14: the 130% cap, through primary credit alone. Every day and Length on a Full gym, and the busiest weeks on
+  // each profile for each lifter
+  const capRuns = (goal: Goal): Run[] => [
+    ...[2, 3, 4, 5, 6].flatMap((days) => LENGTHS.map((length) => ({ ...fullGym, goal, days, length }))),
+    ...(Object.keys(PROFILES) as Run["profile"][]).flatMap((profile) =>
+      (Object.keys(LIFTERS) as Run["lifter"][]).flatMap((lifter) =>
+        [4, 6].map((days) => ({ goal, days, length: "long" as const, lifter, profile })),
+      ),
+    ),
+  ];
+
+  it.each(GOAL_NAMES)("%s plans no Muscle over the cap through its primary credit", (goal) => {
+    for (const run of capRuns(goal)) {
+      const budget = weeklyBudget(goal, run.days);
+      for (const week of simulate(run)) {
+        const primary = weekCredits(week, "primary");
+        for (const [muscle, budgeted] of Object.entries(budget) as [Muscle, number][]) {
+          const label = `${run.profile}, ${run.lifter}, ${run.days} days ${run.length}: ${muscle}`;
+          expect(primary[muscle] ?? 0, label).toBeLessThanOrEqual(budgeted * 1.3);
+        }
+      }
+    }
   });
 
   it.each(GOAL_NAMES)("%s reaches the floor on every other week", (goal) => {

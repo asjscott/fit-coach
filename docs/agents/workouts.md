@@ -210,6 +210,12 @@ Schemas: packages/shared/src/planned-workouts.ts
   offer. The walk is one Set (#109, `takesOneSet`): `restAfterSet` gives no rest after it, and the logging screen
   offers "Next exercise" rather than a Set 2 (`takesAnotherSet`). Recovery Exercises have no Pattern and no strength ratio, so no Working Level. `recovery` also needs
   `seed:exercises` re-run, as `ballistic` did.
+- **The 130% cap never gives way, but for an empty plan** (#128, `WEEKLY_CAP` in `weekly-budget.ts`). A pick is left
+  out when a primary Muscle with a budget would go over 1.3 × its budget, counting the Week Ledger (secondary credit
+  included) and the Sets already planned. So the plan can end well short of Long, and the Day's Workout's
+  `estimatedSeconds` is the honest time. Only when the cap leaves nothing at all is the plan built as a new week's would
+  be, since a stored plan needs an Exercise. `pnpm --filter @fit/engines simulate` prints each Muscle's share of its
+  budget from primary credit and in total; `plan-outcomes.test.ts` pins the primary side.
 - **Build and tune with the simulation.** Scores tie often, as many Exercises share budgeted credits. The planner is
   deterministic, so ties fall to last week's Exercises, then the longest Sets, then the slug, never library order.
   `plan-outcomes.test.ts` pins what a user should see, with the library in either order: run it after any tuning.
