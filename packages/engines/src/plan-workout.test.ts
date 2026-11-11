@@ -267,6 +267,63 @@ describe("planWorkout", () => {
     });
   });
 
+  describe("the 130% cap", () => {
+    // build_muscle at 4 days: 16 for the main Muscles, so a cap of 20.8; 10 for side_delts and abs, so 13
+    const slugsWith = (sets: Record<string, number>) => slugs({ workouts: [week(sets)], workingLevels: withBench });
+    const primaryOf = (slug: string) => exerciseBySlug(slug)!.muscles.primary;
+
+    // Story 14
+    it("adds no Exercise that would take one of its primary Muscles over the cap", () => {
+      // Quads and glutes at 20: one more Set of anything for them makes 21
+      const chosen = slugsWith({ "goblet-squat": 20 });
+      expect(
+        chosen.filter((slug) => primaryOf(slug).some((muscle) => muscle === "quads" || muscle === "glutes")),
+      ).toEqual([]);
+      expect(chosen).not.toContain("dumbbell-romanian-deadlift");
+    });
+
+    it("still adds an Exercise for a Muscle with room left under the cap", () => {
+      // side_delts at 10, their budget: a pick of 3 Sets of lateral raise makes 13, the cap
+      expect(slugsWith({ "dumbbell-lateral-raise": 10 })).toContain("dumbbell-lateral-raise");
+    });
+
+    // Story 15
+    it("counts secondary credit towards a Muscle's total", () => {
+      // Overhead press credits upper_back 0.5 a Set: 41 Sets make 20.5, so a row's Sets would go over, though lats
+      // have had nothing
+      expect(slugsWith({ "dumbbell-overhead-press": 41 })).not.toContain("one-arm-dumbbell-row");
+    });
+
+    it("never blocks an Exercise by its secondary Muscles", () => {
+      // Abs at the cap of 13 keep out plank, whose primary is abs, but not push-up, which credits them as secondary
+      const chosen = slugsWith({ plank: 13 });
+      expect(chosen).not.toContain("plank");
+      expect(chosen).toContain("push-up");
+    });
+
+    // Stories 16 and 17
+    describe("with the week nearly met", () => {
+      // Every budgeted Muscle at its cap but side_delts
+      const nearlyMet = {
+        "goblet-squat": 20,
+        "dumbbell-romanian-deadlift": 20,
+        "one-arm-dumbbell-row": 20,
+        "dumbbell-floor-press": 20,
+        plank: 13,
+      };
+      const { plannedExercises } = plan({ workouts: [week(nearlyMet)], workingLevels: withBench });
+
+      it("gives a shorter Workout rather than filler", () => {
+        expect(plannedExercises).toMatchObject([{ slug: "dumbbell-lateral-raise", sets: 4 }]);
+      });
+
+      it("ends short of its Length, and the Day's Workout gives the real estimate", () => {
+        // 5 minutes of warm-up and 4 Sets of 60 s, on a Standard day of 45 minutes
+        expect(daysWorkout({ plannedExercises }, { workoutLength: "standard" }).estimatedSeconds).toBe(300 + 240);
+      });
+    });
+  });
+
   describe("a Weekly Budget already met", () => {
     const met = {
       "goblet-squat": 20,
@@ -275,8 +332,8 @@ describe("planWorkout", () => {
       "dumbbell-floor-press": 20,
     };
 
-    it("still gives a Workout, as a new week would", () => {
-      const workouts = [week({ ...met, "dumbbell-lateral-raise": 20 })];
+    it("still gives a Workout, as a new week would, once every Muscle is at the cap", () => {
+      const workouts = [week({ ...met, "dumbbell-lateral-raise": 20, plank: 20 })];
       const planned = plan({ workouts, workingLevels: withBench }).plannedExercises;
       expect(planned).toEqual(plan({ workingLevels: withBench }).plannedExercises);
       expect(planned.length).toBeGreaterThan(0);
@@ -369,11 +426,12 @@ describe("planWorkout", () => {
     });
 
     it("plans around the Sets logged this week", () => {
-      // 16 Sets of goblet squat fill quads and glutes, so it's no longer first
+      // 16 Sets of goblet squat fill quads and glutes, so it's no longer first. Once Romanian deadlift adds to glutes,
+      // the 130% cap keeps it out
       const workouts = [logged("w1", "goblet-squat", 16)];
       const chosen = slugs({ workouts });
       expect(chosen[0]).toBe("one-arm-dumbbell-row");
-      expect(chosen.indexOf("goblet-squat")).toBeGreaterThan(chosen.indexOf("push-up"));
+      expect(chosen).not.toContain("goblet-squat");
     });
 
     it("gives each Exercise once", () => {
@@ -657,6 +715,21 @@ describe("planWorkout", () => {
       });
     });
 
+    it("takes the day from a secondary Set for a Muscle no Set worked as primary", () => {
+      // Four Exercises credit abs as secondary, 8 in all and still over the limit the next noon, while none of their
+      // primary Muscles is. With push-ups earlier in the week, abs are at the cap of 13, so no abs Exercise comes back
+      const secondaryAbs = {
+        id: "secondary-abs",
+        startedAt: tuesdayEvening,
+        workoutExercises: ["goblet-squat", "push-up", "pull-up", "suitcase-carry"].map((slug) => ({
+          slug,
+          sets: loggedSets(4, tuesdayEvening),
+        })),
+      };
+      const recovering = reasons({ workouts: [secondaryAbs, logged("push-ups", "push-up", 10)] })[0];
+      expect(recovering).toEqual({ code: "recovering", muscles: ["abs"], lastSetOn: "2026-11-03" });
+    });
+
     it("says the Workout is extra once This Week reaches the days per week", () => {
       expect(plan({ workouts: earlierWorkouts(4), daysPerWeek: 4 }).reasons).toEqual([{ code: "budget-met" }]);
     });
@@ -720,6 +793,12 @@ describe("planWorkout", () => {
 
     it("isn't given to another Goal", () => {
       expect(onFullGym({ goal: "build_muscle" }).filter(isOneSidedLegExercise)).toEqual([]);
+    });
+
+    // Story 14
+    it("waits while quads and glutes are at the 130% cap", () => {
+      // Two-legged squats only, so it's still needed this week: quads and glutes at 20 of a cap of 20.8
+      expect(athletic({ workouts: [week({ "goblet-squat": 20 })] }).filter(isOneSidedLegExercise)).toEqual([]);
     });
 
     it("is needed once a week", () => {
@@ -989,6 +1068,128 @@ describe("planWorkout", () => {
 
       expect(Object.keys(primary({ tags: [], loads: {} }))).toEqual(["full_gym"]);
       expect(Object.keys(primary({ tags: EquipmentTag.options, loads: {} }))).toEqual(["bodyweight_only"]);
+    });
+  });
+
+  // Story 13 (#105): jumps for the athletic Goal, as power work
+  describe("jumps", () => {
+    const JUMPS = ["pogo-hop", "squat-jump", "countermovement-jump", "box-jump", "broad-jump", "lateral-bound"];
+    const HORIZONTAL = ["broad-jump", "lateral-bound"];
+    const isJump = (slug: string) => JUMPS.includes(slug);
+    // The squat Assessment done: a tested squat, not an estimate
+    const squatTested = {
+      ...assessment,
+      patterns: {
+        ...assessment.patterns,
+        squat: {
+          slug: "bodyweight-squat",
+          topSet: { kind: "bodyweight" as const, reps: 25, loggedAt: earlierThisWeek },
+          maximum: 100,
+          loadLimited: false,
+          referenceStrength: 100,
+          estimated: false as const,
+        },
+      },
+    };
+    const athletic = (more: Partial<PlanWorkoutInput> = {}) =>
+      plan({
+        equipmentProfile: fullHomeGym,
+        workingLevels: [],
+        assessment: squatTested,
+        goal: "athletic",
+        includeJumps: true,
+        ...more,
+      }).plannedExercises;
+    const jumpsIn = (more: Partial<PlanWorkoutInput> = {}) => athletic(more).filter(({ slug }) => isJump(slug));
+    const jumpWorkout = (id: string, slugs: string[]) => ({
+      id,
+      startedAt: earlierThisWeek,
+      workoutExercises: slugs.map((slug) => ({ slug, sets: loggedSets(3) })),
+    });
+
+    it("go first: 2 jumps of 3 Sets, as contacts with no load", () => {
+      const planned = athletic();
+      expect(planned.slice(0, 2).every(({ slug }) => isJump(slug))).toBe(true);
+      expect(planned.slice(2).some(({ slug }) => isJump(slug))).toBe(false);
+      for (const { sets, target } of planned.slice(0, 2)) {
+        expect(sets).toBe(3);
+        expect(target.unit).toBe("reps");
+      }
+    });
+
+    it("are about 48 contacts a Workout, set by each jump's place on the ladder", () => {
+      const contacts = jumpsIn().reduce(
+        (total, { sets, target }) => total + sets * (target.unit === "reps" ? target.reps : 0),
+        0,
+      );
+      expect(contacts).toBeGreaterThanOrEqual(42);
+      expect(contacts).toBeLessThanOrEqual(54);
+    });
+
+    it("mix a jump up with a jump forward or sideways", () => {
+      const slugs = jumpsIn().map(({ slug }) => slug);
+      expect(slugs.filter((slug) => HORIZONTAL.includes(slug))).toHaveLength(1);
+    });
+
+    it("go ahead of the one-sided pick and the two-legged squat", () => {
+      const planned = athletic().map(({ slug }) => slug);
+      expect(planned.slice(0, 2).every(isJump)).toBe(true);
+      expect(planned[2] && (isOneSidedLegExercise(planned[2]) || planned[2] === "back-squat")).toBe(true);
+    });
+
+    it("change between the week's two jump Workouts", () => {
+      const first = jumpsIn().map(({ slug }) => slug);
+      const second = jumpsIn({ workouts: [jumpWorkout("first", first)] }).map(({ slug }) => slug);
+      expect(second).toHaveLength(2);
+      expect(second.filter((slug) => first.includes(slug))).toEqual([]);
+    });
+
+    it("come in 2 Workouts a week", () => {
+      const workouts = [jumpWorkout("first", ["pogo-hop", "broad-jump"]), jumpWorkout("second", ["squat-jump"])];
+      expect(jumpsIn({ workouts })).toEqual([]);
+      expect(jumpsIn({ workouts: workouts.slice(0, 1) })).toHaveLength(2);
+    });
+
+    it("halve their contacts in the deload week", () => {
+      const reps = (more: Partial<PlanWorkoutInput>) =>
+        jumpsIn(more).map(({ target }) => (target.unit === "reps" ? target.reps : 0));
+      expect(reps({ deloadWeek: true })).toEqual(reps({}).map((contacts) => contacts / 2));
+    });
+
+    it("stay out with the switch off, the default", () => {
+      expect(jumpsIn({ includeJumps: false })).toEqual([]);
+      expect(jumpsIn({ includeJumps: undefined })).toEqual([]);
+    });
+
+    it.each(["knee", "ankle"] as const)("stay out with a %s injury", (injury) => {
+      expect(jumpsIn({ injuries: [injury] })).toEqual([]);
+    });
+
+    it("stay out until the squat Assessment is done", () => {
+      expect(jumpsIn({ assessment })).toEqual([]);
+    });
+
+    it("are for the athletic Goal only", () => {
+      expect(jumpsIn({ goal: "build_muscle" })).toEqual([]);
+    });
+
+    it("are never picked to fill the budget, as anything's Alternative Exercise or on a day without them", () => {
+      const done = [jumpWorkout("first", ["pogo-hop", "broad-jump"]), jumpWorkout("second", ["squat-jump"])];
+      const planned = athletic({ workouts: done });
+      const options = planned.flatMap(({ alternatives }) => Object.values(alternatives ?? {}).flat());
+      expect([...planned, ...options].filter(({ slug }) => isJump(slug))).toEqual([]);
+    });
+
+    it("stay themselves on a built-in choice", () => {
+      for (const { slug, alternatives } of jumpsIn({ equipmentProfile: dumbbells })) {
+        expect(alternatives?.bodyweight_only?.map((option) => option.slug)).toEqual([slug]);
+      }
+    });
+
+    it("are the last thing a shorter Length cuts", () => {
+      const today = daysWorkout({ plannedExercises: athletic() }, { workoutLength: "quick" }, "athletic");
+      expect(today.plannedExercises.slice(0, 2).map(({ slug }) => isJump(slug))).toEqual([true, true]);
+      expect(today.plannedExercises.slice(0, 2).map(({ sets }) => sets)).toEqual([3, 3]);
     });
   });
 });

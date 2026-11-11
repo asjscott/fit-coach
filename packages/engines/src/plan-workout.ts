@@ -14,6 +14,7 @@ import { withAlternatives, type Candidate } from "./alternative-exercises";
 import { exerciseBySlug, EXERCISES } from "./data/exercises";
 import { BUILT_IN_EQUIPMENT, isAvailable, isSafeFor, matchesBuiltIn, type ProfileWithLoads } from "./equipment";
 import { muscleFatigue, tiredMuscles, type FatigueWorkout } from "./fatigue";
+import { isJump, JUMP_SETS, jumpCandidates, jumpsForWorkout } from "./jumps";
 import { planReasons } from "./plan-reasons";
 import { scoreExercise, type WeekSoFar } from "./plan-score";
 import { trainingWorkouts } from "./recovery-workout";
@@ -33,6 +34,7 @@ import {
   MIN_WORKOUTS_PER_MUSCLE,
   MUSCLE_CAP_PER_WORKOUT,
   SETS_PER_PICK,
+  WEEKLY_CAP,
   weeklyBudget,
   type WeeklyBudget,
 } from "./weekly-budget";
@@ -58,6 +60,10 @@ export type PlanWorkoutInput = {
   assessment: Pick<Assessment, "bodyWeightKg" | "patterns">;
   goal: Goal;
   daysPerWeek: number;
+  // The one-time "Include jumps" switch on the Profile, off by default (#105)
+  includeJumps?: boolean;
+  // The Block's deload week (weekOfBlock). Only jumps read it so far, at half their contacts
+  deloadWeek?: boolean;
 };
 
 // What the planner decides; the API gives it an id and a status when it saves it. heldBack is the tired Muscles
@@ -128,13 +134,20 @@ function withinVarietyCap(candidates: readonly Candidate[], thisWeek: readonly L
 const byTieOrder = ({ exercise: a }: Candidate, { exercise: b }: Candidate) =>
   b.secondsPerSet - a.secondsPerSet || a.slug.localeCompare(b.slug);
 
-// What the equipment and injuries allow, with a target to prescribe. Never a Recovery Exercise
+// What the equipment and injuries allow, with a target to prescribe. Never a Recovery Exercise, nor a jump, which
+// only the jump rule gives (jumps.ts)
 function possibleExercises(input: PlanWorkoutInput): Candidate[] {
   const { equipmentProfile, injuries } = input;
   const levels = workingLevelsFor(input);
   return EXERCISES.flatMap((exercise) => {
     const level = levels.get(exercise.slug);
-    if (!level || exercise.recovery || !isAvailable(exercise, equipmentProfile) || !isSafeFor(exercise, injuries))
+    if (
+      !level ||
+      exercise.recovery ||
+      isJump(exercise) ||
+      !isAvailable(exercise, equipmentProfile) ||
+      !isSafeFor(exercise, injuries)
+    )
       return [];
     const target = targetFrom(level, exercise, equipmentProfile);
     return target ? [{ exercise, target, outgrown: level.outgrown }] : [];
@@ -156,7 +169,7 @@ function pickableExercises(
 }
 
 // Each built-in choice the primary doesn't already match. It goes in the saved plan, as the phone may have no signal
-// when the user chooses
+// when the user chooses. Jumps are there too, so that a jump stays itself or gives way to another jump
 function builtInCandidates(
   input: PlanWorkoutInput,
   thisWeek: readonly LedgerWorkout[],
@@ -165,8 +178,11 @@ function builtInCandidates(
   const choices = BuiltInEquipment.options.filter((choice) => !matchesBuiltIn(input.equipmentProfile, choice));
   return Object.fromEntries(
     choices.map((choice) => {
-      const possible = possibleExercises({ ...input, equipmentProfile: BUILT_IN_EQUIPMENT[choice] });
-      return [choice, { possible, pickable: pickableExercises(possible, thisWeek, lastWeek, input.daysPerWeek) }];
+      const onChoice = { ...input, equipmentProfile: BUILT_IN_EQUIPMENT[choice] };
+      const possible = possibleExercises(onChoice);
+      const jumps = jumpCandidates(onChoice);
+      const pickable = pickableExercises(possible, thisWeek, lastWeek, input.daysPerWeek);
+      return [choice, { possible: [...jumps, ...possible], pickable: [...jumps, ...pickable] }];
     }),
   );
 }
@@ -190,6 +206,16 @@ const setsToAdd = ({ sets }: Draft, candidate: Candidate) =>
   sets.has(candidate) ? MAX_SETS_PER_EXERCISE - sets.get(candidate)! : SETS_PER_PICK;
 
 const creditsOf = ({ exercise }: Candidate) => Object.entries(creditsPerSet(exercise)) as [Muscle, number][];
+
+// Would the pick keep each of the Exercise's primary Muscles within the cap? Its week counts the Week Ledger, secondary
+// credit included, and the Sets already planned. Secondary Muscles may go over, so compound lifts aren't starved
+const withinCap = (candidate: Candidate, draft: Draft, budget: WeeklyBudget, weekSoFar: MuscleCredits) =>
+  candidate.exercise.muscles.primary.every((muscle) => {
+    const budgeted = budget[muscle];
+    if (budgeted === undefined) return true;
+    const planned = (weekSoFar[muscle] ?? 0) + (draft.credits[muscle] ?? 0);
+    return planned + setsToAdd(draft, candidate) <= budgeted * WEEKLY_CAP;
+  });
 
 // Does the Exercise credit a Muscle still short of what this stage of the fill order wants for it?
 const helpsStage = (candidate: Candidate, stage: WeeklyBudget, ledger: MuscleCredits) =>
@@ -259,19 +285,27 @@ type Selection = {
   limitOf: (muscle: Muscle) => number;
   // False while one of its primary Muscles is over the fatigue limit
   isRested: (candidate: Candidate) => boolean;
+  // Athletic's jumps, which go first, then its required pick
+  jumps: readonly Candidate[];
   required?: Candidate;
 };
 
-// The next pick that fits the time, by fill order and then score. The limits give way once nothing within them helps,
-// then the recovery filter as a last resort, and a 4th Set waits for a stage to run out of new Exercises
+// The next pick that fits the time and the cap, by fill order and then score. The limits give way once nothing within
+// them helps, then the recovery filter as a last resort, and a 4th Set waits for a stage to run out of new Exercises.
+// The cap never gives way
 function nextPick(
   { candidates, stages, goal, budget, limitOf, isRested }: Selection,
   draft: Draft,
   ledger: MuscleCredits,
+  weekSoFar: MuscleCredits,
 ) {
   const open = candidates.filter((candidate) => {
     const sets = setsToAdd(draft, candidate);
-    return sets > 0 && candidate.exercise.secondsPerSet * sets <= draft.secondsLeft;
+    return (
+      sets > 0 &&
+      candidate.exercise.secondsPerSet * sets <= draft.secondsLeft &&
+      withinCap(candidate, draft, budget, weekSoFar)
+    );
   });
   const withinLimits = open.filter((candidate) =>
     creditsOf(candidate).every(
@@ -291,18 +325,30 @@ function nextPick(
   return undefined;
 }
 
-// Picks until the time runs out, each pick counting towards the budget before the next. Once the week's budget is met,
-// the rest is picked as a new week's would be, so a user who trains anyway still gets a balanced Workout
+// Picks until the time or the cap runs out, each pick counting towards the budget before the next. Jumps go first,
+// then the required pick. Once the week's budget is met, the rest is picked as a new week's would be, up to the cap, so
+// a user who trains anyway still gets a balanced Workout. With nothing left to add, the plan ends short of its Length
 function selectExercises(selection: Selection, weekSoFar: MuscleCredits): PlannedExercise[] {
   const draft: Draft = { sets: new Map(), fourthSetAfter: new Map(), credits: {}, secondsLeft: WORKOUT_SECONDS };
   let ledger = weekSoFar;
+  for (const jump of selection.jumps) {
+    const credits = creditsPerSet(jump.exercise);
+    draft.sets.set(jump, JUMP_SETS);
+    draft.credits = addCredits(draft.credits, credits, JUMP_SETS);
+    draft.secondsLeft -= jump.exercise.secondsPerSet * JUMP_SETS;
+    ledger = addCredits(ledger, credits, JUMP_SETS);
+  }
   let budgetMet = false;
   for (;;) {
-    let pick = (draft.sets.size === 0 && selection.required) || nextPick(selection, draft, ledger);
+    const { required } = selection;
+    // The required pick keeps to the cap too
+    const requiredNow =
+      draft.sets.size === selection.jumps.length && required && withinCap(required, draft, selection.budget, weekSoFar);
+    let pick = (requiredNow && required) || nextPick(selection, draft, ledger, weekSoFar);
     if (!pick && !budgetMet) {
       budgetMet = true;
       ledger = draft.credits;
-      pick = nextPick(selection, draft, ledger);
+      pick = nextPick(selection, draft, ledger, weekSoFar);
     }
     if (!pick) {
       return [...draft.sets].map(([candidate, sets]) => {
@@ -351,11 +397,15 @@ export function planWorkout(input: PlanWorkoutInput): WorkoutPlan {
     budget,
     limitOf: muscleLimits(budget, Math.max(1, daysPerWeek - thisWeek.length)),
     isRested,
+    jumps: jumpsForWorkout(jumpCandidates(input), thisWeek),
     required:
       requiredPick(candidates, thisWeek, { goal, budget, ledger }) ??
       requiredSquat(candidates, thisWeek, goal, isRested),
   };
-  const selected = selectExercises(selection, ledger);
+  // A week with every Muscle at the cap still gives a Workout, built as a new week's would be, so a user who trains
+  // anyway gets a balanced one. The plan always has an Exercise
+  const capped = selectExercises(selection, ledger);
+  const selected = capped.length ? capped : selectExercises(selection, {});
   const held = heldBack(candidates, selected, tired);
   return {
     weekStart: monday,

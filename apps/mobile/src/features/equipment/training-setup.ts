@@ -4,6 +4,7 @@ import {
   type EquipmentGroupKey,
   type EquipmentProfile,
   type EquipmentProfileInput,
+  type WeightUnit,
 } from "@fit/shared";
 import { z } from "zod";
 import { toLoads, type LoadsForm } from "./loads";
@@ -48,13 +49,14 @@ export function toEquipmentInput(
   setup: TrainingSetup,
   equipment: EquipmentByGroup,
   loads: LoadsForm,
+  unit: WeightUnit,
 ): EquipmentProfileInput {
   const tags = selectedTags(setup, equipment);
   return {
     ...setupProfiles[setup],
     isPrimary: true,
     tags,
-    loads: asksForLoads(setup) ? toLoads(loads, tags) : {},
+    loads: asksForLoads(setup) ? toLoads(loads, tags, unit) : {},
   };
 }
 

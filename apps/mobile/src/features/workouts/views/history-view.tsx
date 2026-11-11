@@ -8,9 +8,9 @@ import { Ring } from "@/components/ring";
 import { Screen } from "@/components/screen";
 import { Spinner } from "@/components/spinner";
 import { Text } from "@/components/text";
-import { useCurrentUser } from "@/features/user/current-user-provider";
+import { useCurrentUser, useWeightUnit } from "@/features/user/current-user-provider";
 import { spacing, useTheme } from "@/theme";
-import { durationLabel, kgLabel, relativeDateLabel, setsLabel, weekLabel } from "../format";
+import { durationLabel, relativeDateLabel, setsLabel, volumeLabel, weekLabel } from "../format";
 import { useHistory } from "../history-provider";
 import { useRefreshHistory } from "../hooks/use-refresh-history";
 import { exerciseName } from "../library";
@@ -75,6 +75,7 @@ export default function HistoryView() {
 
 // "This week" with a ring, and "2 of 4 Workouts · 6,420 kg" against the user's days per week
 function WeekHeader({ week, daysPerWeek, now }: { week: HistoryWeek<Row>; daysPerWeek?: number; now: Date }) {
+  const unit = useWeightUnit();
   const n = week.workoutCount;
   const count = daysPerWeek ? `${n} of ${daysPerWeek} Workouts` : `${n} ${n === 1 ? "Workout" : "Workouts"}`;
   return (
@@ -85,7 +86,7 @@ function WeekHeader({ week, daysPerWeek, now }: { week: HistoryWeek<Row>; daysPe
           {weekLabel(week.start, now)}
         </Text>
         <Text size="sm" color="muted">
-          {count} · {kgLabel(week.volumeKg)} kg
+          {count} · {volumeLabel(week.volumeKg, unit)} {unit}
         </Text>
       </View>
     </View>
@@ -94,6 +95,7 @@ function WeekHeader({ week, daysPerWeek, now }: { week: HistoryWeek<Row>; daysPe
 
 // When, which Exercises, and the Workout's Volume, Sets and duration; a Pending Workout says it's waiting to sync
 function WorkoutRow({ workout, now }: { workout: Row; now: Date }) {
+  const unit = useWeightUnit();
   const { colors } = useTheme();
   const summary = summarizeWorkout(workout);
   return (
@@ -119,9 +121,9 @@ function WorkoutRow({ workout, now }: { workout: Row; now: Date }) {
       </View>
       <View style={{ alignItems: "flex-end" }}>
         <Text size="xl" weight="bold">
-          {kgLabel(summary.volumeKg)}
+          {volumeLabel(summary.volumeKg, unit)}
           <Text size="sm" color="muted">
-            {" kg"}
+            {` ${unit}`}
           </Text>
         </Text>
         <Text size="sm" color="muted">

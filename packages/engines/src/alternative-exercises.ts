@@ -1,6 +1,7 @@
 import { MAX_ALTERNATIVE_OPTIONS } from "@fit/shared";
 import type { BuiltInEquipment, Exercise, PlannedExercise, SetTarget } from "@fit/shared";
 import { exerciseBySlug } from "./data/exercises";
+import { isJump } from "./jumps";
 
 // An Exercise the user can be given, with its target on the equipment it was worked out for. Outgrown: its Working
 // Level is past the top of what it prescribes, so its harder variant goes in its place where possible
@@ -19,7 +20,11 @@ const sharesPattern = (a: Exercise, b: Exercise) =>
 // The best stand-ins for an Exercise, best first: the same Pattern if any share a primary Muscle, else any Pattern.
 // The sort is stable, so the candidates' own order settles a tie
 export function alternativeOptions(exercise: Exercise, candidates: readonly Candidate[]) {
-  const sharing = candidates.filter((candidate) => sharedPrimaryMuscles(exercise, candidate.exercise) > 0);
+  // A jump only ever stands in for a jump, and nothing else for a jump (#105)
+  const sharing = candidates.filter(
+    (candidate) =>
+      isJump(candidate.exercise) === isJump(exercise) && sharedPrimaryMuscles(exercise, candidate.exercise) > 0,
+  );
   const samePattern = sharing.filter((candidate) => sharesPattern(exercise, candidate.exercise));
   return [...(samePattern.length ? samePattern : sharing)]
     .sort((a, b) => sharedPrimaryMuscles(exercise, b.exercise) - sharedPrimaryMuscles(exercise, a.exercise))

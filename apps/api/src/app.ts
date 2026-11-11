@@ -3,13 +3,16 @@ import Fastify from "fastify";
 import { serializerCompiler, validatorCompiler } from "fastify-type-provider-zod";
 import { ensureAssessmentIndexes, migrateWorkingLevels } from "./assessments";
 import { assessmentRoutes } from "./routes/assessments";
+import { checkInRoutes } from "./routes/check-ins";
 import { exerciseRoutes } from "./routes/exercises";
 import { plannedWorkoutRoutes } from "./routes/planned-workouts";
 import { userRoutes } from "./routes/users";
 import { workoutRoutes } from "./routes/workouts";
 import { HealthResponse } from "@fit/shared";
 import { registerAuth } from "./auth";
+import { ensureCheckInIndexes } from "./check-ins";
 import { pingDb } from "./db";
+import { registerTestErrorRoute, reportRouteErrorsWithUser } from "./error-reporting";
 import { ensurePlannedWorkoutIndexes } from "./planned-workouts";
 import { ensureUserIndexes, migrateUsers } from "./users";
 import { ensureWorkoutIndexes } from "./workouts";
@@ -33,6 +36,8 @@ export async function buildApp({ logger }: { logger: boolean }) {
 
   await registerAuth(app);
 
+  reportRouteErrorsWithUser(app);
+
   await ensureUserIndexes().catch((err) => app.log.error(err, "Failed to create user indexes"));
 
   await ensureWorkoutIndexes().catch((err) => app.log.error(err, "Failed to create workout indexes"));
@@ -40,6 +45,8 @@ export async function buildApp({ logger }: { logger: boolean }) {
   await ensureAssessmentIndexes().catch((err) => app.log.error(err, "Failed to create assessment indexes"));
 
   await ensurePlannedWorkoutIndexes().catch((err) => app.log.error(err, "Failed to create planned workout indexes"));
+
+  await ensureCheckInIndexes().catch((err) => app.log.error(err, "Failed to create check-in indexes"));
 
   await migrateUsers().catch((err) => app.log.error(err, "Failed to migrate users"));
 
@@ -50,6 +57,8 @@ export async function buildApp({ logger }: { logger: boolean }) {
   await app.register(workoutRoutes);
   await app.register(assessmentRoutes);
   await app.register(plannedWorkoutRoutes);
+  await app.register(checkInRoutes);
+  registerTestErrorRoute(app);
 
   app.get("/health", async () => {
     return HealthResponse.parse({

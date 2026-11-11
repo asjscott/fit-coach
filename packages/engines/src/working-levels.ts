@@ -126,6 +126,8 @@ function shapeOf(
     return { slug, unit: "band", level, reps: BAND_REP_RANGE.min, outgrown: false };
   }
   if (entry.kind === "core-reps") return { slug, unit: "reps", reps: CORE_REPS, outgrown: false };
+  // A jump's Sets are a fixed number of contacts, so it has no Working Level
+  if (entry.kind === "contacts") return null;
   const reference = referenceStrengths[entry.pattern];
   if (reference === undefined) return null;
   const maximum = reference * entry.ratio;

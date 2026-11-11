@@ -4,8 +4,10 @@ export * from "./assessments";
 export * from "./check-in";
 export * from "./exercises";
 export * from "./equipment";
+export * from "./error-reporting";
 export * from "./health";
 export * from "./planned-workouts";
+export * from "./units";
 export * from "./user";
 export * from "./workouts";
 

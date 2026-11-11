@@ -14,7 +14,7 @@ import { Stack } from "@/components/stack";
 import { Stat } from "@/components/stat";
 import { Text } from "@/components/text";
 import { useToast } from "@/contexts/toast-context";
-import { usePrimaryEquipmentProfile } from "@/features/user/current-user-provider";
+import { usePrimaryEquipmentProfile, useWeightUnit } from "@/features/user/current-user-provider";
 import { useNow } from "@/hooks/use-now";
 import { fonts, spacing, useTheme } from "@/theme";
 import { errorMessage } from "@/utils/error-message";
@@ -22,7 +22,7 @@ import { CurrentExerciseBox } from "../components/current-exercise-box";
 import { SupersetBox } from "../components/superset-box";
 import { WorkoutExerciseRow } from "../components/workout-exercise-row";
 import { nextPlannedExercise, useCurrentWorkoutExercise } from "../current-workout-exercise";
-import { elapsedClockLabel, kgLabel, supersetLetter, timeLabel } from "../format";
+import { elapsedClockLabel, supersetLetter, timeLabel, volumeLabel } from "../format";
 import { useHasEnded } from "../hooks/use-has-ended";
 import { useLeaveWorkout } from "../hooks/use-leave-workout";
 import { useStartWorkout } from "../hooks/use-open-workout";
@@ -191,12 +191,13 @@ function WorkoutTitle({ title, startedAt }: { title: string; startedAt: string }
 
 // Elapsed (ticking), Sets and Volume so far
 function WorkoutStats({ workout }: { workout: InProgressWorkout }) {
+  const unit = useWeightUnit();
   const now = useNow();
   return (
     <View style={styles.stats}>
       <Stat size="3xl" value={elapsedClockLabel(now - Date.parse(workout.startedAt))} label="Elapsed" />
       <Stat size="3xl" value={String(setCount(workout))} label="Sets" />
-      <Stat size="3xl" value={kgLabel(workoutVolume(workout))} unit="kg" label="Volume" />
+      <Stat size="3xl" value={volumeLabel(workoutVolume(workout), unit)} unit={unit} label="Volume" />
     </View>
   );
 }

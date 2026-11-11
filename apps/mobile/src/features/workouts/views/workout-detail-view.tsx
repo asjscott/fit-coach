@@ -14,10 +14,11 @@ import { useToast } from "@/contexts/toast-context";
 import { spacing, useTheme } from "@/theme";
 import { errorMessage } from "@/utils/error-message";
 import { SetRow } from "../components/set-row";
-import { dateLabel, kgLabel, timeStat, workoutTimesLabel } from "../format";
+import { dateLabel, timeStat, volumeLabel, workoutTimesLabel } from "../format";
 import { useHistory } from "../history-provider";
 import { exerciseName, libraryExercise } from "../library";
 import { useLogbook } from "../logbook-provider";
+import { useWeightUnit } from "@/features/user/current-user-provider";
 
 // The detail of a Workout from History: a Pending Workout from the Logbook, deleted
 // there (works offline), or an uploaded one from the list History loaded, deleted on the server
@@ -77,6 +78,7 @@ type WorkoutDetailProps = {
 // Delete workout sits in the header menu, behind a confirmation. Takes the Workout and how to delete it, so an
 // uploaded or a Pending Workout can use it
 function WorkoutDetail({ workout, note, onDelete }: WorkoutDetailProps) {
+  const unit = useWeightUnit();
   const { colors } = useTheme();
   const { showToast } = useToast();
   const [confirming, setConfirming] = useState(false);
@@ -116,7 +118,7 @@ function WorkoutDetail({ workout, note, onDelete }: WorkoutDetailProps) {
         )}
       </Stack>
       <View style={[styles.stats, { borderColor: colors.line }]}>
-        <Stat value={kgLabel(summary.volumeKg)} unit="kg" label="Volume" />
+        <Stat value={volumeLabel(summary.volumeKg, unit)} unit={unit} label="Volume" />
         <Stat value={String(summary.sets)} label="Sets" />
         <Stat {...timeStat(summary.durationMs)} label="Time" />
       </View>

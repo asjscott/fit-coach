@@ -11,7 +11,7 @@ screens (apps/mobile/src/features/workouts/views)
   └─ LogbookProvider (logbook-provider.tsx): one Logbook per app, its state, and finish → toast
        ├─ Logbook (packages/engines/src/logbook.ts): every rule with no UI; the main test seam
        │    ├─ DeviceStorage: device-storage.ts (phone, SQLite) / device-storage.web.ts (web, localStorage)
-       │    ├─ WorkoutUploader: POST /workouts through useApi
+       │    ├─ WorkoutUploader: POST /workouts and PUT /check-ins/:date through useApi
        │    ├─ PreviousSetsSource: GET /workouts/previous-sets?slug= through useApi (4 s timeout)
        │    └─ PlannedWorkoutSource: POST /planned-workouts/current through useApi
        └─ useSyncTriggers: sync() on foreground and on reconnect (expo-network)
@@ -38,11 +38,16 @@ Schemas shared by app and API: packages/shared/src/workouts.ts
   200).
 - **Exercises come from the library built into the app** (`EXERCISES` in `@fit/engines`), not `/exercises`, so the picker
   works offline; an unknown slug is shown as-is (`exerciseName`).
-- **The kg stepper steps through real loads** (#58): `Logbook.nextLoadKg` gives the next lighter or heavier load the
-  primary Equipment Profile makes for the Exercise (`exerciseLoadsKg`, the same loads the Assessment suggests from;
-  rule in `stepLoadKg`, `packages/engines/src/equipment.ts`), staying put past the lightest or heaviest, and by 2 kg
-  when the loads aren't known. `set-entry.ts` only parses the typed text, steps reps (1) and seconds (5), and names
-  the kg step for screen readers (`kgStepLabel`: "Next heavier weight", or "Plus 2 kg" when the loads aren't known).
+- **Loads are stored in kg and shown in the user's unit** (#126). `User.unit` is lb or kg, lb when never chosen
+  (`useWeightUnit`, picked on Profile). Every label in `format.ts` takes the unit and rounds a load to 0.5 of it
+  (`loadInUnit`, `packages/shared/src/units.ts`). A load typed in pounds is stored as its exact kg (`toKg`), never
+  rounded, so 25 lb always shows back as 25 lb; `Set.kg` has no step rule. Equipment Profile weights are entered in
+  the unit too (`loads.ts`, its own lb and kg size lists).
+- **The load stepper steps through real loads** (#58): `loadStep` in `set-entry.ts` steps the primary Equipment
+  Profile's loads for the Exercise (`exerciseLoadsKg`, the same loads the Assessment suggests from) as the user sees
+  them, so a load a hair off the one shown never sticks, staying put past the lightest or heaviest, and by 5 lb or 2 kg
+  when the loads aren't known. `set-entry.ts` also parses the typed text, steps reps (1) and seconds (5), and names the
+  load step for screen readers (`loadStepLabel`: "Next heavier weight", or "Plus 5 lb" when the loads aren't known).
 - **The rest timer lives in memory on the LogbookProvider** (#95), not in the Logbook or storage: it belongs to the
   Workout, so it follows the user between Exercises and to Today, and a force-quit loses it. Only Log set starts or
   restarts it; Finish, Discard and sign-out end it. Its length and countdown are pure (`rest-timer.ts` in
@@ -162,7 +167,9 @@ Phone
   ├─ usePlannedWorkout (features/today/hooks): the copy, asking the server on every Today visit
   ├─ useDaysWorkout: the user's choices over daysWorkout (days-workout.ts), held in memory until Start
   ├─ useCheckIn: today's check-in (stored-check-in.ts, key today.checkIn, by local date), passed to daysWorkout with
-  │  the usual choices. readinessShare (check-in.ts) trims the lowest-priority Sets after the Length cut, unless the
+  │  the usual choices. Each check-in is also queued on the Logbook (queueCheckIn, key logbook:pending-check-ins, one
+  │  per date) and uploaded by sync() after the Pending Workouts, retried the same way, to PUT /check-ins/:date
+  │  (apps/api/src/check-ins.ts, routes/check-ins.ts; GET /check-ins/:date reads one back). Readiness never waits on it. readinessShare (check-in.ts) trims the lowest-priority Sets after the Length cut, unless the
   │  user picks Full workout. Card: check-in-card.tsx, shown by showsCheckIn (today-status.ts)
   ├─ Today (features/today/views/today-view.tsx): one card for the day (`todayCard` in today-status.ts, drawn by today-card.tsx), and planned-workout-sheet.tsx with the Exercises, targets, Length and equipment
   │  (rest-day.ts). todayPlan (today-status.ts) gates both: a plan, stale or not, and no In-progress Workout
@@ -194,7 +201,7 @@ Schemas: packages/shared/src/planned-workouts.ts
 - **A stored Working Level wins unless it's for a way of doing the Exercise this profile doesn't have.** Otherwise the
   planner seeds one from the Assessment's Reference Strengths, which covers Full gym, Bodyweight only and profiles added
   since. A target is rounded to the profile's loads, and an Exercise under the empty bar isn't prescribed.
-- **`target.kg` is a profile load, not forced to 0.25 steps**, while a logged `Set.kg` is: the Logbook rounds the draft.
+- **`target.kg` is a profile load, kept as it is** in the draft; the phone shows it in the user's unit.
 - **A Full gym choice changes little for most users.** An Exercise still possible stays, so a user with no equipment
   gets the same bodyweight Workout, and a Full home gym only sees loads rounded to the built-in table.
 - **`ballistic` needs `pnpm --filter @fit/api seed:exercises`** on the real database (needs `.env`, so it's a human
@@ -218,6 +225,23 @@ Schemas: packages/shared/src/planned-workouts.ts
   offer. The walk is one Set (#109, `takesOneSet`): `restAfterSet` gives no rest after it, and the logging screen
   offers "Next exercise" rather than a Set 2 (`takesAnotherSet`). Recovery Exercises have no Pattern and no strength ratio, so no Working Level. `recovery` also needs
   `seed:exercises` re-run, as `ballistic` did.
+- **Jumps come only from the jump rule** (#105, `jumps.ts`): athletic, `UserProfile.includeJumps` on, the squat tested
+  rather than estimated, and no knee or ankle injury (`avoidWith`). `possibleExercises` leaves them out, so the score
+  never picks one; `jumpsForWorkout` puts 2 of them, 3 Sets each, first in the first 2 Workouts of the week, one that
+  goes up and one forward or sideways. A jump has no Working Level: its target is `{ unit: "reps" }` holding its
+  contacts (`STRENGTH_RATIOS` kind `contacts`), halved when `PlanWorkoutInput.deloadWeek`, which the API sets from
+  `weekOfBlock`. It's logged as a bodyweight Set whose reps are contacts, which the phone labels so (`isJumpSlug`). On a
+  built-in choice a jump only stands in for a jump (`alternativeOptions`). The six jumps also need `seed:exercises`.
+- **A Check-in is stored once per user per local date** (#125), the phone's date, sent in the URL. The server keeps the
+  one with the latest `checkedInAt`, so a retry or a late upload of an earlier one changes nothing, and the PUT answers
+  with the Check-in the date now has. The phone's queue keeps only the newest per date, and one replaced mid-upload
+  still goes up next. Sign-out clears the queue; a failed Check-in never holds up a Pending Workout.
+- **The 130% cap never gives way, but for an empty plan** (#128, `WEEKLY_CAP` in `weekly-budget.ts`). A pick is left
+  out when a primary Muscle with a budget would go over 1.3 × its budget, counting the Week Ledger (secondary credit
+  included) and the Sets already planned. So the plan can end well short of Long, and the Day's Workout's
+  `estimatedSeconds` is the honest time. Only when the cap leaves nothing at all is the plan built as a new week's would
+  be, since a stored plan needs an Exercise. `pnpm --filter @fit/engines simulate` prints each Muscle's share of its
+  budget from primary credit and in total; `plan-outcomes.test.ts` pins the primary side.
 - **Build and tune with the simulation.** Scores tie often, as many Exercises share budgeted credits. The planner is
   deterministic, so ties fall to last week's Exercises, then the longest Sets, then the slug, never library order.
   `plan-outcomes.test.ts` pins what a user should see, with the library in either order: run it after any tuning.
@@ -259,6 +283,47 @@ it("stores an upload once however often it's retried", async () => {
 - **Name tests in GLOSSARY.md terms and say which user story or issue they pin**, as `routes/workouts.test.ts` does.
 - **Never import `db.ts` or a module that does at the top of a test file.** The database client reads `MONGODB_URI` when
   it loads, so the harness sets it before importing the app. Reach the server only through `api.signIn()`.
+
+## Error reporting (#122)
+
+Errors on the web app and the API go to Sentry, tagged with the deploy's environment. Without a DSN nothing is
+reported, so local runs, tests and CI need nothing set.
+
+- **API:** `src/error-reporting.ts`. `server.ts` starts Sentry; `buildApp` adds the user hook and the test route. Sentry's Fastify integration reports errors
+  thrown in a route (5xx only) and uncaught exceptions. A `preHandler` hook adds the Clerk user id on the request's own
+  scope.
+- **Web app:** `src/features/error-reporting/error-reporting.web.ts` reports uncaught errors and unhandled rejections.
+  The root layout sets the Clerk user id. The native build gets the no-op `error-reporting.ts`.
+- **Personal data:** nothing but the Clerk user id. `@fit/shared`'s `MINIMAL_DATA_COLLECTION` turns off user info,
+  cookies, headers, bodies, query strings and local variables, and `withoutPersonalData` strips the same again in
+  `beforeSend`. The web app also drops console and tap breadcrumbs.
+- **Test errors:** `/debug-error` on the web app throws one, and calls the API's `GET /debug/error` (signed in only),
+  which throws another, so one page checks both sides of a deploy. Checks E1–E3 in `docs/manual-checks.md`.
+
+### Setting it up (a human, once)
+
+1. In Sentry (free tier), create a project for the API (platform Node.js) and one for the web app (React). Each
+   project's DSN is under **Project settings → Client Keys**. A DSN is not a secret, but it stays out of the repo.
+2. Set these on each deploy. The environment is `production` or `staging`; unset, events say `development`.
+
+   | Where                             | Variable                         | Value                 |
+   | --------------------------------- | -------------------------------- | --------------------- |
+   | Render, production API service    | `SENTRY_DSN`                     | the API project's DSN |
+   | Render, production API service    | `SENTRY_ENVIRONMENT`             | `production`          |
+   | Render, staging API service       | `SENTRY_DSN`                     | the API project's DSN |
+   | Render, staging API service       | `SENTRY_ENVIRONMENT`             | `staging`             |
+   | Cloudflare Pages, Production      | `EXPO_PUBLIC_SENTRY_DSN`         | the web project's DSN |
+   | Cloudflare Pages, Production      | `EXPO_PUBLIC_SENTRY_ENVIRONMENT` | `production`          |
+   | Cloudflare Pages, Preview (`dev`) | `EXPO_PUBLIC_SENTRY_DSN`         | the web project's DSN |
+   | Cloudflare Pages, Preview (`dev`) | `EXPO_PUBLIC_SENTRY_ENVIRONMENT` | `staging`             |
+
+   The web app's are read at build time, so redeploy after setting them. Render's `RENDER_GIT_COMMIT` becomes the
+   API's release.
+
+3. Run E1–E3 in `docs/manual-checks.md`.
+
+Web stack traces point into the minified bundle: they show the file and line, but not the source. Uploading source
+maps would fix that and isn't set up.
 
 ## Running things
 

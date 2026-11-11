@@ -14,7 +14,7 @@ import {
   toTrainingSetup,
   TrainingSetup,
 } from "@/features/equipment/training-setup";
-import { useCurrentUser, usePrimaryEquipmentProfile } from "@/features/user/current-user-provider";
+import { useCurrentUser, usePrimaryEquipmentProfile, useWeightUnit } from "@/features/user/current-user-provider";
 import { useNotifications } from "@/hooks/use-notifications";
 import type { Stage, StageAction } from "../form/staged-form";
 
@@ -35,6 +35,8 @@ export function useUserOnboarding() {
   const { handleError } = useNotifications();
   const profile = user?.profile ?? {};
   const primaryEquipment = usePrimaryEquipmentProfile();
+  // Weights are entered in the user's unit and saved in kg
+  const unit = useWeightUnit();
 
   // Captured once so the completion message doesn't flip when the save stamps onboardedAt
   const [isEditing] = useState(!!user?.onboardedAt);
@@ -50,7 +52,7 @@ export function useUserOnboarding() {
       workoutLength: isEditing ? usualWorkoutLength(profile) : profile.workoutLength,
       trainingSetup: primaryEquipment && toTrainingSetup(primaryEquipment),
       equipment: groupTags(primaryEquipment?.tags ?? []),
-      loads: toLoadsForm(primaryEquipment?.loads),
+      loads: toLoadsForm(primaryEquipment?.loads, unit),
     },
   });
 
@@ -83,7 +85,7 @@ export function useUserOnboarding() {
   const save = async ({ trainingSetup, equipment, loads, ...values }: OnboardingValues) => {
     try {
       // Updates the primary profile by id if there is one, so retrying or editing never adds a second
-      await saveEquipmentProfile(toEquipmentInput(trainingSetup, equipment, loads), primaryEquipment?.id);
+      await saveEquipmentProfile(toEquipmentInput(trainingSetup, equipment, loads, unit), primaryEquipment?.id);
 
       // The server stamps onboardedAt once the required fields and an equipment profile are saved
       const updated = await updateUser({ profile: values });
