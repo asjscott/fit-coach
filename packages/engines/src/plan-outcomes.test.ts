@@ -1,7 +1,7 @@
 import { beforeAll, describe, expect, it, vi } from "vitest";
 
 import type { Goal, Muscle } from "@fit/shared";
-import { addCredits, creditsPerSet, exerciseBySlug, weeklyBudget, type MuscleCredits } from "./index";
+import { addCredits, creditsPerSet, exerciseBySlug, repRange, weeklyBudget, type MuscleCredits } from "./index";
 
 type Simulation = typeof import("../scripts/simulate-weeks");
 type Run = import("../scripts/simulate-weeks").Run;
@@ -155,6 +155,34 @@ describe.each([
         }
       }
     }
+  });
+
+  // Stories 29, 30: the simulated lifter reaches every target, so each weighted Exercise's Working Level moves up from
+  // one Workout to the next: over four weeks its target is heavier, or the same load for more reps. Not a carry, which
+  // has no target reps and moves only when a different load is logged (story 63)
+  const weightedTargets = (run: Run) => {
+    const targets = new Map<string, { kg: number; reps: number }[]>();
+    for (const { exercises } of simulate(run).flat()) {
+      for (const { slug, target } of exercises) {
+        if (target.unit !== "kg" || !repRange(exerciseBySlug(slug)!, "kg")) continue;
+        targets.set(slug, [...(targets.get(slug) ?? []), { kg: target.kg, reps: target.reps }]);
+      }
+    }
+    return targets;
+  };
+
+  it.each(GOAL_NAMES)("%s moves its loads and target reps up over four weeks on a Full gym", (goal) => {
+    const targets = weightedTargets({ ...fullGym, goal, days: 4, length: "standard" });
+    const moved = [...targets].filter(([, planned]) => planned.length > 1);
+    expect(moved.length).toBeGreaterThanOrEqual(3);
+    for (const [slug, planned] of moved) {
+      const first = planned[0]!;
+      const last = planned.at(-1)!;
+      const heavier = last.kg > first.kg || (last.kg === first.kg && last.reps > first.reps);
+      expect(heavier, `${slug}: ${JSON.stringify(planned)}`).toBe(true);
+    }
+    // At least one load goes up a Load Step, not just the reps
+    expect([...targets.values()].some((planned) => planned.at(-1)!.kg > planned[0]!.kg)).toBe(true);
   });
 
   it.each(GOAL_NAMES)("%s reaches the floor on every other week", (goal) => {
