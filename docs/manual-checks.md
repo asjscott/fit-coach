@@ -150,6 +150,17 @@ A Workout pairs Exercises only when it wouldn't otherwise fit its Length, so cho
 - [ ] **S1** P9's timing check on a paired Workout: start one whose sheet shows at least one superset, note its "About N min", and run it in full with a timer, resting as the timer says and skipping nothing. A pair is timed at Sets × (the longer Exercise's Set + 30 s): does the real time come out within a few minutes of the estimate?
   - iOS: Result: · Android: Result: · Notes:
 
+## Sentry (#122)
+
+Needs Sentry set up and staging deployed with its variables: see "Error reporting" in `docs/agents/workouts.md`. Run these on the installed web app on the iPhone, against staging, signed in with a test account.
+
+- [ ] **E1** The web app: open `/debug-error` on the staging web app (type it after the address in Safari). Within a minute, Sentry has "Test error from the web app (/debug-error)" under the staging environment, with a stack trace and your Clerk user id (`user_…`) as the user, and no email, IP address or headers.
+  - iPhone: Result: · Notes:
+- [ ] **E2** The API: the same page also asks the staging API to throw, and says "the API answered: … Test error from the API". Sentry has "Test error from the API (GET /debug/error)" under staging, with a stack trace, the transaction `GET /debug/error` and your Clerk user id, and no headers, body or query string.
+  - iPhone: Result: · Notes:
+- [ ] **E3** Production stays apart: an error on staging never shows under production, and the local app (no DSN) sends nothing.
+  - Result: · Notes:
+
 ## Over time
 
 These need real weeks of training on `dev`, so run them while M5's gaps are built.
