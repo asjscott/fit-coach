@@ -36,6 +36,8 @@ export const STRENGTH_RATIOS: Record<string, StrengthRatio> = {
   "split-squat": bodyweight("squat", 1.2, 0.7),
   "reverse-lunge": bodyweight("squat", 1.2, 0.7),
   "step-up": bodyweight("squat", 1.2, 0.7),
+  "calf-raise": weighted("squat", 0.3),
+  "cable-knee-extension": weighted("squat", 0.25),
   "bulgarian-split-squat": bodyweight("squat", 1.15, 0.7),
   "cossack-squat": bodyweight("squat", 1.1, 0.7),
   "shrimp-squat": bodyweight("squat", 1, 0.7),
@@ -61,6 +63,7 @@ export const STRENGTH_RATIOS: Record<string, StrengthRatio> = {
   "single-leg-romanian-deadlift": bodyweight("hinge", 0.8, 0.6),
   "single-leg-glute-bridge": bodyweight("hinge", 0.75, 0.6),
   "suspension-hamstring-curl": bodyweight("hinge", 0.7, 0.6),
+  "nordic-hamstring-curl": bodyweight("hinge", 0.5, 0.6),
 
   // ─── Carry: from hinge, per hand ───
   "farmers-carry": weighted("hinge", 0.4),
@@ -86,6 +89,7 @@ export const STRENGTH_RATIOS: Record<string, StrengthRatio> = {
   "archer-push-up": bodyweight("push", 1.1, 0.64),
   "bar-dip": bodyweight("push", 1.45, 0.9),
   "ring-dip": bodyweight("push", 1.35, 0.9),
+  "dumbbell-overhead-triceps-extension": weighted("push", 0.25),
 
   // ─── Pull: a pull-up's total load (body weight plus anything added) ───
   "pull-up": bodyweight("pull", 1, 1),
@@ -99,6 +103,8 @@ export const STRENGTH_RATIOS: Record<string, StrengthRatio> = {
   "renegade-row": weighted("pull", 0.15),
   "lat-pulldown": weighted("pull", 0.75),
   "seated-cable-row": weighted("pull", 0.75),
+  "dumbbell-curl": weighted("pull", 0.2),
+  "table-row": bodyweight("pull", 0.8, 0.5),
 
   // ─── Core: plank seconds ───
   plank: timed(1),

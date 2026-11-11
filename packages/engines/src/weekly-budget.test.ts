@@ -39,7 +39,27 @@ describe("weeklyBudget", () => {
   ];
 
   it.each(worked)("%s at %i days per week is %i, and %i for side_delts and abs", (goal, days, main, last) => {
-    expect(weeklyBudget(goal, days)).toEqual(row(main, last));
+    expect(weeklyBudget(goal, days)).toMatchObject(row(main, last));
+  });
+
+  // Story 12: a calf raise exists, so calves join the budget for the two Goals the research found a case for. Min 4,
+  // target 6, scaled by the same days scale: 6 × 0.75 = 4.5 rounds up to 5, 6 × 1.125 = 6.75 to 7, 6 × 1.25 = 7.5 to 8
+  it.each([
+    ["build_muscle", 2, 5],
+    ["build_muscle", 3, 5],
+    ["build_muscle", 4, 6],
+    ["build_muscle", 5, 7],
+    ["build_muscle", 6, 8],
+    ["athletic", 2, 5],
+    ["athletic", 4, 6],
+    ["athletic", 6, 8],
+  ] as const)("budgets calves for %s at %i days per week at %i", (goal, days, calves) => {
+    expect(weeklyBudget(goal, days).calves).toBe(calves);
+  });
+
+  it.each(["lose_fat", "recomp"] as const)("leaves calves out of %s's budget", (goal) => {
+    expect(Object.keys(weeklyBudget(goal, 4))).not.toContain("calves");
+    expect(weeklyBudget(goal, 4)).toEqual(row(14, 8));
   });
 });
 
@@ -56,9 +76,15 @@ describe("scaledBudget", () => {
 });
 
 describe("fillOrder", () => {
-  it("takes every Muscle to 4, then to its min, then the bigger Muscles to budget, then side_delts and abs", () => {
+  // Story 12: calves fill with side_delts and abs, the last Muscles
+  it("takes every Muscle to 4, then to its min, then the bigger Muscles to budget, then side_delts, abs and calves", () => {
     const { side_delts, abs, ...main } = row(14, 9);
-    expect(fillOrder("build_muscle", 3)).toEqual([row(4, 4), row(10, 6), main, { side_delts, abs }]);
+    expect(fillOrder("build_muscle", 3)).toEqual([
+      { ...row(4, 4), calves: 4 },
+      { ...row(10, 6), calves: 4 },
+      main,
+      { side_delts, abs, calves: 5 },
+    ]);
   });
 
   it("uses the Goal's mins", () => {

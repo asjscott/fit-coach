@@ -131,6 +131,33 @@ describe("planWorkout", () => {
     });
   });
 
+  // Story 12: budgets the library couldn't reach before (#101)
+  describe("the library's gaps", () => {
+    it("gives Bodyweight only lats work, with the table row", () => {
+      const chosen = slugs({
+        equipmentProfile: builtInEquipment("bodyweight_only", "kg"),
+        workingLevels: [],
+        assessment,
+      });
+      expect(chosen).toContain("table-row");
+    });
+
+    it("gives the calf raise once calves are furthest behind", () => {
+      // Every other Muscle has met build_muscle's budget, and nothing but the calf raise trains calves as primary
+      const workouts = [
+        week({
+          "goblet-squat": 16,
+          "dumbbell-romanian-deadlift": 16,
+          "one-arm-dumbbell-row": 16,
+          "dumbbell-floor-press": 16,
+          "dumbbell-lateral-raise": 10,
+          plank: 10,
+        }),
+      ];
+      expect(slugs({ workouts, workingLevels: [...withBench, kg("calf-raise", 20)] })[0]).toBe("calf-raise");
+    });
+  });
+
   describe("when time can't fit the Weekly Budget", () => {
     it("takes every Muscle to 4 first", () => {
       // All but side_delts have 4. Lateral raise scores 1.15, less than goblet squat's 1.67
@@ -176,7 +203,8 @@ describe("planWorkout", () => {
     });
 
     it("doesn't chase a Muscle the Equipment Profile can't train", () => {
-      // Bodyweight only: nothing trains lats, whose 0 of 4 mustn't keep the plan from the other Muscles' mins
+      // Bodyweight only, with no Working Level for the table row: nothing trains lats, whose 0 of 4 mustn't keep the
+      // plan from the other Muscles' mins. recomp, as it doesn't budget calves, which a bodyweight squat credits
       const equipmentProfile: ProfileWithLoads = { tags: [], loads: {} };
       const workouts = [
         week({
@@ -189,7 +217,7 @@ describe("planWorkout", () => {
         }),
       ];
       const workingLevels = [reps("push-up", 12), reps("bodyweight-squat", 20), reps("prone-ytw", 12)];
-      const chosen = slugs({ equipmentProfile, workouts, workingLevels });
+      const chosen = slugs({ equipmentProfile, workouts, workingLevels, goal: "recomp" });
       // Chest's 4 of 10 is the furthest behind its min
       expect(chosen[0]).toBe("push-up");
       expect(chosen.some((slug) => exerciseBySlug(slug)?.muscles.primary.includes("lats"))).toBe(false);
@@ -245,7 +273,7 @@ describe("planWorkout", () => {
   });
 
   describe("a 4th Set picked ahead of a later Exercise", () => {
-    // Lateral raise is the 5th Exercise picked, its 4th Set comes after the 6th, and band row is picked after that
+    // Lateral raise is the 5th Exercise picked, its 4th Set comes after the 7th, and band row is picked after that
     const { plannedExercises } = plan({
       equipmentProfile: builtInEquipment("full_gym", "kg"),
       workingLevels: [],
@@ -256,8 +284,8 @@ describe("planWorkout", () => {
     const raise = plannedExercises.find(({ slug }) => slug === "dumbbell-lateral-raise");
 
     it("records its place among the picks", () => {
-      expect(raise).toMatchObject({ sets: 4, fourthSetAfter: 6 });
-      expect(plannedExercises.map(({ slug }) => slug).indexOf("band-row")).toBeGreaterThanOrEqual(6);
+      expect(raise).toMatchObject({ sets: 4, fourthSetAfter: 7 });
+      expect(plannedExercises.map(({ slug }) => slug).indexOf("band-row")).toBeGreaterThanOrEqual(7);
     });
 
     it("outlasts that Exercise in the cut to Standard", () => {
@@ -373,8 +401,9 @@ describe("planWorkout", () => {
       loads: { barbell: { barKg: 20, platesKg: [1.25, 2.5, 5, 10, 20] } },
     };
     const assessment = { bodyWeightKg: 75, patterns: { squat: strength(100), hinge: strength(120) } };
+    // recomp, which doesn't budget calves: for build_muscle, Exercises crediting them crowd back squat out on a rack
     const planned = (slug: string, more: Partial<PlanWorkoutInput>) =>
-      plan({ assessment, ...more }).plannedExercises.find((exercise) => exercise.slug === slug);
+      plan({ assessment, goal: "recomp", ...more }).plannedExercises.find((exercise) => exercise.slug === slug);
 
     it("is worked out from the Reference Strengths, for a profile added after the Assessment", () => {
       // Back squat's maximum is the Reference Strength. A barbell lift starts at 6 reps, the bottom of its 6–10 range,
@@ -787,13 +816,16 @@ describe("planWorkout", () => {
     const athletic = (more: Partial<PlanWorkoutInput> = {}) => onFullGym({ goal: "athletic", ...more });
 
     it("comes first in the plan until it's done, so a short Workout keeps it", () => {
+      // The step-up, as it credits calves too
       const chosen = athletic();
-      expect(chosen.filter(isOneSidedLegExercise)).toEqual(["dumbbell-bulgarian-split-squat"]);
-      expect(chosen[0]).toBe("dumbbell-bulgarian-split-squat");
+      expect(chosen.filter(isOneSidedLegExercise)).toEqual(["dumbbell-step-up"]);
+      expect(chosen[0]).toBe("dumbbell-step-up");
     });
 
     it("isn't given to another Goal", () => {
-      expect(onFullGym({ goal: "build_muscle" }).filter(isOneSidedLegExercise)).toEqual([]);
+      // build_muscle picks the step-up on score, as it credits calves, but not first
+      expect(onFullGym({ goal: "recomp" }).filter(isOneSidedLegExercise)).toEqual([]);
+      expect(isOneSidedLegExercise(onFullGym({ goal: "build_muscle" })[0]!)).toBe(false);
     });
 
     // Story 14
@@ -819,7 +851,7 @@ describe("planWorkout", () => {
 
     it("isn't met by a one-sided swing, which doesn't train each leg on its own", () => {
       const workouts = [logged("w1", "single-arm-kettlebell-swing", 3)];
-      expect(athletic({ workouts })[0]).toBe("dumbbell-bulgarian-split-squat");
+      expect(athletic({ workouts })[0]).toBe("dumbbell-step-up");
     });
 
     it("isn't a one-sided swing, even when nothing else is available", () => {
@@ -872,7 +904,7 @@ describe("planWorkout", () => {
     });
 
     it("waits for a Workout without the one-sided Exercise, so each Workout has at most one required pick", () => {
-      expect(athletic()[0]?.slug).toBe("dumbbell-bulgarian-split-squat");
+      expect(athletic()[0]?.slug).toBe("dumbbell-step-up");
     });
 
     it("is needed once a week", () => {
@@ -1034,10 +1066,16 @@ describe("planWorkout", () => {
     };
     const dumbbellsAndBench: ProfileWithLoads = { ...dumbbells, tags: ["dumbbells", "flat_bench"] };
 
+    // recomp, which doesn't budget calves: for build_muscle the step-up, which credits them, takes the split squat's
+    // place
     const planned = (slug: string, more: Partial<PlanWorkoutInput> = {}) =>
-      plan({ equipmentProfile: dumbbellsAndBench, workingLevels: [], assessment, ...more }).plannedExercises.find(
-        (plannedExercise) => plannedExercise.slug === slug,
-      );
+      plan({
+        equipmentProfile: dumbbellsAndBench,
+        workingLevels: [],
+        assessment,
+        goal: "recomp",
+        ...more,
+      }).plannedExercises.find((plannedExercise) => plannedExercise.slug === slug);
 
     it("saves both choices on each Exercise, each with its target", () => {
       const squat = planned("dumbbell-bulgarian-split-squat", {

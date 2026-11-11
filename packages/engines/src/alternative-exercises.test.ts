@@ -43,17 +43,25 @@ describe("alternativeOptions", () => {
   });
 
   it("doesn't relax while the Pattern has any match, however few", () => {
-    expect(optionsFor("one-arm-dumbbell-row")).toEqual(["prone-ytw"]);
+    expect(optionsFor("one-arm-dumbbell-row")).toEqual(["table-row", "prone-ytw"]);
+  });
+
+  // Story 12: the table row gives lats work a match on Bodyweight only (#101)
+  it("gives a lats pull the table row", () => {
+    expect(optionsFor("chin-up")).toEqual(["table-row"]);
+    expect(optionsFor("lat-pulldown")).toEqual(["table-row"]);
   });
 
   it("finds nothing when no Exercise shares a primary Muscle", () => {
-    expect(optionsFor("chin-up")).toEqual([]);
     expect(optionsFor("dumbbell-lateral-raise")).toEqual([]);
-    expect(optionsFor("lat-pulldown")).toEqual([]);
+    expect(optionsFor("calf-raise")).toEqual([]);
+    expect(optionsFor("dumbbell-curl")).toEqual([]);
   });
 
   it("leaves nothing when the injuries rule out the only match", () => {
-    expect(optionsFor("one-arm-dumbbell-row", ["shoulder"])).toEqual([]);
+    // Relaxed to any Pattern, an overhead carry's only match is the pike push-up, which avoids shoulder injuries
+    expect(optionsFor("overhead-carry")).toEqual(["pike-push-up"]);
+    expect(optionsFor("overhead-carry", ["shoulder"])).toEqual([]);
   });
 });
 
@@ -93,8 +101,8 @@ describe("withAlternatives", () => {
   });
 
   it("gives an Exercise with no match an empty list", () => {
-    const [chinUp] = onBodyweight([planned("chin-up")]);
-    expect(chinUp.alternatives).toEqual({ bodyweight_only: [] });
+    const [raise] = onBodyweight([planned("dumbbell-lateral-raise")]);
+    expect(raise.alternatives).toEqual({ bodyweight_only: [] });
   });
 
   it("doesn't offer an Exercise that stays in the plan as an option for another", () => {

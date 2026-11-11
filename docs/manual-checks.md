@@ -215,6 +215,13 @@ On the installed PWA against staging, once an Exercise has a Workout behind it (
 - [ ] **PR2** In airplane mode, beat a best again and save. Turn airplane mode off and open the app: once it uploads, Today shows a green note naming the PRs with "See workout". Close and reopen the app: the note is gone, and the Workout's History row says "New PR".
   - iOS: Result: · Notes:
 
+## Library gaps (#101)
+
+Needs `pnpm --filter @fit/api seed:exercises` run once from the main checkout (it needs `apps/api/.env`), so the Exercises tab lists the six new Exercises.
+
+- [ ] **L1** The Exercises tab lists Calf raise, Nordic hamstring curl, Dumbbell curl, Dumbbell overhead triceps extension, Cable knee extension and Table row, each with its cues. Switch Today to Bodyweight only: a back Exercise the plan had (a row or pull-up) offers Table row as its Alternative Exercise, where it used to offer nothing for a lats pull. With a build_muscle or athletic profile, the plan's reasons and Workouts don't break on calves, which are now in the Weekly Budget.
+  - iOS: Result: · Android: Result: · Notes:
+
 ## Your call
 
 Not a bug, but it needs your judgement once you've done some Workouts. Details in `docs/research/planner-simulation.md`.
