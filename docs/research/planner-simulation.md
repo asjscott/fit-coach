@@ -17,6 +17,7 @@ To reproduce: `pnpm --filter @fit/engines simulate` (`packages/engines/scripts/s
 ## Result
 
 - **Since #101, calves in the budget cost build_muscle its back squat**: 0 Sets at 4 days Standard on every gym, where the planner gave 3, as the one-sided squats credit calves and back squat doesn't. The bullets below are from before #101 and the 130% cap. See [The library's gaps](#the-librarys-gaps).
+
 - **Back squat and barbell bench now show up on a Full gym for build_muscle and recomp, after adding a barbell factor of 1.02 to the score.** At 4 days Standard, build_muscle gets 6 Sets of each and recomp gets 3 of back squat and 6 of bench. Neither opens a Standard Workout at 4 days, and at 6 days they sometimes do.
 - **lose_fat and athletic still get little.** At 4 days Standard, lose_fat gets none of either, as its time tilt outweighs 1.02. That's accepted as a known limit of spec #77. Athletic got no back squat at 4 days Standard, as the one-sided dumbbell squats outscore it. A weekly rule (#100) now gives it at least 3 Sets in every simulated combination, 6 at 4 days Standard, and bench stays at 3 to 6.
 - **The cost is a smaller week.** Barbell Sets take 180 seconds, so build_muscle at 4 days Standard falls from 81 to 68 Sets in 175 minutes, and side delts fall to 65% of budget.
@@ -65,7 +66,7 @@ Back squat Sets, then bench Sets, a week.
 | build_muscle | 0, 6             | 0, 6                        | 0, 6                  |
 | recomp       | 3, 6             | 3, 6                        | 3, 6                  |
 | lose_fat     | 0, 0             | 0, 4                        | 0, 4                  |
-| athletic     | 3, 6             | 3, 5                        | 3, 6                  |
+| athletic     | 3, 5             | 3, 5                        | 3, 5                  |
 
 A week of build_muscle, intermediate, on a Full gym:
 
@@ -200,7 +201,7 @@ Sets a week of each, and calves' credited Sets, intermediate:
 | Full home gym   | recomp       | 4    | long     | 0          | 8                     | 0             | 0                                   | 0                    | 0         | 0      |
 | Full home gym   | recomp       | 6    | standard | 0          | 11                    | 0             | 0                                   | 0                    | 0         | 0      |
 | Full home gym   | lose_fat     | 4    | standard | 0          | 8                     | 0             | 0                                   | 0                    | 0         | 0      |
-| Full home gym   | lose_fat     | 4    | long     | 0          | 8                     | 0             | 0                                   | 0                    | 3         | 1.5    |
+| Full home gym   | lose_fat     | 4    | long     | 0          | 8                     | 0             | 0                                   | 0                    | 0         | 1.5    |
 | Full home gym   | lose_fat     | 6    | standard | 0          | 11                    | 0             | 0                                   | 0                    | 0         | 1.5    |
 | Full home gym   | athletic     | 4    | standard | 0          | 4                     | 0             | 0                                   | 0                    | 0         | 5      |
 | Full home gym   | athletic     | 4    | long     | 3          | 8                     | 0             | 0                                   | 0                    | 0         | 7      |
@@ -230,7 +231,7 @@ What calves cost. Back squat and bench Sets a week at 4 days Standard, the same 
 | ------------ | ---------------------- | ---------------- | --------------------------- | --------------------- |
 | build_muscle | 3, 4 → 0, 6            | 3, 4 → 0, 6      | 3, 4 → 0, 6                 | 3, 4 → 0, 6           |
 | recomp       | 3, 6 → 3, 6            | 3, 6 → 3, 6      | 3, 6 → 3, 6                 | 3, 6 → 3, 6           |
-| athletic     | 3, 5 → 3, 5            | 3, 5 → 3, 6      | 3, 6 → 3, 5                 | 3, 6 → 3, 6           |
+| athletic     | 3, 5 → 3, 5            | 3, 5 → 3, 5      | 3, 6 → 3, 5                 | 3, 6 → 3, 5           |
 
 - **build_muscle loses its back squat**, 3 Sets to 0 on every gym; athletic keeps its weekly 3 by rule. Step-ups, split squats and lunges credit calves 0.5 and back squat doesn't, so once calves are budgeted they outscore it, and the cap leaves room for only one squat pick. The same library without calves in the budget keeps back squat at 3. recomp and lose_fat, which don't budget calves, don't change. `plan-outcomes.test.ts` marks build_muscle at 4 and 6 days Standard as a known loss (`it.fails`, so it fails once back squat is back), and accepts athletic's 2 days Short at 1.5 on side delts (was 2).
 
