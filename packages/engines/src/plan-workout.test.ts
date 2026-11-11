@@ -1,7 +1,7 @@
-import { EquipmentTag, type Goal, type WorkingLevel } from "@fit/shared";
+import { EquipmentTag, toKg, type Goal, type WorkingLevel } from "@fit/shared";
 import { describe, expect, it } from "vitest";
 import { exerciseBySlug, EXERCISES } from "./data/exercises";
-import { BUILT_IN_EQUIPMENT, type ProfileWithLoads } from "./equipment";
+import { builtInEquipment, type ProfileWithLoads } from "./equipment";
 import { daysWorkout } from "./days-workout";
 import { planWorkout, type PlanWorkoutInput } from "./plan-workout";
 
@@ -34,6 +34,7 @@ const plan = (more: Partial<PlanWorkoutInput> = {}) =>
     assessment: { bodyWeightKg: 75, patterns: {} },
     goal: "build_muscle",
     daysPerWeek: 4,
+    unit: "kg",
     ...more,
   });
 
@@ -236,7 +237,7 @@ describe("planWorkout", () => {
   describe("a 4th Set picked ahead of a later Exercise", () => {
     // Lateral raise is the 5th Exercise picked, its 4th Set comes after the 6th, and band row is picked after that
     const { plannedExercises } = plan({
-      equipmentProfile: BUILT_IN_EQUIPMENT.full_gym,
+      equipmentProfile: builtInEquipment("full_gym", "kg"),
       workingLevels: [],
       assessment,
       goal: "lose_fat",
@@ -843,7 +844,7 @@ describe("planWorkout", () => {
     it("isn't given on bodyweight only", () => {
       const chosen = slugs({
         goal: "athletic",
-        equipmentProfile: BUILT_IN_EQUIPMENT.bodyweight_only,
+        equipmentProfile: builtInEquipment("bodyweight_only", "kg"),
         workingLevels: [],
         assessment,
         workouts: [oneSidedDone],
@@ -906,6 +907,34 @@ describe("planWorkout", () => {
     it("prescribes a weighted Exercise to the nearest 0.5 kg when the loads aren't known", () => {
       const equipmentProfile: ProfileWithLoads = { tags: ["dumbbells"], loads: {} };
       expect(planned("goblet-squat", { equipmentProfile })?.target).toEqual({ unit: "kg", kg: 20.5, reps: 8 });
+    });
+
+    // User stories 22 and 23
+    it("prescribes a cable Exercise at the nearest load of the profile's stack", () => {
+      const equipmentProfile: ProfileWithLoads = {
+        tags: ["cable_machine"],
+        loads: { cable_machine: { stepKg: toKg(10, "lb") } },
+      };
+      const workingLevels = [kg("lat-pulldown", 47), kg("seated-cable-row", 40)];
+      expect(planned("lat-pulldown", { equipmentProfile, workingLevels })?.target).toEqual({
+        unit: "kg",
+        kg: 10 * toKg(10, "lb"),
+        reps: 8,
+      });
+      expect(planned("seated-cable-row", { equipmentProfile, workingLevels })?.target).toEqual({
+        unit: "kg",
+        kg: 9 * toKg(10, "lb"),
+        reps: 8,
+      });
+    });
+
+    it("prescribes a pound barbell at the nearest load its pound plates make", () => {
+      const equipmentProfile: ProfileWithLoads = {
+        tags: ["barbell", "plates", "power_rack"],
+        loads: { barbell: { barKg: toKg(45, "lb"), platesKg: [45, 25, 10, 5, 2.5].map((lb) => toKg(lb, "lb")) } },
+      };
+      const target = planned("back-squat", { equipmentProfile, workingLevels: [kg("back-squat", 61)] })?.target;
+      expect(target).toEqual({ unit: "kg", kg: toKg(135, "lb"), reps: 8 });
     });
 
     it("prescribes a bodyweight Exercise's reps", () => {
@@ -1021,6 +1050,15 @@ describe("planWorkout", () => {
       });
       expect(squat?.target).toEqual({ unit: "kg", kg: 24, reps: 8 });
       expect(squat?.alternatives?.full_gym?.[0].target).toEqual({ unit: "kg", kg: 20, reps: 8 });
+    });
+
+    // User story 20
+    it("gives Full gym's pound loads to a user in pounds", () => {
+      const squat = planned("dumbbell-bulgarian-split-squat", {
+        unit: "lb",
+        workingLevels: [kg("dumbbell-bulgarian-split-squat", 20.3)],
+      });
+      expect(squat?.alternatives?.full_gym?.[0].target).toEqual({ unit: "kg", kg: toKg(45, "lb"), reps: 8 });
     });
 
     it("keeps an Exercise possible on the equipment even when a guard would stop the Coach picking it there", () => {

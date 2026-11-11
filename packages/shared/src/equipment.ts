@@ -1,4 +1,5 @@
 import { z } from "zod";
+import type { WeightUnit } from "./units";
 
 export const PRESETS: { name: string; tags: EquipmentTag[] }[] = [
   { name: "Bodyweight only", tags: [] },
@@ -162,10 +163,15 @@ export const EquipmentProfile = z.object({
       loop_bands: z.object({ levels: z.array(BandLevel).min(1) }).optional(),
       mini_bands: z.object({ levels: z.array(BandLevel).min(1) }).optional(),
       tube_bands: z.object({ levels: z.array(BandLevel).min(1) }).optional(),
+      // A cable or machine lists no loads, only the step between one plate of its stack and the next
+      cable_machine: z.object({ stepKg: kg }).optional(),
     })
     .default({}),
 });
 export type EquipmentProfile = z.infer<typeof EquipmentProfile>;
+
+// A cable or machine's Load Step until the user sets one, in their unit: 10 lb, or 5 kg
+export const DEFAULT_CABLE_STEP: Record<WeightUnit, number> = { lb: 10, kg: 5 };
 
 // Body for creating or updating an equipment profile; the server owns the id
 export const EquipmentProfileInput = EquipmentProfile.omit({ id: true });

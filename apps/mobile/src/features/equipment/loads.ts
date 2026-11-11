@@ -1,6 +1,7 @@
 import {
   BAND_TAGS,
   BandLevel,
+  DEFAULT_CABLE_STEP,
   fromKg,
   toKg,
   type EquipmentProfile,
@@ -10,7 +11,7 @@ import {
 import { z } from "zod";
 
 // The equipment the weights stage asks about
-export const loadTags = ["dumbbells", "kettlebells", "barbell", ...BAND_TAGS] as const;
+export const loadTags = ["dumbbells", "kettlebells", "barbell", ...BAND_TAGS, "cable_machine"] as const;
 export type LoadTag = (typeof loadTags)[number];
 
 export const bandLevelLabels: Record<BandLevel, string> = {
@@ -106,6 +107,8 @@ export const LoadsForm = z.object({
   loop_bands: bandChoices,
   mini_bands: bandChoices,
   tube_bands: bandChoices,
+  // The Load Step of a cable or machine, which lists no loads
+  cable_machine: z.object({ step: optionalWeight }).optional(),
 });
 export type LoadsForm = z.infer<typeof LoadsForm>;
 
@@ -154,6 +157,8 @@ export function toLoads(form: LoadsForm, tags: EquipmentTag[], unit: WeightUnit)
     const levels = form[tag]?.levels;
     if (has(tag) && levels?.length) loads[tag] = { levels };
   }
+  const cableStep = form.cable_machine?.step;
+  if (has("cable_machine") && cableStep != null) loads.cable_machine = { stepKg: toKg(cableStep, unit) };
   return loads;
 }
 
@@ -175,5 +180,9 @@ export function toLoadsForm(loads: EquipmentProfile["loads"] = {}, unit: WeightU
     loop_bands: loads.loop_bands,
     mini_bands: loads.mini_bands,
     tube_bands: loads.tube_bands,
+    // A profile with no step yet starts at the default in the user's unit
+    cable_machine: {
+      step: loads.cable_machine ? formWeight(loads.cable_machine.stepKg, unit) : DEFAULT_CABLE_STEP[unit],
+    },
   };
 }

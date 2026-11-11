@@ -2,7 +2,7 @@
 import type { Goal, Muscle, WorkoutLength } from "@fit/shared";
 import {
   addCredits,
-  BUILT_IN_EQUIPMENT,
+  builtInEquipment,
   creditsPerSet,
   daysWorkout,
   exerciseBySlug,
@@ -38,7 +38,7 @@ const FULL_HOME_GYM: ProfileWithLoads = {
     dumbbells: { kind: "adjustable", minKg: 2.5, maxKg: 40, stepKg: 2.5 },
   },
 };
-export const PROFILES = { "Full gym": BUILT_IN_EQUIPMENT.full_gym, "Full home gym": FULL_HOME_GYM };
+export const PROFILES = { "Full gym": builtInEquipment("full_gym", "kg"), "Full home gym": FULL_HOME_GYM };
 
 export type Run = {
   goal: Goal;
@@ -89,6 +89,7 @@ export function simulate({ goal, days, length, lifter, profile, jumps = false }:
         goal,
         daysPerWeek: days,
         includeJumps: jumps,
+        unit: "kg",
       });
       const today = daysWorkout({ plannedExercises: plan.plannedExercises }, { workoutLength: length }, goal);
       const workoutExercises = today.plannedExercises.map(({ slug, sets }) => ({

@@ -26,4 +26,10 @@ describe("loadScreens", () => {
       ["mini_bands", "tube_bands"],
     ]);
   });
+
+  // User story 23
+  it("asks for the cable and machine step", () => {
+    expect(loadScreens(["cable_machine", "flat_bench"])).toEqual([["cable_machine"]]);
+    expect(loadScreens(["dumbbells", "cable_machine"])).toEqual([["dumbbells", "cable_machine"]]);
+  });
 });

@@ -6,6 +6,7 @@ const inputs: PlanInputs = {
   daysPerWeek: 4,
   workoutLength: "standard",
   injuries: ["knee", "wrist"],
+  unit: "lb",
   equipmentProfile: {
     tags: ["dumbbells", "flat_bench"],
     loads: { dumbbells: { kind: "adjustable", minKg: 2.5, maxKg: 40, stepKg: 2.5 } },
@@ -70,6 +71,8 @@ describe("planIsDue", () => {
     ["injuries", { injuries: ["knee"] }],
     // Story 13 (#105)
     ["Include jumps switch", { includeJumps: true }],
+    // Story 20: Full gym's loads follow it
+    ["unit", { unit: "kg" }],
     ["primary Equipment Profile's equipment", { equipmentProfile: { tags: ["dumbbells"], loads: {} } }],
     [
       "primary Equipment Profile's loads",
