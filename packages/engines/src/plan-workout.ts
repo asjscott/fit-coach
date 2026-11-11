@@ -48,7 +48,7 @@ import {
   type WeeklyBudget,
 } from "./weekly-budget";
 import { asDone } from "./working-level-sections";
-import { seedWorkingLevels } from "./working-levels";
+import { workingLevelsOn } from "./working-levels";
 import { secondsForSets } from "./workout-length";
 
 // Always the Long version: the day's Workout cuts it to length (daysWorkout)
@@ -140,25 +140,6 @@ function deloaded(target: SetTarget, exercise: Exercise, equipmentProfile: Profi
   }
 }
 
-// Each Exercise's Working Level on this equipment: the stored one, unless it's for a way of doing the Exercise this
-// profile doesn't have. Otherwise it's worked out as the Assessment seeded them, which covers a profile added since
-function workingLevelsFor({ workingLevels, assessment, equipmentProfile }: PlanWorkoutInput) {
-  const referenceStrengths = Object.fromEntries(
-    Object.entries(assessment.patterns).map(([pattern, { referenceStrength }]) => [pattern, referenceStrength]),
-  );
-  const seeded = seedWorkingLevels({
-    referenceStrengths,
-    bodyWeightKg: assessment.bodyWeightKg,
-    equipmentProfiles: [equipmentProfile],
-  });
-  const levels = new Map(seeded.map((level) => [level.slug, level]));
-  for (const stored of workingLevels) {
-    const seed = levels.get(stored.slug);
-    if (!seed || seed.unit === stored.unit) levels.set(stored.slug, stored);
-  }
-  return levels;
-}
-
 // An Exercise whose Working Level has outgrown it, such as a bodyweight seed above 15 reps, gives way to its
 // progression if the user can do that, and otherwise stays at the top of what it prescribes
 function withoutOutgrown(candidates: readonly Candidate[]) {
@@ -186,7 +167,7 @@ const byTieOrder = ({ exercise: a }: Candidate, { exercise: b }: Candidate) =>
 // only the jump rule gives (jumps.ts)
 function possibleExercises(input: PlanWorkoutInput): Candidate[] {
   const { equipmentProfile, injuries } = input;
-  const levels = workingLevelsFor(input);
+  const levels = workingLevelsOn(input);
   const possible = EXERCISES.flatMap((exercise) => {
     const level = levels.get(exercise.slug);
     if (

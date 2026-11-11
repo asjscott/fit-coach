@@ -1,6 +1,7 @@
 import {
   BAND_TAGS,
   BandLevel,
+  type Assessment,
   type BandTag,
   type EquipmentTag,
   type Exercise,
@@ -158,6 +159,34 @@ export function seedWorkingLevels(seed: Seed): WorkingLevel[] {
   return EXERCISES.filter((exercise) => seed.equipmentProfiles.some((profile) => isAvailable(exercise, profile)))
     .flatMap((exercise) => shapeOf(exercise, seed) ?? [])
     .map((shape) => ({ ...shape, movedBy, misses: 0 }));
+}
+
+// Each Exercise's Working Level on this Equipment Profile, by slug: the stored one, unless it's for a way of doing the
+// Exercise this profile doesn't have (another unit). Otherwise it's worked out as the Assessment seeded them, which
+// covers a profile added since. The planner prescribes these, and progression at upload moves them
+export function workingLevelsOn({
+  workingLevels,
+  assessment,
+  equipmentProfile,
+}: {
+  workingLevels: readonly WorkingLevel[];
+  assessment: Pick<Assessment, "bodyWeightKg" | "patterns">;
+  equipmentProfile: ProfileWithLoads;
+}): Map<string, WorkingLevel> {
+  const referenceStrengths = Object.fromEntries(
+    Object.entries(assessment.patterns).map(([pattern, { referenceStrength }]) => [pattern, referenceStrength]),
+  );
+  const seeded = seedWorkingLevels({
+    referenceStrengths,
+    bodyWeightKg: assessment.bodyWeightKg,
+    equipmentProfiles: [equipmentProfile],
+  });
+  const levels = new Map(seeded.map((level) => [level.slug, level]));
+  for (const stored of workingLevels) {
+    const seed = levels.get(stored.slug);
+    if (!seed || seed.unit === stored.unit) levels.set(stored.slug, stored);
+  }
+  return levels;
 }
 
 // ─── The one-off migration (#131) ───
