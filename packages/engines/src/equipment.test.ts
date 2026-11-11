@@ -1,7 +1,15 @@
-import type { EquipmentTag } from "@fit/shared";
+import { EquipmentTag, loadInUnit, toKg } from "@fit/shared";
 import { describe, expect, it } from "vitest";
 import { EXERCISES } from "./data/exercises";
-import { exerciseLoadsKg, isAvailable, isSafeFor, type ProfileWithLoads } from "./equipment";
+import {
+  builtInEquipment,
+  exerciseLoadsKg,
+  isAvailable,
+  isSafeFor,
+  nextLoadKg,
+  withDefaultLoads,
+  type ProfileWithLoads,
+} from "./equipment";
 
 const exercise = (slug: string) => {
   const found = EXERCISES.find((e) => e.slug === slug);
@@ -59,5 +67,135 @@ describe("exerciseLoadsKg", () => {
   it("knows no loads for a slug not in the library, or without a profile", () => {
     expect(exerciseLoadsKg("not-in-the-library", dumbbells)).toEqual([]);
     expect(exerciseLoadsKg("goblet-squat", undefined)).toEqual([]);
+  });
+});
+
+const lb = (pounds: number) => toKg(pounds, "lb");
+
+// User story 22: one Load Step is the next load the Equipment Profile actually has
+describe("nextLoadKg, one Load Step up or down", () => {
+  const step = (slug: string, profile: ProfileWithLoads, kg: number, direction: 1 | -1) => {
+    const next = nextLoadKg(exercise(slug), profile, kg, direction);
+    return next === undefined ? undefined : loadInUnit(next, "lb");
+  };
+
+  it("steps to the next dumbbell in the list", () => {
+    const profile: ProfileWithLoads = {
+      tags: ["dumbbells"],
+      loads: { dumbbells: { kind: "fixed", weightsKg: [lb(20), lb(25), lb(35)] } },
+    };
+    expect(step("goblet-squat", profile, lb(25), 1)).toBe(35);
+    expect(step("goblet-squat", profile, lb(25), -1)).toBe(20);
+  });
+
+  it("steps adjustable dumbbells by their step, in pounds exactly", () => {
+    const profile: ProfileWithLoads = {
+      tags: ["dumbbells"],
+      loads: { dumbbells: { kind: "adjustable", minKg: lb(5), maxKg: lb(100), stepKg: lb(5) } },
+    };
+    expect(step("goblet-squat", profile, lb(25), 1)).toBe(30);
+    expect(step("goblet-squat", profile, lb(95), 1)).toBe(100);
+    expect(step("goblet-squat", profile, lb(25), -1)).toBe(20);
+  });
+
+  it("steps a barbell by the lightest pair of pound plates", () => {
+    const profile: ProfileWithLoads = {
+      tags: ["barbell", "plates", "power_rack"],
+      loads: { barbell: { barKg: lb(45), platesKg: [lb(45), lb(25), lb(10), lb(5), lb(2.5)] } },
+    };
+    expect(step("back-squat", profile, lb(135), 1)).toBe(140);
+    expect(step("back-squat", profile, lb(45), 1)).toBe(50);
+    expect(step("back-squat", profile, lb(135), -1)).toBe(130);
+  });
+
+  it("steps kettlebells to the next bell", () => {
+    const profile: ProfileWithLoads = { tags: ["kettlebells"], loads: { kettlebells: { weightsKg: [12, 16, 24] } } };
+    expect(nextLoadKg(exercise("goblet-squat"), profile, 16, 1)).toBe(24);
+  });
+
+  it("steps from a load between two the profile has to the next one it has", () => {
+    const profile: ProfileWithLoads = { tags: ["kettlebells"], loads: { kettlebells: { weightsKg: [12, 16, 24] } } };
+    expect(nextLoadKg(exercise("goblet-squat"), profile, 18, 1)).toBe(24);
+    expect(nextLoadKg(exercise("goblet-squat"), profile, 18, -1)).toBe(16);
+  });
+
+  it("has no step past the heaviest or lightest load, or when the profile lists no loads", () => {
+    const profile: ProfileWithLoads = { tags: ["kettlebells"], loads: { kettlebells: { weightsKg: [12, 16] } } };
+    expect(nextLoadKg(exercise("goblet-squat"), profile, 16, 1)).toBeUndefined();
+    expect(nextLoadKg(exercise("goblet-squat"), profile, 12, -1)).toBeUndefined();
+    expect(nextLoadKg(exercise("goblet-squat"), { tags: ["kettlebells"], loads: {} }, 16, 1)).toBeUndefined();
+  });
+
+  // User story 23
+  it("steps a cable by the profile's stored step", () => {
+    const profile: ProfileWithLoads = { tags: ["cable_machine"], loads: { cable_machine: { stepKg: lb(10) } } };
+    expect(step("lat-pulldown", profile, lb(100), 1)).toBe(110);
+    expect(step("lat-pulldown", profile, lb(100), -1)).toBe(90);
+  });
+});
+
+// User story 20: Full gym's built-in loads follow the user's unit
+describe("builtInEquipment, Full gym in the user's unit", () => {
+  const inLb = (slug: string) =>
+    exerciseLoadsKg(slug, builtInEquipment("full_gym", "lb")).map((kg) => loadInUnit(kg, "lb"));
+  const inKg = (slug: string) => exerciseLoadsKg(slug, builtInEquipment("full_gym", "kg"));
+
+  it("has dumbbells from 5 to 100 lb in 5s in pounds", () => {
+    expect(inLb("dumbbell-lateral-raise")).toEqual(Array.from({ length: 20 }, (_, i) => 5 * (i + 1)));
+  });
+
+  it("has a 45 lb bar loaded with pound plates in pounds", () => {
+    expect(inLb("back-squat").slice(0, 4)).toEqual([45, 50, 55, 60]);
+    expect(inLb("back-squat")).toContain(135);
+    expect(inLb("back-squat")).toContain(225);
+  });
+
+  it("keeps its kg loads in kg", () => {
+    expect(inKg("dumbbell-lateral-raise")).toEqual(Array.from({ length: 20 }, (_, i) => 2.5 * (i + 1)));
+    expect(inKg("back-squat").slice(0, 3)).toEqual([20, 22.5, 25]);
+  });
+
+  it("steps its cables 10 lb in pounds and 5 kg in kg", () => {
+    expect(inLb("lat-pulldown").slice(0, 3)).toEqual([10, 20, 30]);
+    expect(inKg("lat-pulldown").slice(0, 3)).toEqual([5, 10, 15]);
+  });
+
+  it("has nothing on Bodyweight only", () => {
+    expect(builtInEquipment("bodyweight_only", "lb")).toEqual({ tags: [], loads: {} });
+  });
+});
+
+// User stories 21 and 23: a profile's cable and machine step is 10 lb or 5 kg until the user sets one
+describe("withDefaultLoads", () => {
+  const cable: ProfileWithLoads = { tags: ["cable_machine"], loads: {} };
+
+  it("gives a cable or machine with no stored step 10 lb in pounds and 5 kg in kg", () => {
+    expect(withDefaultLoads(cable, "lb").loads.cable_machine).toEqual({ stepKg: lb(10) });
+    expect(withDefaultLoads(cable, "kg").loads.cable_machine).toEqual({ stepKg: 5 });
+  });
+
+  it("keeps a step the user set", () => {
+    const set: ProfileWithLoads = { ...cable, loads: { cable_machine: { stepKg: lb(15) } } };
+    expect(withDefaultLoads(set, "kg")).toEqual(set);
+  });
+
+  it("adds no step to a profile without a cable or machine", () => {
+    const dumbbells: ProfileWithLoads = { tags: ["dumbbells"], loads: {} };
+    expect(withDefaultLoads(dumbbells, "lb")).toEqual(dumbbells);
+  });
+
+  // User story 20: a gym the user didn't list weights for has Full gym's loads, so the Coach prescribes loads that exist
+  it("gives a profile with all of Full gym's equipment and no weights listed Full gym's loads in the user's unit", () => {
+    const gym: ProfileWithLoads = { tags: EquipmentTag.options, loads: {} };
+    expect(withDefaultLoads(gym, "lb")).toEqual(builtInEquipment("full_gym", "lb"));
+    expect(withDefaultLoads(gym, "kg")).toEqual(builtInEquipment("full_gym", "kg"));
+  });
+
+  it("keeps a gym's own weights and step", () => {
+    const gym: ProfileWithLoads = {
+      tags: EquipmentTag.options,
+      loads: { dumbbells: { kind: "fixed", weightsKg: [10, 20] }, cable_machine: { stepKg: lb(15) } },
+    };
+    expect(withDefaultLoads(gym, "lb")).toEqual(gym);
   });
 });

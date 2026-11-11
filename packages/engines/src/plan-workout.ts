@@ -8,11 +8,12 @@ import {
   type PlannedExercise,
   type PlannedWorkout,
   type SetTarget,
+  type WeightUnit,
   type WorkingLevel,
 } from "@fit/shared";
 import { withAlternatives, type Candidate } from "./alternative-exercises";
 import { exerciseBySlug, EXERCISES } from "./data/exercises";
-import { BUILT_IN_EQUIPMENT, isAvailable, isSafeFor, matchesBuiltIn, type ProfileWithLoads } from "./equipment";
+import { builtInEquipment, isAvailable, isSafeFor, matchesBuiltIn, type ProfileWithLoads } from "./equipment";
 import { muscleFatigue, tiredMuscles, type FatigueWorkout } from "./fatigue";
 import { isJump, JUMP_SETS, jumpCandidates, jumpsForWorkout } from "./jumps";
 import { planReasons } from "./plan-reasons";
@@ -60,6 +61,8 @@ export type PlanWorkoutInput = {
   assessment: Pick<Assessment, "bodyWeightKg" | "patterns">;
   goal: Goal;
   daysPerWeek: number;
+  // The user's unit, which Full gym's loads follow
+  unit: WeightUnit;
   // The one-time "Include jumps" switch on the Profile, off by default (#105)
   includeJumps?: boolean;
   // The Block's deload week (weekOfBlock). Only jumps read it so far, at half their contacts
@@ -178,7 +181,7 @@ function builtInCandidates(
   const choices = BuiltInEquipment.options.filter((choice) => !matchesBuiltIn(input.equipmentProfile, choice));
   return Object.fromEntries(
     choices.map((choice) => {
-      const onChoice = { ...input, equipmentProfile: BUILT_IN_EQUIPMENT[choice] };
+      const onChoice = { ...input, equipmentProfile: builtInEquipment(choice, input.unit) };
       const possible = possibleExercises(onChoice);
       const jumps = jumpCandidates(onChoice);
       const pickable = pickableExercises(possible, thisWeek, lastWeek, input.daysPerWeek);

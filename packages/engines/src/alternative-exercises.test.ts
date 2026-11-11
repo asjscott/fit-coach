@@ -2,7 +2,7 @@ import type { InjuryTag, PlannedExercise, SetTarget } from "@fit/shared";
 import { describe, expect, it } from "vitest";
 import { alternativeOptions, withAlternatives, type Candidate } from "./alternative-exercises";
 import { EXERCISES, exerciseBySlug } from "./data/exercises";
-import { BUILT_IN_EQUIPMENT, isAvailable, isSafeFor } from "./equipment";
+import { builtInEquipment, isAvailable, isSafeFor } from "./equipment";
 
 const target: SetTarget = { unit: "reps", reps: 10 };
 
@@ -10,7 +10,9 @@ const target: SetTarget = { unit: "reps", reps: 10 };
 const bodyweightCandidates = (injuries: InjuryTag[] = []): Candidate[] =>
   EXERCISES.filter(
     (exercise) =>
-      !exercise.recovery && isAvailable(exercise, BUILT_IN_EQUIPMENT.bodyweight_only) && isSafeFor(exercise, injuries),
+      !exercise.recovery &&
+      isAvailable(exercise, builtInEquipment("bodyweight_only", "kg")) &&
+      isSafeFor(exercise, injuries),
   ).map((exercise) => ({ exercise, target }));
 
 const optionsFor = (slug: string, injuries?: InjuryTag[]) =>

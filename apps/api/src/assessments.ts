@@ -2,7 +2,7 @@ import { randomUUID } from "node:crypto";
 import { assess, migrateWorkingLevel, pairToAssess, type LegacyWorkingLevel } from "@fit/engines";
 import { Assessment, LatestAssessment, WorkingLevel, type WorkingLevelMover, type Workout } from "@fit/shared";
 import { client, db } from "./db";
-import { findUser, type OnboardedUser } from "./users";
+import { equipmentProfilesOf, findUser, type OnboardedUser } from "./users";
 import { toWorkout, workouts } from "./workouts";
 
 // One document per Assessment, a snapshot: deleting either Assessment Workout leaves it be
@@ -96,7 +96,7 @@ export async function migrateWorkingLevels() {
   for (const clerkUserId of new Set(legacy.map((doc) => doc.clerkUserId))) {
     const docs = legacy.filter((doc) => doc.clerkUserId === clerkUserId);
     const user = await findUser(clerkUserId);
-    const equipmentProfiles = user?.equipmentProfiles ?? [];
+    const equipmentProfiles = user ? equipmentProfilesOf(user) : [];
     const setBy = new Map<string, WorkingLevelMover | null>();
     for (const { assessmentId } of docs) {
       if (setBy.has(assessmentId)) continue;

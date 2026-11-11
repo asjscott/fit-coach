@@ -1,5 +1,5 @@
 import { ObjectId, type WithId } from "mongodb";
-import { usualWorkoutLength } from "@fit/engines";
+import { usualWorkoutLength, withDefaultLoads } from "@fit/engines";
 import {
   BodyProfile,
   EquipmentProfile,
@@ -45,6 +45,11 @@ export function findUser(clerkUserId: string) {
   return users.findOne({ clerkUserId });
 }
 
+// The stored Equipment Profiles, with a cable or machine the user hasn't set a step for stepping by the default in
+// their unit (#127). The default isn't stored, so it follows a change of unit until the user saves a step
+export const equipmentProfilesOf = (user: Pick<UserDoc, "equipmentProfiles" | "unit">) =>
+  (user.equipmentProfiles ?? []).map((profile) => withDefaultLoads(profile, user.unit ?? DEFAULT_WEIGHT_UNIT));
+
 // What logging and planning need from a user. Onboarding requires weight and gender, and they can't be removed after
 export type OnboardedUser = {
   bodyProfile: BodyProfile;
@@ -68,7 +73,7 @@ export async function findOnboardedUser(clerkUserId: string): Promise<OnboardedU
   return {
     bodyProfile: BodyProfile.parse(user.profile),
     ...TrainingPlanProfile.parse(user.profile),
-    equipmentProfiles: user.equipmentProfiles,
+    equipmentProfiles: equipmentProfilesOf(user),
     injuries: user.profile.injuries ?? [],
     includeJumps: user.profile.includeJumps ?? false,
     workoutLength: usualWorkoutLength(user.profile),
@@ -197,7 +202,7 @@ export function toUser(user: WithId<UserDoc>): User {
     id: user._id.toHexString(),
     profile: user.profile,
     onboardedAt: user.onboardedAt?.toISOString() ?? null,
-    equipmentProfiles: user.equipmentProfiles ?? [],
+    equipmentProfiles: equipmentProfilesOf(user),
     ...(user.timeZone && { timeZone: user.timeZone }),
     unit: user.unit ?? DEFAULT_WEIGHT_UNIT,
   });

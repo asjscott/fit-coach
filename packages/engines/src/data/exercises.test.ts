@@ -1,6 +1,6 @@
 import { Exercise, Pattern, PRESETS, type EquipmentTag, type Muscle } from "@fit/shared";
 import { describe, expect, it } from "vitest";
-import { BUILT_IN_EQUIPMENT, isAvailable } from "../equipment";
+import { builtInEquipment, isAvailable } from "../equipment";
 import { EXERCISES } from "./exercises";
 
 // The jump ladder, easiest first
@@ -80,15 +80,15 @@ describe("exercise library", () => {
     );
 
   it("has a calf raise, the only Exercise with calves as a primary Muscle", () => {
-    expect(primaryOn("calves", BUILT_IN_EQUIPMENT.full_gym)).toEqual(["calf-raise"]);
+    expect(primaryOn("calves", builtInEquipment("full_gym", "kg"))).toEqual(["calf-raise"]);
   });
 
   it("has a curl as well as the chin-up for biceps", () => {
-    expect(primaryOn("biceps", BUILT_IN_EQUIPMENT.full_gym)).toEqual(["chin-up", "dumbbell-curl"]);
+    expect(primaryOn("biceps", builtInEquipment("full_gym", "kg"))).toEqual(["chin-up", "dumbbell-curl"]);
   });
 
   it("gives Bodyweight only a table row for lats", () => {
-    expect(primaryOn("lats", BUILT_IN_EQUIPMENT.bodyweight_only)).toEqual(["table-row"]);
+    expect(primaryOn("lats", builtInEquipment("bodyweight_only", "kg"))).toEqual(["table-row"]);
   });
 
   // Stops us shipping a library where, say, a bodyweight-only user has no way to train pull

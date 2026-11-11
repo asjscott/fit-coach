@@ -41,8 +41,13 @@ export function selectedTags(setup: TrainingSetup | undefined, equipment: Equipm
   return selectableGroups[setup].flatMap((key) => equipment[key] ?? []);
 }
 
-// Only home users are asked for weights; gym loads are unknown, and the other setups have none
-export const asksForLoads = (setup: TrainingSetup | undefined) => setup === "home";
+// The equipment whose weights a setup asks for. Home users are asked about everything selected. A gym is asked only
+// for its cable and machine step, as it has Full gym's standard weights; the other setups have none
+export function loadTagsAsked(setup: TrainingSetup | undefined, tags: EquipmentTag[]): EquipmentTag[] {
+  if (setup === "home") return tags;
+  if (setup === "gym") return tags.filter((tag) => tag === "cable_machine");
+  return [];
+}
 
 // Body for saving the user's primary equipment profile; the server owns the id
 export function toEquipmentInput(
@@ -56,7 +61,7 @@ export function toEquipmentInput(
     ...setupProfiles[setup],
     isPrimary: true,
     tags,
-    loads: asksForLoads(setup) ? toLoads(loads, tags, unit) : {},
+    loads: toLoads(loads, loadTagsAsked(setup, tags), unit),
   };
 }
 

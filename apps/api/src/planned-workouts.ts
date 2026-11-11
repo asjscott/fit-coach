@@ -66,6 +66,7 @@ async function rebuildPlannedWorkout(clerkUserId: string, user: OnboardedUser) {
     goal: user.goal,
     daysPerWeek: user.daysPerWeek,
     includeJumps: user.includeJumps,
+    unit: user.unit,
     deloadWeek: weekOfBlock(latest.assessment, now, user.timeZone)?.deload ?? false,
   });
 

@@ -92,6 +92,15 @@ export function EquipmentLoadsField({ tags }: { tags: EquipmentTag[] }) {
           options={bandLevelOptions}
         />
       ))}
+
+      {has("cable_machine") && (
+        <RHFTextField
+          name="loads.cable_machine.step"
+          label={`Cable and machine step (${unit})`}
+          helperText="How much one more plate of the stack adds"
+          numeric
+        />
+      )}
     </Stack>
   );
 }

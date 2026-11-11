@@ -48,6 +48,15 @@ Schemas shared by app and API: packages/shared/src/workouts.ts
   them, so a load a hair off the one shown never sticks, staying put past the lightest or heaviest, and by 5 lb or 2 kg
   when the loads aren't known. `set-entry.ts` also parses the typed text, steps reps (1) and seconds (5), and names the
   load step for screen readers (`loadStepLabel`: "Next heavier weight", or "Plus 5 lb" when the loads aren't known).
+- **One Load Step is the next load the profile has** (#127). `availableLoadsKg` (`packages/engines/src/equipment.ts`)
+  lists them: dumbbells, kettlebells, the bar plus plate pairs (summed in the unit the plates are sized in, so pound
+  plates make exact pound loads) and a cable stack from `loads.cable_machine.stepKg`. Progression steps with
+  `nextLoadKg(exercise, profile, kg, direction)`, undefined past the heaviest or lightest; `roundToLoadKg` and
+  `loadAtOrBelowKg` round to them. The API reads every profile through `withDefaultLoads` (`equipmentProfilesOf`,
+  `apps/api/src/users.ts`): a cable machine with no step steps 10 lb or 5 kg by the user's unit, and a profile with
+  all of Full gym's equipment and no free weights listed (the onboarding gym) has Full gym's loads. Full gym's loads
+  follow the unit (`builtInEquipment(choice, unit)`), so the unit is part of `planInputsKey`. The onboarding gym is
+  asked only for its cable step (`loadTagsAsked`).
 - **A past Workout starts up to 7 days before its last Set** (#129). `WorkoutUpload` (`@fit/shared`) is the rule, and
   both POST /workouts (400) and the Logbook's finish use it, so a Pending Workout always uploads. It counts back from
   the Sets, not the clock, so an upload that comes days late isn't refused; `Workout` itself doesn't have the rule, so
@@ -166,7 +175,7 @@ planWorkout (packages/engines/src/plan-workout.ts): pure, only the server calls 
   │  budget, and planWorkout returns the Muscles it held back (heldBack, not stored)
   ├─ scoreExercise (plan-score.ts): every tilt, in one place
   └─ withAlternatives (alternative-exercises.ts): each Exercise's options for Full gym and Bodyweight only, saved in
-     the plan. What's possible stays; only what's pickable stands in. Both built-ins are BUILT_IN_EQUIPMENT in
+     the plan. What's possible stays; only what's pickable stands in. Both built-ins are builtInEquipment in
      equipment.ts
 API (apps/api/src/planned-workouts.ts, routes/planned-workouts.ts): the current plan, built if planIsDue
   (plan-rebuild.ts), and rebuilt after every upload (routes/workouts.ts) and Profile change (routes/users.ts)

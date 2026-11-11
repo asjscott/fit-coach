@@ -195,7 +195,15 @@ Needs `pnpm --filter @fit/api seed:exercises` run once from the main checkout (i
 
 ## Units (#126)
 
-- [ ] **U1** An existing account shows every load in lb with nothing chosen: Profile's "Weights in" has lb picked, and Today's plan, the logging screen (target, Last, Sets, stepper), History, a Workout's detail, Volume everywhere and the Equipment Profile's weights all read in lb. Log a Set of 25 lb: it reads 25 lb in the Set row, History and as Last next time, never 24.9. Pick kg on Profile: the same screens switch to kg, and the 25 lb Set reads 11.5 kg. With the loads unknown (a gym profile), the load stepper moves by 5 lb or 2 kg.
+- [ ] **U1** An existing account shows every load in lb with nothing chosen: Profile's "Weights in" has lb picked, and Today's plan, the logging screen (target, Last, Sets, stepper), History, a Workout's detail, Volume everywhere and the Equipment Profile's weights all read in lb. Log a Set of 25 lb: it reads 25 lb in the Set row, History and as Last next time, never 24.9. Pick kg on Profile: the same screens switch to kg, and the 25 lb Set reads 11.5 kg. With the loads unknown (a home profile with dumbbells but no weights entered), the load stepper moves by 5 lb or 2 kg.
+  - iOS: Result: · Android: Result: · Notes:
+
+## Load Steps (#127)
+
+- [ ] **L1** On a gym profile in lb, Today's dumbbell targets are 5 lb steps (25, 30, 35 lb), barbell ones are 45 lb plus pound plates (135, 140 lb) and cable ones are 10 lb steps. On the logging screen the stepper moves 25 → 30 lb on dumbbells, 135 → 140 lb on a barbell and 100 → 110 lb on a cable. Switch to kg on Profile: the targets become 2.5 kg dumbbells, a 20 kg bar and 5 kg cable steps.
+  - iOS: Result: · Android: Result: · Notes:
+
+- [ ] **L2** Edit the gym profile (Profile → Training): a stage asks only for "Cable and machine step (lb)", filled with 10. Change it to 15 and save: Today's cable targets and the cable stepper now move in 15 lb steps. On a home profile with a cable machine selected, the same field shows on the weights stage next to the other equipment.
   - iOS: Result: · Android: Result: · Notes:
 
 ## PRs (#130)

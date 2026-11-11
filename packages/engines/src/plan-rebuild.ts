@@ -1,10 +1,12 @@
-import type { PlannedWorkout, UserProfile, WorkoutLength } from "@fit/shared";
+import type { PlannedWorkout, UserProfile, WeightUnit, WorkoutLength } from "@fit/shared";
 import type { ProfileWithLoads } from "./equipment";
 import { localDateOf, mondayOf } from "./week-ledger";
 
 // The Profile fields that shape a plan: changing any of them rebuilds it
 export type PlanInputs = Pick<UserProfile, "goal" | "daysPerWeek" | "injuries" | "includeJumps"> & {
   workoutLength: WorkoutLength;
+  // Full gym's loads follow it
+  unit: WeightUnit;
   equipmentProfile: ProfileWithLoads;
 };
 
@@ -17,10 +19,11 @@ export function planInputsKey({
   workoutLength,
   injuries,
   includeJumps,
+  unit,
   equipmentProfile,
 }: PlanInputs) {
   const { tags, loads } = equipmentProfile;
-  const key = [goal, daysPerWeek, workoutLength, [...injuries].sort(), [...tags].sort(), loads];
+  const key = [goal, daysPerWeek, workoutLength, [...injuries].sort(), [...tags].sort(), loads, unit];
   return JSON.stringify(includeJumps ? [...key, "jumps"] : key);
 }
 

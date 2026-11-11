@@ -3,7 +3,7 @@
 import type { Muscle, WorkoutLength } from "@fit/shared";
 import {
   addCredits,
-  BUILT_IN_EQUIPMENT,
+  builtInEquipment,
   creditsPerSet,
   exerciseBySlug,
   EXERCISES,
@@ -169,7 +169,7 @@ for (const profile of Object.keys(EVERY_PROFILE) as (keyof typeof EVERY_PROFILE)
 // How thin Bodyweight only's Alternative Exercises are: the Exercises with no other Exercise available on it that
 // shares a Pattern and a primary Muscle
 const onBodyweight = EXERCISES.filter(
-  (exercise) => !exercise.recovery && isAvailable(exercise, BUILT_IN_EQUIPMENT.bodyweight_only),
+  (exercise) => !exercise.recovery && isAvailable(exercise, builtInEquipment("bodyweight_only", "kg")),
 );
 const noMatch = EXERCISES.filter((exercise) => !exercise.recovery).filter(
   (exercise) =>
