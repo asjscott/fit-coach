@@ -1,5 +1,5 @@
 // Weeks of Workouts through the real planner, for the simulation and the plan outcome tests
-import type { Goal, Muscle, Set, SetTarget, WorkingLevel, Workout, WorkoutLength } from "@fit/shared";
+import type { Goal, Muscle, Set as LoggedSet, SetTarget, WorkingLevel, Workout, WorkoutLength } from "@fit/shared";
 import {
   addCredits,
   builtInEquipment,
@@ -77,8 +77,8 @@ const ASSESSED_AT = "2026-11-02T12:00:00.000Z";
 
 // A lifter whose reps grow: every Set reaches the target the plan gives, so the rules move each Working Level on. A
 // band Exercise's Sets are logged without the band, as on the phone: it's the one its Working Level names
-function setsAt(target: SetTarget, sets: number, loggedAt: string): Set[] {
-  const set: Set =
+function setsAt(target: SetTarget, sets: number, loggedAt: string): LoggedSet[] {
+  const set: LoggedSet =
     target.unit === "kg"
       ? { kind: "external", kg: target.kg, reps: target.reps, loggedAt }
       : target.unit === "seconds"
@@ -103,7 +103,8 @@ export function simulate({ goal, days, length, lifter, profile, jumps = false }:
   });
   const seeds = new Map(seeded.map((level) => [level.slug, level]));
   const stored = new Map<string, WorkingLevel>();
-  const workouts: (Pick<Workout, "id" | "startedAt"> & { workoutExercises: { slug: string; sets: Set[] }[] })[] = [];
+  const workouts: (Pick<Workout, "id" | "startedAt"> & { workoutExercises: { slug: string; sets: LoggedSet[] }[] })[] =
+    [];
   const weeks = [];
   for (let week = 0; week < WEEKS; week++) {
     const thisWeek = [];
