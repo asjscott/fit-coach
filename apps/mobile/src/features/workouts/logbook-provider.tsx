@@ -11,6 +11,7 @@ import {
 import {
   PlannedWorkout,
   PreviousSets,
+  type DatedCheckIn,
   type Exercise,
   type InProgressWorkout,
   type SetValues,
@@ -76,8 +77,10 @@ type LogbookContextValue = {
   pendingCount: () => Promise<number>;
   // Removes a Pending Workout so it never uploads; works offline
   deletePending: (workoutId: string) => Promise<void>;
-  // For signing out: removes the in-progress and Pending Workouts and the Planned Workout from the phone
+  // For signing out: removes the in-progress and Pending Workouts, queued Check-ins and the Planned Workout from the phone
   clear: () => Promise<void>;
+  // Queues a Check-in to upload alongside Pending Workouts, retried the same way, and tries to upload it now
+  queueCheckIn: (checkIn: DatedCheckIn) => Promise<void>;
 };
 
 export type AssessmentOptions = Parameters<Logbook["startAssessment"]>[0];
@@ -106,6 +109,9 @@ export function LogbookProvider({ children }: { children: ReactNode }) {
       uploader: {
         upload: async (workout) => {
           await api("/workouts", { method: "POST", body: JSON.stringify(workout) });
+        },
+        uploadCheckIn: async ({ date, ...checkIn }) => {
+          await api(`/check-ins/${date}`, { method: "PUT", body: JSON.stringify(checkIn) });
         },
       },
       previousSets: {
@@ -304,6 +310,14 @@ export function LogbookProvider({ children }: { children: ReactNode }) {
     setRest(null);
   }, [logbook, run]);
 
+  const queueCheckIn = useCallback(
+    async (checkIn: DatedCheckIn) => {
+      await logbook.queueCheckIn(checkIn);
+      await sync();
+    },
+    [logbook, sync],
+  );
+
   return (
     <LogbookContext
       value={{
@@ -337,6 +351,7 @@ export function LogbookProvider({ children }: { children: ReactNode }) {
         pendingCount,
         deletePending,
         clear,
+        queueCheckIn,
       }}
     >
       {workout ? <KeepAwake /> : null}

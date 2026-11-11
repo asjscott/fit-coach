@@ -48,6 +48,8 @@ export type OnboardedUser = {
   injuries: InjuryTag[];
   workoutLength: WorkoutLength;
   timeZone: string;
+  // The "Include jumps" switch, off until the user turns it on (#105)
+  includeJumps: boolean;
 } & TrainingPlanProfile;
 
 // What a Weekly Budget is set by. Onboarding requires these too
@@ -63,6 +65,7 @@ export async function findOnboardedUser(clerkUserId: string): Promise<OnboardedU
     ...TrainingPlanProfile.parse(user.profile),
     equipmentProfiles: user.equipmentProfiles,
     injuries: user.profile.injuries ?? [],
+    includeJumps: user.profile.includeJumps ?? false,
     workoutLength: usualWorkoutLength(user.profile),
     timeZone: user.timeZone ?? "UTC",
   };

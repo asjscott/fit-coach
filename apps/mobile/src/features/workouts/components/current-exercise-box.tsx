@@ -14,7 +14,7 @@ import { usePrimaryEquipmentProfile } from "@/features/user/current-user-provide
 import { fonts, radii, spacing, useTheme } from "@/theme";
 import { errorMessage } from "@/utils/error-message";
 import { plannedSetsLabel, previousSetsLabel } from "../format";
-import { exerciseName, libraryExercise } from "../library";
+import { exerciseName, isJumpSlug, libraryExercise } from "../library";
 import { useLogbook } from "../logbook-provider";
 import { protocolNote } from "../protocol-note";
 import { draftValues, rpeMissing, setDraft, SET_FIELDS, type SetDraft } from "../set-entry";
@@ -98,7 +98,7 @@ export function ExerciseLogging({
     <>
       {planned && !hideTarget ? (
         <Text size="sm" color="muted" style={styles.note}>
-          {`Target: ${plannedSetsLabel(planned, unilateral)}`}
+          {`Target: ${plannedSetsLabel(planned, unilateral, isJumpSlug(slug))}`}
         </Text>
       ) : null}
       {previousSets ? (
@@ -156,6 +156,7 @@ export function ExerciseLogging({
           initial={editingSet}
           asksRpe={asksRpe}
           kgSteps={kgSteps}
+          jump={isJumpSlug(slug)}
           submitLabel={`Save set ${editingIndex + 1}`}
           onSubmit={async (values) => {
             await editSet(id, editingIndex, values);
@@ -179,6 +180,7 @@ export function ExerciseLogging({
           initial={nextSetDraft(workoutExercise, protocol)}
           asksRpe={asksRpe}
           kgSteps={kgSteps}
+          jump={isJumpSlug(slug)}
           submitLabel={`Log set ${nextNumber}`}
           onSubmit={(values) => logSet(id, values)}
         />
@@ -215,6 +217,8 @@ type SetEntryProps = {
   // Asks how hard the Set felt, for an Assessment Workout's test Sets
   asksRpe?: boolean;
   kgSteps: KgSteps;
+  // A jump's reps are entered as contacts (#105)
+  jump?: boolean;
   submitLabel: string;
   onSubmit: (values: SetValues) => Promise<void>;
   // Shown under the submit button, e.g. Cancel while editing
@@ -229,6 +233,7 @@ function SetEntry({
   initial,
   asksRpe = false,
   kgSteps,
+  jump = false,
   submitLabel,
   onSubmit,
   children,
@@ -265,7 +270,7 @@ function SetEntry({
         return field === "kg" ? (
           <SetStepper key={field} field={field} value={value} onChange={onChange} {...kgSteps} />
         ) : (
-          <SetStepper key={field} field={field} value={value} onChange={onChange} />
+          <SetStepper key={field} field={field} value={value} onChange={onChange} contacts={jump} />
         );
       })}
       {asksRpe ? (

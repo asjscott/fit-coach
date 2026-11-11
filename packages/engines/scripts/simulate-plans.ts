@@ -1,8 +1,8 @@
 // Runs weeks of Workouts through the real planner: docs/research/planner-simulation.md records the results.
 // pnpm --filter @fit/engines simulate
 import type { Muscle, WorkoutLength } from "@fit/shared";
-import { addCredits, creditsPerSet, exerciseBySlug, weeklyBudget, type MuscleCredits } from "../src";
-import { GOALS, LIFTERS, PROFILES, simulate, type Run } from "./simulate-weeks";
+import { addCredits, creditsPerSet, exerciseBySlug, isJump, weeklyBudget, type MuscleCredits } from "../src";
+import { GOALS, LIFTERS, PROFILES, simulate, weekCredits, type Run } from "./simulate-weeks";
 
 const round = (value: number) => Math.round(value * 10) / 10;
 
@@ -122,3 +122,61 @@ for (const goal of GOALS) {
     console.log(`| ${goal} | ${length} | ${cells.join(" | ")} |`);
   }
 }
+
+// Jumps (#105): athletic with the switch on against off. Jump minutes are the jump Sets' time; the cost is what the
+// rest of the week loses
+console.log("\n### Jumps: athletic, Full gym, intermediate, switch off then on\n");
+console.log(
+  "| Days | Length | Jumps | Sets | Minutes | Jump Sets | Jump minutes | Other Sets | Quads, glutes | Of budget | Short of budget |",
+);
+console.log("| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |");
+for (const [days, length] of COMBINATIONS) {
+  for (const jumps of [false, true]) {
+    const run: Run = { goal: "athletic", days, length, lifter: "intermediate", profile: "Full gym", jumps };
+    const s = summary(run);
+    const weeks = simulate(run).slice(1);
+    const picks = weeks.flat().flatMap(({ exercises }) => exercises);
+    const jumpPicks = picks.filter(({ slug }) => isJump(exerciseBySlug(slug)!));
+    const jumpSets = jumpPicks.reduce((sets, pick) => sets + pick.sets, 0);
+    const jumpSeconds = jumpPicks.reduce(
+      (total, { slug, sets }) => total + sets * exerciseBySlug(slug)!.secondsPerSet,
+      0,
+    );
+    const credited = picks.reduce<MuscleCredits>(
+      (credits, { slug, sets }) => addCredits(credits, creditsPerSet(exerciseBySlug(slug)!), sets),
+      {},
+    );
+    const perWeek = (value: number) => round(value / weeks.length);
+    const cells = [days, length, jumps ? "on" : "off", s.sets, s.minutes, perWeek(jumpSets)];
+    cells.push(Math.round(jumpSeconds / 60 / weeks.length), round(s.sets - perWeek(jumpSets)));
+    cells.push(`${perWeek(credited.quads ?? 0)}, ${perWeek(credited.glutes ?? 0)}`, s.ofBudget);
+    console.log(`| ${cells.join(" | ")} | ${s.short.join(", ") || "none"} |`);
+  }
+}
+
+// The 130% cap: each budgeted Muscle's credited Sets as a share of its budget, from primary credit alone and in total,
+// in the heaviest of the 3 weeks. Primary stays within 130%; a total over 160% sends the cap back for a decision
+const MUSCLES = Object.keys(weeklyBudget("build_muscle", 4)) as Muscle[];
+const shareOf = (credit: number | undefined, budget: number) => Math.round(((credit ?? 0) / budget) * 100);
+let overTotal = 0;
+for (const profile of Object.keys(PROFILES) as (keyof typeof PROFILES)[]) {
+  for (const lifter of Object.keys(LIFTERS) as (keyof typeof LIFTERS)[]) {
+    console.log(`\n### Credit against the Weekly Budget, primary / total %: ${profile}, ${lifter}\n`);
+    console.log(`| Goal | Days | Length | ${MUSCLES.join(" | ")} |`);
+    console.log(`| --- | --- | --- |${MUSCLES.map(() => " --- |").join("")}`);
+    for (const goal of GOALS) {
+      for (const [days, length] of COMBINATIONS) {
+        const budget = weeklyBudget(goal, days);
+        const weeks = simulate({ goal, days, length, lifter, profile }).slice(1);
+        const cells = MUSCLES.map((muscle) => {
+          const most = (counted: "primary" | "total") =>
+            Math.max(...weeks.map((week) => shareOf(weekCredits(week, counted)[muscle], budget[muscle]!)));
+          if (most("total") > 160) overTotal++;
+          return `${most("primary")} / ${most("total")}`;
+        });
+        console.log(`| ${goal} | ${days} | ${length} | ${cells.join(" | ")} |`);
+      }
+    }
+  }
+}
+console.log(`\nMuscles over 160% in total: ${overTotal}`);
