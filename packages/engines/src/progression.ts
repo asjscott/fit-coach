@@ -44,7 +44,8 @@ const SAME_LOAD_KG = 0.01;
 // The level as this Workout leaves it, recording the Workout as the one that last moved it and why it changed
 function moved({ level, workout }: Judgement, changes: Partial<WorkingLevel>, change: ProgressionChange | null) {
   // An earlier Workout's reason goes, as this Workout's is the one shown
-  const next = { ...level, ...changes, movedBy: { workoutId: workout.id, startedAt: workout.startedAt } };
+  // and a Workout that moves it without a Miss ends its run of Misses (#134)
+  const next = { ...level, misses: 0, ...changes, movedBy: { workoutId: workout.id, startedAt: workout.startedAt } };
   delete next.change;
   return { level: { ...next, ...(change && { change }) } as WorkingLevel, change };
 }
@@ -67,6 +68,65 @@ const notAnAssessment: ProgressionRule = ({ workout }) => (workout.assessment ? 
 // Story 38, 39: one Set decides nothing, unless the Exercise was done as one Set
 const atLeastTwoSets: ProgressionRule = ({ sets, plannedSets }) =>
   sets.length >= Math.min(2, plannedSets ?? 2) ? undefined : UNMOVED;
+
+// Story 46: a Miss is Sets averaging more than 2 reps short of the target, or 10 seconds for a timed Exercise
+const MISS_REPS = 2;
+const MISS_SECONDS = 10;
+// Story 47: two Misses in a row bring the Exercise down
+const MISSES_TO_DROP = 2;
+// Story 48: a Load Step down more than about this much lighter keeps the load and drops the target instead (ADR 0007)
+const MAX_STEP_DOWN = 0.12;
+
+const average = (values: readonly number[]) => values.reduce((sum, value) => sum + value, 0) / values.length;
+const secondsOf = (set: Set) => ("seconds" in set ? set.seconds : 0);
+
+// Whether the judged Sets are a Miss; undefined when they can't be one: a weighted level lifted at another load (a new
+// base), a carry, which has no target reps, or a jump, which never moves
+function isMiss({ level, exercise, sets }: Judgement): boolean | undefined {
+  if (isJump(exercise)) return undefined;
+  switch (level.unit) {
+    case "kg":
+      if (!repRange(exercise, level.unit) || Math.abs(lowestKg(sets) - level.kg) > SAME_LOAD_KG) return undefined;
+      return level.reps - average(sets.map(repsOf)) > MISS_REPS;
+    case "seconds":
+      return level.seconds - average(sets.map(secondsOf)) > MISS_SECONDS;
+    case "reps":
+    case "band":
+      return level.reps - average(sets.map(repsOf)) > MISS_REPS;
+  }
+}
+
+// The level two Misses in a row bring it down to (stories 47–50): a weighted one a Load Step down at the bottom of the
+// range, unless that step is more than about 12% lighter or there's none, when the target drops 2 reps at the same
+// load. A bodyweight or band target drops 2 reps and a timed one 10 seconds, never to an easier variant or band
+function droppedLevel({ level, exercise, equipmentProfile }: Judgement) {
+  switch (level.unit) {
+    case "kg": {
+      const kg = nextLoadKg(exercise, equipmentProfile, level.kg, -1);
+      const range = repRange(exercise, level.unit);
+      if (kg !== undefined && range && (level.kg - kg) / level.kg <= MAX_STEP_DOWN) {
+        return { changes: { kg, reps: range.min }, change: { code: "load-down" } as const };
+      }
+      return { changes: { reps: Math.max(1, level.reps - MISS_REPS) }, change: { code: "target-down" } as const };
+    }
+    case "seconds":
+      return { changes: { seconds: level.seconds - MISS_SECONDS }, change: { code: "target-down" } as const };
+    case "reps":
+    case "band":
+      return { changes: { reps: Math.max(1, level.reps - MISS_REPS) }, change: { code: "target-down" } as const };
+  }
+}
+
+// Stories 46–52: a Miss adds to the level's run of Misses and holds it; the second in a row brings it down and starts
+// a new run. Not a Miss passes on, and the rule that moves the level ends the run (moved resets misses). Counted over
+// the Workouts that include the Exercise, so a skipped Workout, or one without it, leaves the run as it is
+const missesBringItDown: ProgressionRule = (judgement) => {
+  if (!isMiss(judgement)) return undefined;
+  const run = judgement.level.misses + 1;
+  if (run < MISSES_TO_DROP) return moved(judgement, { misses: run }, null);
+  const { changes, change } = droppedLevel(judgement);
+  return moved(judgement, { ...changes, misses: 0 }, change);
+};
 
 // Until #135 and #136 give them their rules: bodyweight, timed and band ladders, Ballistic Exercises and carries. A
 // jump never moves (#105)
@@ -107,13 +167,16 @@ const doubleProgression: ProgressionRule = (judgement) => {
   return moved(judgement, { reps: level.reps + 1 }, { code: "target-up" });
 };
 
-// In order: the first to decide wins. Where later tickets' rules go: the deload week (#137) after notAnAssessment;
-// RPE 10 (#133) and Misses (#134) before newBase; ladders (#135) and Ballistic Exercises and carries (#136) in place of
-// notYetProgressed
+// In order: the first to decide wins. Where later tickets' rules go: the deload week (#137) after notAnAssessment,
+// returning UNMOVED so the run of Misses stays as it is; RPE 10 (#133) after missesBringItDown, as a Miss with RPE 10
+// is still a Miss; ladders (#135) and Ballistic Exercises and carries (#136) in place of notYetProgressed, after
+// missesBringItDown, which brings bodyweight, band and timed levels down too. Every rule that moves a level through
+// moved() ends its run of Misses
 const RULES: readonly ProgressionRule[] = [
   laterWorkoutsOnly,
   notAnAssessment,
   atLeastTwoSets,
+  missesBringItDown,
   notYetProgressed,
   newBase,
   doubleProgression,

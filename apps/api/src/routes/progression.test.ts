@@ -1,7 +1,7 @@
 import type { LatestAssessment, PlannedWorkout, Set, WorkingLevel, Workout } from "@fit/shared";
 import { describe, expect, it } from "vitest";
 import { type TestUser, useRouteTestApi } from "../test/route-test-api";
-import { assessmentPair, hoursAgo, lifted, workout } from "../test/workouts";
+import { assessmentPair, held, hoursAgo, lifted, workout } from "../test/workouts";
 
 const api = useRouteTestApi();
 
@@ -120,6 +120,80 @@ describe("uploads that never move a level twice or backwards (#132)", () => {
       reps: 9,
       movedBy: { workoutId: later.id, startedAt: later.startedAt },
     });
+  });
+});
+
+// Stories 46–52, ADR 0007: two Misses in a row bring an Exercise down
+describe("Misses at upload (#134)", () => {
+  // Story 47
+  it("drops a weighted Exercise one Load Step to the bottom of the range on the second Miss in a row", async () => {
+    const user = await assessedUser();
+    const slug = "one-arm-dumbbell-row";
+    // A new base of 20 kg × 10, then two Workouts averaging 7
+    await upload(user, at(250, [{ slug, sets: [lifted(20, 10), lifted(20, 10)] }]));
+    await upload(user, at(200, [{ slug, sets: [lifted(20, 7), lifted(20, 7)] }]));
+    expect((await workingLevels(user)).get(slug)).toMatchObject({ kg: 20, reps: 10, misses: 1 });
+
+    await upload(user, at(150, [{ slug, sets: [lifted(20, 8), lifted(20, 6)] }]));
+    // 20 kg down to 18 kg is 10% lighter
+    expect((await workingLevels(user)).get(slug)).toMatchObject({ kg: 18, reps: 8, misses: 0 });
+    expect(await plannedExercise(user, slug)).toMatchObject({
+      target: { unit: "kg", kg: 18, reps: 8 },
+      change: { code: "load-down" },
+    });
+  });
+
+  // Story 48, 51, 52: Manual Workouts count, and a Workout without the Exercise, or none at all, isn't a Miss
+  it("keeps the load and drops the target 2 reps when the step down is too big, across Workouts without it", async () => {
+    const user = await assessedUser();
+    // The goblet squat is seeded at 12 kg × 8; 12 kg down to 10 kg would be 17% lighter
+    await upload(user, at(250, [{ slug: "goblet-squat", sets: [lifted(12, 5), lifted(12, 5)] }]));
+    await upload(user, at(200, [{ slug: "one-arm-dumbbell-row", sets: [lifted(14, 8), lifted(14, 8)] }]));
+    await upload(user, at(100, [{ slug: "goblet-squat", sets: [lifted(12, 6), lifted(12, 5)] }]));
+
+    expect((await workingLevels(user)).get("goblet-squat")).toMatchObject({
+      kg: 12,
+      reps: 6,
+      misses: 0,
+      change: { code: "target-down" },
+    });
+  });
+
+  // Story 46
+  it("ends the run on a Workout that isn't a Miss", async () => {
+    const user = await assessedUser();
+    await upload(user, at(250, [{ slug: "goblet-squat", sets: [lifted(12, 5), lifted(12, 5)] }]));
+    await upload(user, at(200, [{ slug: "goblet-squat", sets: [lifted(12, 7), lifted(12, 7)] }]));
+    await upload(user, at(100, [{ slug: "goblet-squat", sets: [lifted(12, 5), lifted(12, 5)] }]));
+
+    expect((await workingLevels(user)).get("goblet-squat")).toMatchObject({ kg: 12, reps: 8, misses: 1 });
+  });
+
+  // Story 49
+  it("lowers a timed target 10 seconds on the second Miss in a row", async () => {
+    const user = await assessedUser();
+    const plank = (await workingLevels(user)).get("plank") as Extract<WorkingLevel, { unit: "seconds" }>;
+    const short = [held(plank.seconds - 15), held(plank.seconds - 15)];
+    await upload(user, at(250, [{ slug: "plank", sets: short }]));
+    await upload(user, at(200, [{ slug: "plank", sets: short }]));
+
+    expect((await workingLevels(user)).get("plank")).toMatchObject({
+      unit: "seconds",
+      seconds: plank.seconds - 10,
+      change: { code: "target-down" },
+    });
+  });
+
+  // Story 40
+  it("counts no Miss in an Assessment Workout", async () => {
+    const user = await assessedUser();
+    await upload(user, at(250, [{ slug: "goblet-squat", sets: [lifted(12, 5), lifted(12, 5)] }]));
+    await upload(
+      user,
+      at(200, [{ slug: "goblet-squat", sets: [lifted(12, 5, 9), lifted(12, 5, 9)] }], { assessment: "A" }),
+    );
+
+    expect((await workingLevels(user)).get("goblet-squat")).toMatchObject({ kg: 12, reps: 8, misses: 1 });
   });
 });
 
