@@ -55,6 +55,10 @@ export function progressionChangeLine(change: ProgressionChange | undefined): st
       return "Heavier: every Set reached the top of the range.";
     case "new-base":
       return "From the weight you lifted last time.";
+    case "load-down":
+      return "Lighter: the last two times fell short of the target.";
+    case "target-down":
+      return "Fewer: the last two times fell short of the target.";
     case "harder-variant":
       return `Ready for this after ${exerciseName(change.from)}.`;
     case "held-at-top":
