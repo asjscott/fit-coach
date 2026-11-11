@@ -5,6 +5,7 @@ import { z } from "zod";
 import { assessIfPaired } from "../assessments";
 import { requireAuth, userIdOf } from "../auth";
 import { finishPlannedWorkout, rebuildAfterUpload } from "../planned-workouts";
+import { progressWorkingLevels } from "../progression";
 import { findOnboardedUser } from "../users";
 import { createWorkout, deleteWorkout, findPreviousSets, findWorkouts, recordPrs, toWorkout } from "../workouts";
 
@@ -44,6 +45,9 @@ export const workoutRoutes: FastifyPluginAsyncZod = async (app) => {
       // A failure fails the upload, though the Workout is stored: the phone keeps it Pending, and its retry (the 200
       // case) pairs it again, so the Assessment isn't lost
       await assessIfPaired(clerkUserId, stored, user);
+      // Progression (#132): after pairing, so a retake's levels are the ones moved, and before the rebuild, so the
+      // next plan uses them. A failure fails the upload in the same way, and the retry moves what it didn't
+      await progressWorkingLevels(clerkUserId, stored, user);
       // PRs (#130): found once and stored against the Workout, so the 200 retry answers with the same ones
       stored.prs = await recordPrs(clerkUserId, workout);
       // Before the rebuild, which would otherwise mark its plan replaced

@@ -142,7 +142,7 @@ const byTieOrder = ({ exercise: a }: Candidate, { exercise: b }: Candidate) =>
 function possibleExercises(input: PlanWorkoutInput): Candidate[] {
   const { equipmentProfile, injuries } = input;
   const levels = workingLevelsFor(input);
-  return EXERCISES.flatMap((exercise) => {
+  const possible = EXERCISES.flatMap((exercise) => {
     const level = levels.get(exercise.slug);
     if (
       !level ||
@@ -154,6 +154,34 @@ function possibleExercises(input: PlanWorkoutInput): Candidate[] {
       return [];
     const target = targetFrom(level, exercise, equipmentProfile);
     return target ? [{ exercise, target, outgrown: level.outgrown }] : [];
+  });
+  return withChanges(possible, levels);
+}
+
+// When a level moved by a Workout, as a time to compare; -Infinity for one no Workout has moved
+const movedAt = (level: WorkingLevel | undefined) => (level?.movedBy ? Date.parse(level.movedBy.startedAt) : -Infinity);
+
+// Why each possible Exercise's Working Level changed (#132), as its Planned Exercise shows it. An Exercise progression
+// outgrew is worded by what the plan does with it: a hold at the top when its harder variant can't be given, and
+// otherwise, on the harder variant, which Exercise it takes over from, until that variant is done itself
+function withChanges(possible: readonly Candidate[], levels: ReadonlyMap<string, WorkingLevel>): Candidate[] {
+  const slugs = new Set(possible.map(({ exercise }) => exercise.slug));
+  const outgrownBy = (slug: string) => levels.get(slug)?.change?.code === "outgrown";
+  return possible.map((candidate) => {
+    const { exercise } = candidate;
+    const level = levels.get(exercise.slug);
+    const from = possible.find(
+      ({ exercise: easier }) =>
+        easier.progression === exercise.slug &&
+        outgrownBy(easier.slug) &&
+        movedAt(level) < movedAt(levels.get(easier.slug)),
+    );
+    if (from) return { ...candidate, change: { code: "harder-variant", from: from.exercise.slug } };
+    const change = level?.change;
+    if (!change) return candidate;
+    if (change.code !== "outgrown") return { ...candidate, change };
+    const replaced = exercise.progression && slugs.has(exercise.progression);
+    return replaced ? candidate : { ...candidate, change: { code: "held-at-top" } };
   });
 }
 
@@ -355,9 +383,15 @@ function selectExercises(selection: Selection, weekSoFar: MuscleCredits): Planne
     }
     if (!pick) {
       return [...draft.sets].map(([candidate, sets]) => {
-        const { exercise, target } = candidate;
+        const { exercise, target, change } = candidate;
         const fourthSetAfter = draft.fourthSetAfter.get(candidate);
-        return { slug: exercise.slug, sets, target, ...(fourthSetAfter && { fourthSetAfter }) };
+        return {
+          slug: exercise.slug,
+          sets,
+          target,
+          ...(fourthSetAfter && { fourthSetAfter }),
+          ...(change && { change }),
+        };
       });
     }
 

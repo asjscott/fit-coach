@@ -18,6 +18,7 @@ export * from "./picker";
 export * from "./plan-rebuild";
 export * from "./plan-score";
 export * from "./plan-workout";
+export * from "./progression";
 export * from "./prs";
 export * from "./recovery-workout";
 export * from "./rest-day";

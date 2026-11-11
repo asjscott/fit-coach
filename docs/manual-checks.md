@@ -215,6 +215,15 @@ On the installed PWA against staging, once an Exercise has a Workout behind it (
 - [ ] **PR2** In airplane mode, beat a best again and save. Turn airplane mode off and open the app: once it uploads, Today shows a green note naming the PRs with "See workout". Close and reopen the app: the note is gone, and the Workout's History row says "New PR".
   - iOS: Result: · Notes:
 
+## Double progression (#132)
+
+On the installed PWA against staging, after the Assessment. Route tests cover the rules; these are for the screen.
+
+- [ ] **DP1** Do a Workout and log every Set of one weighted Exercise at its target or more, at the prescribed weight. Once it uploads, open the Next Workout sheet on Today: if the Exercise is planned again, its target is 1 rep more and under it reads "One more rep: every Set reached the target." An Exercise whose Set fell short shows its old target and no line.
+  - iOS: Result: · Notes:
+- [ ] **DP2** Log 2 or more Sets of a weighted Exercise at a different weight from the one prescribed. Next time it's planned, its target is that weight at the fewest reps you did, with "From the weight you lifted last time."
+  - iOS: Result: · Notes:
+
 ## Library gaps (#101)
 
 Needs `pnpm --filter @fit/api seed:exercises` run once from the main checkout (it needs `apps/api/.env`), so the Exercises tab lists the six new Exercises.

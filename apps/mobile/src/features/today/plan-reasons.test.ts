@@ -1,6 +1,6 @@
 import type { Muscle, PlanReason } from "@fit/shared";
 import { describe, expect, it } from "vitest";
-import { planReasonLines } from "./plan-reasons";
+import { planReasonLines, progressionChangeLine } from "./plan-reasons";
 
 // Wednesday 4 November 2026, in the phone's own time
 const wednesday = new Date(2026, 10, 4, 12);
@@ -12,6 +12,23 @@ const recovering = (muscles: Muscle[], lastSetOn = "2026-11-02"): PlanReason => 
   lastSetOn,
 });
 const behind = (muscles: Muscle[]): PlanReason => ({ code: "behind", muscles });
+
+// Story 42, #132: why an Exercise's Working Level changed, under the Exercise
+describe("progressionChangeLine", () => {
+  it.each([
+    [{ code: "target-up" }, "One more rep: every Set reached the target."],
+    [{ code: "load-up" }, "Heavier: every Set reached the top of the range."],
+    [{ code: "new-base" }, "From the weight you lifted last time."],
+    [{ code: "harder-variant", from: "goblet-squat" }, "Ready for this after Goblet squat."],
+    [{ code: "held-at-top" }, "Held at 20 reps: no heavier weight or harder variant here."],
+  ] as const)("words %o", (change, line) => {
+    expect(progressionChangeLine(change)).toBe(line);
+  });
+
+  it("says nothing when nothing changed", () => {
+    expect(progressionChangeLine(undefined)).toBeNull();
+  });
+});
 
 describe("planReasonLines", () => {
   it("says which group is recovering, and from which day", () => {

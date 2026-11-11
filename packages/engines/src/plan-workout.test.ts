@@ -549,6 +549,56 @@ describe("planWorkout", () => {
     });
   });
 
+  // Story 42, #132: why progression changed each Working Level, shown with its Exercise
+  describe("the reason a Working Level changed", () => {
+    const mover = { workoutId: "00000000-0000-4000-8000-000000000001", startedAt: "2026-11-03T18:00:00.000Z" };
+    const changeOf = (slug: string, more: Partial<PlanWorkoutInput>) =>
+      plan(more).plannedExercises.find((exercise) => exercise.slug === slug)?.change;
+
+    it("goes with the Exercise whose level changed", () => {
+      const row = { ...kg("one-arm-dumbbell-row", 18, 9), movedBy: mover, change: { code: "target-up" as const } };
+      const workingLevels = [...levels.filter(({ slug }) => slug !== "one-arm-dumbbell-row"), row];
+      expect(changeOf("one-arm-dumbbell-row", { workingLevels })).toEqual({ code: "target-up" });
+      expect(changeOf("goblet-squat", { workingLevels })).toBeUndefined();
+    });
+
+    // Story 34: 20 reps on every Set at the heaviest load gives the harder variant, with a reason
+    it("names the outgrown Exercise on the harder variant given in its place", () => {
+      const outgrownSquat: WorkingLevel = {
+        ...kg("goblet-squat", 24, 20),
+        movedBy: mover,
+        outgrown: true,
+        change: { code: "outgrown" },
+      };
+      const workingLevels = [
+        ...levels.filter(({ slug }) => slug !== "goblet-squat"),
+        outgrownSquat,
+        kg("back-squat", 60, 6),
+      ];
+      const equipmentProfile: ProfileWithLoads = {
+        ...dumbbells,
+        tags: [...dumbbells.tags, "barbell", "plates", "squat_rack"],
+        loads: { ...dumbbells.loads, barbell: { barKg: 20, platesKg: [2.5, 5, 10] } },
+      };
+      expect(changeOf("back-squat", { workingLevels, equipmentProfile })).toEqual({
+        code: "harder-variant",
+        from: "goblet-squat",
+      });
+    });
+
+    // Story 35: with no harder variant the profile can do, it holds at 20 reps and says so
+    it("holds an outgrown Exercise at 20 reps when the profile can't do its harder variant", () => {
+      const outgrownSquat: WorkingLevel = {
+        ...kg("goblet-squat", 24, 20),
+        movedBy: mover,
+        outgrown: true,
+        change: { code: "outgrown" },
+      };
+      const workingLevels = [...levels.filter(({ slug }) => slug !== "goblet-squat"), outgrownSquat];
+      expect(changeOf("goblet-squat", { workingLevels })).toEqual({ code: "held-at-top" });
+    });
+  });
+
   describe("an Exercise's Workouts in a week", () => {
     const workoutsWith = (count: number) =>
       Array.from({ length: count }, (_, index) => logged(`w${index}`, "goblet-squat", 3));
