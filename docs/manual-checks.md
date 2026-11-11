@@ -233,6 +233,15 @@ On the installed PWA against staging, in the 5th week of a Block: the week start
 - [ ] **DL2** Dismiss the retest with the ×: it stays gone for the rest of the week. On the Monday after, the plan is back to the usual loads and there's no retest. Or, instead, take A and B in the deload week: the Results open as usual, and next week an Exercise you trained this Block but the Assessment didn't test keeps the target it had reached.
   - iOS: Result: · Notes:
 
+## RPE on the last Set (#133)
+
+On the installed PWA against staging, after the Assessment. Route tests cover the hold; the web build walked the chips with the in-memory API; these are for the phone.
+
+- [ ] **RPE1** Start the Next Workout and log a weighted Exercise's Sets. Until its last planned Set, nothing asks for RPE. Once the last is logged, "How hard was set N? Optional: 10 is no more reps" and chips 6–10 show under the Sets, with Log set and the rest timer where they were. Go on to the next Exercise without tapping one: nothing stops you. Back on the first, tap 10: it highlights; tap it again and it clears. In a Manual Workout the chips show after every Set, for the latest. Editing a rated Set keeps its RPE.
+  - iOS: Result: · Notes:
+- [ ] **RPE2** Rate the last Set of a weighted Exercise 10 where every Set reached its target, and save. Once it uploads, the Next Workout sheet (if it plans the Exercise again) keeps the same weight and target, with "Held: your last Set was RPE 10, all you had." under it.
+  - iOS: Result: · Notes:
+
 ## Library gaps (#101)
 
 Needs `pnpm --filter @fit/api seed:exercises` run once from the main checkout (it needs `apps/api/.env`), so the Exercises tab lists the six new Exercises.

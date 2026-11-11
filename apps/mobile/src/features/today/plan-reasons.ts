@@ -49,6 +49,8 @@ export function progressionChangeLine(change: ProgressionChange | undefined): st
   switch (change?.code) {
     case "target-up":
       return "One more rep: every Set reached the target.";
+    case "seconds-up":
+      return "Five more seconds: every Set reached the target.";
     case "load-up":
       return "Heavier: every Set reached the top of the range.";
     case "new-base":
@@ -60,7 +62,9 @@ export function progressionChangeLine(change: ProgressionChange | undefined): st
     case "harder-variant":
       return `Ready for this after ${exerciseName(change.from)}.`;
     case "held-at-top":
-      return "Held at 20 reps: no heavier weight or harder variant here.";
+      return "Held at the top: no heavier weight or harder variant here.";
+    case "rpe-10":
+      return "Held: your last Set was RPE 10, all you had.";
     case "outgrown":
     case undefined:
       return null;

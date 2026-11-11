@@ -182,17 +182,218 @@ describe("progressWorkingLevel: the Sets it judges", () => {
   });
 });
 
-// Spec #119: the other kinds of Exercise get their rules from #133–#136; until then they stay where they are
-describe("progressWorkingLevel: Exercises without double progression yet", () => {
-  const level = (slug: string, shape: object) =>
-    ({ slug, movedBy: LAST_MOVER, misses: 0, outgrown: false, ...shape }) as WorkingLevel;
-  const repsDone = (reps: number): Set => ({ kind: "bodyweight", reps, loggedAt: THIS_WORKOUT.startedAt });
-  const held = (seconds: number): Set => ({ kind: "timed", seconds, loggedAt: THIS_WORKOUT.startedAt });
+const level = (slug: string, shape: object) =>
+  ({ slug, movedBy: LAST_MOVER, misses: 0, outgrown: false, ...shape }) as WorkingLevel;
+const repsDone = (reps: number): Set => ({ kind: "bodyweight", reps, loggedAt: THIS_WORKOUT.startedAt });
+const held = (seconds: number): Set => ({ kind: "timed", seconds, loggedAt: THIS_WORKOUT.startedAt });
+
+// Stories 43–44, ADR 0007: an RPE of 10 on the last Set holds the load and the target
+describe("progressWorkingLevel: RPE on the last Set", () => {
+  const held = { movedBy: movedByThisWorkout, change: { code: "rpe-10" as const } };
+
+  // Story 44
+  it("holds the load at the top of the range when the last Set was RPE 10", () => {
+    expect(progress(gobletSquat(20, 12), [lifted(20, 12), lifted(20, 12), lifted(20, 12, 10)])).toEqual({
+      level: gobletSquat(20, 12, held),
+      change: { code: "rpe-10" },
+    });
+  });
+
+  it("holds the target when every Set reached it and the last was RPE 10", () => {
+    expect(progress(gobletSquat(14, 9), [lifted(14, 9), lifted(14, 9, 10)])).toEqual({
+      level: gobletSquat(14, 9, held),
+      change: { code: "rpe-10" },
+    });
+  });
+
+  it("holds the prescribed load when the last Set, at another load, was RPE 10", () => {
+    expect(progress(gobletSquat(14, 10), [lifted(16, 9), lifted(16, 9, 10)])).toMatchObject({
+      level: { kg: 14, reps: 10 },
+      change: { code: "rpe-10" },
+    });
+  });
+
+  it("goes by the last Set logged, not the last at the load it judges", () => {
+    const sets = [lifted(14, 12), lifted(14, 12), lifted(16, 6, 10)];
+    expect(progress(gobletSquat(14, 11), sets)).toMatchObject({
+      level: { kg: 14, reps: 11 },
+      change: { code: "rpe-10" },
+    });
+  });
 
   it.each([
-    ["a bodyweight Exercise", level("push-up", { unit: "reps", reps: 10 }), [repsDone(12), repsDone(12)]],
-    ["a timed Exercise", level("plank", { unit: "seconds", seconds: 30 }), [held(40), held(40)]],
-    ["a band Exercise", level("band-row", { unit: "band", level: "light", reps: 10 }), [repsDone(15), repsDone(15)]],
+    ["an RPE of 9 on the last Set", [lifted(14, 9), lifted(14, 9, 9)]],
+    ["an RPE of 10 on an earlier Set", [lifted(14, 9, 10), lifted(14, 9)]],
+  ])("progresses as usual after %s", (_, sets) => {
+    expect(progress(gobletSquat(14, 9), sets)).toMatchObject({
+      level: { kg: 14, reps: 10 },
+      change: { code: "target-up" },
+    });
+  });
+
+  // Stories 44, 46: a Miss is a Miss however hard the last Set felt
+  it("still counts a Miss when the last Set was RPE 10", () => {
+    expect(progress(gobletSquat(14, 10), [lifted(14, 7), lifted(14, 7, 10)])).toMatchObject({
+      level: { kg: 14, reps: 10, misses: 1 },
+      change: null,
+    });
+  });
+
+  it("ends a run of Misses when it holds", () => {
+    expect(progress(gobletSquat(14, 10, { misses: 1 }), [lifted(14, 10), lifted(14, 10, 10)])).toMatchObject({
+      level: { kg: 14, reps: 10, misses: 0 },
+      change: { code: "rpe-10" },
+    });
+  });
+
+  // Spec: an RPE of 10 holds every Exercise, ahead of the ladders
+  it("holds a bodyweight ladder when the last Set was RPE 10", () => {
+    const pushUps = level("push-up", { unit: "reps", reps: 10 });
+    expect(progress(pushUps, [repsDone(10), { ...repsDone(12), rpe: 10 }])).toEqual({
+      level: { ...pushUps, movedBy: movedByThisWorkout, change: { code: "rpe-10" } },
+      change: { code: "rpe-10" },
+    });
+  });
+});
+// A band Exercise's Sets are logged without the band: it's the one its Working Level names (story 59)
+const banded = (reps: number): Set => lifted(1, reps);
+
+// Tube bands at home: light, medium and heavy
+const TUBE_BANDS: ProfileWithLoads = {
+  tags: ["tube_bands"],
+  loads: { tube_bands: { levels: ["light", "medium", "heavy"] } },
+};
+
+// Stories 53–57, spec #119 "Ladders": bodyweight and timed targets climb, then the Exercise moves to its harder variant
+describe("progressWorkingLevel: bodyweight and timed ladders", () => {
+  const pushUps = (reps: number, extra: Partial<WorkingLevel> = {}) =>
+    level("push-up", { unit: "reps", reps, ...extra });
+  const plank = (seconds: number, extra: Partial<WorkingLevel> = {}) =>
+    level("plank", { unit: "seconds", seconds, ...extra });
+
+  // Story 53
+  it("puts a bodyweight target up 1 rep when every Set reaches it", () => {
+    expect(progress(pushUps(10), [repsDone(10), repsDone(12), repsDone(11)])).toEqual({
+      level: pushUps(11, { movedBy: movedByThisWorkout, change: { code: "target-up" } }),
+      change: { code: "target-up" },
+    });
+  });
+
+  it("leaves a bodyweight target as it is when a Set falls short, recording the Workout", () => {
+    expect(progress(pushUps(10), [repsDone(10), repsDone(9)])).toEqual({
+      level: pushUps(10, { movedBy: movedByThisWorkout }),
+      change: null,
+    });
+  });
+
+  // Story 54
+  it("puts a timed target up 5 seconds when every Set reaches it", () => {
+    expect(progress(plank(30), [held(30), held(35)])).toEqual({
+      level: plank(35, { movedBy: movedByThisWorkout, change: { code: "seconds-up" } }),
+      change: { code: "seconds-up" },
+    });
+  });
+
+  it("judges a seeded timed target by the whole seconds it was prescribed as", () => {
+    // 37.4 seconds is prescribed as 37
+    expect(progress(plank(37.4), [held(37), held(37)])).toMatchObject({ level: { seconds: 42 } });
+    expect(progress(plank(37.4), [held(37), held(36)])).toMatchObject({ level: { seconds: 37.4 }, change: null });
+  });
+
+  it.each([
+    ["15 reps", pushUps(14), [repsDone(14), repsDone(14)], { reps: 15 }],
+    ["60 seconds, never past it", plank(58), [held(59), held(59)], { seconds: 60 }],
+  ])("climbs to the top of the ladder, %s", (_, workingLevel, sets, next) => {
+    expect(progress(workingLevel, sets)).toMatchObject({ level: { ...next, outgrown: false } });
+  });
+
+  // Story 55: the planner then gives the harder variant, seeded from Reference Strength (story 56), or holds
+  it.each([
+    ["15 reps", pushUps(14), [repsDone(15), repsDone(17)], pushUps(15)],
+    ["60 seconds", plank(55), [held(60), held(62)], plank(60)],
+  ])("outgrows the Exercise at %s on every Set, for its harder variant", (_, workingLevel, sets, top) => {
+    expect(progress(workingLevel, sets)).toEqual({
+      level: { ...top, movedBy: movedByThisWorkout, outgrown: true, change: { code: "outgrown" } },
+      change: { code: "outgrown" },
+    });
+  });
+
+  // Story 57: an easier variant done again keeps its level at the top, so the plan moves on again
+  it("keeps an outgrown easier variant's level when it's done again", () => {
+    expect(progress(pushUps(15, { outgrown: true }), [repsDone(15), repsDone(15)])).toMatchObject({
+      level: { reps: 15, outgrown: true },
+      change: { code: "outgrown" },
+    });
+  });
+});
+
+// Stories 58, 59, spec #119 "Ladders": a band Exercise climbs 10–15 reps, then steps to the next band
+describe("progressWorkingLevel: band ladders", () => {
+  const bandRow = (band: string, reps: number, extra: Partial<WorkingLevel> = {}) =>
+    level("band-row", { unit: "band", level: band, reps, ...extra });
+  const progressBand = (workingLevel: WorkingLevel, sets: Set[], equipmentProfile = TUBE_BANDS) =>
+    progress(workingLevel, sets, { equipmentProfile });
+
+  it("puts the target up 1 rep when every Set reaches it", () => {
+    expect(progressBand(bandRow("light", 10), [banded(10), banded(11)])).toEqual({
+      level: bandRow("light", 11, { movedBy: movedByThisWorkout, change: { code: "target-up" } }),
+      change: { code: "target-up" },
+    });
+  });
+
+  it("leaves the band and target as they are when a Set falls short", () => {
+    expect(progressBand(bandRow("light", 12), [banded(12), banded(11)])).toMatchObject({
+      level: { level: "light", reps: 12 },
+      change: null,
+    });
+  });
+
+  it.each([
+    ["light", "medium"],
+    ["medium", "heavy"],
+  ])("steps from %s to %s, at the bottom of the range, when every Set reaches 15", (from, to) => {
+    expect(progressBand(bandRow(from, 15), [banded(15), banded(16)])).toEqual({
+      level: bandRow(to, 10, { movedBy: movedByThisWorkout, change: { code: "load-up" } }),
+      change: { code: "load-up" },
+    });
+  });
+
+  it("steps up to extra heavy when the profile has it", () => {
+    const allBands: ProfileWithLoads = {
+      tags: ["tube_bands"],
+      loads: { tube_bands: { levels: ["light", "medium", "heavy", "extra_heavy"] } },
+    };
+    expect(progressBand(bandRow("heavy", 15), [banded(15), banded(15)], allBands)).toMatchObject({
+      level: { level: "extra_heavy", reps: 10 },
+    });
+  });
+
+  it("skips a band the profile doesn't have", () => {
+    const lightAndHeavy: ProfileWithLoads = {
+      tags: ["tube_bands"],
+      loads: { tube_bands: { levels: ["light", "heavy"] } },
+    };
+    expect(progressBand(bandRow("light", 15), [banded(15), banded(15)], lightAndHeavy)).toMatchObject({
+      level: { level: "heavy", reps: 10 },
+    });
+  });
+
+  // As at the heaviest load (stories 34, 35)
+  it("climbs to 20 reps at the heaviest band the profile has, then outgrows the Exercise", () => {
+    expect(progressBand(bandRow("heavy", 15), [banded(15), banded(15)])).toMatchObject({
+      level: { level: "heavy", reps: 16, outgrown: false },
+      change: { code: "target-up" },
+    });
+    expect(progressBand(bandRow("heavy", 20), [banded(20), banded(20)])).toMatchObject({
+      level: { level: "heavy", reps: 20, outgrown: true },
+      change: { code: "outgrown" },
+    });
+  });
+});
+
+// Spec #119: Ballistic Exercises and carries get their rules from #136; until then they stay where they are
+describe("progressWorkingLevel: Exercises without progression yet", () => {
+  it.each([
     [
       "a weighted Ballistic Exercise",
       level("kettlebell-swing", { unit: "kg", kg: 16, reps: 8 }),

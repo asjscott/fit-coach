@@ -284,14 +284,22 @@ Schema: ProgressionChange (packages/shared/src/progression.ts), on WorkingLevel.
 - **Only a later Workout moves a level**: `laterWorkoutsOnly` compares `startedAt` with `movedBy`, so a retry, a late
   Pending Workout or a past Workout never moves it twice or backwards. A judged Workout records itself even when
   nothing changed; an unjudged one (UNMOVED) records nothing.
-- **Only weighted, non-Ballistic, non-carry Exercises move so far** (`notYetProgressed`); the ladders, Ballistic
-  Exercises and carries come with #135 and #136. Jumps never move.
+- **Ballistic Exercises and carries don't move yet** (`notYetProgressed`); they come with #136. Jumps never move.
+- **Ladders** (#135: `bodyweightLadder`, `timedLadder`, `bandLadder`, last in `RULES`): +1 rep to 15, +5 seconds to
+  60, then `outgrown` (the planner gives the `progression` variant, whose level is seeded like any other). A band
+  level climbs 10–15 reps, then steps to the next band the primary profile lists (`ownedBandLevels`) at 10, and at the
+  heaviest climbs to 20 then is outgrown. A band Set's logged kg is ignored: the level's band is assumed.
 - **Misses** (#134, `missesBringItDown`, before `notYetProgressed`): judged Sets averaging more than 2 reps (10
   seconds) short of target add to the level's `misses` and hold it; the second in a row drops a weighted level one
   Load Step to the bottom of the range (`load-down`), or the target 2 reps when that step is over 12% lighter or there
   isn't one (`target-down`), and a bodyweight or band target 2 reps or a timed one 10 seconds, never to an easier
   variant. `moved()` sets `misses` to 0 unless the rule passes it, so any other move ends the run; UNMOVED keeps it
   (one Set, an Assessment, and the deload week). A new base at another load is never a Miss. Jumps and carries have none.
+- **RPE 10** (#133, `rpeTenHolds`, after `missesBringItDown` and before `newBase`): `rpe` on the Exercise's last
+  Set logged (`workoutExercise.sets.at(-1)`, not the judged Sets) at 10 holds the load and target (`rpe-10`), ending a
+  run of Misses; a Miss at RPE 10 is still a Miss. The phone offers it in `ExerciseLogging`
+  (`features/workouts/last-set-rpe.ts`: once a planned Exercise has its Sets, after every Set without a plan; never in
+  an Assessment or on a Recovery Exercise), rating the logged Set in place through `editSet`, so skipping costs no tap.
 - **A load other than the prescribed one** (the level rounded to the primary profile's loads) becomes the new base at
   the fewest reps lifted there.
 
