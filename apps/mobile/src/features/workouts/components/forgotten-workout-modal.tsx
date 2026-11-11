@@ -23,7 +23,7 @@ export function ForgottenWorkoutModal({ isOpen, onDone }: { isOpen: boolean; onD
   const handleFinish = async () => {
     try {
       const outcome = await finishAtLastSet();
-      if (outcome.status === "pending") toastWhenUploaded(showToast, outcome.uploaded);
+      if (outcome.status === "pending") toastWhenUploaded(showToast, outcome);
       else await discard();
       onDone();
     } catch (err) {

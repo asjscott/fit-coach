@@ -1,7 +1,7 @@
 import cors from "@fastify/cors";
 import Fastify from "fastify";
 import { serializerCompiler, validatorCompiler } from "fastify-type-provider-zod";
-import { ensureAssessmentIndexes } from "./assessments";
+import { ensureAssessmentIndexes, migrateWorkingLevels } from "./assessments";
 import { assessmentRoutes } from "./routes/assessments";
 import { checkInRoutes } from "./routes/check-ins";
 import { exerciseRoutes } from "./routes/exercises";
@@ -49,6 +49,8 @@ export async function buildApp({ logger }: { logger: boolean }) {
   await ensureCheckInIndexes().catch((err) => app.log.error(err, "Failed to create check-in indexes"));
 
   await migrateUsers().catch((err) => app.log.error(err, "Failed to migrate users"));
+
+  await migrateWorkingLevels().catch((err) => app.log.error(err, "Failed to migrate working levels"));
 
   await app.register(userRoutes);
   await app.register(exerciseRoutes);

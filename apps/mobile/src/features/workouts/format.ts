@@ -3,6 +3,7 @@ import {
   loadInUnit,
   type BuiltInEquipment,
   type InProgressWorkoutExercise,
+  type Pr,
   type Set,
   type SetTarget,
   type SetValues,
@@ -144,6 +145,21 @@ export const weightLabel = (kg: number, unit: WeightUnit) =>
   `${fromKg(kg, unit).toLocaleString(undefined, { maximumFractionDigits: 1 })} ${unit}`;
 
 export const setsLabel = (sets: number) => `${sets} ${sets === 1 ? "set" : "sets"}`;
+
+// A PR's new best against the one it beat (#130), weights in the user's unit (#126): "Estimated max 21.3 kg, up from
+// 18.7 kg", "14 reps, up from 12"
+export function prLabel({ measure, best, previous }: Pr, unit: WeightUnit) {
+  if (measure === "e1rm") return `Estimated max ${weightLabel(best, unit)}, up from ${weightLabel(previous, unit)}`;
+  if (measure === "load") return `${weightLabel(best, unit)} for 8 reps, up from ${weightLabel(previous, unit)}`;
+  if (measure === "reps") return `${best} reps, up from ${previous}`;
+  return `${best} s, up from ${previous} s`;
+}
+
+// The line that celebrates a Workout's PRs: "New PR: Goblet squat", "2 new PRs: Goblet squat, Plank"
+export function prsHeadline(prs: readonly Pr[]) {
+  const names = prs.map((pr) => exerciseName(pr.slug)).join(", ");
+  return prs.length === 1 ? `New PR: ${names}` : `${prs.length} new PRs: ${names}`;
+}
 
 // How long an In-progress Workout has run, as a ticking clock for its own screen: "0:45", "48:12", "1:05:09"
 export function elapsedClockLabel(ms: number) {

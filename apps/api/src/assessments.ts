@@ -1,8 +1,8 @@
 import { randomUUID } from "node:crypto";
-import { assess, pairToAssess } from "@fit/engines";
-import { Assessment, LatestAssessment, WorkingLevel, type Workout } from "@fit/shared";
+import { assess, migrateWorkingLevel, pairToAssess, type LegacyWorkingLevel } from "@fit/engines";
+import { Assessment, LatestAssessment, WorkingLevel, type WorkingLevelMover, type Workout } from "@fit/shared";
 import { client, db } from "./db";
-import type { OnboardedUser } from "./users";
+import { findUser, type OnboardedUser } from "./users";
 import { toWorkout, workouts } from "./workouts";
 
 // One document per Assessment, a snapshot: deleting either Assessment Workout leaves it be
@@ -86,6 +86,38 @@ export async function assessIfPaired(clerkUserId: string, workout: Workout, user
       }
     }),
   );
+}
+
+// #131's one-off migration, safe to run repeatedly: each Working Level stored before it (no misses) in the new shape
+// (migrateWorkingLevel), moved by the B of the Assessment that set it. The user's current plan was built from the old
+// levels, so it's made due (a plan without builtAt is due once) and the next visit to Today rebuilds it
+export async function migrateWorkingLevels() {
+  const legacy = await workingLevels.find({ misses: { $exists: false } }).toArray();
+  for (const clerkUserId of new Set(legacy.map((doc) => doc.clerkUserId))) {
+    const docs = legacy.filter((doc) => doc.clerkUserId === clerkUserId);
+    const user = await findUser(clerkUserId);
+    const equipmentProfiles = user?.equipmentProfiles ?? [];
+    const setBy = new Map<string, WorkingLevelMover | null>();
+    for (const { assessmentId } of docs) {
+      if (setBy.has(assessmentId)) continue;
+      const assessment = await assessments.findOne({ clerkUserId, id: assessmentId });
+      setBy.set(
+        assessmentId,
+        assessment && { workoutId: assessment.bWorkoutId, startedAt: assessment.bStartedAt.toISOString() },
+      );
+    }
+    for (const doc of docs) {
+      const { _id, assessmentId } = doc;
+      const level = migrateWorkingLevel(doc as LegacyWorkingLevel, equipmentProfiles, setBy.get(assessmentId)!);
+      // Parsing drops the document's own fields, which the replacement sets again
+      await workingLevels.replaceOne(
+        { _id, misses: { $exists: false } },
+        { ...WorkingLevel.parse(level), clerkUserId, assessmentId },
+      );
+    }
+    // By name, as planned-workouts.ts imports this module
+    await db.collection("plannedWorkouts").updateMany({ clerkUserId, status: "current" }, { $unset: { builtAt: "" } });
+  }
 }
 
 // The newest Assessment (its B started last) with its Working Levels, or null before the first
