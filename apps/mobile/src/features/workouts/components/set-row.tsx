@@ -5,6 +5,7 @@ import { Pressable } from "@/components/pressable";
 import { Text } from "@/components/text";
 import { bigNumber, fonts, radii, spacing, useTheme } from "@/theme";
 import { describeSet, setParts } from "../format";
+import { useWeightUnit } from "@/features/user/current-user-provider";
 
 // What can be done to a logged Set from its row: its ⋯ opens Edit and Delete in the row, and a tick closes them
 export type SetRowActions = {
@@ -30,6 +31,7 @@ export type SetRowProps = {
 // A logged Set in a list, its values as big numbers and small units: "Set 1   16 kg × 10 per side". Always one line, so
 // the row keeps its height: the open row gives the tick and "Set" up to the buttons, and long values shrink to fit
 export function SetRow({ set, index, unilateral = false, editing = false, actions }: SetRowProps) {
+  const unit = useWeightUnit();
   const { colors } = useTheme();
   const number = index + 1;
   const open = actions?.open ?? false;
@@ -37,7 +39,7 @@ export function SetRow({ set, index, unilateral = false, editing = false, action
   return (
     <View
       accessible={!actions}
-      accessibilityLabel={`Set ${number}, ${describeSet(set)}${unilateral ? " per side" : ""}`}
+      accessibilityLabel={`Set ${number}, ${describeSet(set, unit)}${unilateral ? " per side" : ""}`}
       style={[styles.row, { borderTopColor: colors.line }]}
     >
       {actions && !open ? <Icon name="check" color="accent" size={18} /> : null}
@@ -50,12 +52,12 @@ export function SetRow({ set, index, unilateral = false, editing = false, action
         {open ? number : `Set ${number}`}
       </Text>
       <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.6} style={styles.values}>
-        {setParts(set).map(([value, unit], i) => (
+        {setParts(set, unit).map(([value, label], i) => (
           <Text key={i}>
             <Text style={styles.number}>{value}</Text>
-            {unit ? (
+            {label ? (
               <Text color="muted" style={styles.unit}>
-                {` ${unit} `}
+                {` ${label} `}
               </Text>
             ) : null}
           </Text>

@@ -146,7 +146,13 @@ describe("todayLoggedLine", () => {
   it("sums the day's Workouts", () => {
     const morning = workout("2026-10-21T08:00:00Z", "2026-10-21T08:30:00Z", 20);
     const evening = workout("2026-10-21T18:00:00Z", "2026-10-21T18:14:00Z", 10);
-    expect(todayLoggedLine([morning, evening])).toBe("2 Sets · 44 min · 300 kg");
+    expect(todayLoggedLine([morning, evening], "kg")).toBe("2 Sets · 44 min · 300 kg");
+  });
+
+  // User story 18: Volume shows in the user's unit
+  it("gives Volume in the user's unit", () => {
+    const morning = workout("2026-10-21T08:00:00Z", "2026-10-21T08:30:00Z", 20);
+    expect(todayLoggedLine([morning], "lb")).toBe("1 Set · 30 min · 441 lb");
   });
 
   it("leaves out Volume with none, as on a bodyweight day", () => {
@@ -157,7 +163,7 @@ describe("todayLoggedLine", () => {
         { slug: "push-up", sets: [{ kind: "bodyweight" as const, reps: 10, loggedAt: "2026-10-21T08:05:00Z" }] },
       ],
     };
-    expect(todayLoggedLine([pushUps])).toBe("1 Set · 10 min");
+    expect(todayLoggedLine([pushUps], "kg")).toBe("1 Set · 10 min");
   });
 });
 

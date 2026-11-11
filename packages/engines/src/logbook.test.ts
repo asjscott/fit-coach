@@ -187,14 +187,15 @@ describe("Logbook", () => {
     expect((await logbook.inProgress())?.workoutExercises[0].sets).toEqual([]);
   });
 
-  it("refuses a weight that isn't in 0.25 kg steps, saying why", async () => {
+  // User story 19: a load entered in pounds is stored as its exact kg, never rounded
+  it("keeps a weight entered in pounds as its exact kg", async () => {
     const { logbook } = setup();
     await logbook.start(at("09:00"));
     const squat = await logbook.addWorkoutExercise(exercise("goblet-squat"));
 
-    await expect(logbook.logSet(squat.id, { kind: "external", kg: 20.1, reps: 10 }, at("09:05"))).rejects.toThrow(
-      new LogbookError("Use 0.25 kg steps"),
-    );
+    await logbook.logSet(squat.id, { kind: "external", kg: 11.33980925, reps: 10 }, at("09:05"));
+
+    expect((await logbook.inProgress())?.workoutExercises[0].sets[0]).toMatchObject({ kg: 11.33980925 });
   });
 
   describe("finishing", () => {
@@ -1347,9 +1348,9 @@ describe("Logbook: Planned Workouts", () => {
       expect(await draftFor(plank)).toEqual({ kind: "timed", seconds: 40 });
     });
 
-    it("rounds a load to the 0.25 kg steps a Set can log, which a 25 lb dumbbell isn't on", async () => {
-      const target = { unit: "kg", kg: 11.34, reps: 8 } as const;
-      expect(await draftFor({ ...gobletSquat, target })).toEqual({ kind: "external", kg: 11.25, reps: 8 });
+    it("keeps a load as its kg, as a 25 lb dumbbell is on no kg step", async () => {
+      const target = { unit: "kg", kg: 11.33980925, reps: 8 } as const;
+      expect(await draftFor({ ...gobletSquat, target })).toEqual({ kind: "external", kg: 11.33980925, reps: 8 });
     });
 
     it("gives a band level no weight to start from, on an Exercise that logs kg", async () => {

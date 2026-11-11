@@ -18,7 +18,8 @@ const count = (name: string) =>
 export const Set = z.discriminatedUnion("kind", [
   z.object({
     kind: z.literal("external"),
-    kg: z.number().positive("Weight must be more than 0").multipleOf(0.25, "Use 0.25 kg steps"),
+    // Exact, not stepped: a load entered in pounds is kept as its exact kg
+    kg: z.number().positive("Weight must be more than 0"),
     reps: count("Reps"),
     rpe: rpe.optional(),
     loggedAt,

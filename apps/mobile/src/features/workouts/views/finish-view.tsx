@@ -11,16 +11,18 @@ import { useToast } from "@/contexts/toast-context";
 import { spacing, useTheme } from "@/theme";
 import { DateTimeField } from "../components/date-time-field";
 import { NothingToSaveModal } from "../components/nothing-to-save-modal";
-import { kgLabel, setsLabel, timeStat, workoutWhenLabel } from "../format";
+import { setsLabel, timeStat, volumeLabel, workoutWhenLabel } from "../format";
 import { useHasEnded } from "../hooks/use-has-ended";
 import { useLeaveWorkout } from "../hooks/use-leave-workout";
 import { exerciseName } from "../library";
 import { useLogbook, type FinishOutcome } from "../logbook-provider";
 import { toastWhenUploaded } from "../upload-toast";
+import { useWeightUnit } from "@/features/user/current-user-provider";
 
 // Leads with what the user did, with Save workout as the one-tap main action. The times start as Start and now,
 // behind Edit times for backfilled and forgotten Workouts
 export default function FinishView() {
+  const unit = useWeightUnit();
   const { workout, finish } = useLogbook();
   const { showToast } = useToast();
   const { colors } = useTheme();
@@ -102,7 +104,7 @@ export default function FinishView() {
         </Stack>
       )}
       <View style={[styles.stats, { borderColor: colors.line }]}>
-        <Stat value={kgLabel(summary.volumeKg)} unit="kg" label="Volume" size="3xl" />
+        <Stat value={volumeLabel(summary.volumeKg, unit)} unit={unit} label="Volume" size="3xl" />
         <Stat value={String(summary.sets)} label="Sets" size="3xl" />
         <Stat {...timeStat(Math.max(0, summary.durationMs))} label="Time" size="3xl" />
       </View>

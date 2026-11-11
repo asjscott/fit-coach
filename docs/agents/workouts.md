@@ -38,11 +38,16 @@ Schemas shared by app and API: packages/shared/src/workouts.ts
   200).
 - **Exercises come from the library built into the app** (`EXERCISES` in `@fit/engines`), not `/exercises`, so the picker
   works offline; an unknown slug is shown as-is (`exerciseName`).
-- **The kg stepper steps through real loads** (#58): `Logbook.nextLoadKg` gives the next lighter or heavier load the
-  primary Equipment Profile makes for the Exercise (`exerciseLoadsKg`, the same loads the Assessment suggests from;
-  rule in `stepLoadKg`, `packages/engines/src/equipment.ts`), staying put past the lightest or heaviest, and by 2 kg
-  when the loads aren't known. `set-entry.ts` only parses the typed text, steps reps (1) and seconds (5), and names
-  the kg step for screen readers (`kgStepLabel`: "Next heavier weight", or "Plus 2 kg" when the loads aren't known).
+- **Loads are stored in kg and shown in the user's unit** (#126). `User.unit` is lb or kg, lb when never chosen
+  (`useWeightUnit`, picked on Profile). Every label in `format.ts` takes the unit and rounds a load to 0.5 of it
+  (`loadInUnit`, `packages/shared/src/units.ts`). A load typed in pounds is stored as its exact kg (`toKg`), never
+  rounded, so 25 lb always shows back as 25 lb; `Set.kg` has no step rule. Equipment Profile weights are entered in
+  the unit too (`loads.ts`, its own lb and kg size lists).
+- **The load stepper steps through real loads** (#58): `loadStep` in `set-entry.ts` steps the primary Equipment
+  Profile's loads for the Exercise (`exerciseLoadsKg`, the same loads the Assessment suggests from) as the user sees
+  them, so a load a hair off the one shown never sticks, staying put past the lightest or heaviest, and by 5 lb or 2 kg
+  when the loads aren't known. `set-entry.ts` also parses the typed text, steps reps (1) and seconds (5), and names the
+  load step for screen readers (`loadStepLabel`: "Next heavier weight", or "Plus 5 lb" when the loads aren't known).
 - **The rest timer lives in memory on the LogbookProvider** (#95), not in the Logbook or storage: it belongs to the
   Workout, so it follows the user between Exercises and to Today, and a force-quit loses it. Only Log set starts or
   restarts it; Finish, Discard and sign-out end it. Its length and countdown are pure (`rest-timer.ts` in
@@ -188,7 +193,7 @@ Schemas: packages/shared/src/planned-workouts.ts
 - **A stored Working Level wins unless it's for a way of doing the Exercise this profile doesn't have.** Otherwise the
   planner seeds one from the Assessment's Reference Strengths, which covers Full gym, Bodyweight only and profiles added
   since. A target is rounded to the profile's loads, and an Exercise under the empty bar isn't prescribed.
-- **`target.kg` is a profile load, not forced to 0.25 steps**, while a logged `Set.kg` is: the Logbook rounds the draft.
+- **`target.kg` is a profile load, kept as it is** in the draft; the phone shows it in the user's unit.
 - **A Full gym choice changes little for most users.** An Exercise still possible stays, so a user with no equipment
   gets the same bodyweight Workout, and a Full home gym only sees loads rounded to the built-in table.
 - **`ballistic` needs `pnpm --filter @fit/api seed:exercises`** on the real database (needs `.env`, so it's a human

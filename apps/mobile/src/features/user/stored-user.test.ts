@@ -17,6 +17,7 @@ const user: User = {
   profile: { goal: "athletic", workoutLength: "short", daysPerWeek: 4 },
   onboardedAt: "2026-10-01T09:00:00.000Z",
   equipmentProfiles: [],
+  unit: "lb",
 };
 
 describe("the User on the phone", () => {
@@ -36,6 +37,14 @@ describe("the User on the phone", () => {
     await storage.setItem("current-user", JSON.stringify({ id: 7 }));
 
     expect(await createStoredUser(storage).read()).toBeNull();
+  });
+
+  // User story 18: lb by default for existing users, so a cold start offline shows loads in lb too
+  it("reads a copy kept before the unit setting existed as lb", async () => {
+    const storage = memoryStorage();
+    await storage.setItem("current-user", JSON.stringify({ ...user, unit: undefined }));
+
+    expect((await createStoredUser(storage).read())?.unit).toBe("lb");
   });
 
   it("forgets the User on sign-out", async () => {
