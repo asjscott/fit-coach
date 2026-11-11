@@ -60,6 +60,29 @@ describe.each([
     expect(setsPerWeek({ ...fullGym, ...run }, "barbell-bench-press")).toBeGreaterThanOrEqual(3);
   });
 
+  // Story 13 (#105): with the switch on, an athletic week has 2 Workouts with 2 jumps of 3 Sets each, placed first
+  it.each([2, 3, 4, 6])("athletic at %i days with jumps on has 2 jump Workouts a week, jumps first", (days) => {
+    const jumps = new Set([
+      "pogo-hop",
+      "squat-jump",
+      "countermovement-jump",
+      "box-jump",
+      "broad-jump",
+      "lateral-bound",
+    ]);
+    for (const week of planned({ ...fullGym, goal: "athletic", days, length: "standard", jumps: true })) {
+      const withJumps = week.filter(({ exercises }) => exercises.some(({ slug }) => jumps.has(slug)));
+      expect(withJumps).toHaveLength(2);
+      for (const { exercises } of withJumps) {
+        expect(exercises.slice(0, 2).map(({ slug, sets }) => [jumps.has(slug), sets])).toEqual([
+          [true, 3],
+          [true, 3],
+        ]);
+        expect(exercises.slice(2).some(({ slug }) => jumps.has(slug))).toBe(false);
+      }
+    }
+  });
+
   // The lowest credited Sets any budgeted Muscle gets in a week
   const lowestMuscle = (run: Run) =>
     Math.min(

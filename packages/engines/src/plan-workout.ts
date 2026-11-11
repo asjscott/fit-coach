@@ -14,6 +14,7 @@ import { withAlternatives, type Candidate } from "./alternative-exercises";
 import { exerciseBySlug, EXERCISES } from "./data/exercises";
 import { BUILT_IN_EQUIPMENT, isAvailable, isSafeFor, matchesBuiltIn, type ProfileWithLoads } from "./equipment";
 import { muscleFatigue, tiredMuscles, type FatigueWorkout } from "./fatigue";
+import { isJump, JUMP_SETS, jumpCandidates, jumpsForWorkout } from "./jumps";
 import { planReasons } from "./plan-reasons";
 import { scoreExercise, type WeekSoFar } from "./plan-score";
 import { trainingWorkouts } from "./recovery-workout";
@@ -59,6 +60,10 @@ export type PlanWorkoutInput = {
   assessment: Pick<Assessment, "bodyWeightKg" | "patterns">;
   goal: Goal;
   daysPerWeek: number;
+  // The one-time "Include jumps" switch on the Profile, off by default (#105)
+  includeJumps?: boolean;
+  // The Block's deload week (weekOfBlock). Only jumps read it so far, at half their contacts
+  deloadWeek?: boolean;
 };
 
 // What the planner decides; the API gives it an id and a status when it saves it. heldBack is the tired Muscles
@@ -133,13 +138,20 @@ function withinVarietyCap(candidates: readonly Candidate[], thisWeek: readonly L
 const byTieOrder = ({ exercise: a }: Candidate, { exercise: b }: Candidate) =>
   b.secondsPerSet - a.secondsPerSet || a.slug.localeCompare(b.slug);
 
-// What the equipment and injuries allow, with a target to prescribe. Never a Recovery Exercise
+// What the equipment and injuries allow, with a target to prescribe. Never a Recovery Exercise, nor a jump, which
+// only the jump rule gives (jumps.ts)
 function possibleExercises(input: PlanWorkoutInput): Candidate[] {
   const { equipmentProfile, injuries } = input;
   const levels = workingLevelsFor(input);
   return EXERCISES.flatMap((exercise) => {
     const level = levels.get(exercise.slug);
-    if (!level || exercise.recovery || !isAvailable(exercise, equipmentProfile) || !isSafeFor(exercise, injuries))
+    if (
+      !level ||
+      exercise.recovery ||
+      isJump(exercise) ||
+      !isAvailable(exercise, equipmentProfile) ||
+      !isSafeFor(exercise, injuries)
+    )
       return [];
     const target = targetFrom(level, exercise, equipmentProfile);
     return target ? [{ exercise, target }] : [];
@@ -161,7 +173,7 @@ function pickableExercises(
 }
 
 // Each built-in choice the primary doesn't already match. It goes in the saved plan, as the phone may have no signal
-// when the user chooses
+// when the user chooses. Jumps are there too, so that a jump stays itself or gives way to another jump
 function builtInCandidates(
   input: PlanWorkoutInput,
   thisWeek: readonly LedgerWorkout[],
@@ -170,8 +182,11 @@ function builtInCandidates(
   const choices = BuiltInEquipment.options.filter((choice) => !matchesBuiltIn(input.equipmentProfile, choice));
   return Object.fromEntries(
     choices.map((choice) => {
-      const possible = possibleExercises({ ...input, equipmentProfile: BUILT_IN_EQUIPMENT[choice] });
-      return [choice, { possible, pickable: pickableExercises(possible, thisWeek, lastWeek, input.daysPerWeek) }];
+      const onChoice = { ...input, equipmentProfile: BUILT_IN_EQUIPMENT[choice] };
+      const possible = possibleExercises(onChoice);
+      const jumps = jumpCandidates(onChoice);
+      const pickable = pickableExercises(possible, thisWeek, lastWeek, input.daysPerWeek);
+      return [choice, { possible: [...jumps, ...possible], pickable: [...jumps, ...pickable] }];
     }),
   );
 }
@@ -274,6 +289,8 @@ type Selection = {
   limitOf: (muscle: Muscle) => number;
   // False while one of its primary Muscles is over the fatigue limit
   isRested: (candidate: Candidate) => boolean;
+  // Athletic's jumps, which go first, then its required pick
+  jumps: readonly Candidate[];
   required?: Candidate;
 };
 
@@ -312,15 +329,26 @@ function nextPick(
   return undefined;
 }
 
-// Picks until the time or the cap runs out, each pick counting towards the budget before the next. Once the week's
-// budget is met, the rest is picked as a new week's would be, up to the cap, so a user who trains anyway still gets a
-// balanced Workout. With nothing left to add, the plan ends short of its Length
+// Picks until the time or the cap runs out, each pick counting towards the budget before the next. Jumps go first,
+// then the required pick. Once the week's budget is met, the rest is picked as a new week's would be, up to the cap, so
+// a user who trains anyway still gets a balanced Workout. With nothing left to add, the plan ends short of its Length
 function selectExercises(selection: Selection, weekSoFar: MuscleCredits): PlannedExercise[] {
   const draft: Draft = { sets: new Map(), fourthSetAfter: new Map(), credits: {}, secondsLeft: WORKOUT_SECONDS };
   let ledger = weekSoFar;
+  for (const jump of selection.jumps) {
+    const credits = creditsPerSet(jump.exercise);
+    draft.sets.set(jump, JUMP_SETS);
+    draft.credits = addCredits(draft.credits, credits, JUMP_SETS);
+    draft.secondsLeft -= jump.exercise.secondsPerSet * JUMP_SETS;
+    ledger = addCredits(ledger, credits, JUMP_SETS);
+  }
   let budgetMet = false;
   for (;;) {
-    let pick = (draft.sets.size === 0 && selection.required) || nextPick(selection, draft, ledger, weekSoFar);
+    const { required } = selection;
+    // The required pick keeps to the cap too
+    const requiredNow =
+      draft.sets.size === selection.jumps.length && required && withinCap(required, draft, selection.budget, weekSoFar);
+    let pick = (requiredNow && required) || nextPick(selection, draft, ledger, weekSoFar);
     if (!pick && !budgetMet) {
       budgetMet = true;
       ledger = draft.credits;
@@ -373,6 +401,7 @@ export function planWorkout(input: PlanWorkoutInput): WorkoutPlan {
     budget,
     limitOf: muscleLimits(budget, Math.max(1, daysPerWeek - thisWeek.length)),
     isRested,
+    jumps: jumpsForWorkout(jumpCandidates(input), thisWeek),
     required:
       requiredPick(candidates, thisWeek, { goal, budget, ledger }) ??
       requiredSquat(candidates, thisWeek, goal, isRested),

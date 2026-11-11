@@ -17,7 +17,7 @@ import { HStack } from "@/components/stack";
 import { Text } from "@/components/text";
 import { dayLengthOptions } from "@/features/user/components/form/fields/user-workout-length-field";
 import { builtInEquipmentLabels, noAlternativeLabel, plannedSetsLabel } from "@/features/workouts/format";
-import { exerciseName, libraryExercise } from "@/features/workouts/library";
+import { exerciseName, isJumpSlug, libraryExercise } from "@/features/workouts/library";
 import { spacing, useTheme } from "@/theme";
 import {
   checkInLighterRow,
@@ -199,7 +199,7 @@ export function PlannedWorkoutSheet({
                 <View key={slug} style={[styles.exercise, { borderTopColor: colors.line }]}>
                   <Text>{exerciseName(slug)}</Text>
                   <Text size="sm" color="muted">
-                    {plannedSetsLabel({ sets, target }, libraryExercise(slug)?.unilateral)}
+                    {plannedSetsLabel({ sets, target }, libraryExercise(slug)?.unilateral, isJumpSlug(slug))}
                   </Text>
                   {supersetWith ? (
                     <Text size="sm" color="muted">

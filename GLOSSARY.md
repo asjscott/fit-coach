@@ -26,6 +26,10 @@ _Avoid_: Movement pattern, category
 An Exercise where the load or the body is accelerated through the end of the movement, such as a swing or a jump.
 _Avoid_: Explosive exercise, power exercise
 
+**Jump**:
+A bodyweight Ballistic Exercise, for the athletic Goal only and behind its Include jumps switch. Its dose is **contacts**, the landings in a Set: a fixed number set by its place on the jump ladder, halved in the deload week. It has no Working Level and doesn't progress by itself, and a Set credits 0.5 to quads and glutes only.
+_Avoid_: Plyo, plyometric (for the Exercise); reps (for its contacts)
+
 **Superset**:
 Two Exercises of a Workout done in turn, a Set of one then a Set of the other with no rest between, and a rest only after the pair. The phone pairs them only when a Workout wouldn't otherwise fit its Length, by each one's main Pattern: push with pull, squat with core, hinge with push. Each Set is still logged under its own Exercise.
 _Avoid_: Circuit, paired set
@@ -39,7 +43,7 @@ One library Exercise as done within a particular Workout, holding the Sets the u
 _Avoid_: Logged exercise, exercise entry
 
 **Set**:
-One continuous effort of a Workout Exercise: kg and reps for a weighted Exercise, reps for a bodyweight one, or seconds for a timed one, optionally with its RPE. For a one-sided Exercise the values are per side.
+One continuous effort of a Workout Exercise: kg and reps for a weighted Exercise, reps for a bodyweight one (contacts for a Jump), or seconds for a timed one, optionally with its RPE. For a one-sided Exercise the values are per side.
 _Avoid_: Round, attempt
 
 **RPE**:
@@ -93,7 +97,7 @@ How many credited Sets each of the eight budgeted Muscles should get in a week, 
 _Avoid_: Weekly target, quota, weekly volume
 
 **Week Ledger**:
-The credited Sets each Muscle has had so far this week, counted from the Sets the user logged and read against the Weekly Budget. A Set credits 1 to each primary Muscle and 0.5 to each secondary, and a one-sided Set counts once. Weeks run Monday to Sunday in the user's timezone.
+The credited Sets each Muscle has had so far this week, counted from the Sets the user logged and read against the Weekly Budget. A Set credits 1 to each primary Muscle and 0.5 to each secondary, a Jump's 0.5 to quads and glutes only, and a one-sided Set counts once. Weeks run Monday to Sunday in the user's timezone.
 _Avoid_: Tally, weekly progress
 
 **Fatigue**:
