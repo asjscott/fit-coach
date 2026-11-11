@@ -39,13 +39,15 @@ const FULL_HOME_GYM: ProfileWithLoads = {
   },
 };
 export const PROFILES = { "Full gym": BUILT_IN_EQUIPMENT.full_gym, "Full home gym": FULL_HOME_GYM };
+// Bodyweight only too, for the table row (#101); the gym tables leave it out
+export const EVERY_PROFILE = { ...PROFILES, "Bodyweight only": BUILT_IN_EQUIPMENT.bodyweight_only };
 
 export type Run = {
   goal: Goal;
   days: number;
   length: WorkoutLength;
   lifter: keyof typeof LIFTERS;
-  profile: keyof typeof PROFILES;
+  profile: keyof typeof EVERY_PROFILE;
   // The "Include jumps" switch on, with the squat tested so jumps can be given (#105)
   jumps?: boolean;
 };
@@ -82,7 +84,7 @@ export function simulate({ goal, days, length, lifter, profile, jumps = false }:
         workouts: workouts.slice(-14),
         now,
         timeZone: TIME_ZONE,
-        equipmentProfile: PROFILES[profile],
+        equipmentProfile: EVERY_PROFILE[profile],
         injuries: [],
         workingLevels: [],
         assessment: assessmentOf(lifter, jumps),

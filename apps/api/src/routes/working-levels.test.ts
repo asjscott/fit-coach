@@ -1,7 +1,7 @@
 import type { EquipmentProfileInput, LatestAssessment, PlannedWorkout, Set, WorkingLevel } from "@fit/shared";
 import type { LegacyWorkingLevel } from "@fit/engines";
 import { describe, expect, it } from "vitest";
-import { type TestUser, useRouteTestApi } from "../test/route-test-api";
+import { ONBOARDED_PROFILE, type TestUser, useRouteTestApi } from "../test/route-test-api";
 import { assessmentPair, held, repsDone, workout } from "../test/workouts";
 
 const api = useRouteTestApi();
@@ -35,7 +35,9 @@ describe("Working Levels as a load and a target (#131)", () => {
 
   // Story 27: the Planned Workout, which Today shows, prescribes each weighted Exercise its load × target reps
   it("prescribes each weighted Exercise its Working Level's load × target reps", async () => {
-    const user = await api.signIn({ equipmentProfile: BARBELL_AND_DUMBBELLS });
+    // recomp: for build_muscle, the Exercises that credit calves (#101) take the deadlift's place
+    const profile = { ...ONBOARDED_PROFILE, goal: "recomp" as const };
+    const user = await api.signIn({ equipmentProfile: BARBELL_AND_DUMBBELLS, profile });
     await assess(user);
 
     // The deadlift, a barbell lift, is prescribed a bar load at the bottom of 6–10; the dumbbell row stays in its 8–12

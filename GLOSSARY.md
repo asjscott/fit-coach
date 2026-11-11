@@ -93,7 +93,7 @@ The Workout on offer today: the Planned Workout on the Workout Length and equipm
 _Avoid_: Today's session, adjusted plan
 
 **Weekly Budget**:
-How many credited Sets each of the eight budgeted Muscles should get in a week, set by the user's Goal and days per week. Workout Length decides how much of it is delivered, not the budget itself. Other Muscles aren't budgeted. The Coach plans a Muscle up to a cap of about 130% of its budget, counted from the Week Ledger and the Sets already planned: it adds no Exercise that would take one of its primary Muscles over it, while secondary credit counts towards a Muscle's total but never keeps an Exercise out.
+How many credited Sets each of the budgeted Muscles should get in a week, set by the user's Goal and days per week. Workout Length decides how much of it is delivered, not the budget itself. Eight Muscles are budgeted for every Goal, and calves too for athletic and build_muscle; other Muscles aren't budgeted. The Coach plans a Muscle up to a cap of about 130% of its budget, counted from the Week Ledger and the Sets already planned: it adds no Exercise that would take one of its primary Muscles over it, while secondary credit counts towards a Muscle's total but never keeps an Exercise out.
 _Avoid_: Weekly target, quota, weekly volume
 
 **Week Ledger**:

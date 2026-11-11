@@ -242,6 +242,8 @@ describe("assess", () => {
       ...["dumbbell-lateral-raise", "renegade-row", "side-plank", "hollow-hold", "bird-dog", "hanging-knee-raise"],
       ...["hanging-leg-raise", "pallof-press", "prone-ytw", "suitcase-carry", "front-rack-carry", "overhead-carry"],
       ...["lat-pulldown", "seated-cable-row", "deadlift", "barbell-overhead-press"],
+      ...["calf-raise", "nordic-hamstring-curl", "dumbbell-curl", "dumbbell-overhead-triceps-extension"],
+      ...["cable-knee-extension", "table-row"],
     ];
     expect(workingLevels.map((level) => level.slug).sort()).toEqual(available.sort());
     expect(levelOf(workingLevels, "back-squat")?.unit).toBe("kg");
@@ -377,7 +379,7 @@ describe("assess", () => {
         ...["bodyweight-squat", "bulgarian-split-squat", "single-leg-glute-bridge", "incline-push-up", "push-up"],
         ...["plank", "dead-bug", "decline-push-up", "archer-push-up", "pike-push-up", "glute-bridge"],
         ...["single-leg-romanian-deadlift", "split-squat", "reverse-lunge", "shrimp-squat", "pistol-squat"],
-        ...["cossack-squat", "side-plank", "hollow-hold", "bird-dog", "prone-ytw"],
+        ...["cossack-squat", "side-plank", "hollow-hold", "bird-dog", "prone-ytw", "table-row"],
       ];
       expect(workingLevels.map((level) => level.slug).sort()).toEqual(available.sort());
     });
