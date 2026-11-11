@@ -8,6 +8,7 @@ import {
   exerciseBySlug,
   EXERCISES,
   isAvailable,
+  isJump,
   weeklyBudget,
   type MuscleCredits,
 } from "../src";
@@ -181,3 +182,34 @@ const noMatch = EXERCISES.filter((exercise) => !exercise.recovery).filter(
 );
 console.log(`\n### Exercises with no bodyweight Alternative Exercise sharing a Pattern and a primary Muscle\n`);
 console.log(`${noMatch.length}: ${noMatch.map(({ slug }) => slug).join(", ")}`);
+
+// Jumps (#105): athletic with the switch on against off. Jump minutes are the jump Sets' time; the cost is what the
+// rest of the week loses
+console.log("\n### Jumps: athletic, Full gym, intermediate, switch off then on\n");
+console.log(
+  "| Days | Length | Jumps | Sets | Minutes | Jump Sets | Jump minutes | Other Sets | Quads, glutes | Of budget | Short of budget |",
+);
+console.log("| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |");
+for (const [days, length] of COMBINATIONS) {
+  for (const jumps of [false, true]) {
+    const run: Run = { goal: "athletic", days, length, lifter: "intermediate", profile: "Full gym", jumps };
+    const s = summary(run);
+    const weeks = simulate(run).slice(1);
+    const picks = weeks.flat().flatMap(({ exercises }) => exercises);
+    const jumpPicks = picks.filter(({ slug }) => isJump(exerciseBySlug(slug)!));
+    const jumpSets = jumpPicks.reduce((sets, pick) => sets + pick.sets, 0);
+    const jumpSeconds = jumpPicks.reduce(
+      (total, { slug, sets }) => total + sets * exerciseBySlug(slug)!.secondsPerSet,
+      0,
+    );
+    const credited = picks.reduce<MuscleCredits>(
+      (credits, { slug, sets }) => addCredits(credits, creditsPerSet(exerciseBySlug(slug)!), sets),
+      {},
+    );
+    const perWeek = (value: number) => round(value / weeks.length);
+    const cells = [days, length, jumps ? "on" : "off", s.sets, s.minutes, perWeek(jumpSets)];
+    cells.push(Math.round(jumpSeconds / 60 / weeks.length), round(s.sets - perWeek(jumpSets)));
+    cells.push(`${perWeek(credited.quads ?? 0)}, ${perWeek(credited.glutes ?? 0)}`, s.ofBudget);
+    console.log(`| ${cells.join(" | ")} | ${s.short.join(", ") || "none"} |`);
+  }
+}
