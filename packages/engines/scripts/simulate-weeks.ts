@@ -37,7 +37,19 @@ export type Run = {
   length: WorkoutLength;
   lifter: keyof typeof LIFTERS;
   profile: keyof typeof PROFILES;
+  // The "Include jumps" switch on, with the squat tested so jumps can be given (#105)
+  jumps?: boolean;
 };
+
+// The lifter's Assessment, with the squat tested rather than estimated when jumps are on, as jumps need
+function assessmentOf(lifter: keyof typeof LIFTERS, jumps: boolean) {
+  const { bodyWeightKg, patterns } = LIFTERS[lifter];
+  if (!jumps) return LIFTERS[lifter];
+  const { referenceStrength } = patterns.squat;
+  const topSet = { kind: "external" as const, kg: referenceStrength, reps: 1, loggedAt: "2026-11-01T12:00:00.000Z" };
+  const squat = { slug: "back-squat", topSet, maximum: referenceStrength, loadLimited: false, referenceStrength };
+  return { bodyWeightKg, patterns: { ...patterns, squat: { ...squat, estimated: false as const } } };
+}
 
 // Spreads the week's Workouts from Monday, at 18:00 in New York
 function workoutDates(week: number, days: number) {
@@ -47,7 +59,7 @@ function workoutDates(week: number, days: number) {
 }
 
 // Every Workout done exactly as planned, on the usual Length
-export function simulate({ goal, days, length, lifter, profile }: Run) {
+export function simulate({ goal, days, length, lifter, profile, jumps = false }: Run) {
   const workouts: {
     id: string;
     startedAt: string;
@@ -64,9 +76,10 @@ export function simulate({ goal, days, length, lifter, profile }: Run) {
         equipmentProfile: PROFILES[profile],
         injuries: [],
         workingLevels: [],
-        assessment: LIFTERS[lifter],
+        assessment: assessmentOf(lifter, jumps),
         goal,
         daysPerWeek: days,
+        includeJumps: jumps,
       });
       const today = daysWorkout({ plannedExercises: plan.plannedExercises }, { workoutLength: length }, goal);
       const workoutExercises = today.plannedExercises.map(({ slug, sets }) => ({

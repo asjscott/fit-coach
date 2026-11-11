@@ -166,10 +166,20 @@ Needs `pnpm --filter @fit/api seed:exercises` run once from the main checkout (i
 - [ ] **R1** On a Rest Day, the "Rest today." card has a "Recovery workout instead" link. Tap it: a Workout opens with a 20-minute walk, then hip flexor stretch, open book, cat-cow and world's greatest stretch at 2 × 45 s each, logged on the normal timed-Set screen. The walk's target reads "1 set · 20 min". Log it: no rest timer starts, and in place of a Set 2 there's "Next exercise", which opens the hip flexor stretch. A stretch's Set still starts its usual rest (1:10), and still offers a Set 3 after its 2.
   - iOS: Result: · Android: Result: · Notes:
 
+## Jumps (#105)
+
+Needs `pnpm --filter @fit/api seed:exercises` run once from the main checkout (it needs `apps/api/.env`), so the Exercises tab lists the six jumps. Use an athletic profile with no knee or ankle injury, whose Assessment tested the squat rather than estimating it.
+
+- [ ] **J1** Profile shows an "Include jumps" switch under Training, off, and only while the Goal is athletic. Turn it on, then open Today: the plan's sheet opens with two jumps, each "3 sets · N contacts" (for example "3 sets · 10 contacts"), one that goes up (pogo hop, squat or countermovement jump, box jump) and one that goes forward or sideways (broad jump or lateral bound). Start the Workout: the jumps come first. Log a jump Set: the stepper says "contacts", with no weight field, and the logged Set uploads. Turn the switch off: Today's plan has no jumps. Turning it back on, or a knee injury in the profile, also works as expected.
+  - iOS: Result: · Android: Result: · Notes:
+- [ ] **J2** Over a week with the switch on: the first 2 Workouts have jumps and the rest don't, and the second jump Workout has different jumps from the first. On a Quick Workout the jumps stay, all 3 Sets each, and something else is cut.
+  - iOS: Result: · Android: Result: · Notes:
+
 ## Your call
 
 Not a bug, but it needs your judgement once you've done some Workouts. Details in `docs/research/planner-simulation.md`.
 
+- With jumps on, 2 Short days a week lose most of their upper-body work to the jumps' 15 minutes (chest 1 of 12, side delts 0 of 8 in the simulation). Should the switch warn, or jumps give way, at 2 Short days? (2026-11-10, see Jumps.)
 - Do Workouts that fill their Length, at up to 214% of a Muscle's budget, feel like too much? Should a Workout stop at the budget? Left until after real use (2026-11-09).
 
 ---

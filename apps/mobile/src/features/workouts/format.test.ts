@@ -223,6 +223,11 @@ describe("plannedSetsLabel", () => {
   it("says the target is per side for a one-sided Exercise", () => {
     expect(plannedSetsLabel(planned, true)).toBe("3 sets · 20 kg × 8 per side");
   });
+
+  // Story 13 (#105): a jump's dose is contacts, with no load
+  it("counts a jump's target in contacts", () => {
+    expect(plannedSetsLabel({ sets: 3, target: { unit: "reps", reps: 10 } }, false, true)).toBe("3 sets · 10 contacts");
+  });
 });
 
 describe("previousSetsLabel", () => {
