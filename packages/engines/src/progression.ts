@@ -140,11 +140,44 @@ const missesBringItDown: ProgressionRule = (judgement) => {
   return moved(judgement, { ...changes, misses: 0 }, change);
 };
 
-// Until #136 gives them their rules: Ballistic Exercises and carries. A jump never moves (#105)
-const notYetProgressed: ProgressionRule = ({ level, exercise }) =>
-  exercise.ballistic || isJump(exercise) || (level.unit === "kg" && !repRange(exercise, level.unit))
-    ? UNMOVED
-    : undefined;
+// Story 62: a jump, a bodyweight Ballistic Exercise, never moves by itself (#105)
+const jumpsNeverMove: ProgressionRule = ({ exercise }) => (isJump(exercise) ? UNMOVED : undefined);
+
+// Story 61: with no RPE logged, a weighted Ballistic Exercise's load goes up at most once every this many Workouts
+const BALLISTIC_WORKOUTS_PER_STEP = 3;
+// Story 61: a last Set at this RPE or lower lets it go up straight away
+const BALLISTIC_EASY_RPE = 7;
+
+// Stories 60, 61: a weighted Ballistic Exercise keeps its fixed 8 reps and moves only by load, carefully. Every Set at 8
+// takes one Load Step up when the last Set's RPE is 7 or lower, or, with no RPE logged, once this is the 3rd Workout
+// since the load last went up. RPE 8 or 9 holds, and so does RPE 10, with its reason. A load other than the one
+// prescribed becomes the new base, at 8. Every Workout it judges counts towards the 3. After missesBringItDown, so a
+// Ballistic Exercise still Misses
+const ballisticByLoad: ProgressionRule = (judgement) => {
+  const { level, exercise, equipmentProfile, sets, workoutExercise } = judgement;
+  const range = repRange(exercise, level.unit);
+  if (!exercise.ballistic || level.unit !== "kg" || !range) return undefined;
+  const workouts = (level.workoutsSinceLoadUp ?? 0) + 1;
+  if (Math.abs(lowestKg(sets) - level.kg) > SAME_LOAD_KG) {
+    return moved(judgement, { kg: lowestKg(sets), reps: range.max, workoutsSinceLoadUp: 0 }, { code: "new-base" });
+  }
+  const held = { reps: range.max, workoutsSinceLoadUp: workouts };
+  const rpe = workoutExercise.sets.at(-1)?.rpe;
+  if (rpe === MAX_RPE) return moved(judgement, held, { code: "rpe-10" });
+  const ready = rpe === undefined ? workouts >= BALLISTIC_WORKOUTS_PER_STEP : rpe <= BALLISTIC_EASY_RPE;
+  const kg = nextLoadKg(exercise, equipmentProfile, level.kg, 1);
+  if (fewestReps(sets) < range.max || !ready || kg === undefined) return moved(judgement, held, null);
+  return moved(judgement, { kg, reps: range.max, workoutsSinceLoadUp: 0 }, { code: "load-up" });
+};
+
+// Story 63: a carry takes no part in double progression or Misses, as its reps mean nothing (isMiss never counts one).
+// Only a different logged load moves it, keeping its reps, whatever the RPE; the same load just records the Workout
+const carriesMoveByLoad: ProgressionRule = (judgement) => {
+  const { level, exercise, sets } = judgement;
+  if (level.unit !== "kg" || repRange(exercise, level.unit)) return undefined;
+  if (Math.abs(lowestKg(sets) - level.kg) <= SAME_LOAD_KG) return moved(judgement, {}, null);
+  return moved(judgement, { kg: lowestKg(sets) }, { code: "new-base" });
+};
 
 // Stories 43, 44: an RPE of 10 on the Exercise's last Set logged, whatever its load, holds the load and the target, so a
 // Set that was all the user had never pushes them on. The Workout still counts as the one that last moved the level
@@ -235,16 +268,19 @@ const bandLadder: ProgressionRule = (judgement) => {
 };
 
 // In order: the first to decide wins. Where later tickets' rules go: the deload week (#137) after notAnAssessment,
-// returning UNMOVED so the run of Misses stays as it is; RPE 10 (#133, rpeTenHolds) after missesBringItDown and before the
-// ladders, so an RPE of 10 holds every Exercise, though a Miss with RPE 10 is still a Miss; Ballistic Exercises and
-// carries (#136) in place of notYetProgressed, after missesBringItDown, which brings bodyweight, band and timed levels
-// down too. Every rule that moves a level through moved() ends its run of Misses
+// returning UNMOVED so the run of Misses stays as it is. RPE 10 (#133, rpeTenHolds) comes after missesBringItDown and
+// before the ladders, so an RPE of 10 holds every Exercise, though a Miss with RPE 10 is still a Miss. Jumps, Ballistic
+// Exercises and carries (#136) come between them: a Ballistic Exercise still Misses and handles RPE 10 itself, so the
+// Workout counts towards its 3, and a carry moves by its load whatever the RPE. Every rule that moves a level through
+// moved() ends its run of Misses
 const RULES: readonly ProgressionRule[] = [
   laterWorkoutsOnly,
   notAnAssessment,
   atLeastTwoSets,
   missesBringItDown,
-  notYetProgressed,
+  jumpsNeverMove,
+  ballisticByLoad,
+  carriesMoveByLoad,
   rpeTenHolds,
   newBase,
   doubleProgression,

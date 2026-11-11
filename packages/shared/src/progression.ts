@@ -7,8 +7,10 @@ const slug = z.string().regex(/^[a-z0-9-]+$/);
 // - target-up: every Set reached the target, so the target went up 1 rep
 // - seconds-up: every Set of a timed Exercise reached the target, so it went up 5 seconds (#135)
 // - load-up: every Set reached the top of the range, so the load went up one Load Step, to the reps Epley predicts; for
-//   a band Exercise, to the next band at the bottom of the range (#135)
-// - new-base: the user lifted a load other than the one prescribed, which became the level's load
+//   a band Exercise, to the next band at the bottom of the range (#135); for a weighted Ballistic Exercise, at its fixed 8
+//   reps, after a last Set of RPE 7 or lower or a 3rd Workout without RPE (#136)
+// - new-base: the user lifted a load other than the one prescribed, which became the level's load; the only way a carry
+//   moves (#136)
 // - outgrown: 20 reps on every Set with no Load Step (or band) to take; 15 reps or 60 seconds on every Set of a
 //   bodyweight or timed Exercise (#135)
 // - load-down: a second Miss in a row (#134), so the load went down one Load Step, to the bottom of the range
