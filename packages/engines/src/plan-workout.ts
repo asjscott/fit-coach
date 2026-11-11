@@ -26,7 +26,7 @@ import { muscleFatigue, tiredMuscles, type FatigueWorkout } from "./fatigue";
 import { isJump, JUMP_SETS, jumpCandidates, jumpsForWorkout } from "./jumps";
 import { planReasons } from "./plan-reasons";
 import { scoreExercise, type WeekSoFar } from "./plan-score";
-import { trainingWorkouts } from "./recovery-workout";
+import { RECOVERY_WORKOUT, trainingWorkouts } from "./recovery-workout";
 import {
   addCredits,
   creditsPerSet,
@@ -290,15 +290,31 @@ const setsToAdd = ({ sets }: Draft, candidate: Candidate) =>
 
 const creditsOf = ({ exercise }: Candidate) => Object.entries(creditsPerSet(exercise)) as [Muscle, number][];
 
-// Would the pick keep each of the Exercise's primary Muscles within the cap? Its week counts the Week Ledger, secondary
-// credit included, and the Sets already planned. Secondary Muscles may go over, so compound lifts aren't starved
-const withinCap = (candidate: Candidate, draft: Draft, budget: WeeklyBudget, weekSoFar: MuscleCredits) =>
-  candidate.exercise.muscles.primary.every((muscle) => {
+// Would this many more Sets of the Exercise, a pick's by default, keep each of its primary Muscles within the cap? Its
+// week counts the Week Ledger, secondary credit included, and the Sets already planned. Secondary Muscles may go over,
+// so compound lifts aren't starved
+const withinCap = (
+  candidate: Candidate,
+  draft: Draft,
+  budget: WeeklyBudget,
+  weekSoFar: MuscleCredits,
+  sets = setsToAdd(draft, candidate),
+) => {
+  const credits = creditsPerSet(candidate.exercise);
+  return candidate.exercise.muscles.primary.every((muscle) => {
     const budgeted = budget[muscle];
     if (budgeted === undefined) return true;
     const planned = (weekSoFar[muscle] ?? 0) + (draft.credits[muscle] ?? 0);
-    return planned + setsToAdd(draft, candidate) <= budgeted * WEEKLY_CAP;
+    return planned + (credits[muscle] ?? 0) * sets <= budgeted * WEEKLY_CAP;
   });
+};
+
+const emptyDraft = (): Draft => ({
+  sets: new Map(),
+  fourthSetAfter: new Map(),
+  credits: {},
+  secondsLeft: WORKOUT_SECONDS,
+});
 
 // Does the Exercise credit a Muscle still short of what this stage of the fill order wants for it?
 const helpsStage = (candidate: Candidate, stage: WeeklyBudget, ledger: MuscleCredits) =>
@@ -334,21 +350,23 @@ function requiredPick(candidates: readonly Candidate[], thisWeek: readonly Ledge
   );
 }
 
-// Athletic's two-legged loaded squat, in order of preference
+// The two-legged loaded squat, in order of preference
 const TWO_LEGGED_SQUATS = ["back-squat", "goblet-squat"];
+// The Goals that need a heavy two-legged squat every week but score one-sided leg work above it: athletic (#100), and
+// build_muscle, whose calves budget (#101) the one-sided squats credit
+const SQUAT_GOALS: readonly Goal[] = ["athletic", "build_muscle"];
 
-// Athletic's other one a week: a heavy two-legged squat, which this Goal needs but which scores below one-sided leg
-// work. It's the first of TWO_LEGGED_SQUATS the equipment allows, and the week is done only once that one has had a
-// pick's worth of Sets, so goblet squat doesn't stand in for back squat. It never shares a Workout with the one-sided
-// pick, and waits while its Muscles recover rather than coming back as a last resort. Once done, it competes on score
-// like any other
+// One a week for SQUAT_GOALS (athletic's other one): a heavy two-legged squat. It's the first of TWO_LEGGED_SQUATS the
+// equipment allows, and the week is done only once that one has had a pick's worth of Sets, so goblet squat doesn't
+// stand in for back squat. It never shares a Workout with athletic's one-sided pick, and waits while its Muscles
+// recover rather than coming back as a last resort. Once done, it competes on score like any other
 function requiredSquat(
   candidates: readonly Candidate[],
   thisWeek: readonly LedgerWorkout[],
   goal: Goal,
   isRested: (candidate: Candidate) => boolean,
 ) {
-  if (goal !== "athletic") return undefined;
+  if (!SQUAT_GOALS.includes(goal)) return undefined;
   const squat = TWO_LEGGED_SQUATS.map((slug) => candidates.find(({ exercise }) => exercise.slug === slug)).find(
     (candidate) => candidate !== undefined,
   );
@@ -408,13 +426,18 @@ function nextPick(
   return undefined;
 }
 
-// Picks until the time or the cap runs out, each pick counting towards the budget before the next. Jumps go first,
-// then the required pick. Once the week's budget is met, the rest is picked as a new week's would be, up to the cap, so
-// a user who trains anyway still gets a balanced Workout. With nothing left to add, the plan ends short of its Length
+// Picks until the time or the cap runs out, each pick counting towards the budget before the next. Jumps go first, as
+// far as the cap allows, then the required pick. Once the week's budget is met, the rest is picked as a new week's
+// would be, up to the cap, so a user who trains anyway still gets a balanced Workout. With nothing left to add, the
+// plan ends short of its Length
 function selectExercises(selection: Selection, weekSoFar: MuscleCredits): PlannedExercise[] {
-  const draft: Draft = { sets: new Map(), fourthSetAfter: new Map(), credits: {}, secondsLeft: WORKOUT_SECONDS };
+  const draft = emptyDraft();
   let ledger = weekSoFar;
+  // Jumps keep to the cap like any other pick
+  const jumps: Candidate[] = [];
   for (const jump of selection.jumps) {
+    if (!withinCap(jump, draft, selection.budget, weekSoFar, JUMP_SETS)) continue;
+    jumps.push(jump);
     const credits = creditsPerSet(jump.exercise);
     draft.sets.set(jump, JUMP_SETS);
     draft.credits = addCredits(draft.credits, credits, JUMP_SETS);
@@ -426,7 +449,7 @@ function selectExercises(selection: Selection, weekSoFar: MuscleCredits): Planne
     const { required } = selection;
     // The required pick keeps to the cap too
     const requiredNow =
-      draft.sets.size === selection.jumps.length && required && withinCap(required, draft, selection.budget, weekSoFar);
+      draft.sets.size === jumps.length && required && withinCap(required, draft, selection.budget, weekSoFar);
     let pick = (requiredNow && required) || nextPick(selection, draft, ledger, weekSoFar);
     if (!pick && !budgetMet) {
       budgetMet = true;
@@ -456,6 +479,37 @@ function selectExercises(selection: Selection, weekSoFar: MuscleCredits): Planne
     ledger = addCredits(ledger, credits, sets);
   }
 }
+
+// What's planned when the cap leaves nothing to add (story 17): the Recovery Workout, as it credits nothing, if the
+// equipment, injuries and time allow every Exercise in it; otherwise the smallest Workout within the cap, one Set of the
+// best Exercise that fits, and the Recovery Workout after all when nothing does
+function whenCapped(input: PlanWorkoutInput, { candidates, goal, budget }: Selection, ledger: MuscleCredits) {
+  const recoveryWorkout: PlannedExercise[] = RECOVERY_WORKOUT.map(({ slug, sets, target }) => ({ slug, sets, target }));
+  const exercises = recoveryWorkout.map(({ slug, sets }) => ({ exercise: exerciseBySlug(slug), sets }));
+  const allowed = exercises.every(
+    ({ exercise }) => exercise && isAvailable(exercise, input.equipmentProfile) && isSafeFor(exercise, input.injuries),
+  );
+  const seconds = exercises.reduce((total, { exercise, sets }) => total + (exercise?.secondsPerSet ?? 0) * sets, 0);
+  if (allowed && seconds <= WORKOUT_SECONDS) return recoveryWorkout;
+  const oneSet = candidates.filter((candidate) => withinCap(candidate, emptyDraft(), budget, ledger, 1));
+  const pick = highestScore(oneSet, { goal, budget, ledger });
+  if (!pick) return recoveryWorkout;
+  return [{ slug: pick.exercise.slug, sets: 1, target: pick.target, ...(pick.change && { change: pick.change }) }];
+}
+
+// The Recovery Workout's Exercises stay themselves on every built-in choice, as they need no equipment
+const recoveryCandidates = (input: PlanWorkoutInput, plannedExercises: readonly PlannedExercise[]) =>
+  Object.fromEntries(
+    BuiltInEquipment.options
+      .filter((choice) => !matchesBuiltIn(input.equipmentProfile, choice))
+      .map((choice) => {
+        const possible = plannedExercises.flatMap(({ slug, target }) => {
+          const exercise = exerciseBySlug(slug);
+          return exercise ? [{ exercise, target }] : [];
+        });
+        return [choice, { possible, pickable: [] }];
+      }),
+  );
 
 // The tired Muscles an Exercise was left out for, unless one came back as a last resort
 function heldBack(candidates: readonly Candidate[], selected: readonly PlannedExercise[], tired: ReadonlySet<Muscle>) {
@@ -491,14 +545,16 @@ export function planWorkout(input: PlanWorkoutInput): WorkoutPlan {
       requiredPick(candidates, thisWeek, { goal, budget, ledger }) ??
       requiredSquat(candidates, thisWeek, goal, isRested),
   };
-  // A week with every Muscle at the cap still gives a Workout, built as a new week's would be, so a user who trains
-  // anyway gets a balanced one. The plan always has an Exercise
-  const capped = selectExercises(selection, ledger);
-  const selected = capped.length ? capped : selectExercises(selection, {});
+  // The cap always holds, the Week Ledger counting towards it, so with nothing left to add the plan is whenCapped's.
+  // The plan always has an Exercise
+  const picked = selectExercises(selection, ledger);
+  const selected = picked.length ? picked : whenCapped(input, selection, ledger);
   const held = heldBack(candidates, selected, tired);
+  const isRecovery = selected.every(({ slug }) => exerciseBySlug(slug)?.recovery);
+  const alternatives = isRecovery ? recoveryCandidates(input, selected) : builtInCandidates(input, thisWeek, lastWeek);
   return {
     weekStart: monday,
-    plannedExercises: withAlternatives(selected, builtInCandidates(input, thisWeek, lastWeek)),
+    plannedExercises: withAlternatives(selected, alternatives),
     ...(goal === "athletic" && { cue: ATHLETIC_CUE }),
     heldBack: held,
     reasons: planReasons({
