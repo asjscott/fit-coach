@@ -97,7 +97,8 @@ Server (apps/api/src/assessments.ts assessIfPaired, called by POST /workouts in 
   │  its latestAssessmentWorkout
   └─ assess (packages/engines/src/assess.ts): top Sets, maximums, Reference Strengths, estimates
        ├─ ratio table: packages/engines/src/strength-ratios.ts (one entry per library Exercise)
-       ├─ Working Levels: packages/engines/src/working-levels.ts seedWorkingLevels
+       ├─ Working Levels: packages/engines/src/working-levels.ts seedWorkingLevels; the shape is WorkingLevel in
+       │  packages/shared/src/assessments.ts, the rep ranges repRange beside the seeding
        └─ Epley both ways: packages/engines/src/e1rm.ts
 GET /assessments/latest (routes/assessments.ts) → features/assessment/hooks/use-latest-assessment.ts
 Results: features/assessment/views/assessment-results-view.tsx (route assessment-results), grouped by
@@ -138,6 +139,13 @@ Schemas: packages/shared/src/assessments.ts; Set.rpe and Workout.assessment in w
 - **Results round a Working Level to what the user can lift** (`roundToLoadKg`): the nearest load the profile offers,
   or the nearest 0.5 kg when the loads aren't known. An Exercise that needs a barbell is left out when its Working Level
   is under the empty bar, the profile's own or an assumed 20 kg (#70). The stored Working Level isn't changed.
+- **A weighted Working Level is a load and a target reps** (#131), seeded at the heaviest load the user's Equipment
+  Profiles have at or below what Epley gives for the bottom of the range with 2 in reserve, or left unrounded when none
+  is that light, so a barbell lift under the bar stays out (#70). Each level also has `movedBy` (the Assessment's B, or
+  null when the planner works one out), `misses`, and `outgrown`: a bodyweight seed above 15 reps is stored at 15 and
+  outgrown, and the planner gives an outgrown Exercise's place to its `progression` when it can (`withoutOutgrown`).
+- **Levels stored before #131 are converted at startup** (`migrateWorkingLevels` in `apps/api/src/assessments.ts`,
+  rule in `migrateWorkingLevel`): any level without `misses`. It's idempotent, and makes the user's current plan due.
 - **Stored Assessments without a field the schema later required** (`referenceStrength`, `maximum`, `bStartedAt`)
   fail to parse in `findLatestAssessment`: dev data only, so drop the collection.
 
