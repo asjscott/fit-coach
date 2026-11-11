@@ -114,6 +114,18 @@ describe("progressWorkingLevel: double progression", () => {
     });
   });
 
+  // Story 35: outgrown only at the load ceiling
+  it("holds at 20 reps, not outgrown, while a heavier load is there but Epley can't reach it yet", () => {
+    const farApart: ProfileWithLoads = {
+      tags: ["dumbbells"],
+      loads: { dumbbells: { kind: "fixed", weightsKg: [8, 24] } },
+    };
+    expect(progress(gobletSquat(8, 20), [lifted(8, 20), lifted(8, 20)], { equipmentProfile: farApart })).toEqual({
+      level: gobletSquat(8, 20, { movedBy: movedByThisWorkout }),
+      change: null,
+    });
+  });
+
   it("treats a profile that lists no loads as a load ceiling", () => {
     const noLoads: ProfileWithLoads = { tags: ["dumbbells"], loads: {} };
     expect(
@@ -236,6 +248,21 @@ describe("progressWorkingLevel: RPE on the last Set", () => {
     expect(progress(gobletSquat(14, 10), [lifted(14, 7), lifted(14, 7, 10)])).toMatchObject({
       level: { kg: 14, reps: 10, misses: 1 },
       change: null,
+    });
+  });
+
+  // Stories 44, 47: RPE 10 holds even the second Miss in a row, which still counts towards the run
+  it("holds the load and target on a second Miss in a row when the last Set was RPE 10", () => {
+    expect(progress(gobletSquat(14, 10, { misses: 1 }), [lifted(14, 7), lifted(14, 7, 10)])).toEqual({
+      level: gobletSquat(14, 10, { movedBy: movedByThisWorkout, misses: 2, change: { code: "rpe-10" } }),
+      change: { code: "rpe-10" },
+    });
+  });
+
+  it("brings it down on the next Miss without RPE 10, the run having carried on", () => {
+    expect(progress(gobletSquat(14, 10, { misses: 2 }), [lifted(14, 7), lifted(14, 7)])).toMatchObject({
+      level: { kg: 14, reps: 8, misses: 0 },
+      change: { code: "target-down" },
     });
   });
 

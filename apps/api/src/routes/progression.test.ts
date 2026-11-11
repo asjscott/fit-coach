@@ -1,7 +1,8 @@
-import type { LatestAssessment, PlannedWorkout, Set, WorkingLevel, Workout } from "@fit/shared";
+import type { WorkingLevel } from "@fit/shared";
 import { describe, expect, it } from "vitest";
-import { type TestUser, useRouteTestApi } from "../test/route-test-api";
-import { assessmentPair, held, hoursAgo, lifted, workout } from "../test/workouts";
+import { useRouteTestApi } from "../test/route-test-api";
+import { assessedUser, at, currentPlan, plannedExercise, upload, workingLevels } from "../test/uploads";
+import { held, lifted } from "../test/workouts";
 
 const api = useRouteTestApi();
 
@@ -10,7 +11,7 @@ const api = useRouteTestApi();
 describe("double progression at upload (#132)", () => {
   // Stories 29, 42, 81: the target goes up 1 rep, and the next plan prescribes it with the reason
   it("puts the target up 1 rep when every Set reaches it, for the next Planned Workout", async () => {
-    const user = await assessedUser();
+    const user = await assessedUser(api);
     const row = { slug: "one-arm-dumbbell-row", sets: [lifted(14, 8), lifted(14, 9), lifted(14, 8)] };
     await upload(user, at(100, [row]));
 
@@ -24,7 +25,7 @@ describe("double progression at upload (#132)", () => {
   // Stories 30–32, 37: a different load becomes the new base, then the top of the range takes one Load Step, to the
   // reps Epley predicts there
   it("steps the load up from the top of the range to the reps Epley predicts there", async () => {
-    const user = await assessedUser();
+    const user = await assessedUser(api);
     const slug = "one-arm-dumbbell-row";
     // Last week or before, so the row's Workouts this week leave it within the variety cap
     await upload(user, at(200, [{ slug, sets: [lifted(20, 12), lifted(20, 13)] }]));
@@ -41,7 +42,7 @@ describe("double progression at upload (#132)", () => {
 
   // Story 33: a Load Step Epley says is out of reach keeps the reps climbing
   it("keeps the reps climbing while the next Load Step is out of reach", async () => {
-    const user = await assessedUser();
+    const user = await assessedUser(api);
     // A new base of 14 kg × 12, then the top of the range there
     await upload(user, at(100, [{ slug: "goblet-squat", sets: [lifted(14, 12), lifted(14, 12)] }]));
     await upload(user, at(75, [{ slug: "goblet-squat", sets: [lifted(14, 12), lifted(14, 12)] }]));
@@ -52,7 +53,7 @@ describe("double progression at upload (#132)", () => {
 
   // Story 36
   it("judges the Sets at the lowest load used", async () => {
-    const user = await assessedUser();
+    const user = await assessedUser(api);
     const sets = [lifted(14, 6), lifted(12, 8), lifted(12, 8)];
     await upload(user, at(100, [{ slug: "goblet-squat", sets }]));
 
@@ -61,7 +62,7 @@ describe("double progression at upload (#132)", () => {
 
   // Story 38
   it("moves nothing on one Set", async () => {
-    const user = await assessedUser();
+    const user = await assessedUser(api);
     const before = (await workingLevels(user)).get("goblet-squat");
     await upload(user, at(100, [{ slug: "goblet-squat", sets: [lifted(12, 12)] }]));
 
@@ -70,7 +71,7 @@ describe("double progression at upload (#132)", () => {
 
   // Story 41: each Exercise moves only from its own Sets, an Alternative Exercise included
   it("moves an Alternative Exercise's own Working Level, not the planned Exercise's", async () => {
-    const user = await assessedUser();
+    const user = await assessedUser(api);
     const plan = await currentPlan(user);
     const before = await workingLevels(user);
     const planned = plan.plannedExercises[0]!.slug;
@@ -86,7 +87,7 @@ describe("double progression at upload (#132)", () => {
 
   // Story 40
   it("doesn't progress from an Assessment Workout", async () => {
-    const user = await assessedUser();
+    const user = await assessedUser(api);
     const before = (await workingLevels(user)).get("goblet-squat");
     const retest = { slug: "goblet-squat", sets: [lifted(12, 9, 7), lifted(12, 9, 8)] };
     await upload(user, at(100, [retest], { assessment: "A" }));
@@ -98,7 +99,7 @@ describe("double progression at upload (#132)", () => {
 // Stories 43, 44: an optional RPE on the last Set, where 10 holds the load and the target (#133)
 describe("RPE on the last Set at upload (#133)", () => {
   it("holds the load and the target when the last Set was RPE 10, for the next Planned Workout", async () => {
-    const user = await assessedUser();
+    const user = await assessedUser(api);
     // Every Set reached the row's 14 kg × 8, which would put the target up, but the last was all the user had
     const row = { slug: "one-arm-dumbbell-row", sets: [lifted(14, 8), lifted(14, 8), lifted(14, 8, 10)] };
     await upload(user, at(100, [row]));
@@ -110,8 +111,27 @@ describe("RPE on the last Set at upload (#133)", () => {
     });
   });
 
+  // Stories 44, 47: even on the second Miss in a row, which still counts
+  it("holds the load and the target on a second Miss in a row when the last Set was RPE 10", async () => {
+    const user = await assessedUser(api);
+    const slug = "one-arm-dumbbell-row";
+    await upload(user, at(250, [{ slug, sets: [lifted(14, 5), lifted(14, 5)] }]));
+    await upload(user, at(200, [{ slug, sets: [lifted(14, 5), lifted(14, 5, 10)] }]));
+
+    expect((await workingLevels(user)).get(slug)).toMatchObject({
+      kg: 14,
+      reps: 8,
+      misses: 2,
+      change: { code: "rpe-10" },
+    });
+    expect(await plannedExercise(user, slug)).toMatchObject({
+      target: { unit: "kg", kg: 14, reps: 8 },
+      change: { code: "rpe-10" },
+    });
+  });
+
   it("progresses as usual when the last Set's RPE is short of 10", async () => {
-    const user = await assessedUser();
+    const user = await assessedUser(api);
     const row = { slug: "one-arm-dumbbell-row", sets: [lifted(14, 8), lifted(14, 8), lifted(14, 8, 9)] };
     await upload(user, at(100, [row]));
 
@@ -124,7 +144,7 @@ describe("uploads that never move a level twice or backwards (#132)", () => {
   const reachingNine = [lifted(12, 9), lifted(12, 9)];
 
   it("moves a level once however often the Workout is uploaded", async () => {
-    const user = await assessedUser();
+    const user = await assessedUser(api);
     const finished = at(100, [{ slug: "goblet-squat", sets: [lifted(12, 8), lifted(12, 8)] }]);
     await upload(user, finished);
     expect((await user.post("/workouts", finished)).statusCode).toBe(200);
@@ -133,7 +153,7 @@ describe("uploads that never move a level twice or backwards (#132)", () => {
   });
 
   it("leaves a level to a later Workout when an earlier, Pending Workout uploads after it", async () => {
-    const user = await assessedUser();
+    const user = await assessedUser(api);
     const earlier = at(100, [{ slug: "goblet-squat", sets: [lifted(12, 8), lifted(12, 8)] }]);
     const later = at(75, [{ slug: "goblet-squat", sets: reachingNine }]);
     await upload(user, later);
@@ -151,7 +171,7 @@ describe("uploads that never move a level twice or backwards (#132)", () => {
 describe("Misses at upload (#134)", () => {
   // Story 47
   it("drops a weighted Exercise one Load Step to the bottom of the range on the second Miss in a row", async () => {
-    const user = await assessedUser();
+    const user = await assessedUser(api);
     const slug = "one-arm-dumbbell-row";
     // A new base of 20 kg × 10, then two Workouts averaging 7
     await upload(user, at(250, [{ slug, sets: [lifted(20, 10), lifted(20, 10)] }]));
@@ -169,7 +189,7 @@ describe("Misses at upload (#134)", () => {
 
   // Story 48, 51, 52: Manual Workouts count, and a Workout without the Exercise, or none at all, isn't a Miss
   it("keeps the load and drops the target 2 reps when the step down is too big, across Workouts without it", async () => {
-    const user = await assessedUser();
+    const user = await assessedUser(api);
     // The goblet squat is seeded at 12 kg × 8; 12 kg down to 10 kg would be 17% lighter
     await upload(user, at(250, [{ slug: "goblet-squat", sets: [lifted(12, 5), lifted(12, 5)] }]));
     await upload(user, at(200, [{ slug: "one-arm-dumbbell-row", sets: [lifted(14, 8), lifted(14, 8)] }]));
@@ -185,7 +205,7 @@ describe("Misses at upload (#134)", () => {
 
   // Story 46
   it("ends the run on a Workout that isn't a Miss", async () => {
-    const user = await assessedUser();
+    const user = await assessedUser(api);
     await upload(user, at(250, [{ slug: "goblet-squat", sets: [lifted(12, 5), lifted(12, 5)] }]));
     await upload(user, at(200, [{ slug: "goblet-squat", sets: [lifted(12, 7), lifted(12, 7)] }]));
     await upload(user, at(100, [{ slug: "goblet-squat", sets: [lifted(12, 5), lifted(12, 5)] }]));
@@ -195,7 +215,7 @@ describe("Misses at upload (#134)", () => {
 
   // Story 49
   it("lowers a timed target 10 seconds on the second Miss in a row", async () => {
-    const user = await assessedUser();
+    const user = await assessedUser(api);
     const plank = (await workingLevels(user)).get("plank") as Extract<WorkingLevel, { unit: "seconds" }>;
     const short = [held(plank.seconds - 15), held(plank.seconds - 15)];
     await upload(user, at(250, [{ slug: "plank", sets: short }]));
@@ -210,7 +230,7 @@ describe("Misses at upload (#134)", () => {
 
   // Story 40
   it("counts no Miss in an Assessment Workout", async () => {
-    const user = await assessedUser();
+    const user = await assessedUser(api);
     await upload(user, at(250, [{ slug: "goblet-squat", sets: [lifted(12, 5), lifted(12, 5)] }]));
     await upload(
       user,
@@ -220,51 +240,3 @@ describe("Misses at upload (#134)", () => {
     expect((await workingLevels(user)).get("goblet-squat")).toMatchObject({ kg: 12, reps: 8, misses: 1 });
   });
 });
-
-// The dumbbells-at-home user, assessed two weeks ago so that Workouts uploaded after it can be in an earlier week and
-// rested by now
-async function assessedUser() {
-  const user = await api.signIn();
-  const [a, b] = assessmentPair();
-  await upload(user, retimed(a, 340));
-  await upload(user, retimed(b, 320));
-  return user;
-}
-
-// A Workout started this many hours ago, its Sets logged in its hour
-function at(
-  startedHoursAgo: number,
-  exercises: { slug: string; sets: Set[] }[],
-  extra: Partial<Pick<Workout, "assessment" | "plannedWorkoutId">> = {},
-) {
-  return retimed(workout(startedHoursAgo, exercises, extra), startedHoursAgo);
-}
-
-function retimed(finished: Workout, startedHoursAgo: number): Workout {
-  return {
-    ...finished,
-    startedAt: hoursAgo(startedHoursAgo),
-    endedAt: hoursAgo(startedHoursAgo - 1),
-    workoutExercises: finished.workoutExercises.map((exercise) => ({
-      ...exercise,
-      sets: exercise.sets.map((set) => ({ ...set, loggedAt: hoursAgo(startedHoursAgo - 0.5) })),
-    })),
-  };
-}
-
-async function upload(user: TestUser, finished: Workout) {
-  expect((await user.post("/workouts", finished)).statusCode).toBe(201);
-}
-
-async function workingLevels(user: TestUser) {
-  const latest = (await user.get("/assessments/latest")).body as LatestAssessment;
-  return new Map<string, WorkingLevel>(latest!.workingLevels.map((level) => [level.slug, level]));
-}
-
-async function currentPlan(user: TestUser) {
-  return (await user.post("/planned-workouts/current")).body as PlannedWorkout;
-}
-
-async function plannedExercise(user: TestUser, slug: string) {
-  return (await currentPlan(user)).plannedExercises.find((exercise) => exercise.slug === slug);
-}

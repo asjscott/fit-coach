@@ -18,7 +18,7 @@ describe.each([
 ])("plan outcomes, with %s", (_, reversed) => {
   let simulate: Simulation["simulate"];
   let weekCredits: Simulation["weekCredits"];
-  let PROFILES: Simulation["PROFILES"];
+  let EVERY_PROFILE: Simulation["EVERY_PROFILE"];
   let LIFTERS: Simulation["LIFTERS"];
 
   beforeAll(async () => {
@@ -29,7 +29,7 @@ describe.each([
         return { ...library, EXERCISES: [...library.EXERCISES].reverse() };
       });
     } else vi.doUnmock("./data/exercises");
-    ({ simulate, weekCredits, PROFILES, LIFTERS } = await import("../scripts/simulate-weeks"));
+    ({ simulate, weekCredits, EVERY_PROFILE, LIFTERS } = await import("../scripts/simulate-weeks"));
   });
 
   // Average over the weeks after the first, once a week's Exercises carry on from the last
@@ -41,21 +41,15 @@ describe.each([
     return sets / weeks.length;
   };
 
-  // Story 25: a user with a gym gets real barbell work
+  // Story 25: a user with a gym gets real barbell work. build_muscle's is a required pick, as since calves joined its
+  // budget (#101) the one-sided squats, which credit them, outscore back squat
   it.each([
     { goal: "recomp", days: 4, length: "standard" },
     { goal: "athletic", days: 4, length: "long" },
     { goal: "athletic", days: 4, length: "standard" },
-  ] as const)("$goal at $days days $length has back squat on a Full gym", (run) => {
-    expect(setsPerWeek({ ...fullGym, ...run }, "back-squat")).toBeGreaterThanOrEqual(3);
-  });
-
-  // A known loss, awaiting a decision: since calves joined build_muscle's budget (#101), the one-sided squats, which
-  // credit them, outscore back squat, and with the 130% cap (#128) it's gone at 4 days Standard. This fails once it's back
-  it.fails.each([
     { goal: "build_muscle", days: 4, length: "standard" },
     { goal: "build_muscle", days: 6, length: "standard" },
-  ] as const)("$goal at $days days $length has lost back squat on a Full gym", (run) => {
+  ] as const)("$goal at $days days $length has back squat on a Full gym", (run) => {
     expect(setsPerWeek({ ...fullGym, ...run }, "back-squat")).toBeGreaterThanOrEqual(3);
   });
 
@@ -107,8 +101,9 @@ describe.each([
   // Story 23: a short week still covers every budgeted Muscle, as far as the 4-Set floor. These three can't, an
   // accepted limit of spec #77: the plan is always built Long, so at Short big barbell lifts leave no time. Athletic's
   // weekly back squat (#100) takes one of its two Short Workouts' time, leaving side delts at 2, and 1.5 once calves
-  // joined its budget (#101)
-  const belowFloor = { build_muscle: 3, recomp: 2, lose_fat: 4, athletic: 1.5 };
+  // joined its budget (#101). build_muscle's weekly back squat, required since spec #119's review, does the same: calves
+  // at 1.5, side delts at 2
+  const belowFloor = { build_muscle: 1.5, recomp: 2, lose_fat: 4, athletic: 1.5 };
 
   it.each(GOAL_NAMES)("%s at 2 days Short stays where the floor's limit says", (goal) => {
     expect(lowestMuscle({ ...fullGym, goal, days: 2, length: "short" })).toBeGreaterThanOrEqual(belowFloor[goal]);
@@ -134,10 +129,10 @@ describe.each([
   });
 
   // Story 14: the 130% cap, through primary credit alone. Every day and Length on a Full gym, and the busiest weeks on
-  // each profile for each lifter
+  // each profile for each lifter, Bodyweight only included
   const capRuns = (goal: Goal): Run[] => [
     ...[2, 3, 4, 5, 6].flatMap((days) => LENGTHS.map((length) => ({ ...fullGym, goal, days, length }))),
-    ...(Object.keys(PROFILES) as Run["profile"][]).flatMap((profile) =>
+    ...(Object.keys(EVERY_PROFILE) as Run["profile"][]).flatMap((profile) =>
       (Object.keys(LIFTERS) as Run["lifter"][]).flatMap((lifter) =>
         [4, 6].map((days) => ({ goal, days, length: "long" as const, lifter, profile })),
       ),

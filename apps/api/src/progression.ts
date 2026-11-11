@@ -1,4 +1,4 @@
-import { exerciseBySlug, progressWorkingLevel, seedWorkingLevels, weekOfBlock } from "@fit/engines";
+import { exerciseBySlug, progressWorkingLevel, weekOfBlock, workingLevelsOn } from "@fit/engines";
 import { WorkingLevel, type Workout } from "@fit/shared";
 import { findLatestAssessment, workingLevels } from "./assessments";
 import { plannedWorkouts } from "./planned-workouts";
@@ -13,22 +13,10 @@ export async function progressWorkingLevels(clerkUserId: string, workout: Workou
   const equipmentProfile = user.equipmentProfiles.find(({ isPrimary }) => isPrimary);
   if (!latest || !equipmentProfile) return;
 
-  // As the planner works them out: the stored level, unless the primary profile does the Exercise another way, and
-  // otherwise one seeded from the Assessment, such as for an Exercise a profile added since makes available
+  // As the planner works them out (workingLevelsOn)
   const { assessment } = latest;
-  const seeded = seedWorkingLevels({
-    referenceStrengths: Object.fromEntries(
-      Object.entries(assessment.patterns).map(([pattern, { referenceStrength }]) => [pattern, referenceStrength]),
-    ),
-    bodyWeightKg: assessment.bodyWeightKg,
-    equipmentProfiles: [equipmentProfile],
-  });
-  const stored = new Map(latest.workingLevels.map((level) => [level.slug, level]));
-  const levelOf = (slug: string) => {
-    const seed = seeded.find((level) => level.slug === slug);
-    const level = stored.get(slug);
-    return level && (!seed || seed.unit === level.unit) ? level : seed;
-  };
+  const levels = workingLevelsOn({ workingLevels: latest.workingLevels, assessment, equipmentProfile });
+  const stored = new Set(latest.workingLevels.map(({ slug }) => slug));
 
   const planned = workout.plannedWorkoutId
     ? await plannedWorkouts.findOne({ clerkUserId, id: workout.plannedWorkoutId })
@@ -37,7 +25,7 @@ export async function progressWorkingLevels(clerkUserId: string, workout: Workou
 
   for (const workoutExercise of workout.workoutExercises) {
     const exercise = exerciseBySlug(workoutExercise.slug);
-    const level = levelOf(workoutExercise.slug);
+    const level = levels.get(workoutExercise.slug);
     if (!exercise || !level) continue;
     const progression = progressWorkingLevel({
       level,

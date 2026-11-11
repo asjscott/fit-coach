@@ -1,6 +1,7 @@
 import {
   BAND_TAGS,
   BandLevel,
+  type Assessment,
   type BandTag,
   type EquipmentTag,
   type Exercise,
@@ -25,13 +26,17 @@ export const BAND_REP_RANGE: RepRange = { min: 10, max: 15 };
 export const BALLISTIC_REP_RANGE: RepRange = { min: 8, max: 8 };
 // A bodyweight target climbs to this, then the Exercise moves to its harder variant
 export const BODYWEIGHT_TOP_REPS = 15;
+// The top of the timed ladder: at this many seconds on every Set, the Exercise moves to its harder variant
+export const TIMED_TOP_SECONDS = 60;
 // The most reps any target climbs to, such as a weighted one at the heaviest load the profile has
 export const MAX_REPS = 20;
 // A carry has no range, as its reps mean nothing; it's prescribed this many, as before ranges, and only a different
 // logged load moves it
 export const CARRY_REPS = 8;
 
-const isCarry = (exercise: Pick<Exercise, "patterns">) => exercise.patterns.some(({ pattern }) => pattern === "carry");
+// A carry: its reps mean nothing, so it has no rep range and no PR
+export const isCarry = (exercise: Pick<Exercise, "patterns">) =>
+  exercise.patterns.some(({ pattern }) => pattern === "carry");
 
 // A barbell lift is one that needs a barbell however it's done
 const isBarbellLift = (exercise: Pick<Exercise, "equipmentOptions">) =>
@@ -111,12 +116,23 @@ const bodyweightLevel = (reps: number) => ({
   outgrown: reps > BODYWEIGHT_TOP_REPS,
 });
 
-type Shape = WorkingLevel extends infer L ? (L extends WorkingLevel ? Omit<L, "movedBy" | "misses"> : never) : never;
+// The same for a timed target, at the top of the timed ladder
+const timedLevel = (seconds: number) => ({
+  seconds: Math.min(seconds, TIMED_TOP_SECONDS),
+  outgrown: seconds > TIMED_TOP_SECONDS,
+});
 
-function shapeOf(
+// A seeded Working Level before its progress (movedBy, misses) is added, for each unit
+type SeededLevel = WorkingLevel extends infer L
+  ? L extends WorkingLevel
+    ? Omit<L, "movedBy" | "misses">
+    : never
+  : never;
+
+function seededLevelOf(
   exercise: Exercise,
   { referenceStrengths, bodyWeightKg, equipmentProfiles: profiles }: Seed,
-): Shape | null {
+): SeededLevel | null {
   const { slug } = exercise;
   const entry = STRENGTH_RATIOS[slug];
   if (!entry) return null;
@@ -139,7 +155,7 @@ function shapeOf(
     case "bodyweight":
       return { slug, unit: "reps", ...bodyweightLevel(bodyweightReps(maximum, bodyWeightKg * entry.share)) };
     case "timed":
-      return { slug, unit: "seconds", seconds: maximum, outgrown: false };
+      return { slug, unit: "seconds", ...timedLevel(maximum) };
   }
 }
 
@@ -148,8 +164,36 @@ function shapeOf(
 export function seedWorkingLevels(seed: Seed): WorkingLevel[] {
   const movedBy = seed.movedBy ?? null;
   return EXERCISES.filter((exercise) => seed.equipmentProfiles.some((profile) => isAvailable(exercise, profile)))
-    .flatMap((exercise) => shapeOf(exercise, seed) ?? [])
-    .map((shape) => ({ ...shape, movedBy, misses: 0 }));
+    .flatMap((exercise) => seededLevelOf(exercise, seed) ?? [])
+    .map((level) => ({ ...level, movedBy, misses: 0 }));
+}
+
+// Each Exercise's Working Level on this Equipment Profile, by slug: the stored one, unless it's for a way of doing the
+// Exercise this profile doesn't have (another unit). Otherwise it's worked out as the Assessment seeded them, which
+// covers a profile added since. The planner prescribes these, and progression at upload moves them
+export function workingLevelsOn({
+  workingLevels,
+  assessment,
+  equipmentProfile,
+}: {
+  workingLevels: readonly WorkingLevel[];
+  assessment: Pick<Assessment, "bodyWeightKg" | "patterns">;
+  equipmentProfile: ProfileWithLoads;
+}): Map<string, WorkingLevel> {
+  const referenceStrengths = Object.fromEntries(
+    Object.entries(assessment.patterns).map(([pattern, { referenceStrength }]) => [pattern, referenceStrength]),
+  );
+  const seeded = seedWorkingLevels({
+    referenceStrengths,
+    bodyWeightKg: assessment.bodyWeightKg,
+    equipmentProfiles: [equipmentProfile],
+  });
+  const levels = new Map(seeded.map((level) => [level.slug, level]));
+  for (const stored of workingLevels) {
+    const seed = levels.get(stored.slug);
+    if (!seed || seed.unit === stored.unit) levels.set(stored.slug, stored);
+  }
+  return levels;
 }
 
 // ─── The one-off migration (#131) ───
@@ -163,8 +207,12 @@ export type LegacyWorkingLevel =
 
 const clamp = (value: number, { min, max }: RepRange) => Math.min(max, Math.max(min, value));
 
+// The reps every weighted level was stored for before #131
+const LEGACY_REPS = 8;
+
 // A stored Working Level in the new shape: a weighted one at the heaviest load the profiles have at or below its kg,
-// at the bottom of its range; band reps clamped into 10–15; bodyweight reps capped at 15, outgrown above it. movedBy
+// at the bottom of its range; band reps clamped into 10–15; bodyweight reps capped at 15 and seconds at 60, outgrown
+// above them. movedBy
 // is the Assessment's B that set it
 export function migrateWorkingLevel(
   legacy: LegacyWorkingLevel,
@@ -176,7 +224,7 @@ export function migrateWorkingLevel(
   switch (legacy.unit) {
     case "kg": {
       // An Exercise the library no longer has keeps the 8 reps it was stored for
-      if (!exercise) return { ...legacy, reps: CARRY_REPS, ...progress };
+      if (!exercise) return { ...legacy, reps: LEGACY_REPS, ...progress };
       const kg = loadAtOrBelowKg(legacy.kg, loadsInAny(exercise, equipmentProfiles));
       return { ...legacy, kg, reps: startingReps(exercise), ...progress };
     }
@@ -185,6 +233,6 @@ export function migrateWorkingLevel(
     case "reps":
       return { ...legacy, ...progress, ...bodyweightLevel(legacy.reps) };
     case "seconds":
-      return { ...legacy, ...progress };
+      return { ...legacy, ...progress, ...timedLevel(legacy.seconds) };
   }
 }

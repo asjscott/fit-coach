@@ -52,7 +52,7 @@ export async function createWorkout(clerkUserId: string, sent: Workout) {
 // Workout counts from its own day
 export async function recordPrs(clerkUserId: string, workout: WithId<WorkoutDoc>): Promise<Pr[]> {
   if (workout.prs) return workout.prs;
-  const slugs = [...new Set(workout.workoutExercises.map((we) => we.slug))];
+  const slugs = [...new Set(workout.workoutExercises.map(({ slug }) => slug))];
   const earlier = await workouts
     .find(
       { clerkUserId, "workoutExercises.slug": { $in: slugs }, startedAt: { $lt: workout.startedAt } },

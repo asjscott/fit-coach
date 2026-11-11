@@ -8,8 +8,8 @@ import {
   exerciseBySlug,
   planWorkout,
   progressWorkingLevel,
-  seedWorkingLevels,
   weekOfBlock,
+  workingLevelsOn,
   type MuscleCredits,
   type ProfileWithLoads,
 } from "../src";
@@ -93,15 +93,7 @@ function setsAt(target: SetTarget, sets: number, loggedAt: string): LoggedSet[] 
 export function simulate({ goal, days, length, lifter, profile, jumps = false }: Run) {
   const assessment = assessmentOf(lifter, jumps);
   const equipmentProfile = EVERY_PROFILE[profile];
-  const referenceStrengths = Object.fromEntries(
-    Object.entries(assessment.patterns).map(([pattern, { referenceStrength }]) => [pattern, referenceStrength]),
-  );
-  const seeded = seedWorkingLevels({
-    referenceStrengths,
-    bodyWeightKg: assessment.bodyWeightKg,
-    equipmentProfiles: [equipmentProfile],
-  });
-  const seeds = new Map(seeded.map((level) => [level.slug, level]));
+  const seeds = workingLevelsOn({ workingLevels: [], assessment, equipmentProfile });
   const stored = new Map<string, WorkingLevel>();
   const workouts: (Pick<Workout, "id" | "startedAt"> & { workoutExercises: { slug: string; sets: LoggedSet[] }[] })[] =
     [];

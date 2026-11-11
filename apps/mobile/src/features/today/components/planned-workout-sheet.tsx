@@ -204,9 +204,9 @@ export function PlannedWorkoutSheet({
                   <Text size="sm" color="muted">
                     {plannedSetsLabel({ sets, target }, unit, libraryExercise(slug)?.unilateral, isJumpSlug(slug))}
                   </Text>
-                  {progressionChangeLine(change) ? (
+                  {progressionChangeLine(change, slug) ? (
                     <Text size="sm" color="muted">
-                      {progressionChangeLine(change)}
+                      {progressionChangeLine(change, slug)}
                     </Text>
                   ) : null}
                   {supersetWith ? (

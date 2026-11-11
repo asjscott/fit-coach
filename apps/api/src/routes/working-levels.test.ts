@@ -104,7 +104,7 @@ describe("the Working Level migration (#131)", () => {
     expect(targets.get("one-arm-dumbbell-row")).toEqual({ unit: "kg", kg: 12, reps: 8 });
   });
 
-  it("clamps reps levels into the new ranges: band reps into 10–15, bodyweight reps to 15 and outgrown above it", async () => {
+  it("clamps reps levels into the new ranges: band reps into 10–15, bodyweight reps to 15 and timed to 60 seconds, outgrown above them", async () => {
     const user = await api.signIn({ equipmentProfile: NO_EQUIPMENT });
     await assessWith(user, [{ slug: "push-up", sets: [repsDone(12)] }]);
 
@@ -121,7 +121,7 @@ describe("the Working Level migration (#131)", () => {
     expect(levels.get("band-pull-apart")).toMatchObject({ level: "light", reps: 15 });
     expect(levels.get("push-up")).toMatchObject({ reps: 15, outgrown: true });
     expect(levels.get("bodyweight-squat")).toMatchObject({ reps: 12, outgrown: false });
-    expect(levels.get("plank")).toMatchObject({ seconds: 75, misses: 0 });
+    expect(levels.get("plank")).toMatchObject({ seconds: 60, misses: 0, outgrown: true });
   });
 
   it("leaves levels already in the new shape as they are", async () => {

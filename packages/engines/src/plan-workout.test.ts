@@ -4,6 +4,7 @@ import { exerciseBySlug, EXERCISES } from "./data/exercises";
 import { builtInEquipment, type ProfileWithLoads } from "./equipment";
 import { daysWorkout } from "./days-workout";
 import { planWorkout, type PlanWorkoutInput } from "./plan-workout";
+import { RECOVERY_WORKOUT } from "./recovery-workout";
 
 const dumbbells: ProfileWithLoads = {
   tags: ["dumbbells"],
@@ -361,11 +362,18 @@ describe("planWorkout", () => {
       "dumbbell-floor-press": 20,
     };
 
-    it("still gives a Workout, as a new week would, once every Muscle is at the cap", () => {
+    // Story 17: the cap still holds, so with nothing left under it the plan is the Recovery Workout, not more training
+    it("gives the Recovery Workout once every Muscle is at the cap", () => {
       const workouts = [week({ ...met, "dumbbell-lateral-raise": 20, plank: 20 })];
       const planned = plan({ workouts, workingLevels: withBench }).plannedExercises;
-      expect(planned).toEqual(plan({ workingLevels: withBench }).plannedExercises);
-      expect(planned.length).toBeGreaterThan(0);
+      expect(planned.map(({ slug, sets, target }) => ({ slug, sets, target }))).toEqual(RECOVERY_WORKOUT);
+    });
+
+    it("keeps the Recovery Workout itself on every built-in choice", () => {
+      const workouts = [week({ ...met, "dumbbell-lateral-raise": 20, plank: 20 })];
+      for (const { slug, target, alternatives } of plan({ workouts, workingLevels: withBench }).plannedExercises) {
+        for (const options of Object.values(alternatives ?? {})) expect(options).toEqual([{ slug, target }]);
+      }
     });
 
     it("uses the rest of the time once what's left of the budget is planned", () => {
@@ -684,15 +692,12 @@ describe("planWorkout", () => {
     });
 
     it("ranks a Ballistic Exercise higher for athletic than for build_muscle, with the same inputs", () => {
-      const onKettlebells = { equipmentProfile: kettlebells, workingLevels: [], assessment };
-      expect(slugs({ ...onKettlebells, goal: "athletic" }).slice(1, 3)).toEqual([
-        "single-arm-kettlebell-swing",
-        "renegade-row",
-      ]);
-      expect(slugs({ ...onKettlebells, goal: "build_muscle" }).slice(1, 3)).toEqual([
-        "renegade-row",
-        "single-arm-kettlebell-swing",
-      ]);
+      // The week's required picks done, the two-legged squat and athletic's one-sided one, so only the score orders it
+      const workouts = [week({ "goblet-squat": 3, "dumbbell-single-leg-romanian-deadlift": 3 })];
+      const onKettlebells = { equipmentProfile: kettlebells, workingLevels: [], assessment, workouts };
+      const swingAt = (goal: Goal) => slugs({ ...onKettlebells, goal }).indexOf("single-arm-kettlebell-swing");
+      expect(swingAt("athletic")).toBe(1);
+      expect(swingAt("build_muscle")).toBe(2);
     });
 
     // They share a Goal factor. recomp's smaller Weekly Budget can still tip a close pick on a big Equipment Profile
@@ -920,7 +925,7 @@ describe("planWorkout", () => {
     });
   });
 
-  describe("an athletic user's two-legged loaded squat", () => {
+  describe("an athletic or build_muscle user's two-legged loaded squat", () => {
     const oneSidedDone = logged("w1", "dumbbell-bulgarian-split-squat", 3);
     const athletic = (more: Partial<PlanWorkoutInput> = {}) =>
       plan({ goal: "athletic", equipmentProfile: fullHomeGym, workingLevels: [], assessment, ...more })
@@ -949,8 +954,15 @@ describe("planWorkout", () => {
       expect(chosen).not.toContain("back-squat");
     });
 
-    it("isn't given to another Goal", () => {
-      expect(onFullGym({ goal: "build_muscle", workouts: [oneSidedDone] })[0]).not.toBe("back-squat");
+    // Story 25: build_muscle's calves budget lets the one-sided squats, which credit them, outscore back squat
+    it("is given for build_muscle too, first in the Workout with 3 Sets", () => {
+      const buildMuscle = plan({ goal: "build_muscle", equipmentProfile: fullHomeGym, workingLevels: [], assessment });
+      expect(buildMuscle.plannedExercises[0]).toMatchObject({ slug: "back-squat", sets: 3 });
+    });
+
+    it.each(["recomp", "lose_fat"] as const)("isn't required for %s", (goal) => {
+      const workouts = [logged("w2", "deadlift", 3)];
+      expect(onFullGym({ goal, workouts })[0]).not.toBe("back-squat");
     });
 
     it("waits for a Workout without the one-sided Exercise, so each Workout has at most one required pick", () => {
@@ -1370,6 +1382,12 @@ describe("planWorkout", () => {
 
     it("stay out until the squat Assessment is done", () => {
       expect(jumpsIn({ assessment })).toEqual([]);
+    });
+
+    // Story 14: jumps keep to the 130% cap like any other pick
+    it("stay out while quads and glutes are at the 130% cap", () => {
+      // Quads and glutes at 20 of a cap of 20.8: 3 Sets of a jump, at 0.5 each, would make 21.5
+      expect(jumpsIn({ workouts: [week({ "goblet-squat": 20 })] })).toEqual([]);
     });
 
     it("are for the athletic Goal only", () => {

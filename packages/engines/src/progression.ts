@@ -11,7 +11,14 @@ import {
 import { epley, epleyReps } from "./e1rm";
 import { availableLoadsKg, nextLoadKg, roundToLoadKg, type ProfileWithLoads } from "./equipment";
 import { isJump } from "./jumps";
-import { BODYWEIGHT_TOP_REPS, MAX_REPS, ownedBandLevels, repRange, type RepRange } from "./working-levels";
+import {
+  BODYWEIGHT_TOP_REPS,
+  MAX_REPS,
+  ownedBandLevels,
+  repRange,
+  TIMED_TOP_SECONDS,
+  type RepRange,
+} from "./working-levels";
 
 // Everything progression judges one Workout Exercise by (ADR 0007, #132)
 export type ProgressionInput = {
@@ -50,8 +57,9 @@ type ProgressionRule = (judgement: Judgement) => Outcome | undefined;
 // All the user had: no more reps
 const MAX_RPE = RPE_SCALE[RPE_SCALE.length - 1];
 
-// A load logged in the other unit is its exact kg, a hair off the profile's own
-const SAME_LOAD_KG = 0.01;
+// A load logged in the other unit is its exact kg, a hair off the profile's own: loads this close are the same load
+const OTHER_UNIT_TOLERANCE_KG = 0.01;
+const sameLoad = (a: number, b: number) => Math.abs(a - b) <= OTHER_UNIT_TOLERANCE_KG;
 
 // The level as this Workout leaves it, recording the Workout as the one that last moved it and why it changed
 function moved({ level, workout }: Judgement, changes: Partial<WorkingLevel>, change: ProgressionChange | null) {
@@ -66,6 +74,9 @@ const repsOf = (set: Set) => ("reps" in set ? set.reps : 0);
 const fewestReps = (sets: readonly Set[]) => Math.min(...sets.map(repsOf));
 const lowestKg = (sets: readonly Set[]) =>
   Math.min(...sets.map((set) => (set.kind === "external" ? set.kg : Infinity)));
+
+// Were the judged Sets lifted at the weighted level's load? Otherwise that load is a new base
+const atLevelLoad = ({ level, sets }: Judgement) => level.unit === "kg" && sameLoad(lowestKg(sets), level.kg);
 
 // ─── The rules ───
 
@@ -97,11 +108,12 @@ const secondsOf = (set: Set) => ("seconds" in set ? set.seconds : 0);
 
 // Whether the judged Sets are a Miss; undefined when they can't be one: a weighted level lifted at another load (a new
 // base), a carry, which has no target reps, or a jump, which never moves
-function isMiss({ level, exercise, sets }: Judgement): boolean | undefined {
+function isMiss(judgement: Judgement): boolean | undefined {
+  const { level, exercise, sets } = judgement;
   if (isJump(exercise)) return undefined;
   switch (level.unit) {
     case "kg":
-      if (!repRange(exercise, level.unit) || Math.abs(lowestKg(sets) - level.kg) > SAME_LOAD_KG) return undefined;
+      if (!repRange(exercise, level.unit) || !atLevelLoad(judgement)) return undefined;
       return level.reps - average(sets.map(repsOf)) > MISS_REPS;
     case "seconds":
       return level.seconds - average(sets.map(secondsOf)) > MISS_SECONDS;
@@ -132,6 +144,9 @@ function droppedLevel({ level, exercise, equipmentProfile }: Judgement) {
   }
 }
 
+// The Exercise's last Set logged was all the user had
+const isRpeTen = ({ workoutExercise }: Judgement) => workoutExercise.sets.at(-1)?.rpe === MAX_RPE;
+
 // Stories 46–52: a Miss adds to the level's run of Misses and holds it; the second in a row brings it down and starts
 // a new run. Not a Miss passes on, and the rule that moves the level ends the run (moved resets misses). Counted over
 // the Workouts that include the Exercise, so a skipped Workout, or one without it, leaves the run as it is
@@ -139,6 +154,8 @@ const missesBringItDown: ProgressionRule = (judgement) => {
   if (!isMiss(judgement)) return undefined;
   const run = judgement.level.misses + 1;
   if (run < MISSES_TO_DROP) return moved(judgement, { misses: run }, null);
+  // Story 44: a last Set at RPE 10 holds the load and target even then, though the Miss still counts
+  if (isRpeTen(judgement)) return moved(judgement, { misses: run }, { code: "rpe-10" });
   const { changes, change } = droppedLevel(judgement);
   return moved(judgement, { ...changes, misses: 0 }, change);
 };
@@ -161,12 +178,12 @@ const ballisticByLoad: ProgressionRule = (judgement) => {
   const range = repRange(exercise, level.unit);
   if (!exercise.ballistic || level.unit !== "kg" || !range) return undefined;
   const workouts = (level.workoutsSinceLoadUp ?? 0) + 1;
-  if (Math.abs(lowestKg(sets) - level.kg) > SAME_LOAD_KG) {
+  if (!atLevelLoad(judgement)) {
     return moved(judgement, { kg: lowestKg(sets), reps: range.max, workoutsSinceLoadUp: 0 }, { code: "new-base" });
   }
   const held = { reps: range.max, workoutsSinceLoadUp: workouts };
+  if (isRpeTen(judgement)) return moved(judgement, held, { code: "rpe-10" });
   const rpe = workoutExercise.sets.at(-1)?.rpe;
-  if (rpe === MAX_RPE) return moved(judgement, held, { code: "rpe-10" });
   const ready = rpe === undefined ? workouts >= BALLISTIC_WORKOUTS_PER_STEP : rpe <= BALLISTIC_EASY_RPE;
   const kg = nextLoadKg(exercise, equipmentProfile, level.kg, 1);
   if (fewestReps(sets) < range.max || !ready || kg === undefined) return moved(judgement, held, null);
@@ -178,19 +195,19 @@ const ballisticByLoad: ProgressionRule = (judgement) => {
 const carriesMoveByLoad: ProgressionRule = (judgement) => {
   const { level, exercise, sets } = judgement;
   if (level.unit !== "kg" || repRange(exercise, level.unit)) return undefined;
-  if (Math.abs(lowestKg(sets) - level.kg) <= SAME_LOAD_KG) return moved(judgement, {}, null);
+  if (atLevelLoad(judgement)) return moved(judgement, {}, null);
   return moved(judgement, { kg: lowestKg(sets) }, { code: "new-base" });
 };
 
 // Stories 43, 44: an RPE of 10 on the Exercise's last Set logged, whatever its load, holds the load and the target, so a
 // Set that was all the user had never pushes them on. The Workout still counts as the one that last moved the level
 const rpeTenHolds: ProgressionRule = (judgement) =>
-  judgement.workoutExercise.sets.at(-1)?.rpe === MAX_RPE ? moved(judgement, {}, { code: "rpe-10" }) : undefined;
+  isRpeTen(judgement) ? moved(judgement, {}, { code: "rpe-10" }) : undefined;
 
 // Story 37: a load other than the one prescribed becomes the new base, at the fewest reps lifted there
 const newBase: ProgressionRule = (judgement) => {
   const { level, sets } = judgement;
-  if (level.unit !== "kg" || Math.abs(lowestKg(sets) - level.kg) <= SAME_LOAD_KG) return undefined;
+  if (level.unit !== "kg" || atLevelLoad(judgement)) return undefined;
   return moved(judgement, { kg: lowestKg(sets), reps: fewestReps(sets) }, { code: "new-base" });
 };
 
@@ -204,27 +221,27 @@ function loadStepUp({ level, exercise, equipmentProfile, sets }: Judgement, rang
   return reps >= range.min ? { kg, reps: Math.min(reps, range.max) } : undefined;
 }
 
+const outgrown: ProgressionChange = { code: "outgrown" };
+
 // Stories 29–35, weighted double progression: every Set at the target puts it up 1 rep. Every Set at the top of the
 // range takes one Load Step up, once Epley predicts at least the bottom of the range there; until then, and at the
-// heaviest load the profile has, the target climbs to 20. At 20 with no step to take, the Exercise is outgrown: the
-// planner gives its harder variant if the profile can do it, or holds it
+// heaviest load the profile has, the target climbs to 20. At 20 it holds while a heavier load is there, and with none,
+// the Exercise is outgrown: the planner gives its harder variant if the profile can do it, or holds it
 const doubleProgression: ProgressionRule = (judgement) => {
-  const { level, exercise, sets } = judgement;
+  const { level, exercise, equipmentProfile, sets } = judgement;
   const range = repRange(exercise, level.unit);
   if (level.unit !== "kg" || !range) return undefined;
   if (fewestReps(sets) < level.reps) return moved(judgement, {}, null);
   const stepUp = fewestReps(sets) >= range.max ? loadStepUp(judgement, range) : undefined;
   if (stepUp) return moved(judgement, stepUp, { code: "load-up" });
-  if (level.reps >= MAX_REPS) return moved(judgement, { outgrown: true }, { code: "outgrown" });
-  return moved(judgement, { reps: level.reps + 1 }, { code: "target-up" });
+  if (level.reps < MAX_REPS) return moved(judgement, { reps: level.reps + 1 }, { code: "target-up" });
+  // At 20 with a heavier load there, it holds until Epley reaches the step
+  if (nextLoadKg(exercise, equipmentProfile, level.kg, 1) !== undefined) return moved(judgement, {}, null);
+  return moved(judgement, { outgrown: true }, outgrown);
 };
 
-// The top of the timed ladder: at this many seconds on every Set, the Exercise moves to its harder variant
-export const TIMED_TOP_SECONDS = 60;
 // A timed target goes up this much at a time
 const TIMED_STEP_SECONDS = 5;
-
-const outgrown: ProgressionChange = { code: "outgrown" };
 
 // Stories 53, 55: every Set at the target puts a bodyweight one up 1 rep, to 15. At 15 on every Set, the Exercise is
 // outgrown: the planner gives its harder variant, seeded from Reference Strength, if the profile can do it, or holds it
@@ -300,9 +317,9 @@ function judge(input: ProgressionInput): Judgement {
   const { sets } = workoutExercise;
   if (level.unit !== "kg" || !sets.some((set) => set.kind === "external")) return { ...input, sets };
   const lowest = lowestKg(sets);
-  const atLowest = sets.filter((set) => set.kind === "external" && Math.abs(set.kg - lowest) <= SAME_LOAD_KG);
+  const atLowest = sets.filter((set) => set.kind === "external" && sameLoad(set.kg, lowest));
   const prescribed = roundToLoadKg(level.kg, availableLoadsKg(exercise, equipmentProfile));
-  const kg = Math.abs(lowest - prescribed) <= SAME_LOAD_KG ? prescribed : level.kg;
+  const kg = sameLoad(lowest, prescribed) ? prescribed : level.kg;
   return { ...input, level: { ...level, kg }, sets: atLowest };
 }
 
