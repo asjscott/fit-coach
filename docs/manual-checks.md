@@ -152,6 +152,11 @@ A Workout pairs Exercises only when it wouldn't otherwise fit its Length, so cho
 - [ ] **S1** P9's timing check on a paired Workout: start one whose sheet shows at least one superset, note its "About N min", and run it in full with a timer, resting as the timer says and skipping nothing. A pair is timed at Sets × (the longer Exercise's Set + 30 s): does the real time come out within a few minutes of the estimate?
   - iOS: Result: · Android: Result: · Notes:
 
+## Past Workouts (#129)
+
+- [ ] **W1** On Today, tap "Log a past workout" under Start manual workout: a sheet asks "Which day was it?" with Yesterday and the five weekdays before it. Pick one: the Workout opens with "Done <that day>" under its title. Log a Set or two and tap Finish: the times read that day, an hour long, with Edit times already open. Set a start 8 days back and Save: "The start can't be more than 7 days ago" shows under Start. Set it back within the week and Save: in History the Workout sits on its own day, and This Week counts it only if that day is in this week. On the installed web app, check that the date and time inputs are easy to use on the iPhone.
+  - iOS: Result: · Android: Result: · Notes:
+
 ## Sentry (#122)
 
 Needs Sentry set up and staging deployed with its variables: see "Error reporting" in `docs/agents/workouts.md`. Run these on the installed web app on the iPhone, against staging, signed in with a test account.
