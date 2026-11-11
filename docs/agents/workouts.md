@@ -283,8 +283,11 @@ Schema: ProgressionChange (packages/shared/src/progression.ts), on WorkingLevel.
 - **Only a later Workout moves a level**: `laterWorkoutsOnly` compares `startedAt` with `movedBy`, so a retry, a late
   Pending Workout or a past Workout never moves it twice or backwards. A judged Workout records itself even when
   nothing changed; an unjudged one (UNMOVED) records nothing.
-- **Only weighted, non-Ballistic, non-carry Exercises move so far** (`notYetProgressed`); the ladders, Ballistic
-  Exercises and carries come with #135 and #136. Jumps never move.
+- **Ballistic Exercises and carries don't move yet** (`notYetProgressed`); they come with #136. Jumps never move.
+- **Ladders** (#135: `bodyweightLadder`, `timedLadder`, `bandLadder`, last in `RULES`): +1 rep to 15, +5 seconds to
+  60, then `outgrown` (the planner gives the `progression` variant, whose level is seeded like any other). A band
+  level climbs 10–15 reps, then steps to the next band the primary profile lists (`ownedBandLevels`) at 10, and at the
+  heaviest climbs to 20 then is outgrown. A band Set's logged kg is ignored: the level's band is assumed.
 - **A load other than the prescribed one** (the level rounded to the primary profile's loads) becomes the new base at
   the fewest reps lifted there.
 

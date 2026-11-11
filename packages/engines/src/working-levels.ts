@@ -81,16 +81,21 @@ type Seed = {
 const optionsOwnedByAny = (exercise: Exercise, profiles: ProfileWithLoads[]) =>
   profiles.flatMap((profile) => ownedOptions(exercise, profile).map((option) => ({ option, profile })));
 
-// The lightest band the user has for the Exercise; light when the profiles don't say (or it's done on a cable)
-function lightestBand(exercise: Exercise, profiles: ProfileWithLoads[]): BandLevel {
+// The bands any of the profiles has for the Exercise, lightest first; none when they don't say (or it's done on a
+// cable)
+export function ownedBandLevels(exercise: Exercise, profiles: ProfileWithLoads[]): BandLevel[] {
   const levels = new Set(
     optionsOwnedByAny(exercise, profiles).flatMap(({ option, profile }) =>
       option.filter(isBandTag).flatMap((tag) => profile.loads[tag]?.levels ?? []),
     ),
   );
   // The schema lists band levels lightest first
-  return BandLevel.options.find((level) => levels.has(level)) ?? "light";
+  return BandLevel.options.filter((level) => levels.has(level));
 }
+
+// The lightest band the user has for the Exercise; light when the profiles don't say
+const lightestBand = (exercise: Exercise, profiles: ProfileWithLoads[]): BandLevel =>
+  ownedBandLevels(exercise, profiles)[0] ?? "light";
 
 // A weighted Exercise the user can only do with bands, like a lateral raise with no dumbbells
 const bandsOnly = (exercise: Exercise, profiles: ProfileWithLoads[]) =>

@@ -17,10 +17,13 @@ const behind = (muscles: Muscle[]): PlanReason => ({ code: "behind", muscles });
 describe("progressionChangeLine", () => {
   it.each([
     [{ code: "target-up" }, "One more rep: every Set reached the target."],
+    // Story 54, #135
+    [{ code: "seconds-up" }, "Five more seconds: every Set reached the target."],
     [{ code: "load-up" }, "Heavier: every Set reached the top of the range."],
     [{ code: "new-base" }, "From the weight you lifted last time."],
     [{ code: "harder-variant", from: "goblet-squat" }, "Ready for this after Goblet squat."],
-    [{ code: "held-at-top" }, "Held at 20 reps: no heavier weight or harder variant here."],
+    // Stories 35, 55: at 20 reps, 15 reps or 60 seconds
+    [{ code: "held-at-top" }, "Held at the top: no heavier weight or harder variant here."],
   ] as const)("words %o", (change, line) => {
     expect(progressionChangeLine(change)).toBe(line);
   });
