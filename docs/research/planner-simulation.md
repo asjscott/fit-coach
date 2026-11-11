@@ -8,6 +8,8 @@ The rerun asked for by spec #77 and ticket #87. The percentages in `exercise-sel
 
 **Update, 2026-11-09:** athletic rows rerun with its weekly back squat (#100). See [Athletic's weekly squat](#athletics-weekly-squat).
 
+**Update, 2026-11-10:** athletic rerun with jumps on and off (#105). See [Jumps](#jumps).
+
 To reproduce: `pnpm --filter @fit/engines simulate` (`packages/engines/scripts/simulate-plans.ts`) prints every table.
 
 ## Result
@@ -137,6 +139,28 @@ The lowest credited Sets any budgeted Muscle got in a week, athletic, Full gym, 
 | short    | 3, 2   | 4      | 4, 5.5  | 8      | 8        |
 | standard | 4.5    | 7.5    | 10.5, 9 | 11.5   | 16.5     |
 | long     | 6      | 9.5    | 15.5    | 20     | 23, 22.5 |
+
+## Jumps
+
+Ticket #105. With the "Include jumps" switch on, an athletic user whose squat was tested gets 2 jumps of 3 Sets first in 2 Workouts a week: one that goes up and one that goes forward or sideways, the second Workout's two different from the first's. A jump Set is 75 seconds and credits 0.5 to quads and glutes only. Rerun 2026-11-10, athletic, Full gym, intermediate, switch off then on. The off rows are today's planner, so they differ a little from the tables above, which weren't all rerun after later tickets.
+
+| Days | Length   | Jumps | Sets | Minutes | Jump Sets | Jump minutes | Other Sets | Quads, glutes | Of budget | Short of budget                                                                                               |
+| ---- | -------- | ----- | ---- | ------- | --------- | ------------ | ---------- | ------------- | --------- | ------------------------------------------------------------------------------------------------------------- |
+| 4    | standard | off   | 77   | 175     | 0         | 0            | 77         | 18, 27        | 103–169%  | none                                                                                                          |
+| 4    | standard | on    | 87   | 177     | 12        | 15           | 75         | 16.5, 29      | 100–181%  | none                                                                                                          |
+| 3    | standard | off   | 58   | 130     | 0         | 0            | 58         | 15, 21        | 83–150%   | hamstrings 13.5/14, chest 13/14, side_delts 7.5/9                                                             |
+| 3    | standard | on    | 64   | 135     | 12        | 15           | 52         | 13.5, 21      | 75–150%   | quads 13.5/14, hamstrings 10.5/14, lats 12.5/14, side_delts 7/9                                               |
+| 4    | long     | off   | 116  | 239     | 0         | 0            | 116        | 16, 33        | 100–285%  | none                                                                                                          |
+| 4    | long     | on    | 115  | 239     | 12        | 15           | 103        | 18.5, 35      | 100–230%  | none                                                                                                          |
+| 2    | short    | off   | 24   | 58      | 0         | 0            | 24         | 6, 9          | 33–75%    | quads 6/12, hamstrings 4.5/12, glutes 9/12, chest 4/12, lats 6/12, upper_back 8.5/12, side_delts 4/8, abs 6/8 |
+| 2    | short    | on    | 27   | 58      | 12        | 15           | 15         | 12, 15        | 0–125%    | hamstrings 4.5/12, chest 1/12, lats 5/12, upper_back 6.5/12, side_delts 0/8, abs 4.5/8                        |
+| 6    | standard | off   | 131  | 266     | 0         | 0            | 131        | 20, 36        | 100–277%  | none                                                                                                          |
+| 6    | standard | on    | 137  | 265     | 12        | 15           | 125        | 22.5, 38.5    | 105–231%  | none                                                                                                          |
+
+- **Jumps take 15 minutes a week** in every combination, 12 Sets of 75 seconds, as the research estimated. They're 90 contacts a week: 48 in the first jump Workout and 42 in the second. The Day's Workout estimate includes them, so a Workout still fits its Length; the delivery figures in `exercise-selection-by-goal.md` don't include them yet.
+- **The cost is the strength work those 15 minutes would have held**, as Workouts fill their Length. At 4 days Standard it's 2 Sets of other work (77 to 75) and nothing falls short. At 4 days Long and 6 days Standard it's 6 to 13 Sets of work already over budget. At 3 days Standard it's 6 Sets, and quads, hamstrings and lats fall just under budget.
+- **2 days Short can't afford them.** Jumps go first and are the last thing a shorter Length cuts, so they take 15 of the week's 58 minutes: other Sets fall from 24 to 15, chest to 1 and side delts to 0. That's what the spec asked for, as the switch is the user's choice, but a user training 2 Short days a week loses most of their upper-body work to it. Worth a decision before the switch is shown to such a user.
+- **Quads and glutes barely move**, by -1.5 to +6 credited Sets, as a jump Set's 0.5 credit stands in for the leg work it displaces. Jumps add to strength work rather than replace it.
 
 ## Why the tables can't fix it
 

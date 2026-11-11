@@ -28,13 +28,15 @@ export type SetStepperProps = {
   // What's typed, e.g. "16.25"
   value: string;
   onChange: (value: string) => void;
-} & (({ field: "kg" } & KgSteps) | { field: Exclude<SetField, "kg"> });
+} & (({ field: "kg" } & KgSteps) | { field: Exclude<SetField, "kg">; contacts?: boolean });
 
 // One Set value with − and + either side: kg to the next load, reps by 1, seconds by 5, repeating while held. Any
 // value can still be typed
 export function SetStepper(props: SetStepperProps) {
   const { field, value, onChange } = props;
-  const unit = UNITS[field];
+  // A jump's reps are its contacts (#105)
+  const contacts = props.field === "reps" && props.contacts;
+  const unit = contacts ? "contacts" : UNITS[field];
   // The latest value, so steps repeated while held build on each other before the parent re-renders
   const latest = useRef(value);
   latest.current = value;
@@ -48,7 +50,7 @@ export function SetStepper(props: SetStepperProps) {
   const label = (direction: StepDirection) =>
     props.field === "kg"
       ? kgStepLabel(direction, props.loadsKnown)
-      : `${direction === 1 ? "Plus" : "Minus"} ${STEP_NAMES[props.field]}`;
+      : `${direction === 1 ? "Plus" : "Minus"} ${contacts ? "1 contact" : STEP_NAMES[props.field]}`;
 
   return (
     <Input size="xl" style={styles.root}>
@@ -59,7 +61,7 @@ export function SetStepper(props: SetStepperProps) {
         placeholder="0"
         keyboardType={field === "kg" ? "decimal-pad" : "number-pad"}
         selectTextOnFocus
-        accessibilityLabel={field}
+        accessibilityLabel={contacts ? "contacts" : field}
         style={styles.field}
       />
       <Text color="muted" weight="medium" style={styles.unit} importantForAccessibility="no">

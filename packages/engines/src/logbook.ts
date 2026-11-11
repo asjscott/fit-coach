@@ -1,4 +1,5 @@
 import {
+  DatedCheckIn,
   InProgressWorkout,
   PlannedWorkout,
   Pr,
@@ -45,9 +46,11 @@ export async function readStoredCopy<T>(storage: DeviceStorage, key: string, sch
   return json === null ? null : (schema.safeParse(JSON.parse(json)).data ?? null);
 }
 
-// Resolves once the server has the Workout, with the PRs it found on it (none when void); rejects on any failure
+// Each resolves once the server has the Workout or Check-in, a Workout with the PRs the server found on it (none when
+// void); rejects on any failure
 export type WorkoutUploader = {
   upload(workout: Workout): Promise<Pr[] | void>;
+  uploadCheckIn(checkIn: DatedCheckIn): Promise<void>;
 };
 
 // The server's Previous Sets for an Exercise: null when no Workout on the server has it; rejects
@@ -119,6 +122,7 @@ function targetDraft(loadType: LoadType, target: SetTarget): SetValues | null {
 const IN_PROGRESS_KEY = "logbook:in-progress";
 const PENDING_KEY = "logbook:pending";
 const PLANNED_WORKOUT_KEY = "logbook:planned-workout";
+const PENDING_CHECK_INS_KEY = "logbook:pending-check-ins";
 const UNSEEN_PRS_KEY = "logbook:unseen-prs";
 
 // awaitingNextPlan: a Workout has uploaded since this plan was built, so the server has a newer one for the phone
@@ -170,6 +174,16 @@ export function createLogbook({
 
   const writePending = (workouts: Workout[]) => storage.setItem(PENDING_KEY, JSON.stringify(workouts));
 
+  // Check-ins waiting to upload, at most one per date. One the phone can't read counts as none, as it's not training
+  const readPendingCheckIns = async () =>
+    (await readStoredCopy(storage, PENDING_CHECK_INS_KEY, DatedCheckIn.array())) ?? [];
+
+  const writePendingCheckIns = (checkIns: DatedCheckIn[]) =>
+    storage.setItem(PENDING_CHECK_INS_KEY, JSON.stringify(checkIns));
+
+  // The same Check-in: a newer one for its date is a different one
+  const sameCheckIn = (a: DatedCheckIn, b: DatedCheckIn) => a.date === b.date && a.checkedInAt === b.checkedInAt;
+
   // With no copy, the phone asks for a plan
   const readPlannedWorkout = () => readStoredCopy(storage, PLANNED_WORKOUT_KEY, StoredPlannedWorkout);
 
@@ -190,6 +204,59 @@ export function createLogbook({
 
   // Tells a plan built after the last upload from an answer that may have left the server before it
   let uploadCount = 0;
+
+  // Uploads each Pending Workout, removing it once the server has it. Reads the phone again before each upload, so a
+  // Workout deleted meanwhile is skipped
+  async function uploadPendingWorkouts(failures: unknown[]) {
+    const tried = new Set<string>();
+    let workout: Workout | undefined;
+    while ((workout = (await serially(readPending)).find((p) => !tried.has(p.id)))) {
+      tried.add(workout.id);
+      let prs: Pr[] | void;
+      try {
+        prs = await uploader.upload(workout);
+      } catch (err) {
+        failures.push(err);
+        continue;
+      }
+      // A Recovery Workout changes no plan, so the copy stays current
+      const changesPlan = !isRecoveryWorkout(workout);
+      if (changesPlan) uploadCount += 1;
+      const { id, startedAt } = workout;
+      await serially(async () => {
+        // Kept until seen (#130), for Finish to celebrate or a note on Today
+        if (prs?.length) {
+          const unseen = (await readUnseenPrs()).filter((u) => u.workoutId !== id);
+          await storage.setItem(UNSEEN_PRS_KEY, JSON.stringify([...unseen, { workoutId: id, startedAt, prs }]));
+        }
+        await writePending((await readPending()).filter((p) => p.id !== id));
+        const stored = await readPlannedWorkout();
+        if (stored && changesPlan) await writePlannedWorkout({ ...stored, awaitingNextPlan: true });
+      });
+    }
+  }
+
+  // Uploads each queued Check-in the same way. One replaced while it uploads stays queued as the newer one, which
+  // uploads next, so the server ends on the latest
+  async function uploadPendingCheckIns(failures: unknown[]) {
+    const tried: DatedCheckIn[] = [];
+    let checkIn: DatedCheckIn | undefined;
+    while (
+      (checkIn = (await serially(readPendingCheckIns)).find((queued) => !tried.some((t) => sameCheckIn(t, queued))))
+    ) {
+      tried.push(checkIn);
+      try {
+        await uploader.uploadCheckIn(checkIn);
+      } catch (err) {
+        failures.push(err);
+        continue;
+      }
+      const uploaded = checkIn;
+      await serially(async () =>
+        writePendingCheckIns((await readPendingCheckIns()).filter((queued) => !sameCheckIn(queued, uploaded))),
+      );
+    }
+  }
 
   // A Workout Exercise with its Previous Sets snapshot: the server's or a Pending Workout's, whichever is newer
   function newWorkoutExercise(
@@ -518,6 +585,16 @@ export function createLogbook({
         await storage.removeItem(PENDING_KEY);
         await storage.removeItem(PLANNED_WORKOUT_KEY);
         await storage.removeItem(UNSEEN_PRS_KEY);
+        await storage.removeItem(PENDING_CHECK_INS_KEY);
+      }),
+
+    // Queues a Check-in for sync() to upload, replacing any still queued for its date, so only the latest goes up.
+    // The day's Check-in for Readiness is the phone's own copy, kept apart from this queue
+    queueCheckIn: (checkIn: DatedCheckIn) =>
+      serially(async () => {
+        const parsed = parseOrThrow(DatedCheckIn, checkIn);
+        const others = (await readPendingCheckIns()).filter((queued) => queued.date !== parsed.date);
+        await writePendingCheckIns([...others, parsed]);
       }),
 
     // PRs uploads found that haven't been shown, oldest upload first: the Finish screen's to celebrate when the upload
@@ -533,40 +610,16 @@ export function createLogbook({
         ),
       ),
 
-    // Uploads each Pending Workout, removing it from the phone only once the server has it.
-    // A failed upload leaves that Workout pending and moves on to the next; once all have
+    // Uploads each Pending Workout, then each queued Check-in, removing it from the phone only once the server has it.
+    // A failed upload leaves it pending and moves on to the next; once all have
     // been tried, rejects with the first failure if there was one.
     // Uploads run outside the queue, so logging a Set never waits on the network
     sync: () =>
       (syncing ??= (async () => {
         const failures: unknown[] = [];
         try {
-          const tried = new Set<string>();
-          // Reads the phone again before each upload, so a Workout deleted meanwhile is skipped
-          let workout: Workout | undefined;
-          while ((workout = (await serially(readPending)).find((p) => !tried.has(p.id)))) {
-            tried.add(workout.id);
-            let prs: Pr[] | void;
-            try {
-              prs = await uploader.upload(workout);
-            } catch (err) {
-              failures.push(err);
-              continue;
-            }
-            // A Recovery Workout changes no plan, so the copy stays current
-            const changesPlan = !isRecoveryWorkout(workout);
-            if (changesPlan) uploadCount += 1;
-            const { id, startedAt } = workout;
-            await serially(async () => {
-              if (prs?.length) {
-                const unseen = (await readUnseenPrs()).filter((u) => u.workoutId !== id);
-                await storage.setItem(UNSEEN_PRS_KEY, JSON.stringify([...unseen, { workoutId: id, startedAt, prs }]));
-              }
-              await writePending((await readPending()).filter((p) => p.id !== id));
-              const stored = await readPlannedWorkout();
-              if (stored && changesPlan) await writePlannedWorkout({ ...stored, awaitingNextPlan: true });
-            });
-          }
+          await uploadPendingWorkouts(failures);
+          await uploadPendingCheckIns(failures);
         } finally {
           syncing = null;
         }

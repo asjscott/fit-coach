@@ -26,7 +26,7 @@ const unused = () => {
 const newLogbook = () =>
   createLogbook({
     storage: deviceStorage,
-    uploader: { upload: unused },
+    uploader: { upload: unused, uploadCheckIn: unused },
     previousSets: { forExercise: unused },
     plannedWorkouts: { current: async () => plannedWorkout },
     newId: unused,

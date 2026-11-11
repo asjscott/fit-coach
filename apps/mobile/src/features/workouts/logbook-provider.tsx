@@ -13,6 +13,7 @@ import {
   PlannedWorkout,
   PreviousSets,
   Workout,
+  type DatedCheckIn,
   type Exercise,
   type InProgressWorkout,
   type Pr,
@@ -76,8 +77,10 @@ type LogbookContextValue = {
   pendingCount: () => Promise<number>;
   // Removes a Pending Workout so it never uploads; works offline
   deletePending: (workoutId: string) => Promise<void>;
-  // For signing out: removes the in-progress and Pending Workouts and the Planned Workout from the phone
+  // For signing out: removes the in-progress and Pending Workouts, queued Check-ins and the Planned Workout from the phone
   clear: () => Promise<void>;
+  // Queues a Check-in to upload alongside Pending Workouts, retried the same way, and tries to upload it now
+  queueCheckIn: (checkIn: DatedCheckIn) => Promise<void>;
   // PRs from uploads the user hasn't been shown (#130), leaving out a just-finished Workout's, which Finish celebrates
   unseenPrs: UnseenPrs[];
   // Once shown, a Workout's PRs are only in History
@@ -113,6 +116,9 @@ export function LogbookProvider({ children }: { children: ReactNode }) {
       uploader: {
         upload: async (workout) =>
           Workout.parse(await api("/workouts", { method: "POST", body: JSON.stringify(workout) })).prs,
+        uploadCheckIn: async ({ date, ...checkIn }) => {
+          await api(`/check-ins/${date}`, { method: "PUT", body: JSON.stringify(checkIn) });
+        },
       },
       previousSets: {
         forExercise: async (slug) => {
@@ -324,6 +330,14 @@ export function LogbookProvider({ children }: { children: ReactNode }) {
     setRest(null);
   }, [logbook, run]);
 
+  const queueCheckIn = useCallback(
+    async (checkIn: DatedCheckIn) => {
+      await logbook.queueCheckIn(checkIn);
+      await sync();
+    },
+    [logbook, sync],
+  );
+
   return (
     <LogbookContext
       value={{
@@ -356,6 +370,7 @@ export function LogbookProvider({ children }: { children: ReactNode }) {
         pendingCount,
         deletePending,
         clear,
+        queueCheckIn,
         unseenPrs,
         markPrsSeen,
       }}

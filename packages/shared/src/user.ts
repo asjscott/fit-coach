@@ -29,6 +29,8 @@ export const UserProfile = z.object({
   daysPerWeek: z.number().int().min(2).max(6),
   workoutLength: WorkoutLength,
   injuries: z.array(InjuryTag, { error: "Choose any that apply, or None" }),
+  // The one-time "Include jumps" switch, off by default: jumps are for the athletic Goal only (#105)
+  includeJumps: z.boolean().optional(),
 });
 
 export type UserProfile = z.infer<typeof UserProfile>;
@@ -37,8 +39,8 @@ export type UserProfile = z.infer<typeof UserProfile>;
 export const BodyProfile = UserProfile.pick({ weightKg: true, gender: true });
 export type BodyProfile = z.infer<typeof BodyProfile>;
 
-// Fields that must be filled before a user counts as onboarded; injuries are optional
-export const OnboardingProfile = UserProfile.omit({ injuries: true });
+// Fields that must be filled before a user counts as onboarded; injuries and the jumps switch are optional
+export const OnboardingProfile = UserProfile.omit({ injuries: true, includeJumps: true });
 export type OnboardingProfile = z.infer<typeof OnboardingProfile>;
 
 export const User = z.object({
