@@ -12,6 +12,7 @@ import { HealthResponse } from "@fit/shared";
 import { registerAuth } from "./auth";
 import { ensureCheckInIndexes } from "./check-ins";
 import { pingDb } from "./db";
+import { registerTestErrorRoute, reportRouteErrorsWithUser } from "./error-reporting";
 import { ensurePlannedWorkoutIndexes } from "./planned-workouts";
 import { ensureUserIndexes, migrateUsers } from "./users";
 import { ensureWorkoutIndexes } from "./workouts";
@@ -35,6 +36,8 @@ export async function buildApp({ logger }: { logger: boolean }) {
 
   await registerAuth(app);
 
+  reportRouteErrorsWithUser(app);
+
   await ensureUserIndexes().catch((err) => app.log.error(err, "Failed to create user indexes"));
 
   await ensureWorkoutIndexes().catch((err) => app.log.error(err, "Failed to create workout indexes"));
@@ -53,6 +56,7 @@ export async function buildApp({ logger }: { logger: boolean }) {
   await app.register(assessmentRoutes);
   await app.register(plannedWorkoutRoutes);
   await app.register(checkInRoutes);
+  registerTestErrorRoute(app);
 
   app.get("/health", async () => {
     return HealthResponse.parse({
