@@ -92,13 +92,13 @@ for (const goal of GOALS) {
   for (const workout of lastWeek) console.log(`- ${workout}`);
 }
 
-console.log("\n### Weekly Budget: main Muscles, then side delts and abs\n");
+console.log("\n### Weekly Budget: main Muscles, then side delts and abs, then calves where budgeted\n");
 console.log(`| Goal | ${DAYS.map((days) => `${days} days`).join(" | ")} |`);
 console.log(`| --- |${DAYS.map(() => " --- |").join("")}`);
 for (const goal of GOALS) {
   const cells = DAYS.map((days) => {
     const budget = weeklyBudget(goal, days);
-    return `${budget.quads}, ${budget.side_delts}`;
+    return [budget.quads, budget.side_delts, budget.calves].filter((sets) => sets !== undefined).join(", ");
   });
   console.log(`| ${goal} | ${cells.join(" | ")} |`);
 }
