@@ -153,15 +153,15 @@ _Avoid_: Strength score, base e1RM
 ### Progression
 
 **Load Step**:
-The smallest change in load an Equipment Profile allows for one kind of equipment, such as 5 lb for dumbbells. Progression moves a weighted Exercise up or down one Load Step at a time.
+The move from one load to the next an Equipment Profile has for one kind of equipment, such as from the 25 lb to the 30 lb dumbbells, or a set step for cable and machine. Progression moves a weighted Exercise up or down one Load Step at a time.
 _Avoid_: Increment, jump, plate step
 
 **Miss**:
-A Workout in which an Exercise's Sets average more than 2 reps short of their target. Two in a row on the same Exercise drop it a Load Step. A skipped Workout isn't one, and nothing in a deload week is.
+A Workout in which an Exercise's Sets average more than 2 reps, or 10 seconds, short of their target. Two in a row, counted over the Workouts that include that Exercise, drop it a Load Step, or lower a bodyweight or timed target. A skipped Workout isn't one, and nothing in a deload week is, though a deload week doesn't break the run either.
 _Avoid_: Failure, failed set, stall
 
 **PR**:
-A new best on an Exercise: the highest estimated one-rep maximum for a weighted one, from Sets of 12 reps or fewer, or the most reps or seconds for a bodyweight or timed variant. The first Workout on an Exercise sets a baseline, not a PR.
+A new best on an Exercise: the highest estimated one-rep maximum for a weighted one, from Sets of 12 reps or fewer, the heaviest load for 8 reps for a weighted Ballistic Exercise, or the most reps or seconds for a bodyweight or timed variant. A carry has none. The first Workout on an Exercise sets a baseline, not a PR.
 _Avoid_: Personal best, record, PB
 
 **Weekly Streak**:
