@@ -43,9 +43,23 @@ function line(reason: PlanReason, now: Date) {
   }
 }
 
-// Why progression changed an Exercise's Working Level since it was last done (#132), shown under the Exercise; null
-// when nothing changed. An outgrown level is planned as its harder variant or a hold, so it's never shown as it is
-export function progressionChangeLine(change: ProgressionChange | undefined): string | null {
+// Names whose first word keeps its capital mid-sentence
+const PROPER_WORDS = new Set(["Bulgarian", "Romanian", "Nordic"]);
+
+// An Exercise's name as more than one of it, mid-sentence: "decline push-ups", "Bulgarian split squats"
+function pluralName(slug: string) {
+  const name = exerciseName(slug);
+  const [first = ""] = name.split(" ");
+  const sentenceCase = PROPER_WORDS.has(first) ? name : name.charAt(0).toLowerCase() + name.slice(1);
+  if (/[^aeiou]y$/.test(sentenceCase)) return `${sentenceCase.slice(0, -1)}ies`;
+  if (/(s|x|ch|sh)$/.test(sentenceCase)) return `${sentenceCase}es`;
+  return `${sentenceCase}s`;
+}
+
+// Why progression changed the Working Level of the Exercise planned as slug since it was last done (#132), shown under
+// the Exercise; null when nothing changed. An outgrown level is planned as its harder variant or a hold, so it's never
+// shown as it is
+export function progressionChangeLine(change: ProgressionChange | undefined, slug: string): string | null {
   switch (change?.code) {
     case "target-up":
       return "One more rep: every Set reached the target.";
@@ -60,7 +74,7 @@ export function progressionChangeLine(change: ProgressionChange | undefined): st
     case "target-down":
       return "Fewer: the last two times fell short of the target.";
     case "harder-variant":
-      return `Ready for this after ${exerciseName(change.from)}.`;
+      return `Ready for ${pluralName(slug)}.`;
     case "held-at-top":
       return "Held at the top: no heavier weight or harder variant here.";
     case "rpe-10":

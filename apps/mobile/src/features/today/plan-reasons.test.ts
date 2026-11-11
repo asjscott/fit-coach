@@ -24,17 +24,26 @@ describe("progressionChangeLine", () => {
     // Stories 47–49, #134
     [{ code: "load-down" }, "Lighter: the last two times fell short of the target."],
     [{ code: "target-down" }, "Fewer: the last two times fell short of the target."],
-    [{ code: "harder-variant", from: "goblet-squat" }, "Ready for this after Goblet squat."],
     // Stories 35, 55: at 20 reps, 15 reps or 60 seconds
     [{ code: "held-at-top" }, "Held at the top: no heavier weight or harder variant here."],
     // Story 44
     [{ code: "rpe-10" }, "Held: your last Set was RPE 10, all you had."],
   ] as const)("words %o", (change, line) => {
-    expect(progressionChangeLine(change)).toBe(line);
+    expect(progressionChangeLine(change, "goblet-squat")).toBe(line);
+  });
+
+  // Story 55: named by the harder variant now planned, as the user reads it in a sentence
+  it.each([
+    ["decline-push-up", "Ready for decline push-ups."],
+    ["barbell-bench-press", "Ready for barbell bench presses."],
+    ["bulgarian-split-squat", "Ready for Bulgarian split squats."],
+    ["front-rack-carry", "Ready for front-rack carries."],
+  ])("words the harder variant %s by its name", (slug, line) => {
+    expect(progressionChangeLine({ code: "harder-variant", from: "push-up" }, slug)).toBe(line);
   });
 
   it("says nothing when nothing changed", () => {
-    expect(progressionChangeLine(undefined)).toBeNull();
+    expect(progressionChangeLine(undefined, "goblet-squat")).toBeNull();
   });
 });
 
