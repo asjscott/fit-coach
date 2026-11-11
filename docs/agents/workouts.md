@@ -215,9 +215,95 @@ Schemas: packages/shared/src/planned-workouts.ts
   offer. The walk is one Set (#109, `takesOneSet`): `restAfterSet` gives no rest after it, and the logging screen
   offers "Next exercise" rather than a Set 2 (`takesAnotherSet`). Recovery Exercises have no Pattern and no strength ratio, so no Working Level. `recovery` also needs
   `seed:exercises` re-run, as `ballistic` did.
+- **Jumps come only from the jump rule** (#105, `jumps.ts`): athletic, `UserProfile.includeJumps` on, the squat tested
+  rather than estimated, and no knee or ankle injury (`avoidWith`). `possibleExercises` leaves them out, so the score
+  never picks one; `jumpsForWorkout` puts 2 of them, 3 Sets each, first in the first 2 Workouts of the week, one that
+  goes up and one forward or sideways. A jump has no Working Level: its target is `{ unit: "reps" }` holding its
+  contacts (`STRENGTH_RATIOS` kind `contacts`), halved when `PlanWorkoutInput.deloadWeek`, which the API sets from
+  `weekOfBlock`. It's logged as a bodyweight Set whose reps are contacts, which the phone labels so (`isJumpSlug`). On a
+  built-in choice a jump only stands in for a jump (`alternativeOptions`). The six jumps also need `seed:exercises`.
 - **Build and tune with the simulation.** Scores tie often, as many Exercises share budgeted credits. The planner is
   deterministic, so ties fall to last week's Exercises, then the longest Sets, then the slug, never library order.
   `plan-outcomes.test.ts` pins what a user should see, with the library in either order: run it after any tuning.
+
+## Route tests (#123)
+
+`pnpm --filter @fit/api test` runs the API's route tests (`apps/api/src/routes/*.test.ts`, Vitest). Each test file
+starts the whole API (`buildApp` in `apps/api/src/app.ts`, which `server.ts` listens on) against its own in-memory
+MongoDB replica set, with Clerk switched off as in `dev:local`, and sends requests with Fastify's `inject`, so nothing
+listens on a port and nothing reaches Clerk. The first run downloads the MongoDB binary, as `dev:local` does.
+
+To write one:
+
+```ts
+import { useRouteTestApi } from "../test/route-test-api";
+import { lifted, workout } from "../test/workouts";
+
+const api = useRouteTestApi(); // once per file, at the top: starts the API before its tests, stops it after
+
+it("stores an upload once however often it's retried", async () => {
+  const user = await api.signIn(); // a new account, onboarded with dumbbells at home
+  const finished = workout(2, [{ slug: "goblet-squat", sets: [lifted(14, 10), lifted(14, 9)] }]);
+  expect((await user.post("/workouts", finished)).statusCode).toBe(201);
+});
+```
+
+- **Every `signIn()` is a new account**, so tests in a file share the database but never each other's data. Pass
+  `profile`, `equipmentProfile` or `onboarded: false` for another user. `user.get/post/patch/put/delete` return
+  `{ statusCode, body }`, the body parsed.
+- **Read results through routes, never the database.** What the Coach prescribes is `POST /planned-workouts/current`,
+  Working Levels are `GET /assessments/latest`, History is `GET /workouts`. A result no route shows isn't something a
+  route test can pin; say so in the test rather than reading the collection.
+- **Fixtures** are in `apps/api/src/test/workouts.ts`: `workout(startedHoursAgo, exercises, extra)`, where `extra` can
+  set `assessment` or `plannedWorkoutId`; Sets (`lifted`, `repsDone`, `held`); and `assessmentPair()`, a dumbbell
+  user's A and B. Times count back from now, so a Workout lands in the plan's current week; `assessmentPair` starts 50
+  and 26 hours ago.
+- **The server reads the clock**, and plans are due on a new day in the user's timezone (UTC for test users), so build
+  times from now rather than fixed dates.
+- **Name tests in GLOSSARY.md terms and say which user story or issue they pin**, as `routes/workouts.test.ts` does.
+- **Never import `db.ts` or a module that does at the top of a test file.** The database client reads `MONGODB_URI` when
+  it loads, so the harness sets it before importing the app. Reach the server only through `api.signIn()`.
+
+## Error reporting (#122)
+
+Errors on the web app and the API go to Sentry, tagged with the deploy's environment. Without a DSN nothing is
+reported, so local runs, tests and CI need nothing set.
+
+- **API:** `src/error-reporting.ts`. `server.ts` starts Sentry; `buildApp` adds the user hook and the test route. Sentry's Fastify integration reports errors
+  thrown in a route (5xx only) and uncaught exceptions. A `preHandler` hook adds the Clerk user id on the request's own
+  scope.
+- **Web app:** `src/features/error-reporting/error-reporting.web.ts` reports uncaught errors and unhandled rejections.
+  The root layout sets the Clerk user id. The native build gets the no-op `error-reporting.ts`.
+- **Personal data:** nothing but the Clerk user id. `@fit/shared`'s `MINIMAL_DATA_COLLECTION` turns off user info,
+  cookies, headers, bodies, query strings and local variables, and `withoutPersonalData` strips the same again in
+  `beforeSend`. The web app also drops console and tap breadcrumbs.
+- **Test errors:** `/debug-error` on the web app throws one, and calls the API's `GET /debug/error` (signed in only),
+  which throws another, so one page checks both sides of a deploy. Checks E1–E3 in `docs/manual-checks.md`.
+
+### Setting it up (a human, once)
+
+1. In Sentry (free tier), create a project for the API (platform Node.js) and one for the web app (React). Each
+   project's DSN is under **Project settings → Client Keys**. A DSN is not a secret, but it stays out of the repo.
+2. Set these on each deploy. The environment is `production` or `staging`; unset, events say `development`.
+
+   | Where                             | Variable                         | Value                 |
+   | --------------------------------- | -------------------------------- | --------------------- |
+   | Render, production API service    | `SENTRY_DSN`                     | the API project's DSN |
+   | Render, production API service    | `SENTRY_ENVIRONMENT`             | `production`          |
+   | Render, staging API service       | `SENTRY_DSN`                     | the API project's DSN |
+   | Render, staging API service       | `SENTRY_ENVIRONMENT`             | `staging`             |
+   | Cloudflare Pages, Production      | `EXPO_PUBLIC_SENTRY_DSN`         | the web project's DSN |
+   | Cloudflare Pages, Production      | `EXPO_PUBLIC_SENTRY_ENVIRONMENT` | `production`          |
+   | Cloudflare Pages, Preview (`dev`) | `EXPO_PUBLIC_SENTRY_DSN`         | the web project's DSN |
+   | Cloudflare Pages, Preview (`dev`) | `EXPO_PUBLIC_SENTRY_ENVIRONMENT` | `staging`             |
+
+   The web app's are read at build time, so redeploy after setting them. Render's `RENDER_GIT_COMMIT` becomes the
+   API's release.
+
+3. Run E1–E3 in `docs/manual-checks.md`.
+
+Web stack traces point into the minified bundle: they show the file and line, but not the source. Uploading source
+maps would fix that and isn't set up.
 
 ## Running things
 

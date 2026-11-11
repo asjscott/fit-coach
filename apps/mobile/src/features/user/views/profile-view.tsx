@@ -8,6 +8,7 @@ import { LoadingButton } from "@/components/loading-button";
 import { Screen } from "@/components/screen";
 import { SectionLabel } from "@/components/section-label";
 import { HStack, Stack } from "@/components/stack";
+import { Switch } from "@/components/switch";
 import { Text } from "@/components/text";
 import { useToast } from "@/contexts/toast-context";
 import { equipmentSummary } from "@/features/equipment/equipment-summary";
@@ -76,6 +77,7 @@ export default function ProfileView() {
             value={profile.injuries?.length ? profile.injuries.map(injuryLabel).join(", ") : "None"}
           />
           <UnitRow />
+          {profile.goal === "athletic" ? <IncludeJumps on={profile.includeJumps ?? false} /> : null}
         </Section>
         <Divider />
         {/* Retaking lives here for now: Today only offers the first Assessment, then its Results */}
@@ -124,6 +126,37 @@ export default function ProfileView() {
         onConfirm={signOutAndClear}
       />
     </Screen>
+  );
+}
+
+// The one-time "Include jumps" switch, off by default and for the athletic Goal only (#105). It shows the new value
+// straight away and goes back if the server refuses it
+function IncludeJumps({ on }: { on: boolean }) {
+  const { updateUser } = useCurrentUser();
+  const { showToast } = useToast();
+  const [shown, setShown] = useState(on);
+  useEffect(() => setShown(on), [on]);
+
+  const change = async (includeJumps: boolean) => {
+    setShown(includeJumps);
+    try {
+      await updateUser({ profile: { includeJumps } });
+    } catch (err) {
+      setShown(!includeJumps);
+      showToast("Couldn't change jumps", { error: err });
+    }
+  };
+
+  return (
+    <Stack spacing={1}>
+      <HStack justify="between" align="center" style={{ minHeight: 44 }}>
+        <Text color="muted">Include jumps</Text>
+        <Switch value={shown} onValueChange={change} accessibilityLabel="Include jumps" />
+      </HStack>
+      <Text size="sm" color="muted">
+        Two jumps first in 2 Workouts a week, once you've done the squat test. Not with a knee or ankle injury.
+      </Text>
+    </Stack>
   );
 }
 

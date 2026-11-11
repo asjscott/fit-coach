@@ -193,9 +193,12 @@ export function setTargetLabel(target: SetTarget, unit: WeightUnit) {
 
 type PlannedSets = NonNullable<InProgressWorkoutExercise["planned"]>;
 
-// What the plan sets for an Exercise: "3 sets · 20 kg × 8", with " per side" for a one-sided Exercise
-export const plannedSetsLabel = ({ sets, target }: PlannedSets, unit: WeightUnit, unilateral = false) =>
-  `${setsLabel(sets)} · ${setTargetLabel(target, unit)}${unilateral ? " per side" : ""}`;
+// What the plan sets for an Exercise: "3 sets · 20 kg × 8", with " per side" for a one-sided Exercise, and a jump's
+// reps as contacts: "3 sets · 10 contacts" (#105). A load is in the user's unit
+export const plannedSetsLabel = ({ sets, target }: PlannedSets, unit: WeightUnit, unilateral = false, jump = false) => {
+  const label = jump && target.unit === "reps" ? `${target.reps} contacts` : setTargetLabel(target, unit);
+  return `${setsLabel(sets)} · ${label}${unilateral ? " per side" : ""}`;
+};
 
 export const builtInEquipmentLabels: Record<BuiltInEquipment, string> = {
   full_gym: "Full gym",
