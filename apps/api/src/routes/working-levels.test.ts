@@ -38,10 +38,10 @@ describe("Working Levels as a load and a target (#131)", () => {
     const user = await api.signIn({ equipmentProfile: BARBELL_AND_DUMBBELLS });
     await assess(user);
 
-    // The floor press test (12 kg x 5 at RPE 9) makes a bench press maximum of 38.9 kg: 30.7 kg for 6 reps with 2 in
-    // reserve, so the 30 kg bar load. The dumbbell row stays in its 8–12 range
+    // The deadlift, a barbell lift, is prescribed a bar load at the bottom of 6–10; the dumbbell row stays in its 8–12
+    // range. (Which Exercises the plan picks depends on fatigue, which counts the Assessment's Sets from its end, #129)
     const targets = new Map((await currentPlan(user)).plannedExercises.map(({ slug, target }) => [slug, target]));
-    expect(targets.get("barbell-bench-press")).toEqual({ unit: "kg", kg: 30, reps: 6 });
+    expect(targets.get("deadlift")).toEqual({ unit: "kg", kg: 60, reps: 6 });
     expect(targets.get("one-arm-dumbbell-row")).toEqual({ unit: "kg", kg: 14, reps: 8 });
   });
 
