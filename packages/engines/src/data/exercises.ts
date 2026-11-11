@@ -3,6 +3,7 @@ import { BATCH_1 } from "./batch_1";
 import { BATCH_2 } from "./batch_2";
 import { BATCH_3 } from "./batch_3";
 import { BATCH_4 } from "./batch_4";
+import { LIBRARY_GAPS } from "./library-gaps";
 import { RECOVERY } from "./recovery";
 
 // The first 20 exercises. Every movement pattern (except carry) has at least
@@ -287,7 +288,7 @@ const Base: Exercise[] = [
     recovery: false,
     oneSet: false,
     secondsPerSet: 90,
-    regression: null,
+    regression: "table-row",
     progression: "pull-up-negative",
     avoidWith: [],
     cues: [
@@ -411,7 +412,15 @@ const Base: Exercise[] = [
   },
 ];
 
-export const EXERCISES: Exercise[] = [...Base, ...BATCH_1, ...BATCH_2, ...BATCH_3, ...BATCH_4, ...RECOVERY];
+export const EXERCISES: Exercise[] = [
+  ...Base,
+  ...BATCH_1,
+  ...BATCH_2,
+  ...BATCH_3,
+  ...BATCH_4,
+  ...LIBRARY_GAPS,
+  ...RECOVERY,
+];
 
 const bySlug = new Map(EXERCISES.map((exercise) => [exercise.slug, exercise]));
 

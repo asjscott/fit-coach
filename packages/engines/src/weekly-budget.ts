@@ -9,10 +9,13 @@ const MAIN_MUSCLES = ["quads", "hamstrings", "glutes", "chest", "lats", "upper_b
 const LAST_MUSCLES = ["side_delts", "abs"] as const;
 
 // The tunable numbers, all judgement: docs/research/weekly-budget-volume.md weighs the evidence, and spec #77 settled
-// its four Goal columns into these two rows. Credited Sets per week, the target being for 4 days per week
-const DOSES: Record<Goal, { main: Dose; last: Dose }> = {
-  build_muscle: { main: { min: 10, target: 16 }, last: { min: 6, target: 10 } },
-  athletic: { main: { min: 10, target: 16 }, last: { min: 6, target: 10 } },
+// its four Goal columns into these two rows. Credited Sets per week, the target being for 4 days per week. Calves have
+// a dose of their own, for the two Goals the research found a case for once the library had a calf raise (#101), and
+// fill with the last Muscles
+const CALVES: Dose = { min: 4, target: 6 };
+const DOSES: Record<Goal, { main: Dose; last: Dose; calves?: Dose }> = {
+  build_muscle: { main: { min: 10, target: 16 }, last: { min: 6, target: 10 }, calves: CALVES },
+  athletic: { main: { min: 10, target: 16 }, last: { min: 6, target: 10 }, calves: CALVES },
   lose_fat: { main: { min: 10, target: 14 }, last: { min: 4, target: 8 } },
   recomp: { main: { min: 10, target: 14 }, last: { min: 4, target: 8 } },
 };
@@ -31,10 +34,13 @@ export const FATIGUE_LIMIT = 4;
 const eachMuscle = (muscles: readonly Muscle[], value: number): WeeklyBudget =>
   Object.fromEntries(muscles.map((muscle) => [muscle, value]));
 
-const stage = (goal: Goal, valueOf: (dose: Dose) => number) => ({
-  main: eachMuscle(MAIN_MUSCLES, valueOf(DOSES[goal].main)),
-  last: eachMuscle(LAST_MUSCLES, valueOf(DOSES[goal].last)),
-});
+function stage(goal: Goal, valueOf: (dose: Dose) => number) {
+  const { main, last, calves } = DOSES[goal];
+  return {
+    main: eachMuscle(MAIN_MUSCLES, valueOf(main)),
+    last: { ...eachMuscle(LAST_MUSCLES, valueOf(last)), ...(calves && { calves: valueOf(calves) }) },
+  };
+}
 
 // Half rounds up
 export const scaledBudget = ({ min, target }: Dose, daysPerWeek: number) =>

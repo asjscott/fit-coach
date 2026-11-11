@@ -29,7 +29,11 @@ const FULL_HOME_GYM: ProfileWithLoads = {
     dumbbells: { kind: "adjustable", minKg: 2.5, maxKg: 40, stepKg: 2.5 },
   },
 };
-export const PROFILES = { "Full gym": BUILT_IN_EQUIPMENT.full_gym, "Full home gym": FULL_HOME_GYM };
+export const PROFILES = {
+  "Full gym": BUILT_IN_EQUIPMENT.full_gym,
+  "Full home gym": FULL_HOME_GYM,
+  "Bodyweight only": BUILT_IN_EQUIPMENT.bodyweight_only,
+};
 
 export type Run = {
   goal: Goal;

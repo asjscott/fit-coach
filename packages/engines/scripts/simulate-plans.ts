@@ -1,7 +1,16 @@
 // Runs weeks of Workouts through the real planner: docs/research/planner-simulation.md records the results.
 // pnpm --filter @fit/engines simulate
 import type { Muscle, WorkoutLength } from "@fit/shared";
-import { addCredits, creditsPerSet, exerciseBySlug, weeklyBudget, type MuscleCredits } from "../src";
+import {
+  addCredits,
+  BUILT_IN_EQUIPMENT,
+  creditsPerSet,
+  exerciseBySlug,
+  EXERCISES,
+  isAvailable,
+  weeklyBudget,
+  type MuscleCredits,
+} from "../src";
 import { GOALS, LIFTERS, PROFILES, simulate, type Run } from "./simulate-weeks";
 
 const round = (value: number) => Math.round(value * 10) / 10;
@@ -122,3 +131,53 @@ for (const goal of GOALS) {
     console.log(`| ${goal} | ${length} | ${cells.join(" | ")} |`);
   }
 }
+
+// The Exercises added for the library's gaps (#101), and where the planner gives them
+const LIBRARY_GAPS = [
+  "calf-raise",
+  "nordic-hamstring-curl",
+  "dumbbell-curl",
+  "dumbbell-overhead-triceps-extension",
+  "cable-knee-extension",
+  "table-row",
+];
+const GAP_COMBINATIONS: [number, WorkoutLength][] = [
+  [4, "standard"],
+  [4, "long"],
+  [6, "standard"],
+];
+console.log("\n### The library's gaps: Sets a week of each, and calves' credited Sets, intermediate\n");
+console.log(`| Profile | Goal | Days | Length | ${LIBRARY_GAPS.join(" | ")} | Calves |`);
+console.log(`| --- | --- | --- | --- |${LIBRARY_GAPS.map(() => " --- |").join("")} --- |`);
+for (const profile of Object.keys(PROFILES) as (keyof typeof PROFILES)[]) {
+  for (const goal of GOALS) {
+    for (const [days, length] of GAP_COMBINATIONS) {
+      const weeks = simulate({ goal, days, length, lifter: "intermediate", profile }).slice(1);
+      const picks = weeks.flat().flatMap(({ exercises }) => exercises);
+      const perWeek = (sets: number) => round(sets / weeks.length);
+      const setsOf = (slug: string) =>
+        perWeek(picks.filter((pick) => pick.slug === slug).reduce((total, pick) => total + pick.sets, 0));
+      const calves = perWeek(
+        picks.reduce((total, { slug, sets }) => total + (creditsPerSet(exerciseBySlug(slug)!).calves ?? 0) * sets, 0),
+      );
+      console.log(`| ${[profile, goal, days, length, ...LIBRARY_GAPS.map(setsOf), calves].join(" | ")} |`);
+    }
+  }
+}
+
+// How thin Bodyweight only's Alternative Exercises are: the Exercises with no other Exercise available on it that
+// shares a Pattern and a primary Muscle
+const onBodyweight = EXERCISES.filter(
+  (exercise) => !exercise.recovery && isAvailable(exercise, BUILT_IN_EQUIPMENT.bodyweight_only),
+);
+const noMatch = EXERCISES.filter((exercise) => !exercise.recovery).filter(
+  (exercise) =>
+    !onBodyweight.some(
+      (other) =>
+        other.slug !== exercise.slug &&
+        other.patterns.some(({ pattern }) => exercise.patterns.some((own) => own.pattern === pattern)) &&
+        other.muscles.primary.some((muscle) => exercise.muscles.primary.includes(muscle)),
+    ),
+);
+console.log(`\n### Exercises with no bodyweight Alternative Exercise sharing a Pattern and a primary Muscle\n`);
+console.log(`${noMatch.length}: ${noMatch.map(({ slug }) => slug).join(", ")}`);
