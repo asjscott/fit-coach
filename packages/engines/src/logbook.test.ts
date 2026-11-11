@@ -1,5 +1,6 @@
 import type {
   BodyProfile,
+  DatedCheckIn,
   EquipmentProfile,
   PlannedExercise,
   PlannedWorkout,
@@ -39,7 +40,13 @@ function memoryStorage(): DeviceStorage {
 // Records what reached the server
 function fakeUploader() {
   const uploaded: Workout[] = [];
-  return { uploaded, upload: async (workout: Workout) => void uploaded.push(workout) };
+  const uploadedCheckIns: DatedCheckIn[] = [];
+  return {
+    uploaded,
+    upload: async (workout: Workout) => void uploaded.push(workout),
+    uploadedCheckIns,
+    uploadCheckIn: async (checkIn: DatedCheckIn) => void uploadedCheckIns.push(checkIn),
+  };
 }
 
 // The server's answer for each Exercise; Exercises not listed have none
@@ -403,6 +410,112 @@ describe("Logbook", () => {
 
     expect(uploader.uploaded).toEqual([first]);
     expect(await logbook.pending()).toEqual([]);
+  });
+});
+
+// Spec #119 stories 10 and 11 (#125): Check-ins go up with Pending Workouts and retry the same way. Readiness reads the
+// phone's own copy of the day's Check-in, so nothing here waits on the server
+describe("Logbook: queued Check-ins", () => {
+  const checkIn = (date: string, time: string, sleep = 3): DatedCheckIn => ({
+    date,
+    sleep,
+    energy: 3,
+    soreness: 2,
+    checkedInAt: `${date}T${time}:00.000Z`,
+  });
+
+  it("uploads a queued Check-in once", async () => {
+    const { logbook, uploader } = setup();
+    const morning = checkIn("2026-10-24", "07:00");
+
+    await logbook.queueCheckIn(morning);
+    await logbook.sync();
+    await logbook.sync();
+
+    expect(uploader.uploadedCheckIns).toEqual([morning]);
+  });
+
+  it("keeps a Check-in made offline queued, even over a restart, until the signal is back", async () => {
+    const { logbook, uploader, storage } = setup();
+    const uploadCheckIn = uploader.uploadCheckIn;
+    uploader.uploadCheckIn = async () => {
+      throw new Error("No signal");
+    };
+    const morning = checkIn("2026-10-24", "07:00");
+    await logbook.queueCheckIn(morning);
+
+    await expect(logbook.sync()).rejects.toThrow("No signal");
+    expect(uploader.uploadedCheckIns).toEqual([]);
+
+    const rebuilt = setup(storage);
+    rebuilt.uploader.uploadCheckIn = uploadCheckIn;
+    await rebuilt.logbook.sync();
+    await rebuilt.logbook.sync();
+
+    expect(uploader.uploadedCheckIns).toEqual([morning]);
+  });
+
+  it("uploads only the latest Check-in for a date when the user changes it before it uploads", async () => {
+    const { logbook, uploader } = setup();
+    const yesterday = checkIn("2026-10-23", "07:00");
+    const morning = checkIn("2026-10-24", "07:00", 1);
+    const changed = checkIn("2026-10-24", "07:05", 4);
+
+    await logbook.queueCheckIn(yesterday);
+    await logbook.queueCheckIn(morning);
+    await logbook.queueCheckIn(changed);
+    await logbook.sync();
+
+    expect(uploader.uploadedCheckIns).toEqual([yesterday, changed]);
+  });
+
+  it("still uploads a Check-in changed while the earlier one was uploading", async () => {
+    const { logbook, uploader } = setup();
+    const morning = checkIn("2026-10-24", "07:00", 1);
+    const changed = checkIn("2026-10-24", "07:05", 4);
+    const uploadCheckIn = uploader.uploadCheckIn;
+    uploader.uploadCheckIn = async (sent) => {
+      // The user changes it while the first one is on its way
+      if (sent.checkedInAt === morning.checkedInAt) await logbook.queueCheckIn(changed);
+      return uploadCheckIn(sent);
+    };
+
+    await logbook.queueCheckIn(morning);
+    await logbook.sync();
+    await logbook.sync();
+
+    expect(uploader.uploadedCheckIns).toEqual([morning, changed]);
+  });
+
+  it("uploads Pending Workouts and Check-ins independently: one failing doesn't hold up the other", async () => {
+    const { logbook, uploader } = setup();
+    const morning = checkIn("2026-10-24", "07:00");
+    uploader.uploadCheckIn = async () => {
+      throw new Error("Server error");
+    };
+    await logbook.queueCheckIn(morning);
+    const workout = await finishPlank(logbook, "09:00");
+
+    await expect(logbook.sync()).rejects.toThrow("Server error");
+
+    expect(uploader.uploaded).toEqual([workout]);
+    expect(await logbook.pending()).toEqual([]);
+  });
+
+  it("refuses a Check-in with a rating outside 1 to 5", async () => {
+    const { logbook } = setup();
+
+    await expect(logbook.queueCheckIn({ ...checkIn("2026-10-24", "07:00"), sleep: 6 })).rejects.toThrow(LogbookError);
+  });
+
+  it("clears queued Check-ins on sign-out, so none upload as the next user", async () => {
+    const { logbook, uploader } = setup();
+    await logbook.queueCheckIn(checkIn("2026-10-24", "07:00"));
+
+    await logbook.clear();
+    await logbook.sync();
+
+    expect(uploader.uploadedCheckIns).toEqual([]);
   });
 });
 
