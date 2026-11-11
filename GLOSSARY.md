@@ -143,7 +143,7 @@ The results of one completed pair of Assessment Workouts: for each tested Patter
 _Avoid_: Baseline, test results, fitness test
 
 **Working Level**:
-What the Coach will prescribe next for one Exercise for this user: kg for 8 reps for a weighted Exercise, a band level and reps for a band Exercise, reps for a bodyweight one, seconds for a timed one. An Assessment sets the first one.
+What the Coach will prescribe next for one Exercise for this user: a load and a target reps within a rep range for a weighted Exercise (8–12 by default, 6–10 for a barbell lift, a fixed 8 for a Ballistic Exercise, and no range for a carry), a band level and reps within 10–15 for a band Exercise, reps up to 15 for a bodyweight one, seconds for a timed one. Each records the Workout that last moved it and the run of Misses it is on. An Assessment sets the first one, at the bottom of the range; a bodyweight one above 15 reps starts on the harder variant.
 _Avoid_: Exercise state, starting load, current weight
 
 **Reference Strength**:

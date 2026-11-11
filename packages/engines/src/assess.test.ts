@@ -60,6 +60,9 @@ const tested = (result: AssessmentPattern | undefined) => (result?.estimated ===
 
 const levelOf = (workingLevels: WorkingLevel[], slug: string) => workingLevels.find((level) => level.slug === slug);
 
+// A Working Level just set by this pair: B is the Workout that set it, with no Misses yet
+const setByB = { movedBy: { workoutId: B_ID, startedAt: "2026-10-22T09:00:00.000Z" }, misses: 0, outgrown: false };
+
 describe("assess", () => {
   it("records the pair, when its B started and the body weight used", () => {
     expect(assess(a, b, profile, [home]).assessment).toMatchObject({
@@ -161,11 +164,13 @@ describe("assess", () => {
     it("still gives its Exercises Working Levels", () => {
       const { workingLevels } = assess(a, withoutPush, profile, [home]);
 
-      // A floor press is 0.37 of push's 34: 12.58, for 8 reps 12.58 / (1 + 10/30) = 9.435
+      // A floor press is 0.37 of push's 34: 12.58, for 8 reps 12.58 / (1 + 10/30) = 9.435, so the 8 kg dumbbells
       expect(levelOf(workingLevels, "dumbbell-floor-press")).toEqual({
         slug: "dumbbell-floor-press",
         unit: "kg",
-        kg: expect.closeTo(9.435, 5),
+        kg: 8,
+        reps: 8,
+        ...setByB,
       });
       expect(levelOf(workingLevels, "push-up")?.unit).toBe("reps");
     });
@@ -202,19 +207,20 @@ describe("assess", () => {
     expect(patterns.hinge?.referenceStrength).toBeCloseTo(80, 5);
   });
 
-  it("gives each tested Exercise a Working Level in kg for 8 reps with 2 in reserve", () => {
+  // #131: a weighted Working Level is a load and a target reps at the bottom of its range, 8 for a dumbbell lift
+  it("gives each tested Exercise the heaviest load the user has for 8 reps with 2 in reserve, for 8 reps", () => {
     const { workingLevels } = assess(a, b, profile, [home]);
 
-    // The maximum / (1 + 10/30): squat 16.8 -> 12.6, hinge 20 x 1.2 = 24 -> 18,
-    // push 12 x (1 + 5/30) = 14 -> 10.5, pull 16 x 1.2 = 19.2 -> 14.4
-    const kgOf = (slug: string) => {
+    // The maximum / (1 + 10/30), then the heaviest dumbbell at or below it: squat 16.8 -> 12.6 -> 12,
+    // hinge 20 x 1.2 = 24 -> 18 -> 16, push 12 x (1 + 5/30) = 14 -> 10.5 -> 10, pull 16 x 1.2 = 19.2 -> 14.4 -> 14
+    const targetOf = (slug: string) => {
       const level = levelOf(workingLevels, slug);
-      return level?.unit === "kg" ? level.kg : undefined;
+      return level?.unit === "kg" ? [level.kg, level.reps] : undefined;
     };
-    expect(kgOf("goblet-squat")).toBeCloseTo(12.6, 5);
-    expect(kgOf("dumbbell-romanian-deadlift")).toBeCloseTo(18, 5);
-    expect(kgOf("dumbbell-floor-press")).toBeCloseTo(10.5, 5);
-    expect(kgOf("one-arm-dumbbell-row")).toBeCloseTo(14.4, 5);
+    expect(targetOf("goblet-squat")).toEqual([12, 8]);
+    expect(targetOf("dumbbell-romanian-deadlift")).toEqual([16, 8]);
+    expect(targetOf("dumbbell-floor-press")).toEqual([10, 8]);
+    expect(targetOf("one-arm-dumbbell-row")).toEqual([14, 8]);
   });
 
   it("gives every Exercise available in any of the Equipment Profiles a Working Level in its unit", () => {
@@ -249,39 +255,51 @@ describe("assess", () => {
   it("scales the other Exercises of a Pattern from its Reference Strength", () => {
     const { workingLevels } = assess(a, b, profile, [home, gym]);
 
-    // Squat's Reference Strength is 42 kg: a back squat's maximum, for 8 reps 42 / (1 + 10/30) = 31.5
+    // Squat's Reference Strength is 42 kg: a back squat's maximum. A barbell lift starts at 6 reps, the bottom of its
+    // 6–10 range: 42 / (1 + 8/30) = 33.2, and the heaviest bar load at or below it is 32.5
     expect(levelOf(workingLevels, "back-squat")).toEqual({
       slug: "back-squat",
       unit: "kg",
-      kg: expect.closeTo(31.5, 5),
+      kg: 32.5,
+      reps: 6,
+      ...setByB,
     });
   });
 
-  it("takes carry from hinge", () => {
+  it("takes carry from hinge, for 8 reps as a carry has no range", () => {
     const { workingLevels } = assess(a, b, profile, [home]);
 
-    // Hinge's Reference Strength is 80 kg; a farmer's carry is 0.4 of it per hand, 32 / (1 + 10/30) = 24
+    // Hinge's Reference Strength is 80 kg; a farmer's carry is 0.4 of it per hand, 32 / (1 + 10/30) = 24, and the
+    // heaviest dumbbell at or below it is 20
     expect(levelOf(workingLevels, "farmers-carry")).toEqual({
       slug: "farmers-carry",
       unit: "kg",
-      kg: expect.closeTo(24, 5),
+      kg: 20,
+      reps: 8,
+      ...setByB,
     });
   });
 
-  it("gives a band Exercise the lightest band it can use, for 12 reps", () => {
+  it("gives a band Exercise the lightest band it can use, at the bottom of the 10–15 band range", () => {
     const { workingLevels } = assess(a, b, profile, [home, gym]);
 
-    expect(levelOf(workingLevels, "band-row")).toEqual({ slug: "band-row", unit: "band", level: "heavy", reps: 12 });
-    expect(levelOf(workingLevels, "band-good-morning")).toMatchObject({ unit: "band", level: "medium", reps: 12 });
+    expect(levelOf(workingLevels, "band-row")).toEqual({
+      slug: "band-row",
+      unit: "band",
+      level: "heavy",
+      reps: 10,
+      ...setByB,
+    });
+    expect(levelOf(workingLevels, "band-good-morning")).toMatchObject({ unit: "band", level: "medium", reps: 10 });
   });
 
   it("gives a core rep Exercise 10 reps", () => {
     const { workingLevels } = assess(a, b, profile, [home]);
 
-    expect(levelOf(workingLevels, "dead-bug")).toEqual({ slug: "dead-bug", unit: "reps", reps: 10 });
+    expect(levelOf(workingLevels, "dead-bug")).toEqual({ slug: "dead-bug", unit: "reps", reps: 10, ...setByB });
   });
 
-  it("gives a bodyweight Exercise a rep target with 2 in reserve, from body weight x its share, capped to 3-20", () => {
+  it("gives a bodyweight Exercise a rep target with 2 in reserve, from body weight x its share, at least 3, and at most 15", () => {
     const pushUpRepsAfter = (benchKg: number) => {
       const pushTest = assessmentWorkout(B_ID, "B", "2026-10-22T09:00:00.000Z", [
         { slug: "dumbbell-bench-press", sets: [rated(benchKg, 9)] },
@@ -291,9 +309,10 @@ describe("assess", () => {
 
     // 20 kg x 6 counts a maximum of 24, so a Reference Strength of 60 and a push-up maximum of 78 kg. The push-up
     // moves 80 x 0.64 = 51.2 kg: 30 x (78 / 51.2 - 1) = 15.7 reps to failure, 2 in reserve leaves 14
-    expect(pushUpRepsAfter(20)).toEqual({ slug: "push-up", unit: "reps", reps: 14 });
-    expect(pushUpRepsAfter(8)).toEqual({ slug: "push-up", unit: "reps", reps: 3 });
-    expect(pushUpRepsAfter(40)).toEqual({ slug: "push-up", unit: "reps", reps: 20 });
+    expect(pushUpRepsAfter(20)).toEqual({ slug: "push-up", unit: "reps", reps: 14, ...setByB });
+    expect(pushUpRepsAfter(8)).toEqual({ slug: "push-up", unit: "reps", reps: 3, ...setByB });
+    // Above 15 it has outgrown the push-up, and the Coach starts on the harder variant (#131)
+    expect(pushUpRepsAfter(40)).toEqual({ slug: "push-up", unit: "reps", reps: 15, ...setByB, outgrown: true });
   });
 
   it("takes plank seconds as core's Reference Strength, and seeds the timed Working Levels from it", () => {
@@ -302,9 +321,19 @@ describe("assess", () => {
     expect(assessment.patterns.core).toMatchObject({ slug: "plank", topSet: { seconds: 90 }, maximum: 90 });
     expect(assessment.patterns.core?.referenceStrength).toBe(90);
     // A side plank and a hollow hold are each half a plank
-    expect(levelOf(workingLevels, "plank")).toEqual({ slug: "plank", unit: "seconds", seconds: 90 });
-    expect(levelOf(workingLevels, "side-plank")).toEqual({ slug: "side-plank", unit: "seconds", seconds: 45 });
-    expect(levelOf(workingLevels, "hollow-hold")).toEqual({ slug: "hollow-hold", unit: "seconds", seconds: 45 });
+    expect(levelOf(workingLevels, "plank")).toEqual({ slug: "plank", unit: "seconds", seconds: 90, ...setByB });
+    expect(levelOf(workingLevels, "side-plank")).toEqual({
+      slug: "side-plank",
+      unit: "seconds",
+      seconds: 45,
+      ...setByB,
+    });
+    expect(levelOf(workingLevels, "hollow-hold")).toEqual({
+      slug: "hollow-hold",
+      unit: "seconds",
+      seconds: 45,
+      ...setByB,
+    });
   });
 
   describe("with no equipment", () => {
@@ -327,12 +356,12 @@ describe("assess", () => {
 
     it("gives the tested bodyweight Exercise back its reps to failure, less 2 in reserve", () => {
       // The round trip: test -> Reference Strength -> the same Exercise's maximum. 10 reps to failure, 2 in reserve,
-      // leaves 8. Epley runs both ways past 12 reps too, so 20 leaves 18
+      // leaves 8. Epley runs both ways past 12 reps too, so 15 leaves 13
       const pushUpLevel = (reps: number) =>
         levelOf(assess(a, pushUps(reps), profile, [bodyweightOnly]).workingLevels, "push-up");
 
-      expect(pushUpLevel(10)).toEqual({ slug: "push-up", unit: "reps", reps: 8 });
-      expect(pushUpLevel(20)).toEqual({ slug: "push-up", unit: "reps", reps: 18 });
+      expect(pushUpLevel(10)).toEqual({ slug: "push-up", unit: "reps", reps: 8, ...setByB });
+      expect(pushUpLevel(15)).toEqual({ slug: "push-up", unit: "reps", reps: 13, ...setByB });
     });
 
     it("tests every Pattern and gives every Exercise available without equipment a Working Level", () => {

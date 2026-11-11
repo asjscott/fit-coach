@@ -2,8 +2,9 @@ import { MAX_ALTERNATIVE_OPTIONS } from "@fit/shared";
 import type { BuiltInEquipment, Exercise, PlannedExercise, SetTarget } from "@fit/shared";
 import { exerciseBySlug } from "./data/exercises";
 
-// An Exercise the user can be given, with its target on the equipment it was worked out for
-export type Candidate = { exercise: Exercise; target: SetTarget };
+// An Exercise the user can be given, with its target on the equipment it was worked out for. Outgrown: its Working
+// Level is past the top of what it prescribes, so its harder variant goes in its place where possible
+export type Candidate = { exercise: Exercise; target: SetTarget; outgrown?: boolean };
 
 // One built-in choice's Exercises. possible decides what stays; pickable, what's left of it after the plan's guards, is
 // what can stand in, as the guards are about what the Coach gives next and not what the equipment allows
