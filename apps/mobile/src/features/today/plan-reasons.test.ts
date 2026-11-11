@@ -19,6 +19,9 @@ describe("progressionChangeLine", () => {
     [{ code: "target-up" }, "One more rep: every Set reached the target."],
     [{ code: "load-up" }, "Heavier: every Set reached the top of the range."],
     [{ code: "new-base" }, "From the weight you lifted last time."],
+    // Stories 47–49, #134
+    [{ code: "load-down" }, "Lighter: the last two times fell short of the target."],
+    [{ code: "target-down" }, "Fewer: the last two times fell short of the target."],
     [{ code: "harder-variant", from: "goblet-squat" }, "Ready for this after Goblet squat."],
     [{ code: "held-at-top" }, "Held at 20 reps: no heavier weight or harder variant here."],
     // Story 44

@@ -225,6 +225,21 @@ describe("progressWorkingLevel: RPE on the last Set", () => {
       change: { code: "target-up" },
     });
   });
+
+  // Stories 44, 46: a Miss is a Miss however hard the last Set felt
+  it("still counts a Miss when the last Set was RPE 10", () => {
+    expect(progress(gobletSquat(14, 10), [lifted(14, 7), lifted(14, 7, 10)])).toMatchObject({
+      level: { kg: 14, reps: 10, misses: 1 },
+      change: null,
+    });
+  });
+
+  it("ends a run of Misses when it holds", () => {
+    expect(progress(gobletSquat(14, 10, { misses: 1 }), [lifted(14, 10), lifted(14, 10, 10)])).toMatchObject({
+      level: { kg: 14, reps: 10, misses: 0 },
+      change: { code: "rpe-10" },
+    });
+  });
 });
 
 // Spec #119: the other kinds of Exercise get their rules from #133–#136; until then they stay where they are
@@ -246,5 +261,123 @@ describe("progressWorkingLevel: Exercises without double progression yet", () =>
     ["a carry", level("farmers-carry", { unit: "kg", kg: 20, reps: 8 }), [lifted(24, 8), lifted(24, 8)]],
   ])("leaves %s unmoved", (_, workingLevel, sets) => {
     expect(progress(workingLevel, sets)).toBeNull();
+  });
+});
+
+// Stories 46–52, ADR 0007: a Miss is Sets averaging more than 2 reps short of target, or 10 seconds for a timed
+// Exercise; two in a row bring the Exercise down
+describe("progressWorkingLevel: Misses", () => {
+  // Story 46
+  it("counts a Miss when the Sets average more than 2 reps short of the target, holding the level", () => {
+    // 7 and 7 average 7, 3 short of 10
+    expect(progress(gobletSquat(14, 10), [lifted(14, 7), lifted(14, 7)])).toEqual({
+      level: gobletSquat(14, 10, { movedBy: movedByThisWorkout, misses: 1 }),
+      change: null,
+    });
+  });
+
+  // Story 46: a bad Set or two doesn't count
+  it("doesn't count Sets averaging 2 reps short as a Miss", () => {
+    // 10, 7 and 7 average 8
+    expect(progress(gobletSquat(14, 10), [lifted(14, 10), lifted(14, 7), lifted(14, 7)])).toMatchObject({
+      level: { kg: 14, reps: 10, misses: 0 },
+    });
+  });
+
+  it("ends a run of Misses on a Workout that isn't one", () => {
+    expect(progress(gobletSquat(14, 10, { misses: 1 }), [lifted(14, 9), lifted(14, 8)])).toMatchObject({
+      level: { kg: 14, reps: 10, misses: 0 },
+    });
+    expect(progress(gobletSquat(14, 10, { misses: 1 }), [lifted(14, 10), lifted(14, 10)])).toMatchObject({
+      level: { kg: 14, reps: 11, misses: 0 },
+    });
+  });
+
+  // Story 47
+  it("drops a weighted Exercise one Load Step on the second Miss in a row, back to the bottom of the range", () => {
+    // 20 kg down to 18 kg is 10% lighter
+    expect(progress(gobletSquat(20, 11, { misses: 1 }), [lifted(20, 8), lifted(20, 7)])).toEqual({
+      level: gobletSquat(18, 8, { movedBy: movedByThisWorkout, misses: 0, change: { code: "load-down" } }),
+      change: { code: "load-down" },
+    });
+  });
+
+  // Story 48: on light dumbbells one step down can be a quarter of the load
+  it("keeps the load and drops the target 2 reps when one Load Step down is more than about 12% lighter", () => {
+    // 10 kg down to 8 kg is 20% lighter
+    expect(progress(gobletSquat(10, 11, { misses: 1 }), [lifted(10, 8), lifted(10, 7)])).toEqual({
+      level: gobletSquat(10, 9, { movedBy: movedByThisWorkout, misses: 0, change: { code: "target-down" } }),
+      change: { code: "target-down" },
+    });
+  });
+
+  it("drops the target 2 reps at the lightest load the profile has", () => {
+    expect(progress(gobletSquat(8, 12, { misses: 1 }), [lifted(8, 9), lifted(8, 9)])).toMatchObject({
+      level: { kg: 8, reps: 10, misses: 0 },
+      change: { code: "target-down" },
+    });
+  });
+
+  it("counts a lighter load than the one prescribed as a new base, not a Miss", () => {
+    expect(progress(gobletSquat(14, 11, { misses: 1 }), [lifted(12, 7), lifted(12, 7)])).toMatchObject({
+      level: { kg: 12, reps: 7, misses: 0 },
+      change: { code: "new-base" },
+    });
+  });
+
+  // Story 49, 50: lower the target, never an easier variant
+  const level = (slug: string, shape: object) =>
+    ({ slug, movedBy: LAST_MOVER, misses: 0, outgrown: false, ...shape }) as WorkingLevel;
+  const repsDone = (reps: number): Set => ({ kind: "bodyweight", reps, loggedAt: THIS_WORKOUT.startedAt });
+  const held = (seconds: number): Set => ({ kind: "timed", seconds, loggedAt: THIS_WORKOUT.startedAt });
+
+  it.each([
+    [
+      "a bodyweight target 2 reps",
+      level("push-up", { unit: "reps", reps: 12, misses: 1 }),
+      [repsDone(9), repsDone(8)],
+      { unit: "reps", reps: 10 },
+    ],
+    [
+      "a timed target 10 seconds",
+      level("plank", { unit: "seconds", seconds: 45, misses: 1 }),
+      [held(30), held(32)],
+      { unit: "seconds", seconds: 35 },
+    ],
+    [
+      "a band target 2 reps on the same band",
+      level("band-row", { unit: "band", level: "medium", reps: 12, misses: 1 }),
+      [repsDone(9), repsDone(8)],
+      { unit: "band", level: "medium", reps: 10 },
+    ],
+  ])("lowers %s on the second Miss in a row", (_, workingLevel, sets, next) => {
+    expect(progress(workingLevel, sets)).toEqual({
+      level: { ...workingLevel, ...next, movedBy: movedByThisWorkout, misses: 0, change: { code: "target-down" } },
+      change: { code: "target-down" },
+    });
+  });
+
+  it("counts a timed Miss at more than 10 seconds short", () => {
+    const plank = level("plank", { unit: "seconds", seconds: 45 });
+    expect(progress(plank, [held(34), held(34)])).toMatchObject({ level: { seconds: 45, misses: 1 } });
+    // 35 seconds is 10 short: no Miss, and the level waits on #135's ladders
+    expect(progress(plank, [held(35), held(35)])?.level.misses ?? 0).toBe(0);
+  });
+
+  it("never brings a jump down", () => {
+    const jump = level("box-jump", { unit: "reps", reps: 8, misses: 1 });
+    expect(progress(jump, [repsDone(3), repsDone(3)])).toBeNull();
+  });
+
+  // Stories 38, 40
+  it.each([
+    ["on one Set", [lifted(14, 3)], {}],
+    [
+      "in an Assessment Workout",
+      [lifted(14, 3), lifted(14, 3)],
+      { workout: { ...THIS_WORKOUT, assessment: "A" as const } },
+    ],
+  ])("counts no Miss %s", (_, sets, extra) => {
+    expect(progress(gobletSquat(14, 10, { misses: 1 }), sets, extra)).toBeNull();
   });
 });
