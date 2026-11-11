@@ -26,6 +26,11 @@ function useStarting<Args extends unknown[]>(start: (...args: Args) => Promise<v
 
 export const useStartWorkout = () => useStarting(useLogbook().start);
 
+export function useStartPastWorkout() {
+  const { startWorkout, starting } = useStarting<[Date]>(useLogbook().startPast);
+  return { startPastWorkout: startWorkout, startingPast: starting };
+}
+
 export function useStartPlannedWorkout() {
   const { startWorkout, starting } = useStarting<[PlannedWorkoutToStart]>(useLogbook().startPlannedWorkout);
   return { startPlannedWorkout: startWorkout, startingPlan: starting };

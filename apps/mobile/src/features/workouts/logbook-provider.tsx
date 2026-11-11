@@ -31,6 +31,8 @@ type LogbookContextValue = {
   // false until the in-progress Workout has been read from the phone
   isLoaded: boolean;
   start: () => Promise<void>;
+  // Starts a Manual Workout logged afterwards, for an earlier day (#129)
+  startPast: (pastStart: Date) => Promise<void>;
   // Starts Assessment Workout A or B with its tests already added
   startAssessment: (options: AssessmentOptions) => Promise<void>;
   // The latest Planned Workout on the phone, read from it, and whether it's known to be out of date
@@ -195,6 +197,7 @@ export function LogbookProvider({ children }: { children: ReactNode }) {
   useSyncTriggers(sync);
 
   const start = useCallback(() => run(() => logbook.start(new Date())), [logbook, run]);
+  const startPast = useCallback((pastStart: Date) => run(() => logbook.start(new Date(), pastStart)), [logbook, run]);
 
   const startAssessment = useCallback(
     (options: AssessmentOptions) => run(() => logbook.startAssessment(options, new Date())),
@@ -322,6 +325,7 @@ export function LogbookProvider({ children }: { children: ReactNode }) {
         refreshPlannedWorkout,
         syncing: syncsUnderWay > 0,
         start,
+        startPast,
         startAssessment,
         startPlannedWorkout,
         startRecoveryWorkout,

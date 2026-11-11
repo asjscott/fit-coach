@@ -76,6 +76,22 @@ export const Workout = z
   });
 export type Workout = z.infer<typeof Workout>;
 
+// A Workout not logged live can start on any of the last 7 days (#129)
+export const PAST_WORKOUT_DAYS = 7;
+const PAST_WORKOUT_MS = PAST_WORKOUT_DAYS * 24 * 60 * 60 * 1000;
+
+// When a Workout's latest Set was logged
+const lastLoggedAt = ({ workoutExercises }: Pick<Workout, "workoutExercises">) =>
+  Math.max(...workoutExercises.flatMap(({ sets }) => sets.map(({ loggedAt }) => Date.parse(loggedAt))));
+
+// A Workout as finished on the phone and uploaded: its start no more than 7 days before its last Set. Counted from the
+// Sets rather than the clock, so a Pending Workout uploading late is never refused. Only new Workouts are held to it, so
+// History never fails on a Workout stored before the rule
+export const WorkoutUpload = Workout.refine(
+  (workout) => lastLoggedAt(workout) - Date.parse(workout.startedAt) <= PAST_WORKOUT_MS,
+  { error: `The start can't be more than ${PAST_WORKOUT_DAYS} days ago`, path: ["startedAt"] },
+);
+
 // Previous Sets (GLOSSARY.md, ADR 0002): the Sets of one Exercise from the user's most recent Workout that
 // included it, with that Workout's times so a newer Pending Workout can beat it
 export const PreviousSets = z.object({
@@ -98,6 +114,9 @@ export const InProgressWorkout = z.object({
   assessment: AssessmentPart.optional(),
   // An Assessment Workout's first suggested loads come from the profile it started with, not a later edit
   bodyProfile: BodyProfile.optional(),
+  // A Manual Workout logged afterwards (#129): when it was done, on an earlier day in the last 7. startedAt stays when
+  // logging began, so the clock and the forgotten check follow the logging; Finish starts the times here
+  pastStart: z.iso.datetime().optional(),
   plannedWorkoutId,
   workoutExercises: z.array(
     z
