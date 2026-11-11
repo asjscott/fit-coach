@@ -55,6 +55,10 @@ describe("planIsDue", () => {
     expect(planIsDue(afterTuesdaysWorkout, inputs, new Date("2026-11-04T05:30:00Z"), timeZone)).toBe(true);
   });
 
+  it("isn't due for a plan built before the Include jumps switch, while it's off", () => {
+    expect(due({ includeJumps: false })).toBe(false);
+  });
+
   it("is due for a plan with no record of when it was built", () => {
     expect(planIsDue({ weekStart: "2026-11-02", builtFrom }, inputs, now, timeZone)).toBe(true);
   });
@@ -64,6 +68,8 @@ describe("planIsDue", () => {
     ["days per week", { daysPerWeek: 5 }],
     ["usual Workout Length", { workoutLength: "long" }],
     ["injuries", { injuries: ["knee"] }],
+    // Story 13 (#105)
+    ["Include jumps switch", { includeJumps: true }],
     ["primary Equipment Profile's equipment", { equipmentProfile: { tags: ["dumbbells"], loads: {} } }],
     [
       "primary Equipment Profile's loads",

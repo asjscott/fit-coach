@@ -38,8 +38,19 @@ describe("strength ratios", () => {
     expect(exerciseMaximum(slug, referenceStrength(slug, 42))).toBeCloseTo(42, 9);
   });
 
+  // Story 13 (#105): a jump's dose is contacts, set by its place on the ladder, not a Working Level
+  it("gives each jump a fixed number of contacts a Set, about 48 a Workout and no more higher up the ladder", () => {
+    const ladder = ["pogo-hop", "squat-jump", "countermovement-jump", "box-jump", "broad-jump", "lateral-bound"];
+    const contacts = ladder.map((slug) => {
+      const entry = STRENGTH_RATIOS[slug];
+      return entry?.kind === "contacts" ? entry.contacts : undefined;
+    });
+    expect(contacts).toEqual([10, 8, 8, 6, 6, 6]);
+  });
+
   it("refuses an Exercise the table can't scale", () => {
     expect(() => referenceStrength("band-row", 20)).toThrow();
     expect(() => referenceStrength("dead-bug", 20)).toThrow();
+    expect(() => referenceStrength("squat-jump", 20)).toThrow();
   });
 });
