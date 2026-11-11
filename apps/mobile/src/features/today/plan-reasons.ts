@@ -1,4 +1,5 @@
-import { muscleGroupsOf, type Muscle, type MuscleGroup, type PlanReason } from "@fit/shared";
+import { muscleGroupsOf, type Muscle, type MuscleGroup, type PlanReason, type ProgressionChange } from "@fit/shared";
+import { exerciseName } from "../workouts/library";
 import { weekdayLabel } from "../workouts/format";
 import { localDateText } from "../workouts/local-date-time";
 
@@ -39,6 +40,26 @@ function line(reason: PlanReason, now: Date) {
       const groups = groupsAre(reason.muscles);
       return groups && `${groups} furthest behind this week.`;
     }
+  }
+}
+
+// Why progression changed an Exercise's Working Level since it was last done (#132), shown under the Exercise; null
+// when nothing changed. An outgrown level is planned as its harder variant or a hold, so it's never shown as it is
+export function progressionChangeLine(change: ProgressionChange | undefined): string | null {
+  switch (change?.code) {
+    case "target-up":
+      return "One more rep: every Set reached the target.";
+    case "load-up":
+      return "Heavier: every Set reached the top of the range.";
+    case "new-base":
+      return "From the weight you lifted last time.";
+    case "harder-variant":
+      return `Ready for this after ${exerciseName(change.from)}.`;
+    case "held-at-top":
+      return "Held at 20 reps: no heavier weight or harder variant here.";
+    case "outgrown":
+    case undefined:
+      return null;
   }
 }
 

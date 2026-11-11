@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { BandLevel } from "./equipment";
 import { Pattern } from "./exercises";
+import { ProgressionChange } from "./progression";
 import { Set } from "./workouts";
 
 const slug = z.string().regex(/^[a-z0-9-]+$/);
@@ -61,6 +62,8 @@ const progress = {
   // Past the top of what it prescribes, such as a bodyweight seed above 15 reps: the Coach gives the Exercise's
   // progression (its harder variant) instead when the profile can do it, and otherwise holds it at the top
   outgrown: z.boolean(),
+  // Why the Workout that last moved it changed it. Absent when that Workout changed nothing, or no Workout has moved it
+  change: ProgressionChange.optional(),
 };
 
 // What the Coach will prescribe next for one Exercise (GLOSSARY.md): a load in kg and a target reps within the

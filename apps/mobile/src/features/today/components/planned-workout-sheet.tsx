@@ -27,6 +27,7 @@ import {
   supersetWithLabel,
   todayPlanLine,
 } from "../today-status";
+import { progressionChangeLine } from "../plan-reasons";
 import { CheckInRatings } from "./check-in-card";
 import { TodayCardLink } from "./today-card";
 import { useWeightUnit } from "@/features/user/current-user-provider";
@@ -197,12 +198,17 @@ export function PlannedWorkoutSheet({
               </View>
             ) : null}
             <View>
-              {plannedExercises.map(({ slug, sets, target, replaces, otherOptions, supersetWith }) => (
+              {plannedExercises.map(({ slug, sets, target, replaces, otherOptions, supersetWith, change }) => (
                 <View key={slug} style={[styles.exercise, { borderTopColor: colors.line }]}>
                   <Text>{exerciseName(slug)}</Text>
                   <Text size="sm" color="muted">
                     {plannedSetsLabel({ sets, target }, unit, libraryExercise(slug)?.unilateral, isJumpSlug(slug))}
                   </Text>
+                  {progressionChangeLine(change) ? (
+                    <Text size="sm" color="muted">
+                      {progressionChangeLine(change)}
+                    </Text>
+                  ) : null}
                   {supersetWith ? (
                     <Text size="sm" color="muted">
                       {supersetWithLabel(exerciseName(supersetWith))}

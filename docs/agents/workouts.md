@@ -263,6 +263,31 @@ Schemas: packages/shared/src/planned-workouts.ts
   deterministic, so ties fall to last week's Exercises, then the longest Sets, then the slug, never library order.
   `plan-outcomes.test.ts` pins what a user should see, with the library in either order: run it after any tuning.
 
+## Progression (#132, ADR 0007)
+
+```text
+progressWorkingLevel (packages/engines/src/progression.ts): pure. ProgressionInput (the Working Level, the Workout,
+  its Workout Exercise, the library Exercise, the primary Equipment Profile, deloadWeek, plannedSets) → Progression
+  ({ level, change }) or null when it doesn't move the level. judge() picks the Sets (the lowest load used), then RULES
+  run in order and the first to decide wins: return a Progression, UNMOVED, or undefined to pass on
+API: progressWorkingLevels (apps/api/src/progression.ts), called by POST /workouts after assessIfPaired and before
+  the rebuild, on retries too. Writes each moved level to workingLevels, guarded on the movedBy it read
+Planner: the level's change goes on its Planned Exercise (withChanges in plan-workout.ts), an outgrown one worded as
+  harder-variant (on the variant given instead) or held-at-top; daysWorkout keeps it only on the Exercise itself
+Phone: progressionChangeLine (features/today/plan-reasons.ts) under each Exercise in planned-workout-sheet.tsx
+Schema: ProgressionChange (packages/shared/src/progression.ts), on WorkingLevel.change and PlannedExercise.change
+```
+
+- **Adding a rule** (#133–#137): write a `ProgressionRule` and put it in its place in `RULES`; the comment above
+  `RULES` says where each ticket's goes. `moved()` records the Workout and the reason, and drops an earlier reason.
+- **Only a later Workout moves a level**: `laterWorkoutsOnly` compares `startedAt` with `movedBy`, so a retry, a late
+  Pending Workout or a past Workout never moves it twice or backwards. A judged Workout records itself even when
+  nothing changed; an unjudged one (UNMOVED) records nothing.
+- **Only weighted, non-Ballistic, non-carry Exercises move so far** (`notYetProgressed`); the ladders, Ballistic
+  Exercises and carries come with #135 and #136. Jumps never move.
+- **A load other than the prescribed one** (the level rounded to the primary profile's loads) becomes the new base at
+  the fewest reps lifted there.
+
 ## PRs (#130)
 
 ```text
