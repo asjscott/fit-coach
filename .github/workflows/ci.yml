@@ -1,9 +1,20 @@
 name: CI
-on: [push, pull_request]
+# Once per commit: pushes to the long-lived branches, and every pull request (which covers its branch's pushes)
+on:
+  push:
+    branches: [dev, main]
+  pull_request:
+
+# A new push to the same branch or pull request cancels the run it replaces
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   check:
     runs-on: ubuntu-latest
+    # Usually about 5 minutes; a hang stops here instead of using up the month's minutes
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
@@ -22,16 +33,3 @@ jobs:
       - run: pnpm --filter @fit/api build
       - run: pnpm --filter @fit/mobile exec expo export --platform web
       - run: pnpm --filter @fit/mobile exec expo export --platform ios
-
-  web-storage:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 22
-          cache: pnpm
-      - run: pnpm install --frozen-lockfile
-      - run: pnpm --filter @fit/mobile exec playwright install --with-deps chromium webkit
-      - run: pnpm --filter @fit/mobile test:web

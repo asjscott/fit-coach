@@ -100,7 +100,11 @@ pnpm typecheck
 pnpm test
 ```
 
-The web storage end-to-end tests use Playwright, which needs its browsers installed once:
+CI runs once per commit, on pull requests and on pushes to `dev` and `main`. A newer push cancels the run it replaces.
+
+The web storage end-to-end tests use Playwright, which needs its browsers installed once. CI runs them
+([.github/workflows/web-storage.yml](.github/workflows/web-storage.yml)) only when a change touches the files they
+exercise. Bump that workflow's Playwright image tag along with `@playwright/test`.
 
 ```sh
 pnpm --filter @fit/mobile exec playwright install chromium webkit
