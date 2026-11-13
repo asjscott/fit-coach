@@ -6,19 +6,22 @@ import {
   type Logbook,
   type PlannedWorkoutCopy,
   type Rest,
+  type UnseenPrs,
   type WorkoutTimes,
 } from "@fit/engines";
 import {
   PlannedWorkout,
   PreviousSets,
+  Workout,
+  type DatedCheckIn,
   type Exercise,
   type InProgressWorkout,
+  type Pr,
   type SetValues,
-  type Workout,
 } from "@fit/shared";
 import * as Crypto from "expo-crypto";
 import { useKeepAwake } from "expo-keep-awake";
-import { createContext, use, useCallback, useEffect, useState, type ReactNode } from "react";
+import { createContext, use, useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import { Vibration } from "react-native";
 import { useApi } from "@/api";
 import { deviceStorage } from "./device-storage";
@@ -30,6 +33,8 @@ type LogbookContextValue = {
   // false until the in-progress Workout has been read from the phone
   isLoaded: boolean;
   start: () => Promise<void>;
+  // Starts a Manual Workout logged afterwards, for an earlier day (#129)
+  startPast: (pastStart: Date) => Promise<void>;
   // Starts Assessment Workout A or B with its tests already added
   startAssessment: (options: AssessmentOptions) => Promise<void>;
   // The latest Planned Workout on the phone, read from it, and whether it's known to be out of date
@@ -57,8 +62,6 @@ type LogbookContextValue = {
   skipRest: () => void;
   // The values a new Set starts with: a test's suggested load, else the last Set's, or null for the first
   nextSetDraft: Logbook["nextSetDraft"];
-  // Where the kg stepper goes on − or +
-  nextLoadKg: Logbook["nextLoadKg"];
   // Ends the Workout with these times, resolving as soon as it is a Pending Workout, then
   // tries to upload it (see FinishOutcome). Resolves to "nothing-to-save" with no Sets,
   // leaving the Workout in progress to be discarded. Rejects with a LogbookError for invalid times
@@ -74,16 +77,25 @@ type LogbookContextValue = {
   pendingCount: () => Promise<number>;
   // Removes a Pending Workout so it never uploads; works offline
   deletePending: (workoutId: string) => Promise<void>;
-  // For signing out: removes the in-progress and Pending Workouts and the Planned Workout from the phone
+  // For signing out: removes the in-progress and Pending Workouts, queued Check-ins and the Planned Workout from the phone
   clear: () => Promise<void>;
+  // Queues a Check-in to upload alongside Pending Workouts, retried the same way, and tries to upload it now
+  queueCheckIn: (checkIn: DatedCheckIn) => Promise<void>;
+  // PRs from uploads the user hasn't been shown (#130), leaving out a just-finished Workout's, which Finish celebrates
+  unseenPrs: UnseenPrs[];
+  // Once shown, a Workout's PRs are only in History
+  markPrsSeen: (workoutIds: string[]) => Promise<void>;
 };
 
 export type AssessmentOptions = Parameters<Logbook["startAssessment"]>[0];
 export type PlannedWorkoutToStart = Parameters<Logbook["startPlannedWorkout"]>[0];
 
 // uploaded settles once the upload attempt does: true when the server has this Workout,
-// false when it stays on the phone as a Pending Workout for the next try
-export type FinishOutcome = { status: "pending"; uploaded: Promise<boolean> } | { status: "nothing-to-save" };
+// false when it stays on the phone as a Pending Workout for the next try. prs settles with it: the PRs the upload found,
+// now seen, or none when it didn't upload, so a later upload's PRs go to Today instead
+export type FinishOutcome =
+  | { status: "pending"; workoutId: string; uploaded: Promise<boolean>; prs: Promise<Pr[]> }
+  | { status: "nothing-to-save" };
 
 // A rest that ended this long ago, while the app was in the background, ends without vibrating on return
 const LATE_REST_END_MS = 2000;
@@ -102,8 +114,10 @@ export function LogbookProvider({ children }: { children: ReactNode }) {
     createLogbook({
       storage: deviceStorage,
       uploader: {
-        upload: async (workout) => {
-          await api("/workouts", { method: "POST", body: JSON.stringify(workout) });
+        upload: async (workout) =>
+          Workout.parse(await api("/workouts", { method: "POST", body: JSON.stringify(workout) })).prs,
+        uploadCheckIn: async ({ date, ...checkIn }) => {
+          await api(`/check-ins/${date}`, { method: "PUT", body: JSON.stringify(checkIn) });
         },
       },
       previousSets: {
@@ -133,6 +147,9 @@ export function LogbookProvider({ children }: { children: ReactNode }) {
     stale: false,
   });
   const [isLoaded, setIsLoaded] = useState(false);
+  const [unseenPrs, setUnseenPrs] = useState<UnseenPrs[]>([]);
+  // Workouts whose upload Finish is waiting on, to celebrate their PRs itself
+  const celebrating = useRef(new Set<string>());
   // Held in memory only, as it belongs to the Workout, not an Exercise: a force-quit loses it
   const [rest, setRest] = useState<Rest | null>(null);
   // Counted, as a sync and a finish can overlap
@@ -142,6 +159,7 @@ export function LogbookProvider({ children }: { children: ReactNode }) {
   const refreshPending = useCallback(async () => {
     setPending(await logbook.pending());
     setPlannedWorkoutCopy(await logbook.plannedWorkout());
+    setUnseenPrs((await logbook.unseenPrs()).filter((unseen) => !celebrating.current.has(unseen.workoutId)));
   }, [logbook]);
 
   const refreshPlannedWorkout = useCallback(async () => {
@@ -191,6 +209,7 @@ export function LogbookProvider({ children }: { children: ReactNode }) {
   useSyncTriggers(sync);
 
   const start = useCallback(() => run(() => logbook.start(new Date())), [logbook, run]);
+  const startPast = useCallback((pastStart: Date) => run(() => logbook.start(new Date(), pastStart)), [logbook, run]);
 
   const startAssessment = useCallback(
     (options: AssessmentOptions) => run(() => logbook.startAssessment(options, new Date())),
@@ -268,8 +287,17 @@ export function LogbookProvider({ children }: { children: ReactNode }) {
         if (!result || result.status === "nothing-to-save") return { status: "nothing-to-save" };
         setRest(null);
         const { id } = result.workout;
+        celebrating.current.add(id);
         const uploaded = sync().then(async () => !(await logbook.pending()).some((p) => p.id === id));
-        return { status: "pending", uploaded };
+        const prs = uploaded
+          .then(async (ok) => {
+            if (!ok) return [];
+            const found = (await logbook.unseenPrs()).find((unseen) => unseen.workoutId === id)?.prs ?? [];
+            await logbook.markPrsSeen([id]);
+            return found;
+          })
+          .finally(() => celebrating.current.delete(id));
+        return { status: "pending", workoutId: id, uploaded, prs };
       } finally {
         setSyncsUnderWay((count) => count - 1);
       }
@@ -296,10 +324,20 @@ export function LogbookProvider({ children }: { children: ReactNode }) {
 
   const pendingCount = useCallback(() => logbook.pendingCount(), [logbook]);
 
+  const markPrsSeen = useCallback((workoutIds: string[]) => run(() => logbook.markPrsSeen(workoutIds)), [logbook, run]);
+
   const clear = useCallback(async () => {
     await run(() => logbook.clear());
     setRest(null);
   }, [logbook, run]);
+
+  const queueCheckIn = useCallback(
+    async (checkIn: DatedCheckIn) => {
+      await logbook.queueCheckIn(checkIn);
+      await sync();
+    },
+    [logbook, sync],
+  );
 
   return (
     <LogbookContext
@@ -310,6 +348,7 @@ export function LogbookProvider({ children }: { children: ReactNode }) {
         refreshPlannedWorkout,
         syncing: syncsUnderWay > 0,
         start,
+        startPast,
         startAssessment,
         startPlannedWorkout,
         startRecoveryWorkout,
@@ -324,7 +363,6 @@ export function LogbookProvider({ children }: { children: ReactNode }) {
         extendRest: extendCurrentRest,
         skipRest,
         nextSetDraft: logbook.nextSetDraft,
-        nextLoadKg: logbook.nextLoadKg,
         finish,
         finishAtLastSet,
         discard,
@@ -333,6 +371,9 @@ export function LogbookProvider({ children }: { children: ReactNode }) {
         pendingCount,
         deletePending,
         clear,
+        queueCheckIn,
+        unseenPrs,
+        markPrsSeen,
       }}
     >
       {workout ? <KeepAwake /> : null}

@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 import type { WithId } from "mongodb";
-import { isSamePlan, planInputsKey, planIsDue, planWorkout } from "@fit/engines";
+import { isSamePlan, planInputsKey, planIsDue, planWorkout, weekOfBlock } from "@fit/engines";
 import { PlannedWorkout } from "@fit/shared";
 import { findLatestAssessment } from "./assessments";
 import { client, db } from "./db";
@@ -65,6 +65,9 @@ async function rebuildPlannedWorkout(clerkUserId: string, user: OnboardedUser) {
     assessment: latest.assessment,
     goal: user.goal,
     daysPerWeek: user.daysPerWeek,
+    includeJumps: user.includeJumps,
+    unit: user.unit,
+    deloadWeek: weekOfBlock(latest.assessment, now, user.timeZone)?.deload ?? false,
   });
 
   // The Muscles held back are stored as the recovering reason

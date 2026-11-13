@@ -26,6 +26,10 @@ _Avoid_: Movement pattern, category
 An Exercise where the load or the body is accelerated through the end of the movement, such as a swing or a jump.
 _Avoid_: Explosive exercise, power exercise
 
+**Jump**:
+A bodyweight Ballistic Exercise, for the athletic Goal only and behind its Include jumps switch. Its dose is **contacts**, the landings in a Set: a fixed number set by its place on the jump ladder, halved in the deload week. It has no Working Level and doesn't progress by itself, and a Set credits 0.5 to quads and glutes only.
+_Avoid_: Plyo, plyometric (for the Exercise); reps (for its contacts)
+
 **Superset**:
 Two Exercises of a Workout done in turn, a Set of one then a Set of the other with no rest between, and a rest only after the pair. The phone pairs them only when a Workout wouldn't otherwise fit its Length, by each one's main Pattern: push with pull, squat with core, hinge with push. Each Set is still logged under its own Exercise.
 _Avoid_: Circuit, paired set
@@ -39,7 +43,7 @@ One library Exercise as done within a particular Workout, holding the Sets the u
 _Avoid_: Logged exercise, exercise entry
 
 **Set**:
-One continuous effort of a Workout Exercise: kg and reps for a weighted Exercise, reps for a bodyweight one, or seconds for a timed one, optionally with its RPE. For a one-sided Exercise the values are per side.
+One continuous effort of a Workout Exercise: kg and reps for a weighted Exercise, reps for a bodyweight one (contacts for a Jump), or seconds for a timed one, optionally with its RPE. For a one-sided Exercise the values are per side.
 _Avoid_: Round, attempt
 
 **RPE**:
@@ -89,11 +93,11 @@ The Workout on offer today: the Planned Workout on the Workout Length and equipm
 _Avoid_: Today's session, adjusted plan
 
 **Weekly Budget**:
-How many credited Sets each of the eight budgeted Muscles should get in a week, set by the user's Goal and days per week. Workout Length decides how much of it is delivered, not the budget itself. Other Muscles aren't budgeted.
+How many credited Sets each of the budgeted Muscles should get in a week, set by the user's Goal and days per week. Workout Length decides how much of it is delivered, not the budget itself. Eight Muscles are budgeted for every Goal, and calves too for athletic and build_muscle; other Muscles aren't budgeted. The Coach plans a Muscle up to a cap of about 130% of its budget, counted from the Week Ledger and the Sets already planned: it adds no Exercise, a Jump included, that would take one of its primary Muscles over it, while secondary credit counts towards a Muscle's total but never keeps an Exercise out.
 _Avoid_: Weekly target, quota, weekly volume
 
 **Week Ledger**:
-The credited Sets each Muscle has had so far this week, counted from the Sets the user logged and read against the Weekly Budget. A Set credits 1 to each primary Muscle and 0.5 to each secondary, and a one-sided Set counts once. Weeks run Monday to Sunday in the user's timezone.
+The credited Sets each Muscle has had so far this week, counted from the Sets the user logged and read against the Weekly Budget. A Set credits 1 to each primary Muscle and 0.5 to each secondary, a Jump's 0.5 to quads and glutes only, and a one-sided Set counts once. Weeks run Monday to Sunday in the user's timezone.
 _Avoid_: Tally, weekly progress
 
 **Fatigue**:
@@ -117,11 +121,11 @@ An Exercise the Coach suggests in place of a planned one that can't be done on F
 _Avoid_: Substitute, swap, replacement
 
 **Workout Length**:
-How long the user wants a Workout to take, 5 minutes of warm-up included: Short (30 minutes), Standard (45) or Long (60), or Quick (20), which is only for one Workout. They choose their usual one during onboarding, can change it in Profile, and can change it for a single Workout. A user with none stored counts as Standard.
+The most the user wants a Workout to take, 5 minutes of warm-up included: Short (30 minutes), Standard (45) or Long (60), or Quick (20), which is only for one Workout. It's a most, not a target: once nothing is left to add under the 130% cap, the Workout ends short of it, and Today shows the real estimate. They choose their usual one during onboarding, can change it in Profile, and can change it for a single Workout. A user with none stored counts as Standard.
 _Avoid_: Mode, session type
 
 **Recovery Workout**:
-A walk or mobility Workout the user chooses in place of the Day's Workout, for one day. Unlike a Rest Day, it's something they do. It credits no Sets.
+A walk or mobility Workout the user chooses in place of the Day's Workout, for one day, and what the Coach plans when the 130% cap leaves nothing else to add. Unlike a Rest Day, it's something they do. It credits no Sets.
 _Avoid_: Recovery day, recovery session
 
 **Block**:
@@ -143,7 +147,7 @@ The results of one completed pair of Assessment Workouts: for each tested Patter
 _Avoid_: Baseline, test results, fitness test
 
 **Working Level**:
-What the Coach will prescribe next for one Exercise for this user: kg for 8 reps for a weighted Exercise, a band level and reps for a band Exercise, reps for a bodyweight one, seconds for a timed one. An Assessment sets the first one.
+What the Coach will prescribe next for one Exercise for this user: a load and a target reps within a rep range for a weighted Exercise (8–12 by default, 6–10 for a barbell lift, a fixed 8 for a Ballistic Exercise, and no range for a carry), a band level and reps within 10–15 for a band Exercise, reps up to 15 for a bodyweight one, seconds for a timed one. Each records the Workout that last moved it and the run of Misses it is on. An Assessment sets the first one, at the bottom of the range; a bodyweight one above 15 reps, or a timed one above 60 seconds, starts on the harder variant.
 _Avoid_: Exercise state, starting load, current weight
 
 **Reference Strength**:

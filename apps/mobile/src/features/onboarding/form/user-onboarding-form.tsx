@@ -9,7 +9,7 @@ import { EquipmentTagsField } from "@/features/equipment/components/form/fields/
 import { TrainingSetupField } from "@/features/equipment/components/form/fields/training-setup-field";
 import { EquipmentLoadsField } from "@/features/equipment/components/form/fields/equipment-loads-field";
 import { loadScreens } from "@/features/equipment/loads";
-import { asksForLoads, selectableGroups, selectedTags } from "@/features/equipment/training-setup";
+import { loadTagsAsked, selectableGroups, selectedTags } from "@/features/equipment/training-setup";
 import { UserBirthYearField } from "@/features/user/components/form/fields/user-birth-year-field";
 import { UserDaysPerWeekField } from "@/features/user/components/form/fields/user-days-per-week-field";
 import { UserGoalField } from "@/features/user/components/form/fields/user-goal-field";
@@ -30,7 +30,7 @@ export function UserOnboardingForm({ exit }: { exit: { label: string; onPress: (
   const tags = selectedTags(trainingSetup, equipment);
   // Gym has everything and no equipment has nothing, so neither is asked to pick
   const picksEquipment = trainingSetup === "home" || trainingSetup === "bodyweight";
-  const weightScreens = asksForLoads(trainingSetup) ? loadScreens(tags) : [];
+  const weightScreens = loadScreens(loadTagsAsked(trainingSetup, tags));
 
   return (
     <>

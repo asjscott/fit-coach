@@ -129,7 +129,7 @@ export const BATCH_2: Exercise[] = [
     oneSet: false,
     secondsPerSet: 90,
     regression: "glute-bridge",
-    progression: null,
+    progression: "nordic-hamstring-curl",
     avoidWith: ["knee"],
     cues: [
       "Heels in the straps, lying on your back",

@@ -1,6 +1,6 @@
 import type { Muscle, PlanReason } from "@fit/shared";
 import { describe, expect, it } from "vitest";
-import { planReasonLines } from "./plan-reasons";
+import { planReasonLines, progressionChangeLine } from "./plan-reasons";
 
 // Wednesday 4 November 2026, in the phone's own time
 const wednesday = new Date(2026, 10, 4, 12);
@@ -12,6 +12,40 @@ const recovering = (muscles: Muscle[], lastSetOn = "2026-11-02"): PlanReason => 
   lastSetOn,
 });
 const behind = (muscles: Muscle[]): PlanReason => ({ code: "behind", muscles });
+
+// Story 42, #132: why an Exercise's Working Level changed, under the Exercise
+describe("progressionChangeLine", () => {
+  it.each([
+    [{ code: "target-up" }, "One more rep: every Set reached the target."],
+    // Story 54, #135
+    [{ code: "seconds-up" }, "Five more seconds: every Set reached the target."],
+    [{ code: "load-up" }, "Heavier: every Set reached the top of the range."],
+    [{ code: "new-base" }, "From the weight you lifted last time."],
+    // Stories 47–49, #134
+    [{ code: "load-down" }, "Lighter: the last two times fell short of the target."],
+    [{ code: "target-down" }, "Fewer: the last two times fell short of the target."],
+    // Stories 35, 55: at 20 reps, 15 reps or 60 seconds
+    [{ code: "held-at-top" }, "Held at the top: no heavier weight or harder variant here."],
+    // Story 44
+    [{ code: "rpe-10" }, "Held: your last Set was RPE 10, all you had."],
+  ] as const)("words %o", (change, line) => {
+    expect(progressionChangeLine(change, "goblet-squat")).toBe(line);
+  });
+
+  // Story 55: named by the harder variant now planned, as the user reads it in a sentence
+  it.each([
+    ["decline-push-up", "Ready for decline push-ups."],
+    ["barbell-bench-press", "Ready for barbell bench presses."],
+    ["bulgarian-split-squat", "Ready for Bulgarian split squats."],
+    ["front-rack-carry", "Ready for front-rack carries."],
+  ])("words the harder variant %s by its name", (slug, line) => {
+    expect(progressionChangeLine({ code: "harder-variant", from: "push-up" }, slug)).toBe(line);
+  });
+
+  it("says nothing when nothing changed", () => {
+    expect(progressionChangeLine(undefined, "goblet-squat")).toBeNull();
+  });
+});
 
 describe("planReasonLines", () => {
   it("says which group is recovering, and from which day", () => {

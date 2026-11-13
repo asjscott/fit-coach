@@ -1,18 +1,20 @@
 import { useAuth } from "@clerk/expo";
 import { canAssess, usualWorkoutLength } from "@fit/engines";
-import { HealthResponse } from "@fit/shared";
+import { HealthResponse, WeightUnit } from "@fit/shared";
 import { useEffect, useState, type ReactNode } from "react";
+import { Chip } from "@/components/chip";
 import { Divider } from "@/components/divider";
 import { LoadingButton } from "@/components/loading-button";
 import { Screen } from "@/components/screen";
 import { SectionLabel } from "@/components/section-label";
 import { HStack, Stack } from "@/components/stack";
+import { Switch } from "@/components/switch";
 import { Text } from "@/components/text";
 import { useToast } from "@/contexts/toast-context";
 import { equipmentSummary } from "@/features/equipment/equipment-summary";
 import { useChosenTests } from "@/features/assessment/hooks/use-chosen-tests";
 import { useStartAssessment } from "@/features/assessment/hooks/use-start-assessment";
-import { useCurrentUser, usePrimaryEquipmentProfile } from "@/features/user/current-user-provider";
+import { useCurrentUser, usePrimaryEquipmentProfile, useWeightUnit } from "@/features/user/current-user-provider";
 import { genderLabel } from "@/features/user/components/form/fields/user-gender-field";
 import { goalLabel } from "@/features/user/components/form/fields/user-goal-field";
 import { injuryLabel } from "@/features/user/components/form/fields/user-injuries-field";
@@ -74,6 +76,8 @@ export default function ProfileView() {
             label="Injuries"
             value={profile.injuries?.length ? profile.injuries.map(injuryLabel).join(", ") : "None"}
           />
+          <UnitRow />
+          {profile.goal === "athletic" ? <IncludeJumps on={profile.includeJumps ?? false} /> : null}
         </Section>
         <Divider />
         {/* Retaking lives here for now: Today only offers the first Assessment, then its Results */}
@@ -125,6 +129,37 @@ export default function ProfileView() {
   );
 }
 
+// The one-time "Include jumps" switch, off by default and for the athletic Goal only (#105). It shows the new value
+// straight away and goes back if the server refuses it
+function IncludeJumps({ on }: { on: boolean }) {
+  const { updateUser } = useCurrentUser();
+  const { showToast } = useToast();
+  const [shown, setShown] = useState(on);
+  useEffect(() => setShown(on), [on]);
+
+  const change = async (includeJumps: boolean) => {
+    setShown(includeJumps);
+    try {
+      await updateUser({ profile: { includeJumps } });
+    } catch (err) {
+      setShown(!includeJumps);
+      showToast("Couldn't change jumps", { error: err });
+    }
+  };
+
+  return (
+    <Stack spacing={1}>
+      <HStack justify="between" align="center" style={{ minHeight: 44 }}>
+        <Text color="muted">Include jumps</Text>
+        <Switch value={shown} onValueChange={change} accessibilityLabel="Include jumps" />
+      </HStack>
+      <Text size="sm" color="muted">
+        Two jumps first in 2 Workouts a week, once you've done the squat test. Not with a knee or ankle injury.
+      </Text>
+    </Stack>
+  );
+}
+
 // Only in development builds: whether the API and database are reachable, and the components styleguide
 function DevelopmentSection() {
   const api = useApi();
@@ -156,6 +191,44 @@ function Section({ label, children }: { label: string; children: ReactNode }) {
       <SectionLabel>{label}</SectionLabel>
       {children}
     </Stack>
+  );
+}
+
+const UNIT_LABELS: Record<WeightUnit, string> = { lb: "lb", kg: "kg" };
+
+// Pounds or kilograms for every load in the app (#126), saved as soon as it's picked
+function UnitRow() {
+  const { updateUser } = useCurrentUser();
+  const unit = useWeightUnit();
+  const { showToast } = useToast();
+  const [saving, setSaving] = useState<WeightUnit | null>(null);
+
+  const choose = async (choice: WeightUnit) => {
+    if (choice === unit || saving) return;
+    setSaving(choice);
+    try {
+      await updateUser({ unit: choice });
+    } catch (err) {
+      showToast("Couldn't change the unit", { error: err });
+    } finally {
+      setSaving(null);
+    }
+  };
+
+  return (
+    <HStack justify="between" align="center" spacing={4}>
+      <Text color="muted">Weights in</Text>
+      <HStack spacing={2}>
+        {WeightUnit.options.map((choice) => (
+          <Chip
+            key={choice}
+            label={UNIT_LABELS[choice]}
+            selected={(saving ?? unit) === choice}
+            onPress={() => choose(choice)}
+          />
+        ))}
+      </HStack>
+    </HStack>
   );
 }
 

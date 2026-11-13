@@ -1,4 +1,5 @@
-import { muscleGroupsOf, type Muscle, type MuscleGroup, type PlanReason } from "@fit/shared";
+import { muscleGroupsOf, type Muscle, type MuscleGroup, type PlanReason, type ProgressionChange } from "@fit/shared";
+import { exerciseName } from "../workouts/library";
 import { weekdayLabel } from "../workouts/format";
 import { localDateText } from "../workouts/local-date-time";
 
@@ -39,6 +40,48 @@ function line(reason: PlanReason, now: Date) {
       const groups = groupsAre(reason.muscles);
       return groups && `${groups} furthest behind this week.`;
     }
+  }
+}
+
+// Names whose first word keeps its capital mid-sentence
+const PROPER_WORDS = new Set(["Bulgarian", "Romanian", "Nordic"]);
+
+// An Exercise's name as more than one of it, mid-sentence: "decline push-ups", "Bulgarian split squats"
+function pluralName(slug: string) {
+  const name = exerciseName(slug);
+  const [first = ""] = name.split(" ");
+  const sentenceCase = PROPER_WORDS.has(first) ? name : name.charAt(0).toLowerCase() + name.slice(1);
+  if (/[^aeiou]y$/.test(sentenceCase)) return `${sentenceCase.slice(0, -1)}ies`;
+  if (/(s|x|ch|sh)$/.test(sentenceCase)) return `${sentenceCase}es`;
+  return `${sentenceCase}s`;
+}
+
+// Why progression changed the Working Level of the Exercise planned as slug since it was last done (#132), shown under
+// the Exercise; null when nothing changed. An outgrown level is planned as its harder variant or a hold, so it's never
+// shown as it is
+export function progressionChangeLine(change: ProgressionChange | undefined, slug: string): string | null {
+  switch (change?.code) {
+    case "target-up":
+      return "One more rep: every Set reached the target.";
+    case "seconds-up":
+      return "Five more seconds: every Set reached the target.";
+    case "load-up":
+      return "Heavier: every Set reached the top of the range.";
+    case "new-base":
+      return "From the weight you lifted last time.";
+    case "load-down":
+      return "Lighter: the last two times fell short of the target.";
+    case "target-down":
+      return "Fewer: the last two times fell short of the target.";
+    case "harder-variant":
+      return `Ready for ${pluralName(slug)}.`;
+    case "held-at-top":
+      return "Held at the top: no heavier weight or harder variant here.";
+    case "rpe-10":
+      return "Held: your last Set was RPE 10, all you had.";
+    case "outgrown":
+    case undefined:
+      return null;
   }
 }
 

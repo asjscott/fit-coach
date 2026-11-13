@@ -25,12 +25,15 @@ const patterns: Assessment["patterns"] = {
   core: test("plank"),
 };
 
+// Working Levels no Workout has moved yet
+const fresh = { movedBy: null, misses: 0, outgrown: false };
+
 const levels: WorkingLevel[] = [
-  { slug: "plank", unit: "seconds", seconds: 44.6 },
-  { slug: "farmers-carry", unit: "kg", kg: 18.3 },
-  { slug: "goblet-squat", unit: "kg", kg: 13 },
-  { slug: "push-up", unit: "reps", reps: 12 },
-  { slug: "back-squat", unit: "kg", kg: 40 },
+  { slug: "plank", unit: "seconds", seconds: 44.6, ...fresh },
+  { slug: "farmers-carry", unit: "kg", kg: 18.3, reps: 8, ...fresh },
+  { slug: "goblet-squat", unit: "kg", kg: 13, reps: 8, ...fresh },
+  { slug: "push-up", unit: "reps", reps: 12, ...fresh },
+  { slug: "back-squat", unit: "kg", kg: 40, reps: 6, ...fresh },
 ];
 
 describe("workingLevelSections", () => {
@@ -60,24 +63,26 @@ describe("workingLevelSections", () => {
         .map((l) => [l.slug, l]),
     );
 
-    expect(bySlug["goblet-squat"]).toEqual({ slug: "goblet-squat", unit: "kg", kg: 12 });
-    expect(bySlug["farmers-carry"]).toEqual({ slug: "farmers-carry", unit: "kg", kg: 20 });
-    expect(bySlug.plank).toEqual({ slug: "plank", unit: "seconds", seconds: 45 });
-    expect(bySlug["push-up"]).toEqual({ slug: "push-up", unit: "reps", reps: 12 });
+    expect(bySlug["goblet-squat"]).toMatchObject({ slug: "goblet-squat", unit: "kg", kg: 12, reps: 8 });
+    expect(bySlug["farmers-carry"]).toMatchObject({ slug: "farmers-carry", unit: "kg", kg: 20 });
+    expect(bySlug.plank).toMatchObject({ slug: "plank", unit: "seconds", seconds: 45 });
+    expect(bySlug["push-up"]).toMatchObject({ slug: "push-up", unit: "reps", reps: 12 });
   });
 
   describe("a barbell Exercise lighter than the bar", () => {
     const gym: ProfileWithLoads = { tags: ["barbell", "plates", "squat_rack", "dumbbells"], loads: {} };
     const levelFor = (slug: string, kg: number, profile: ProfileWithLoads) =>
-      workingLevelSections([{ slug, unit: "kg", kg }], profile, patterns, []).flatMap((s) => s.workingLevels)[0];
+      workingLevelSections([{ slug, unit: "kg", kg, reps: 8, ...fresh }], profile, patterns, []).flatMap(
+        (s) => s.workingLevels,
+      )[0];
 
     it("is left out under an assumed 20 kg bar when the loads aren't known", () => {
       expect(levelFor("back-squat", 19.5, gym)).toBeUndefined();
     });
 
     it("stays at the bar itself, and rounds to the nearest 0.5 kg above it", () => {
-      expect(levelFor("back-squat", 20, gym)).toEqual({ slug: "back-squat", unit: "kg", kg: 20 });
-      expect(levelFor("back-squat", 62.3, gym)).toEqual({ slug: "back-squat", unit: "kg", kg: 62.5 });
+      expect(levelFor("back-squat", 20, gym)).toMatchObject({ slug: "back-squat", unit: "kg", kg: 20 });
+      expect(levelFor("back-squat", 62.3, gym)).toMatchObject({ slug: "back-squat", unit: "kg", kg: 62.5 });
     });
 
     it("goes by the profile's own bar once the loads are known", () => {
@@ -87,15 +92,20 @@ describe("workingLevelSections", () => {
       };
 
       expect(levelFor("back-squat", 14, lightBar)).toBeUndefined();
-      expect(levelFor("back-squat", 16, lightBar)).toEqual({ slug: "back-squat", unit: "kg", kg: 15 });
+      expect(levelFor("back-squat", 16, lightBar)).toMatchObject({ slug: "back-squat", unit: "kg", kg: 15 });
     });
 
     it("leaves an Exercise that needs no bar alone", () => {
-      expect(levelFor("goblet-squat", 7, gym)).toEqual({ slug: "goblet-squat", unit: "kg", kg: 7 });
+      expect(levelFor("goblet-squat", 7, gym)).toMatchObject({ slug: "goblet-squat", unit: "kg", kg: 7 });
     });
 
     it("drops the Pattern's section when it was the only Exercise there", () => {
-      const sections = workingLevelSections([{ slug: "back-squat", unit: "kg", kg: 7 }], gym, patterns, []);
+      const sections = workingLevelSections(
+        [{ slug: "back-squat", unit: "kg", kg: 7, reps: 6, ...fresh }],
+        gym,
+        patterns,
+        [],
+      );
 
       expect(sections).toEqual([]);
     });

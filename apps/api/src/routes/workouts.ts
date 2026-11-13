@@ -1,12 +1,13 @@
 import type { FastifyPluginAsyncZod } from "fastify-type-provider-zod";
 import { isRecoveryWorkout } from "@fit/engines";
-import { ErrorResponse, PreviousSets, PreviousSetsQuery, Workout, WorkoutsQuery } from "@fit/shared";
+import { ErrorResponse, PreviousSets, PreviousSetsQuery, Workout, WorkoutsQuery, WorkoutUpload } from "@fit/shared";
 import { z } from "zod";
 import { assessIfPaired } from "../assessments";
 import { requireAuth, userIdOf } from "../auth";
 import { finishPlannedWorkout, rebuildAfterUpload } from "../planned-workouts";
+import { progressWorkingLevels } from "../progression";
 import { findOnboardedUser } from "../users";
-import { createWorkout, deleteWorkout, findPreviousSets, findWorkouts, toWorkout } from "../workouts";
+import { createWorkout, deleteWorkout, findPreviousSets, findWorkouts, recordPrs, toWorkout } from "../workouts";
 
 // The signed-in user's finished Workouts. Checks shape only: an Exercise slug the
 // server's library doesn't know is accepted, so an upload can never get stuck
@@ -29,11 +30,12 @@ export const workoutRoutes: FastifyPluginAsyncZod = async (app) => {
 
   // Idempotent on the phone-generated id: 201 when stored, 200 with the stored Workout when it was already uploaded.
   // Also works out any Assessment it completes, marks the Planned Workout it came from finished and rebuilds the
-  // Planned Workout, unless it's a Recovery Workout, which changes no plan. 403 before onboarding, which the app never
-  // offers logging before
+  // Planned Workout, unless it's a Recovery Workout, which changes no plan. Answers with the Workout's PRs. 403 before
+  // onboarding, which the app never offers logging before. 400 for a start more than 7 days before its last Set
+  // (WorkoutUpload, #129)
   app.post(
     "/workouts",
-    { schema: { body: Workout, response: { 200: Workout, 201: Workout, 403: ErrorResponse } } },
+    { schema: { body: WorkoutUpload, response: { 200: Workout, 201: Workout, 403: ErrorResponse } } },
     async (req, reply) => {
       const clerkUserId = userIdOf(req)!;
       const user = await findOnboardedUser(clerkUserId);
@@ -43,6 +45,11 @@ export const workoutRoutes: FastifyPluginAsyncZod = async (app) => {
       // A failure fails the upload, though the Workout is stored: the phone keeps it Pending, and its retry (the 200
       // case) pairs it again, so the Assessment isn't lost
       await assessIfPaired(clerkUserId, stored, user);
+      // Progression (#132): after pairing, so a retake's levels are the ones moved, and before the rebuild, so the
+      // next plan uses them. A failure fails the upload in the same way, and the retry moves what it didn't
+      await progressWorkingLevels(clerkUserId, stored, user);
+      // PRs (#130): found once and stored against the Workout, so the 200 retry answers with the same ones
+      stored.prs = await recordPrs(clerkUserId, workout);
       // Before the rebuild, which would otherwise mark its plan replaced
       if (stored.plannedWorkoutId) await finishPlannedWorkout(clerkUserId, stored.plannedWorkoutId);
       // After pairing, so a retake's plan uses the new Working Levels. A failure fails the upload in the same way.

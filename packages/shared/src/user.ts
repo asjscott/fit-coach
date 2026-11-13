@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { EquipmentProfile } from "./equipment";
+import { DEFAULT_WEIGHT_UNIT, WeightUnit } from "./units";
 
 export const Goal = z.enum(["lose_fat", "build_muscle", "recomp", "athletic"]);
 export type Goal = z.infer<typeof Goal>;
@@ -29,6 +30,8 @@ export const UserProfile = z.object({
   daysPerWeek: z.number().int().min(2).max(6),
   workoutLength: WorkoutLength,
   injuries: z.array(InjuryTag, { error: "Choose any that apply, or None" }),
+  // The one-time "Include jumps" switch, off by default: jumps are for the athletic Goal only (#105)
+  includeJumps: z.boolean().optional(),
 });
 
 export type UserProfile = z.infer<typeof UserProfile>;
@@ -37,8 +40,8 @@ export type UserProfile = z.infer<typeof UserProfile>;
 export const BodyProfile = UserProfile.pick({ weightKg: true, gender: true });
 export type BodyProfile = z.infer<typeof BodyProfile>;
 
-// Fields that must be filled before a user counts as onboarded; injuries are optional
-export const OnboardingProfile = UserProfile.omit({ injuries: true });
+// Fields that must be filled before a user counts as onboarded; injuries and the jumps switch are optional
+export const OnboardingProfile = UserProfile.omit({ injuries: true, includeJumps: true });
 export type OnboardingProfile = z.infer<typeof OnboardingProfile>;
 
 export const User = z.object({
@@ -49,6 +52,8 @@ export const User = z.object({
   equipmentProfiles: z.array(EquipmentProfile),
   // The phone's IANA timezone, so the server's weeks match Today's (ADR 0003); absent until the phone first sends it
   timeZone: z.string().optional(),
+  // The unit every load shows in; a user who has never chosen gets the default
+  unit: WeightUnit.default(DEFAULT_WEIGHT_UNIT),
 });
 export type User = z.infer<typeof User>;
 
@@ -65,5 +70,6 @@ function isTimeZone(timeZone: string) {
 export const UserUpdate = z.strictObject({
   profile: UserProfile.partial().optional(),
   timeZone: z.string().refine(isTimeZone, { error: "Unknown timezone" }).optional(),
+  unit: WeightUnit.optional(),
 });
 export type UserUpdate = z.infer<typeof UserUpdate>;

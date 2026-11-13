@@ -1,5 +1,5 @@
 import { exerciseLoadsKg, isRatedTest, takesAnotherSet, takesNoMoreSets } from "@fit/engines";
-import { RPE_SCALE, type InProgressWorkoutExercise, type LoadType, type SetValues } from "@fit/shared";
+import { RPE_SCALE, type InProgressWorkoutExercise, type LoadType, type Set, type SetValues } from "@fit/shared";
 import { useState, type ReactNode } from "react";
 import { StyleSheet, View } from "react-native";
 import { Alert, AlertIcon, AlertText } from "@/components/alert";
@@ -10,17 +10,18 @@ import { SectionLabel } from "@/components/section-label";
 import { HStack, Stack } from "@/components/stack";
 import { Text } from "@/components/text";
 import { useToast } from "@/contexts/toast-context";
-import { usePrimaryEquipmentProfile } from "@/features/user/current-user-provider";
+import { usePrimaryEquipmentProfile, useWeightUnit } from "@/features/user/current-user-provider";
 import { fonts, radii, spacing, useTheme } from "@/theme";
 import { errorMessage } from "@/utils/error-message";
 import { plannedSetsLabel, previousSetsLabel } from "../format";
-import { exerciseName, libraryExercise } from "../library";
+import { offersLastSetRpe, withRpe } from "../last-set-rpe";
+import { exerciseName, isJumpSlug, libraryExercise } from "../library";
 import { useLogbook } from "../logbook-provider";
 import { protocolNote } from "../protocol-note";
-import { draftValues, rpeMissing, setDraft, SET_FIELDS, type SetDraft } from "../set-entry";
+import { draftValues, loadStep, rpeMissing, setDraft, SET_FIELDS, type SetDraft } from "../set-entry";
 import { RestTimer } from "./rest-timer";
 import { SetRow } from "./set-row";
-import { SetStepper, type KgSteps } from "./set-stepper";
+import { SetStepper, type LoadSteps } from "./set-stepper";
 import { WorkoutExerciseMenu } from "./workout-exercise-menu";
 
 export type CurrentExerciseBoxProps = {
@@ -70,8 +71,9 @@ export function ExerciseLogging({
   next,
   hideTarget = false,
 }: Pick<CurrentExerciseBoxProps, "workoutExercise" | "next"> & { hideTarget?: boolean }) {
-  const { workout, logSet, editSet, deleteSet, nextSetDraft, protocolState, nextLoadKg } = useLogbook();
+  const { workout, logSet, editSet, deleteSet, nextSetDraft, protocolState } = useLogbook();
   const primaryEquipment = usePrimaryEquipmentProfile();
+  const unit = useWeightUnit();
   const { showToast } = useToast();
   // The Set being corrected, or null while logging a new one
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
@@ -81,29 +83,28 @@ export function ExerciseLogging({
   const { id, slug, loadType, sets, previousSets, planned } = workoutExercise;
   const unilateral = libraryExercise(slug)?.unilateral ?? false;
   const editingSet = editingIndex === null ? undefined : sets[editingIndex];
+  const lastSet = sets.at(-1);
   const nextNumber = sets.length + 1;
   // In an Assessment Workout every Exercise is a test, and the Logbook says what it asks for next
   const protocol =
     workout?.assessment && primaryEquipment ? protocolState(workout, workoutExercise, primaryEquipment) : undefined;
-  const note = protocol && protocolNote(protocol, sets.length, loadType, { nextTest: !!next });
+  const note = protocol && protocolNote(protocol, sets.length, loadType, { nextTest: !!next, unit });
   // A test that's done, or the walk once its one Set is logged (#109)
   const done = (!!protocol && takesNoMoreSets(protocol)) || !takesAnotherSet(workoutExercise);
   const asksRpe = !!workout && isRatedTest(workout, loadType);
-  const kgSteps: KgSteps = {
-    stepKg: (kg, direction) => nextLoadKg(slug, kg, direction, primaryEquipment),
-    loadsKnown: exerciseLoadsKg(slug, primaryEquipment).length > 0,
-  };
+  const loadsKg = exerciseLoadsKg(slug, primaryEquipment);
+  const loadSteps: LoadSteps = { step: loadStep(loadsKg, unit), loadsKnown: loadsKg.length > 0, unit };
 
   return (
     <>
       {planned && !hideTarget ? (
         <Text size="sm" color="muted" style={styles.note}>
-          {`Target: ${plannedSetsLabel(planned, unilateral)}`}
+          {`Target: ${plannedSetsLabel(planned, unit, unilateral, isJumpSlug(slug))}`}
         </Text>
       ) : null}
       {previousSets ? (
         <Text size="sm" color="subtle" style={styles.note}>
-          {previousSetsLabel(previousSets.sets)}
+          {previousSetsLabel(previousSets.sets, unit)}
         </Text>
       ) : null}
       {unilateral ? (
@@ -148,6 +149,20 @@ export function ExerciseLogging({
         </View>
       ) : null}
 
+      {lastSet && editingIndex === null && workout && offersLastSetRpe(workout, workoutExercise) ? (
+        <LastSetRpe
+          set={lastSet}
+          number={sets.length}
+          onRate={async (rpe) => {
+            try {
+              await editSet(id, sets.length - 1, withRpe(lastSet, rpe));
+            } catch (err) {
+              showToast(errorMessage(err), { error: err });
+            }
+          }}
+        />
+      ) : null}
+
       {editingSet && editingIndex !== null ? (
         <SetEntry
           key={`edit-${editingIndex}`}
@@ -155,7 +170,8 @@ export function ExerciseLogging({
           loadType={loadType}
           initial={editingSet}
           asksRpe={asksRpe}
-          kgSteps={kgSteps}
+          loadSteps={loadSteps}
+          jump={isJumpSlug(slug)}
           submitLabel={`Save set ${editingIndex + 1}`}
           onSubmit={async (values) => {
             await editSet(id, editingIndex, values);
@@ -178,7 +194,8 @@ export function ExerciseLogging({
           loadType={loadType}
           initial={nextSetDraft(workoutExercise, protocol)}
           asksRpe={asksRpe}
-          kgSteps={kgSteps}
+          loadSteps={loadSteps}
+          jump={isJumpSlug(slug)}
           submitLabel={`Log set ${nextNumber}`}
           onSubmit={(values) => logSet(id, values)}
         />
@@ -207,6 +224,36 @@ export function ExerciseLogging({
   );
 }
 
+// The optional RPE for the Exercise's last Set so far (#133): one tap on a chip rates it, a tap on the chosen one takes
+// it off, and logging on without one skips it
+function LastSetRpe({
+  set,
+  number,
+  onRate,
+}: {
+  set: Set;
+  number: number;
+  onRate: (rpe: number | undefined) => Promise<void>;
+}) {
+  return (
+    <Stack spacing={2} style={styles.entry}>
+      <Text size="sm" color="muted">
+        {`How hard was set ${number}? Optional: 10 is no more reps`}
+      </Text>
+      <HStack spacing={2}>
+        {RPE_SCALE.map((choice) => (
+          <Chip
+            key={choice}
+            label={String(choice)}
+            selected={set.rpe === choice}
+            onPress={() => void onRate(set.rpe === choice ? undefined : choice)}
+          />
+        ))}
+      </HStack>
+    </Stack>
+  );
+}
+
 type SetEntryProps = {
   heading: string;
   loadType: LoadType;
@@ -214,7 +261,9 @@ type SetEntryProps = {
   initial: SetValues | null;
   // Asks how hard the Set felt, for an Assessment Workout's test Sets
   asksRpe?: boolean;
-  kgSteps: KgSteps;
+  loadSteps: LoadSteps;
+  // A jump's reps are entered as contacts (#105)
+  jump?: boolean;
   submitLabel: string;
   onSubmit: (values: SetValues) => Promise<void>;
   // Shown under the submit button, e.g. Cancel while editing
@@ -228,25 +277,27 @@ function SetEntry({
   loadType,
   initial,
   asksRpe = false,
-  kgSteps,
+  loadSteps,
+  jump = false,
   submitLabel,
   onSubmit,
   children,
 }: SetEntryProps) {
   const { showToast } = useToast();
-  const [draft, setDraftState] = useState<SetDraft>(() => setDraft(loadType, initial));
+  const [draft, setDraftState] = useState<SetDraft>(() => setDraft(loadType, initial, loadSteps.unit));
   const [rpe, setRpe] = useState<number | undefined>(initial?.rpe);
   const [saving, setSaving] = useState(false);
 
   const handleSubmit = async () => {
-    const result = draftValues(loadType, draft);
+    const result = draftValues(loadType, draft, loadSteps.unit);
     if ("error" in result) {
       showToast(result.error, { type: "warning" });
       return;
     }
     setSaving(true);
     try {
-      await onSubmit(asksRpe ? { ...result.values, rpe } : result.values);
+      // A Set being corrected keeps the RPE it was rated at, though only a test asks for it here
+      await onSubmit(rpe === undefined ? result.values : { ...result.values, rpe });
     } catch (err) {
       showToast(errorMessage(err), { error: err });
     } finally {
@@ -262,10 +313,10 @@ function SetEntry({
       {SET_FIELDS[loadType].map((field) => {
         const value = draft[field] ?? "";
         const onChange = (text: string) => setDraftState((prev) => ({ ...prev, [field]: text }));
-        return field === "kg" ? (
-          <SetStepper key={field} field={field} value={value} onChange={onChange} {...kgSteps} />
+        return field === "load" ? (
+          <SetStepper key={field} field={field} value={value} onChange={onChange} {...loadSteps} />
         ) : (
-          <SetStepper key={field} field={field} value={value} onChange={onChange} />
+          <SetStepper key={field} field={field} value={value} onChange={onChange} contacts={jump} />
         );
       })}
       {asksRpe ? (

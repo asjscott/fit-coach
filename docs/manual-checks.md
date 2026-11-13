@@ -142,6 +142,8 @@ npx expo run:android --variant release --device
 
 - [ ] **C5** The next day the check-in is gone: the card is back (if there's a plan) and the Workout is full.
   - iOS: Result: · Android: Result: · Notes:
+- [ ] **C6** (#125) In airplane mode, check in on Today: the Day's Workout follows the Readiness straight away, as online. Change the check-in once, still offline. Turn airplane mode off and bring the app to the foreground. The `checkIns` collection in the staging database has one document for today, with the changed ratings, not the first.
+  - iOS: Result: · Android: Result: · Notes:
 
 ## Supersets (#96)
 
@@ -149,6 +151,22 @@ A Workout pairs Exercises only when it wouldn't otherwise fit its Length, so cho
 
 - [ ] **S1** P9's timing check on a paired Workout: start one whose sheet shows at least one superset, note its "About N min", and run it in full with a timer, resting as the timer says and skipping nothing. A pair is timed at Sets × (the longer Exercise's Set + 30 s): does the real time come out within a few minutes of the estimate?
   - iOS: Result: · Android: Result: · Notes:
+
+## Past Workouts (#129)
+
+- [ ] **W1** On Today, tap "Log a past workout" under Start manual workout: a sheet asks "Which day was it?" with Yesterday and the five weekdays before it. Pick one: the Workout opens with "Done <that day>" under its title. Log a Set or two and tap Finish: the times read that day, an hour long, with Edit times already open. Set a start 8 days back and Save: "The start can't be more than 7 days ago" shows under Start. Set it back within the week and Save: in History the Workout sits on its own day, and This Week counts it only if that day is in this week. On the installed web app, check that the date and time inputs are easy to use on the iPhone.
+  - iOS: Result: · Android: Result: · Notes:
+
+## Sentry (#122)
+
+Needs Sentry set up and staging deployed with its variables: see "Error reporting" in `docs/agents/workouts.md`. Run these on the installed web app on the iPhone, against staging, signed in with a test account.
+
+- [ ] **E1** The web app: open `/debug-error` on the staging web app (type it after the address in Safari). Within a minute, Sentry has "Test error from the web app (/debug-error)" under the staging environment, with a stack trace and your Clerk user id (`user_…`) as the user, and no email, IP address or headers.
+  - iPhone: Result: · Notes:
+- [ ] **E2** The API: the same page also asks the staging API to throw, and says "the API answered: … Test error from the API". Sentry has "Test error from the API (GET /debug/error)" under staging, with a stack trace, the transaction `GET /debug/error` and your Clerk user id, and no headers, body or query string.
+  - iPhone: Result: · Notes:
+- [ ] **E3** Production stays apart: an error on staging never shows under production, and the local app (no DSN) sends nothing.
+  - Result: · Notes:
 
 ## Over time
 
@@ -166,10 +184,76 @@ Needs `pnpm --filter @fit/api seed:exercises` run once from the main checkout (i
 - [ ] **R1** On a Rest Day, the "Rest today." card has a "Recovery workout instead" link. Tap it: a Workout opens with a 20-minute walk, then hip flexor stretch, open book, cat-cow and world's greatest stretch at 2 × 45 s each, logged on the normal timed-Set screen. The walk's target reads "1 set · 20 min". Log it: no rest timer starts, and in place of a Set 2 there's "Next exercise", which opens the hip flexor stretch. A stretch's Set still starts its usual rest (1:10), and still offers a Set 3 after its 2.
   - iOS: Result: · Android: Result: · Notes:
 
+## Jumps (#105)
+
+Needs `pnpm --filter @fit/api seed:exercises` run once from the main checkout (it needs `apps/api/.env`), so the Exercises tab lists the six jumps. Use an athletic profile with no knee or ankle injury, whose Assessment tested the squat rather than estimating it.
+
+- [ ] **J1** Profile shows an "Include jumps" switch under Training, off, and only while the Goal is athletic. Turn it on, then open Today: the plan's sheet opens with two jumps, each "3 sets · N contacts" (for example "3 sets · 10 contacts"), one that goes up (pogo hop, squat or countermovement jump, box jump) and one that goes forward or sideways (broad jump or lateral bound). Start the Workout: the jumps come first. Log a jump Set: the stepper says "contacts", with no weight field, and the logged Set uploads. Turn the switch off: Today's plan has no jumps. Turning it back on, or a knee injury in the profile, also works as expected.
+  - iOS: Result: · Android: Result: · Notes:
+- [ ] **J2** Over a week with the switch on: the first 2 Workouts have jumps and the rest don't, and the second jump Workout has different jumps from the first. On a Quick Workout the jumps stay, all 3 Sets each, and something else is cut.
+  - iOS: Result: · Android: Result: · Notes:
+
+## Units (#126)
+
+- [ ] **U1** An existing account shows every load in lb with nothing chosen: Profile's "Weights in" has lb picked, and Today's plan, the logging screen (target, Last, Sets, stepper), History, a Workout's detail, Volume everywhere and the Equipment Profile's weights all read in lb. Log a Set of 25 lb: it reads 25 lb in the Set row, History and as Last next time, never 24.9. Pick kg on Profile: the same screens switch to kg, and the 25 lb Set reads 11.5 kg. With the loads unknown (a home profile with dumbbells but no weights entered), the load stepper moves by 5 lb or 2 kg.
+  - iOS: Result: · Android: Result: · Notes:
+
+## Load Steps (#127)
+
+- [ ] **LS1** On a gym profile in lb, Today's dumbbell targets are 5 lb steps (25, 30, 35 lb), barbell ones are 45 lb plus pound plates (135, 140 lb) and cable ones are 10 lb steps. On the logging screen the stepper moves 25 → 30 lb on dumbbells, 135 → 140 lb on a barbell and 100 → 110 lb on a cable. Switch to kg on Profile: the targets become 2.5 kg dumbbells, a 20 kg bar and 5 kg cable steps.
+  - iOS: Result: · Android: Result: · Notes:
+
+- [ ] **LS2** Edit the gym profile (Profile → Training): a stage asks only for "Cable and machine step (lb)", filled with 10. Change it to 15 and save: Today's cable targets and the cable stepper now move in 15 lb steps. On a home profile with a cable machine selected, the same field shows on the weights stage next to the other equipment.
+  - iOS: Result: · Android: Result: · Notes:
+
+## PRs (#130)
+
+On the installed PWA against staging, once an Exercise has a Workout behind it (the first Workout on an Exercise is only a baseline). The web build walked both checks with the in-memory API; these are for the phone.
+
+- [ ] **PR1** With signal, beat an Exercise's best (more kg at the same reps, or more reps) and Save workout. The toast reads "Workout saved. New PR: …" with "See workout", which opens the Workout in History showing "New PR · …" under that Exercise. Today shows no PR note for it.
+  - iOS: Result: · Notes:
+- [ ] **PR2** In airplane mode, beat a best again and save. Turn airplane mode off and open the app: once it uploads, Today shows a green note naming the PRs with "See workout". Close and reopen the app: the note is gone, and the Workout's History row says "New PR".
+  - iOS: Result: · Notes:
+
+## Double progression (#132)
+
+On the installed PWA against staging, after the Assessment. Route tests cover the rules; these are for the screen.
+
+- [ ] **DP1** Do a Workout and log every Set of one weighted Exercise at its target or more, at the prescribed weight. Once it uploads, open the Next Workout sheet on Today: if the Exercise is planned again, its target is 1 rep more and under it reads "One more rep: every Set reached the target." An Exercise whose Set fell short shows its old target and no line.
+  - iOS: Result: · Notes:
+- [ ] **DP2** Log 2 or more Sets of a weighted Exercise at a different weight from the one prescribed. Next time it's planned, its target is that weight at the fewest reps you did, with "From the weight you lifted last time."
+  - iOS: Result: · Notes:
+
+## Deload week and the retest (#137)
+
+On the installed PWA against staging, in the 5th week of a Block: the week starting 4 Mondays after the Monday of the week the Assessment's B was done. Route tests cover the rules; these are for the screen.
+
+- [ ] **DL1** In the deload week, open the Next Workout sheet on Today: the Exercises and Sets are as usual, weighted targets about 10% lighter (on a real dumbbell, plate or stack step), and bodyweight, band and timed targets about 70% of last week's (never under 5 reps or 15 s unless they were already). Below the plan, a "Retake the Assessment" section explains that only the Exercises it tests, and any not done this Block, get new levels, with Start assessment A. The wording reads well and doesn't feel pushy.
+  - iOS: Result: · Notes:
+- [ ] **DL2** Dismiss the retest with the ×: it stays gone for the rest of the week. On the Monday after, the plan is back to the usual loads and there's no retest. Or, instead, take A and B in the deload week: the Results open as usual, and next week an Exercise you trained this Block but the Assessment didn't test keeps the target it had reached.
+  - iOS: Result: · Notes:
+
+## RPE on the last Set (#133)
+
+On the installed PWA against staging, after the Assessment. Route tests cover the hold; the web build walked the chips with the in-memory API; these are for the phone.
+
+- [ ] **RPE1** Start the Next Workout and log a weighted Exercise's Sets. Until its last planned Set, nothing asks for RPE. Once the last is logged, "How hard was set N? Optional: 10 is no more reps" and chips 6–10 show under the Sets, with Log set and the rest timer where they were. Go on to the next Exercise without tapping one: nothing stops you. Back on the first, tap 10: it highlights; tap it again and it clears. In a Manual Workout the chips show after every Set, for the latest. Editing a rated Set keeps its RPE.
+  - iOS: Result: · Notes:
+- [ ] **RPE2** Rate the last Set of a weighted Exercise 10 where every Set reached its target, and save. Once it uploads, the Next Workout sheet (if it plans the Exercise again) keeps the same weight and target, with "Held: your last Set was RPE 10, all you had." under it.
+  - iOS: Result: · Notes:
+
+## Library gaps (#101)
+
+Needs `pnpm --filter @fit/api seed:exercises` run once from the main checkout (it needs `apps/api/.env`), so the Exercises tab lists the six new Exercises.
+
+- [ ] **L1** The Exercises tab lists Calf raise, Nordic hamstring curl, Dumbbell curl, Dumbbell overhead triceps extension, Cable knee extension and Table row, each with its cues. Switch Today to Bodyweight only: a back Exercise the plan had (a row or pull-up) offers Table row as its Alternative Exercise, where it used to offer nothing for a lats pull. With a build_muscle or athletic profile, the plan's reasons and Workouts don't break on calves, which are now in the Weekly Budget.
+  - iOS: Result: · Android: Result: · Notes:
+
 ## Your call
 
 Not a bug, but it needs your judgement once you've done some Workouts. Details in `docs/research/planner-simulation.md`.
 
+- With jumps on, 2 Short days a week lose most of their upper-body work to the jumps' 15 minutes (chest 1 of 12, side delts 0 of 8 in the simulation). Should the switch warn, or jumps give way, at 2 Short days? (2026-11-10, see Jumps.)
 - Do Workouts that fill their Length, at up to 214% of a Muscle's budget, feel like too much? Should a Workout stop at the budget? Left until after real use (2026-11-09).
 
 ---

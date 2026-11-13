@@ -1,8 +1,18 @@
 // Runs weeks of Workouts through the real planner: docs/research/planner-simulation.md records the results.
 // pnpm --filter @fit/engines simulate
-import type { Muscle, WorkoutLength } from "@fit/shared";
-import { addCredits, creditsPerSet, exerciseBySlug, weeklyBudget, type MuscleCredits } from "../src";
-import { GOALS, LIFTERS, PROFILES, simulate, type Run } from "./simulate-weeks";
+import type { Muscle, SetTarget, WorkoutLength } from "@fit/shared";
+import {
+  addCredits,
+  builtInEquipment,
+  creditsPerSet,
+  exerciseBySlug,
+  EXERCISES,
+  isAvailable,
+  isJump,
+  weeklyBudget,
+  type MuscleCredits,
+} from "../src";
+import { EVERY_PROFILE, GOALS, LIFTERS, PROFILES, simulate, weekCredits, type Run } from "./simulate-weeks";
 
 const round = (value: number) => Math.round(value * 10) / 10;
 
@@ -82,13 +92,13 @@ for (const goal of GOALS) {
   for (const workout of lastWeek) console.log(`- ${workout}`);
 }
 
-console.log("\n### Weekly Budget: main Muscles, then side delts and abs\n");
+console.log("\n### Weekly Budget: main Muscles, then side delts and abs, then calves where budgeted\n");
 console.log(`| Goal | ${DAYS.map((days) => `${days} days`).join(" | ")} |`);
 console.log(`| --- |${DAYS.map(() => " --- |").join("")}`);
 for (const goal of GOALS) {
   const cells = DAYS.map((days) => {
     const budget = weeklyBudget(goal, days);
-    return `${budget.quads}, ${budget.side_delts}`;
+    return [budget.quads, budget.side_delts, budget.calves].filter((sets) => sets !== undefined).join(", ");
   });
   console.log(`| ${goal} | ${cells.join(" | ")} |`);
 }
@@ -120,5 +130,177 @@ for (const goal of GOALS) {
       return `${lowestMuscle(run, weeks)} (${holding})`;
     });
     console.log(`| ${goal} | ${length} | ${cells.join(" | ")} |`);
+  }
+}
+
+// The Exercises added for the library's gaps (#101), and where the planner gives them
+const LIBRARY_GAPS = [
+  "calf-raise",
+  "nordic-hamstring-curl",
+  "dumbbell-curl",
+  "dumbbell-overhead-triceps-extension",
+  "cable-knee-extension",
+  "table-row",
+];
+const GAP_COMBINATIONS: [number, WorkoutLength][] = [
+  [4, "standard"],
+  [4, "long"],
+  [6, "standard"],
+];
+console.log("\n### The library's gaps: Sets a week of each, and calves' credited Sets, intermediate\n");
+console.log(`| Profile | Goal | Days | Length | ${LIBRARY_GAPS.join(" | ")} | Calves |`);
+console.log(`| --- | --- | --- | --- |${LIBRARY_GAPS.map(() => " --- |").join("")} --- |`);
+for (const profile of Object.keys(EVERY_PROFILE) as (keyof typeof EVERY_PROFILE)[]) {
+  for (const goal of GOALS) {
+    for (const [days, length] of GAP_COMBINATIONS) {
+      const weeks = simulate({ goal, days, length, lifter: "intermediate", profile }).slice(1);
+      const picks = weeks.flat().flatMap(({ exercises }) => exercises);
+      const perWeek = (sets: number) => round(sets / weeks.length);
+      const setsOf = (slug: string) =>
+        perWeek(picks.filter((pick) => pick.slug === slug).reduce((total, pick) => total + pick.sets, 0));
+      const calves = perWeek(
+        picks.reduce((total, { slug, sets }) => total + (creditsPerSet(exerciseBySlug(slug)!).calves ?? 0) * sets, 0),
+      );
+      console.log(`| ${[profile, goal, days, length, ...LIBRARY_GAPS.map(setsOf), calves].join(" | ")} |`);
+    }
+  }
+}
+
+// How thin Bodyweight only's Alternative Exercises are: the Exercises with no other Exercise available on it that
+// shares a Pattern and a primary Muscle
+const onBodyweight = EXERCISES.filter(
+  (exercise) => !exercise.recovery && isAvailable(exercise, builtInEquipment("bodyweight_only", "kg")),
+);
+const noMatch = EXERCISES.filter((exercise) => !exercise.recovery).filter(
+  (exercise) =>
+    !onBodyweight.some(
+      (other) =>
+        other.slug !== exercise.slug &&
+        other.patterns.some(({ pattern }) => exercise.patterns.some((own) => own.pattern === pattern)) &&
+        other.muscles.primary.some((muscle) => exercise.muscles.primary.includes(muscle)),
+    ),
+);
+console.log(`\n### Exercises with no bodyweight Alternative Exercise sharing a Pattern and a primary Muscle\n`);
+console.log(`${noMatch.length}: ${noMatch.map(({ slug }) => slug).join(", ")}`);
+
+// Jumps (#105): athletic with the switch on against off. Jump minutes are the jump Sets' time; the cost is what the
+// rest of the week loses
+console.log("\n### Jumps: athletic, Full gym, intermediate, switch off then on\n");
+console.log(
+  "| Days | Length | Jumps | Sets | Minutes | Jump Sets | Jump minutes | Other Sets | Quads, glutes | Of budget | Short of budget |",
+);
+console.log("| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |");
+for (const [days, length] of COMBINATIONS) {
+  for (const jumps of [false, true]) {
+    const run: Run = { goal: "athletic", days, length, lifter: "intermediate", profile: "Full gym", jumps };
+    const s = summary(run);
+    const weeks = simulate(run).slice(1);
+    const picks = weeks.flat().flatMap(({ exercises }) => exercises);
+    const jumpPicks = picks.filter(({ slug }) => isJump(exerciseBySlug(slug)!));
+    const jumpSets = jumpPicks.reduce((sets, pick) => sets + pick.sets, 0);
+    const jumpSeconds = jumpPicks.reduce(
+      (total, { slug, sets }) => total + sets * exerciseBySlug(slug)!.secondsPerSet,
+      0,
+    );
+    const credited = picks.reduce<MuscleCredits>(
+      (credits, { slug, sets }) => addCredits(credits, creditsPerSet(exerciseBySlug(slug)!), sets),
+      {},
+    );
+    const perWeek = (value: number) => round(value / weeks.length);
+    const cells = [days, length, jumps ? "on" : "off", s.sets, s.minutes, perWeek(jumpSets)];
+    cells.push(Math.round(jumpSeconds / 60 / weeks.length), round(s.sets - perWeek(jumpSets)));
+    cells.push(`${perWeek(credited.quads ?? 0)}, ${perWeek(credited.glutes ?? 0)}`, s.ofBudget);
+    console.log(`| ${cells.join(" | ")} | ${s.short.join(", ") || "none"} |`);
+  }
+}
+
+// The 130% cap: each budgeted Muscle's credited Sets as a share of its budget, from primary credit alone and in total,
+// in the heaviest of the 3 weeks. Primary stays within 130%; a total over 160% sends the cap back for a decision
+const MUSCLES = Object.keys(weeklyBudget("build_muscle", 4)) as Muscle[];
+const shareOf = (credit: number | undefined, budget: number) => Math.round(((credit ?? 0) / budget) * 100);
+let overTotal = 0;
+for (const profile of Object.keys(PROFILES) as (keyof typeof PROFILES)[]) {
+  for (const lifter of Object.keys(LIFTERS) as (keyof typeof LIFTERS)[]) {
+    console.log(`\n### Credit against the Weekly Budget, primary / total %: ${profile}, ${lifter}\n`);
+    console.log(`| Goal | Days | Length | ${MUSCLES.join(" | ")} |`);
+    console.log(`| --- | --- | --- |${MUSCLES.map(() => " --- |").join("")}`);
+    for (const goal of GOALS) {
+      for (const [days, length] of COMBINATIONS) {
+        const budget = weeklyBudget(goal, days);
+        const weeks = simulate({ goal, days, length, lifter, profile }).slice(1);
+        const cells = MUSCLES.map((muscle) => {
+          if (!budget[muscle]) return "–";
+          const most = (counted: "primary" | "total") =>
+            Math.max(...weeks.map((week) => shareOf(weekCredits(week, counted)[muscle], budget[muscle]!)));
+          if (most("total") > 160) overTotal++;
+          return `${most("primary")} / ${most("total")}`;
+        });
+        console.log(`| ${goal} | ${days} | ${length} | ${cells.join(" | ")} |`);
+      }
+    }
+  }
+}
+console.log(`\nMuscles over 160% in total: ${overTotal}`);
+
+// Bodyweight only, left out of the cap tables: the weeks with a Muscle over the 130% cap through primary credit alone
+console.log("\n### Bodyweight only over the cap through primary credit, both lifters, every day and Length\n");
+console.log("| Goal | Runs over | Weeks over | Highest |");
+console.log("| --- | --- | --- | --- |");
+for (const goal of GOALS) {
+  let runs = 0;
+  let weeksOver = 0;
+  let highest = { share: 0, at: "" };
+  for (const lifter of Object.keys(LIFTERS) as (keyof typeof LIFTERS)[]) {
+    for (const days of DAYS) {
+      for (const length of LENGTHS) {
+        const budget = weeklyBudget(goal, days);
+        const weeks = simulate({ goal, days, length, lifter, profile: "Bodyweight only" });
+        const over = weeks.filter((week, index) => {
+          const primary = weekCredits(week, "primary");
+          const shares = (Object.entries(budget) as [Muscle, number][]).map(([muscle, budgeted]) => ({
+            muscle,
+            share: shareOf(primary[muscle], budgeted),
+          }));
+          for (const { muscle, share } of shares) {
+            if (share > highest.share) {
+              highest = { share, at: `${lifter}, ${days} days ${length}, week ${index + 1}, ${muscle}` };
+            }
+          }
+          return shares.some(({ share }) => share > 130);
+        }).length;
+        weeksOver += over;
+        if (over) runs++;
+      }
+    }
+  }
+  const cells = [goal, `${runs} of ${2 * DAYS.length * LENGTHS.length}`, weeksOver];
+  console.log(`| ${cells.join(" | ")} | ${highest.share}% (${highest.at}) |`);
+}
+
+// Progression (#138): the lifter reaches every target, so the rules move each Working Level. Each Exercise's target the
+// first and last time it's planned in the four weeks, and how many Workouts it's planned in
+function targetOf(target: SetTarget) {
+  switch (target.unit) {
+    case "kg":
+      return `${target.kg} kg × ${target.reps}`;
+    case "reps":
+      return `${target.reps} reps`;
+    case "seconds":
+      return `${target.seconds} s`;
+    case "band":
+      return `${target.level} band × ${target.reps}`;
+  }
+}
+for (const goal of GOALS) {
+  console.log(`\n### Working Levels over four weeks: ${goal}, Full gym, intermediate, 4 days, Standard\n`);
+  console.log("| Exercise | Workouts | First target | Last target |");
+  console.log("| --- | --- | --- | --- |");
+  const planned = new Map<string, SetTarget[]>();
+  const run: Run = { goal, days: 4, length: "standard", lifter: "intermediate", profile: "Full gym" };
+  for (const { exercises } of simulate(run).flat()) {
+    for (const { slug, target } of exercises) planned.set(slug, [...(planned.get(slug) ?? []), target]);
+  }
+  for (const [slug, targets] of planned) {
+    console.log(`| ${slug} | ${targets.length} | ${targetOf(targets[0]!)} | ${targetOf(targets.at(-1)!)} |`);
   }
 }

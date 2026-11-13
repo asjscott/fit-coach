@@ -1,5 +1,5 @@
 import { summarizeWorkout } from "@fit/engines";
-import type { Workout, WorkoutExercise } from "@fit/shared";
+import type { Pr, Workout, WorkoutExercise } from "@fit/shared";
 import { Stack as NavStack, router, useLocalSearchParams } from "expo-router";
 import { useEffect, useState } from "react";
 import { StyleSheet, View } from "react-native";
@@ -14,10 +14,11 @@ import { useToast } from "@/contexts/toast-context";
 import { spacing, useTheme } from "@/theme";
 import { errorMessage } from "@/utils/error-message";
 import { SetRow } from "../components/set-row";
-import { dateLabel, kgLabel, timeStat, workoutTimesLabel } from "../format";
+import { dateLabel, prLabel, timeStat, volumeLabel, workoutTimesLabel } from "../format";
 import { useHistory } from "../history-provider";
 import { exerciseName, libraryExercise } from "../library";
 import { useLogbook } from "../logbook-provider";
+import { useWeightUnit } from "@/features/user/current-user-provider";
 
 // The detail of a Workout from History: a Pending Workout from the Logbook, deleted
 // there (works offline), or an uploaded one from the list History loaded, deleted on the server
@@ -77,6 +78,7 @@ type WorkoutDetailProps = {
 // Delete workout sits in the header menu, behind a confirmation. Takes the Workout and how to delete it, so an
 // uploaded or a Pending Workout can use it
 function WorkoutDetail({ workout, note, onDelete }: WorkoutDetailProps) {
+  const unit = useWeightUnit();
   const { colors } = useTheme();
   const { showToast } = useToast();
   const [confirming, setConfirming] = useState(false);
@@ -116,12 +118,21 @@ function WorkoutDetail({ workout, note, onDelete }: WorkoutDetailProps) {
         )}
       </Stack>
       <View style={[styles.stats, { borderColor: colors.line }]}>
-        <Stat value={kgLabel(summary.volumeKg)} unit="kg" label="Volume" />
+        <Stat value={volumeLabel(summary.volumeKg, unit)} unit={unit} label="Volume" />
         <Stat value={String(summary.sets)} label="Sets" />
         <Stat {...timeStat(summary.durationMs)} label="Time" />
       </View>
       {workout.workoutExercises.map((workoutExercise, i) => (
-        <WorkoutExerciseSection key={`${workoutExercise.slug}-${i}`} workoutExercise={workoutExercise} />
+        <WorkoutExerciseSection
+          key={`${workoutExercise.slug}-${i}`}
+          workoutExercise={workoutExercise}
+          // Once per Exercise, on its first Workout Exercise when it was done twice
+          pr={
+            workout.workoutExercises.findIndex((we) => we.slug === workoutExercise.slug) === i
+              ? workout.prs?.find((pr) => pr.slug === workoutExercise.slug)
+              : undefined
+          }
+        />
       ))}
       <ConfirmModal
         isOpen={confirming}
@@ -135,12 +146,25 @@ function WorkoutDetail({ workout, note, onDelete }: WorkoutDetailProps) {
   );
 }
 
-function WorkoutExerciseSection({ workoutExercise: { slug, sets } }: { workoutExercise: WorkoutExercise }) {
+// The Exercise with its Sets, and the PR the upload found on it (#130)
+function WorkoutExerciseSection({
+  workoutExercise: { slug, sets },
+  pr,
+}: {
+  workoutExercise: WorkoutExercise;
+  pr: Pr | undefined;
+}) {
   const { colors } = useTheme();
   const unilateral = libraryExercise(slug)?.unilateral;
+  const unit = useWeightUnit();
   return (
     <View style={[styles.exercise, { borderColor: colors.line }]}>
       <Text weight="semiBold">{exerciseName(slug)}</Text>
+      {pr ? (
+        <Text size="sm" weight="semiBold" color="success">
+          New PR · {prLabel(pr, unit)}
+        </Text>
+      ) : null}
       {sets.map((set, i) => (
         <SetRow key={set.loggedAt + i} set={set} index={i} unilateral={unilateral} />
       ))}
