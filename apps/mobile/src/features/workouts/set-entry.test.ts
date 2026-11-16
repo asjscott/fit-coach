@@ -78,18 +78,39 @@ describe("stepValue", () => {
 describe("loadStep", () => {
   it("steps to the next load the equipment has, as the user sees it", () => {
     const dumbbells = [toKg(20, "lb"), toKg(25, "lb"), toKg(30, "lb")];
-    expect(loadStep(dumbbells, "lb")(25, 1)).toBe(30);
-    expect(loadStep(dumbbells, "lb")(25, -1)).toBe(20);
-    expect(loadStep([10, 12.5, 15], "kg")(12.5, 1)).toBe(15);
+    expect(loadStep([dumbbells], "lb")(25, 1)).toBe(30);
+    expect(loadStep([dumbbells], "lb")(25, -1)).toBe(20);
+    expect(loadStep([[10, 12.5, 15]], "kg")(12.5, 1)).toBe(15);
   });
 
   it("never sticks on a load whose kg is a hair off the one shown", () => {
-    expect(loadStep([12.5, 15], "lb")(27.5, 1)).toBe(33);
+    expect(loadStep([[12.5, 15]], "lb")(27.5, 1)).toBe(33);
   });
 
   it("stays put past the lightest or heaviest load", () => {
-    expect(loadStep([10, 12.5], "kg")(12.5, 1)).toBe(12.5);
-    expect(loadStep([10, 12.5], "kg")(10, -1)).toBe(10);
+    expect(loadStep([[10, 12.5]], "kg")(12.5, 1)).toBe(12.5);
+    expect(loadStep([[10, 12.5]], "kg")(10, -1)).toBe(10);
+  });
+
+  // #149: on a lb Full gym, an Exercise done with dumbbells or kettlebells
+  describe("with dumbbells in pounds and kettlebells in kg", () => {
+    const dumbbells = [20, 25, 30, 35].map((lb) => toKg(lb, "lb"));
+    const kettlebells = [8, 12, 16];
+    const step = loadStep([dumbbells, kettlebells], "lb");
+
+    it("steps a dumbbell load through the dumbbells, never to a kettlebell between them", () => {
+      expect(step(25, 1)).toBe(30);
+      expect(step(30, -1)).toBe(25);
+    });
+
+    it("steps a kettlebell load through the kettlebells", () => {
+      expect(step(26.5, 1)).toBe(35.5);
+      expect(step(26.5, -1)).toBe(17.5);
+    });
+
+    it("steps a typed load on neither through the first kind of equipment", () => {
+      expect(step(27, 1)).toBe(30);
+    });
   });
 
   it("steps by 5 lb or 2 kg when the loads aren't known", () => {
