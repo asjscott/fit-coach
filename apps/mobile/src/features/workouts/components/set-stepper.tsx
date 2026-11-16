@@ -8,16 +8,7 @@ import { Pressable } from "@/components/pressable";
 import { Text } from "@/components/text";
 import { bigNumber, radii, spacing, useTheme } from "@/theme";
 import { startRepeating } from "../hold-to-repeat";
-import {
-  fieldLabel,
-  loadStepLabel,
-  secondsField,
-  secondsStepLabel,
-  stepValue,
-  STEPS,
-  type LoadStep,
-  type SetField,
-} from "../set-entry";
+import { FIELD_STEPPERS, loadStepper, stepValue, type LoadStep, type SetField } from "../set-entry";
 
 // A load is typed and stepped in the user's unit
 export type LoadSteps = {
@@ -31,60 +22,52 @@ export type SetStepperProps = {
   // What's typed, e.g. "16.5"
   value: string;
   onChange: (value: string) => void;
-} & (({ field: "load" } & LoadSteps) | { field: Exclude<SetField, "load">; jump?: boolean });
+} & (
+  | ({ field: "load" } & LoadSteps)
+  | {
+      field: Exclude<SetField, "load">;
+      // A Jump's reps are its contacts (#105)
+      jump?: boolean;
+    }
+);
 
 // One Set value with − and + either side: a load to the next load, reps by 1, seconds by 5 or, from a minute, by the
 // minute, repeating while held. Any value can still be typed: seconds show in minutes from a minute (#145), as
 // seconds while being typed
 export function SetStepper(props: SetStepperProps) {
-  const { field, value, onChange } = props;
-  // A jump's reps are its contacts (#105)
-  const contacts = props.field === "reps" && props.jump;
+  const { value, onChange } = props;
+  const stepper =
+    props.field === "load"
+      ? loadStepper(props.step, props.loadsKnown, props.unit)
+      : FIELD_STEPPERS[props.field === "reps" && props.jump ? "contacts" : props.field];
   const [typing, setTyping] = useState(false);
-  const shown = field === "seconds" && !typing ? secondsField(value) : { value, unit: "s" };
-  const unit = props.field === "load" ? props.unit : contacts ? "contacts" : field === "reps" ? "reps" : shown.unit;
+  const shown = stepper.shown(value, typing);
   // The latest value, so steps repeated while held build on each other before the parent re-renders
   const latest = useRef(value);
   latest.current = value;
   const step = (direction: StepDirection) => {
-    latest.current =
-      props.field === "load"
-        ? stepValue("load", latest.current, direction, props.step)
-        : stepValue(props.field, latest.current, direction);
+    latest.current = stepValue(stepper, latest.current, direction);
     onChange(latest.current);
-  };
-  const label = (direction: StepDirection) => {
-    if (props.field === "load") return loadStepLabel(direction, props.loadsKnown, props.unit);
-    if (props.field === "seconds") return secondsStepLabel(value, direction);
-    return `${direction === 1 ? "Plus" : "Minus"} ${STEPS.reps} ${contacts ? "contact" : "rep"}`;
   };
 
   return (
     <Input size="xl" style={styles.root}>
-      <StepButton icon="minus" label={label(-1)} onStep={() => step(-1)} />
+      <StepButton icon="minus" label={stepper.stepLabel(value, -1)} onStep={() => step(-1)} />
       <InputField
         value={shown.value}
         onChangeText={onChange}
         onFocus={() => setTyping(true)}
         onBlur={() => setTyping(false)}
         placeholder="0"
-        keyboardType={field === "load" ? "decimal-pad" : "number-pad"}
+        keyboardType={stepper.keyboardType}
         selectTextOnFocus
-        accessibilityLabel={
-          props.field === "load"
-            ? fieldLabel(field, props.unit)
-            : contacts
-              ? "contacts"
-              : shown.unit === "min"
-                ? "minutes"
-                : field
-        }
+        accessibilityLabel={shown.name}
         style={styles.field}
       />
       <Text color="muted" weight="medium" style={styles.unit} importantForAccessibility="no">
-        {unit}
+        {shown.unit}
       </Text>
-      <StepButton icon="plus" label={label(1)} onStep={() => step(1)} />
+      <StepButton icon="plus" label={stepper.stepLabel(value, 1)} onStep={() => step(1)} />
     </Input>
   );
 }
