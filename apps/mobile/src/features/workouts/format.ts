@@ -45,11 +45,14 @@ export const timeLabel = (iso: string) => {
 // Two digits, for clocks: "05"
 export const twoDigits = (n: number) => String(n).padStart(2, "0");
 
-// Whole minutes as a value and unit: "49" min under an hour, then "2:05" h
-const minutesStat = (minutes: number) =>
-  minutes < 60
-    ? { value: String(minutes), unit: "min" }
-    : { value: `${Math.floor(minutes / 60)}:${twoDigits(minutes % 60)}`, unit: "h" };
+// Whole minutes as a value and unit: "49" min under an hour, then "2 h 5" min, or "49" h on the hour. Never a clock,
+// which reads oddly past a day: "49:00 h" (#144)
+function minutesStat(minutes: number) {
+  const hours = Math.floor(minutes / 60);
+  const rest = minutes % 60;
+  if (!hours) return { value: String(minutes), unit: "min" };
+  return rest ? { value: `${hours} h ${rest}`, unit: "min" } : { value: String(hours), unit: "h" };
+}
 
 const statLabel = ({ value, unit }: { value: string; unit: string }) => `${value} ${unit}`;
 

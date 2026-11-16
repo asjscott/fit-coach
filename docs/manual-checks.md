@@ -12,20 +12,20 @@ The simulators ran what they could on 13 Nov (Session 1 below). The rest falls i
 
 **1. Run on the phones now**, on a Release build against the API on your Mac ([Setting up the phones](#setting-up-the-phones)):
 
-| Check | What's left                                                                                                                                       |
-| ----- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
-| T2    | All of it, on both phones. It's only valid on a Release build.                                                                                    |
-| C6    | iOS; Android passed on the emulator. Read "the staging database" as the one in `apps/api/.env`: look at `checkIns` in Atlas → Browse Collections. |
-| PR2   | All of it. Run it on the Release build in airplane mode, not the PWA: the PWA can't work offline until #124.                                      |
-| J1    | Failed on the wording ("reps", not "contacts"): recheck once that's fixed. Flip the iOS switch with your finger. Android.                         |
-| W1    | iOS. Skip the installed web app's date inputs: the web app on Cloudflare runs `main`, which has no past Workouts.                                 |
-| R1    | The "Rest today." card on a real Rest Day, and iOS.                                                                                               |
-| U1    | The Equipment Profile's weights screen, and the 5 lb / 2 kg step on a home profile with dumbbells but no weights entered. Android.                |
-| LS1   | Android.                                                                                                                                          |
-| LS2   | Android, and the home-profile variant (a cable machine selected).                                                                                 |
-| RPE1  | The chips after every Set in a Manual Workout. Android.                                                                                           |
-| L1    | Android.                                                                                                                                          |
-| DP2   | Android.                                                                                                                                          |
+| Check | What's left                                                                                                                                                                                              |
+| ----- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| T2    | All of it, on both phones. It's only valid on a Release build.                                                                                                                                           |
+| C6    | iOS; Android passed on the emulator. Read "the staging database" as the one in `apps/api/.env`: look at `checkIns` in Atlas → Browse Collections.                                                        |
+| PR2   | All of it. Run it on the Release build in airplane mode, not the PWA: the PWA can't work offline until #124.                                                                                             |
+| J1    | Failed on the wording ("reps", not "contacts"): recheck once that's fixed. Flip the iOS switch with your finger. Android.                                                                                |
+| W1    | iOS. Both phones: no Elapsed timer on a past Workout, and Time in hours and minutes (#144). Skip the installed web app's date inputs: the web app on Cloudflare runs `main`, which has no past Workouts. |
+| R1    | The "Rest today." card on a real Rest Day, and iOS.                                                                                                                                                      |
+| U1    | The Equipment Profile's weights screen, and the 5 lb / 2 kg step on a home profile with dumbbells but no weights entered. Android.                                                                       |
+| LS1   | Android.                                                                                                                                                                                                 |
+| LS2   | Android, and the home-profile variant (a cable machine selected).                                                                                                                                        |
+| RPE1  | The chips after every Set in a Manual Workout. Android.                                                                                                                                                  |
+| L1    | Android.                                                                                                                                                                                                 |
+| DP2   | Android.                                                                                                                                                                                                 |
 
 DP1 and RPE2 passed on both simulators. Look at them on a phone only if you have time.
 
@@ -246,7 +246,7 @@ A Workout pairs Exercises only when it wouldn't otherwise fit its Length, so cho
 
 ## Past Workouts (#129)
 
-- [x] **W1** On Today, tap "Log a past workout" under Start manual workout: a sheet asks "Which day was it?" with Yesterday and the five weekdays before it. Pick one: the Workout opens with "Done <that day>" under its title. Log a Set or two and tap Finish: the times read that day, an hour long, with Edit times already open. Set a start 8 days back and Save: "The start can't be more than 7 days ago" shows under Start. Set it back within the week and Save: in History the Workout sits on its own day, and This Week counts it only if that day is in this week. On the installed web app, check that the date and time inputs are easy to use on the iPhone.
+- [x] **W1** On Today, tap "Log a past workout" under Start manual workout: a sheet asks "Which day was it?" with Yesterday and the five weekdays before it. Pick one: the Workout opens with "Done <that day>" under its title, and no Elapsed timer above its Sets and Volume. Log a Set or two and tap Finish: the times read that day, an hour long, with Edit times already open. Set an end two days after the start: Time reads in hours and minutes ("49 h"), not as a clock. Set a start 8 days back and Save: "The start can't be more than 7 days ago" shows under Start. Set it back within the week and Save: in History the Workout sits on its own day, and This Week counts it only if that day is in this week. On the installed web app, check that the date and time inputs are easy to use on the iPhone.
   - iOS: Result: ⚠️ · Android: Result: ⚠️ · Notes: Android emulator, native, not the installed web app. Sheet: "Which day was it?" with Yesterday, Wednesday, Tuesday, Monday, Sunday, Saturday. Saturday opened with "Done Saturday, 10:43 AM". Finish: Saturday, an hour long, Edit times open. Start 8 days back: "The start can't be more than 7 days ago" under Start. Saved: under Last week in History, and This Week stayed at 3. ⚠️ The Elapsed timer counts up on a past Workout, and the invalid 49-hour span read "49:00 h". The web app's date inputs weren't tried. Physical phone inputs date inputs work but same error as simulators with elapsed timer counter starting
 
 ## Sentry (#122)
