@@ -1,6 +1,6 @@
 import { stepLoadKg, UNKNOWN_LOADS_STEP_KG, type StepDirection } from "@fit/engines";
 import { loadInUnit, toKg, type LoadType, type SetValues, type WeightUnit } from "@fit/shared";
-import { durationParts } from "./format";
+import { durationParts, leadParts } from "./format";
 
 // Entering a Set's values with −/+ steppers: what each step adds, and turning typed text into the values the
 // Logbook checks. A load is typed and stepped in the user's unit, and becomes its exact kg only once logged (#126)
@@ -57,8 +57,7 @@ export function secondsField(text: string): { value: string; unit: string } {
   if (!/^\d+$/.test(trimmed)) return { value: text, unit: "s" };
   const parts = durationParts(Number(trimmed));
   const [value, unit] = parts.at(-1)!;
-  const lead = parts.slice(0, -1).map(([n, label]) => `${n} ${label} `);
-  return { value: `${lead.join("")}${value}`, unit };
+  return { value: `${leadParts(parts)}${value}`, unit };
 }
 
 // For screen readers, what one step of a timed Set adds or takes away: "Plus 1 minute", "Minus 5 seconds"
@@ -71,7 +70,7 @@ export function secondsStepLabel(text: string, direction: StepDirection): string
 
 // A load has no fixed step: it goes to the next load the equipment has (loadStep). Seconds step by 5 under a minute;
 // a minute or more goes to the next or previous whole minute (secondsStep)
-export const STEPS: Record<Exclude<SetField, "load">, number> = { reps: 1, seconds: 5 };
+const STEPS: Record<Exclude<SetField, "load">, number> = { reps: 1, seconds: 5 };
 
 const MINUTE = 60;
 
@@ -102,8 +101,54 @@ export function loadStepLabel(direction: StepDirection, loadsKnown: boolean, uni
   return `${direction === 1 ? "Plus" : "Minus"} ${UNKNOWN_LOADS_STEP[unit]} ${unit}`;
 }
 
-// The smallest amount each field steps from: a load to 0.5 of the user's unit, as it's shown; reps and seconds whole
-const RESOLUTION: Record<SetField, number> = { load: 0.5, reps: 1, seconds: 1 };
+// How a field's stepper reads and steps, one entry per field so the stepper doesn't branch on it. A load's depends on
+// the equipment and the user's unit (loadStepper); a Jump's reps are its contacts (#105)
+export type FieldStepper = {
+  // The value drawn, the unit beside it, and the value's name for screen readers; as typed while typing
+  shown: (text: string, typing: boolean) => { value: string; unit: string; name: string };
+  // For screen readers, what one step adds or takes away
+  stepLabel: (text: string, direction: StepDirection) => string;
+  // The smallest amount it steps from, as it's shown
+  resolution: number;
+  next: (from: number, direction: StepDirection) => number;
+  keyboardType: "decimal-pad" | "number-pad";
+};
+
+const asTyped = (unit: string) => (text: string) => ({ value: text, unit, name: unit });
+
+// Reps, or a Jump's contacts, by 1
+const countStepper = (one: string, many: string): FieldStepper => ({
+  shown: asTyped(many),
+  stepLabel: (_, direction) => `${direction === 1 ? "Plus" : "Minus"} ${STEPS.reps} ${one}`,
+  resolution: 1,
+  next: (from, direction) => from + STEPS.reps * direction,
+  keyboardType: "number-pad",
+});
+
+export const FIELD_STEPPERS = {
+  reps: countStepper("rep", "reps"),
+  contacts: countStepper("contact", "contacts"),
+  // In minutes from a minute (#145), as seconds while being typed
+  seconds: {
+    shown: (text, typing) => {
+      const { value, unit } = typing ? { value: text, unit: "s" } : secondsField(text);
+      return { value, unit, name: unit === "min" ? "minutes" : "seconds" };
+    },
+    stepLabel: secondsStepLabel,
+    resolution: 1,
+    next: secondsStep,
+    keyboardType: "number-pad",
+  },
+} satisfies Record<string, FieldStepper>;
+
+// A load to 0.5 of the user's unit, as it's shown, to the next load `step` gives
+export const loadStepper = (step: LoadStep, loadsKnown: boolean, unit: WeightUnit): FieldStepper => ({
+  shown: asTyped(unit),
+  stepLabel: (_, direction) => loadStepLabel(direction, loadsKnown, unit),
+  resolution: 0.5,
+  next: step,
+  keyboardType: "decimal-pad",
+});
 
 // A field's typed text as a number, reading a decimal comma as a point; NaN when empty or not a number
 export function parseField(text: string): number {
@@ -115,16 +160,8 @@ const roundTo = (value: number, resolution: number) => Math.round(value / resolu
 
 // Steps from the typed value, first rounded to what the field steps from; from nothing when the field is empty or not
 // a number; never below zero
-export function stepValue(field: "load", text: string, direction: StepDirection, step: LoadStep): string;
-export function stepValue(field: Exclude<SetField, "load">, text: string, direction: StepDirection): string;
-export function stepValue(field: SetField, text: string, direction: StepDirection, step?: LoadStep): string {
+export function stepValue({ resolution, next }: FieldStepper, text: string, direction: StepDirection): string {
   const typed = parseField(text);
-  const from = Number.isFinite(typed) ? roundTo(typed, RESOLUTION[field]) : 0;
-  const to =
-    field === "load"
-      ? step!(from, direction)
-      : field === "seconds"
-        ? secondsStep(from, direction)
-        : from + STEPS[field] * direction;
-  return String(Math.max(0, to));
+  const from = Number.isFinite(typed) ? roundTo(typed, resolution) : 0;
+  return String(Math.max(0, next(from, direction)));
 }

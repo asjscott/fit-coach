@@ -7,7 +7,7 @@ import { SectionLabel } from "@/components/section-label";
 import { Stat } from "@/components/stat";
 import { Text } from "@/components/text";
 import { relativeDateLabel, setsSummary, timeStat, volumeLabel } from "@/features/workouts/format";
-import { exerciseName, isJumpSlug } from "@/features/workouts/library";
+import { exerciseName, setReading } from "@/features/workouts/library";
 import { spacing, useTheme } from "@/theme";
 import { useWeightUnit } from "@/features/user/current-user-provider";
 
@@ -65,7 +65,7 @@ export function LastWorkoutSection({
             {exerciseName(exercise.slug)}
           </Text>
           <Text color="muted" weight="medium" numberOfLines={1} style={{ flexShrink: 1 }}>
-            {setsSummary(exercise.sets, unit, isJumpSlug(exercise.slug))}
+            {setsSummary(exercise.sets, unit, setReading(exercise.slug))}
           </Text>
         </View>
       ))}

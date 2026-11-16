@@ -27,6 +27,11 @@ import {
   workoutTimesLabel,
   workoutWhenLabel,
 } from "./format";
+import type { SetReading } from "./library";
+
+// How a one-sided Exercise's Sets read, and a Jump's
+const oneSided: SetReading = { unilateral: true, jump: false };
+const jump: SetReading = { unilateral: false, jump: true };
 
 const phone = vi.hoisted(() => ({ uses24hourClock: false as boolean | null }));
 vi.mock("expo-localization", () => ({ getCalendars: () => [phone] }));
@@ -187,7 +192,7 @@ describe("workoutExerciseSummary in a Workout started from a plan", () => {
   });
 
   it("says the target is per side for a one-sided Exercise, as Today does", () => {
-    expect(workoutExerciseSummary([], "kg", undefined, planned, true)).toBe("3 sets · 20 kg × 8 per side");
+    expect(workoutExerciseSummary([], "kg", undefined, planned, oneSided)).toBe("3 sets · 20 kg × 8 per side");
   });
 });
 
@@ -196,20 +201,20 @@ describe("a Jump's Sets", () => {
   const jumps = { sets: 3, target: { unit: "reps", reps: 6 } } as const;
 
   it("counts an upcoming Jump's target Sets in contacts", () => {
-    expect(workoutExerciseSummary([], "kg", undefined, jumps, false, true)).toBe("3 sets · 6 contacts");
+    expect(workoutExerciseSummary([], "kg", undefined, jumps, jump)).toBe("3 sets · 6 contacts");
   });
 
   it("reads a logged Jump Set in contacts, and its row's big number with contacts after it", () => {
     const landed: Set = { kind: "bodyweight", reps: 10, loggedAt };
-    expect(describeSet(landed, "kg", true)).toBe("10 contacts");
-    expect(setParts(landed, "kg", true)).toEqual([[10, "contacts"]]);
+    expect(describeSet(landed, "kg", jump)).toBe("10 contacts");
+    expect(setParts(landed, "kg", jump)).toEqual([[10, "contacts"]]);
   });
 
   it("summarises logged and Previous Jump Sets in contacts", () => {
     const landed = (contacts: number): Set => ({ kind: "bodyweight", reps: contacts, loggedAt });
-    expect(setsSummary([landed(6), landed(6)], "kg", true)).toBe("6, 6 contacts");
-    expect(workoutExerciseSummary([landed(6)], "kg", undefined, jumps, false, true)).toBe("1 set · 6 contacts");
-    expect(workoutExerciseSummary([], "kg", [landed(5)], undefined, false, true)).toBe("Last: 5 contacts");
+    expect(setsSummary([landed(6), landed(6)], "kg", jump)).toBe("6, 6 contacts");
+    expect(workoutExerciseSummary([landed(6)], "kg", undefined, jumps, jump)).toBe("1 set · 6 contacts");
+    expect(workoutExerciseSummary([], "kg", [landed(5)], undefined, jump)).toBe("Last: 5 contacts");
   });
 
   it("still says reps for a bodyweight Exercise that isn't a Jump", () => {
@@ -262,14 +267,12 @@ describe("plannedSetsLabel", () => {
   });
 
   it("says the target is per side for a one-sided Exercise", () => {
-    expect(plannedSetsLabel(planned, "kg", true)).toBe("3 sets · 20 kg × 8 per side");
+    expect(plannedSetsLabel(planned, "kg", oneSided)).toBe("3 sets · 20 kg × 8 per side");
   });
 
   // Story 13 (#105): a jump's dose is contacts, with no load
   it("counts a jump's target in contacts", () => {
-    expect(plannedSetsLabel({ sets: 3, target: { unit: "reps", reps: 10 } }, "kg", false, true)).toBe(
-      "3 sets · 10 contacts",
-    );
+    expect(plannedSetsLabel({ sets: 3, target: { unit: "reps", reps: 10 } }, "kg", jump)).toBe("3 sets · 10 contacts");
   });
 });
 
