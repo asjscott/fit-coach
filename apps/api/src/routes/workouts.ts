@@ -4,7 +4,7 @@ import { ErrorResponse, PreviousSets, PreviousSetsQuery, Workout, WorkoutsQuery,
 import { z } from "zod";
 import { assessIfPaired } from "../assessments";
 import { requireAuth, userIdOf } from "../auth";
-import { finishPlannedWorkout, rebuildAfterUpload } from "../planned-workouts";
+import { finishPlannedWorkout, rebuildAfterDelete, rebuildAfterUpload } from "../planned-workouts";
 import { progressWorkingLevels } from "../progression";
 import { findOnboardedUser } from "../users";
 import { createWorkout, deleteWorkout, findPreviousSets, findWorkouts, recordPrs, toWorkout } from "../workouts";
@@ -61,13 +61,16 @@ export const workoutRoutes: FastifyPluginAsyncZod = async (app) => {
     },
   );
 
-  // 204 when deleted; 404 when the Workout isn't this user's or doesn't exist
+  // 204 when deleted, after rebuilding the Planned Workout without it (#143); 404 when the Workout isn't this user's or
+  // doesn't exist. Working Levels it moved stay as they are
   app.delete(
     "/workouts/:id",
     { schema: { params: z.object({ id: z.string() }), response: { 204: z.null(), 404: ErrorResponse } } },
     async (req, reply) => {
-      const deleted = await deleteWorkout(userIdOf(req)!, req.params.id);
+      const clerkUserId = userIdOf(req)!;
+      const deleted = await deleteWorkout(clerkUserId, req.params.id);
       if (!deleted) return reply.code(404).send({ error: "workout not found" });
+      await rebuildAfterDelete(clerkUserId);
       return reply.code(204).send(null);
     },
   );

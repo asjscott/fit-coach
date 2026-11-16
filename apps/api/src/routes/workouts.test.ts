@@ -1,6 +1,6 @@
 import { exerciseBySlug } from "@fit/engines";
 import type { LatestAssessment, PlannedWorkout, Set } from "@fit/shared";
-import { describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { type TestUser, useRouteTestApi } from "../test/route-test-api";
 import { assessmentPair, held, lifted, repsDone, workout } from "../test/workouts";
 
@@ -74,6 +74,45 @@ describe("POST /workouts", () => {
     expect((await user.post("/workouts", recovery)).statusCode).toBe(201);
 
     expect(await currentPlan(user)).toEqual(plan);
+  });
+});
+
+// #143: History's delete. The clock is a Thursday noon in UTC, the test users' timezone, so the Assessment Workouts fall
+// on Tuesday and Wednesday and, with 3 days a week, a Workout this morning is the week's work done. Only Date is faked
+describe("DELETE /workouts/:id", () => {
+  beforeEach(() => {
+    vi.useFakeTimers({ toFake: ["Date"], now: new Date("2026-11-05T12:00:00Z"), shouldAdvanceTime: true });
+  });
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it("rebuilds the Planned Workout without the deleted Workout: the week's work isn't done, and nothing recovers from it", async () => {
+    const { user } = await assessedUser();
+    const { plan: neverLogged } = await assessedUser();
+    const thisMorning = workout(2, [
+      { slug: "goblet-squat", sets: Array.from({ length: 5 }, () => lifted(14, 10)) },
+      { slug: "plank", sets: [held(60), held(60), held(60)] },
+    ]);
+    expect((await user.post("/workouts", thisMorning)).statusCode).toBe(201);
+    const withIt = await currentPlan(user);
+    expect(withIt.reasons).toContainEqual({ code: "budget-met" });
+    expect(withIt.reasons).toContainEqual(
+      expect.objectContaining({
+        code: "recovering",
+        muscles: expect.arrayContaining(["quads"]),
+        lastSetOn: "2026-11-05",
+      }),
+    );
+
+    expect((await user.delete(`/workouts/${thisMorning.id}`)).statusCode).toBe(204);
+
+    const without = await currentPlan(user);
+    expect(without.reasons).not.toContainEqual({ code: "budget-met" });
+    expect(without.reasons).not.toContainEqual(expect.objectContaining({ lastSetOn: "2026-11-05" }));
+    // The same plan as a user who never logged it
+    expect(without.plannedExercises).toEqual(neverLogged.plannedExercises);
+    expect(without.reasons).toEqual(neverLogged.reasons);
   });
 });
 

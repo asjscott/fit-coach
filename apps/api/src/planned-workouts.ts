@@ -136,6 +136,13 @@ export async function rebuildAfterUpload(
   await rebuildPlannedWorkout(clerkUserId, user);
 }
 
+// For every deleted Workout (#143), so the plan no longer counts it. A rebuild that gives the same plan, as after
+// deleting a Recovery Workout, keeps it with its id. Before onboarding there's nothing to plan from
+export async function rebuildAfterDelete(clerkUserId: string) {
+  const user = await findOnboardedUser(clerkUserId);
+  if (user) await rebuildPlannedWorkout(clerkUserId, user);
+}
+
 function toPlannedWorkout({
   id,
   status,
