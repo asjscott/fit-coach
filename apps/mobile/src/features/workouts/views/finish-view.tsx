@@ -77,7 +77,7 @@ export default function FinishView() {
     try {
       showOutcome(await finish({ startedAt, endedAt }));
     } catch (err) {
-      // The time rules: a start more than 7 days back, an end before the start or in the future
+      // The time rules: a start more than 7 days back, an end before the start, in the future or more than 6 hours on
       if (err instanceof LogbookError) {
         if (err.field === "startedAt") setStartError(err.message);
         else setEndError(err.message);

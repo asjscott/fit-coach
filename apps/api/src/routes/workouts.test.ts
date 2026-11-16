@@ -2,7 +2,7 @@ import { exerciseBySlug } from "@fit/engines";
 import type { LatestAssessment, PlannedWorkout, Set } from "@fit/shared";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { type TestUser, useRouteTestApi } from "../test/route-test-api";
-import { assessmentPair, held, lifted, repsDone, workout } from "../test/workouts";
+import { assessmentPair, held, hoursAgo, lifted, repsDone, workout } from "../test/workouts";
 
 const api = useRouteTestApi();
 
@@ -74,6 +74,17 @@ describe("POST /workouts", () => {
     expect((await user.post("/workouts", recovery)).statusCode).toBe(201);
 
     expect(await currentPlan(user)).toEqual(plan);
+  });
+
+  // #152: a Workout lasts at most 6 hours
+  it("refuses a Workout that lasts more than 6 hours", async () => {
+    const user = await api.signIn();
+    const sevenHours = { ...workout(8, [{ slug: "goblet-squat", sets: [lifted(14, 10)] }]), endedAt: hoursAgo(1) };
+
+    const { statusCode } = await user.post("/workouts", sevenHours);
+
+    expect(statusCode).toBe(400);
+    expect((await user.get("/workouts")).body).toEqual([]);
   });
 });
 
