@@ -1,10 +1,20 @@
 import type { WorkingLevel } from "@fit/shared";
-import { describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { useRouteTestApi } from "../test/route-test-api";
 import { assessedUser, at, currentPlan, plannedExercise, upload, workingLevels } from "../test/uploads";
 import { held, lifted } from "../test/workouts";
 
 const api = useRouteTestApi();
+
+// The clock is a Wednesday noon in UTC, the test users' timezone, so the Workouts uploaded 75 hours back or more fall in
+// last week whatever day the tests run, and this week's plan can still pick their Exercises. From a Thursday on they'd
+// fall in this week, and the variety cap would leave the row out of the plan. Only Date is faked
+beforeEach(() => {
+  vi.useFakeTimers({ toFake: ["Date"], now: new Date("2026-11-11T12:00:00Z"), shouldAdvanceTime: true });
+});
+afterEach(() => {
+  vi.useRealTimers();
+});
 
 // Double progression at upload (#132, ADR 0007). The user is the harness's dumbbells-at-home user (8–24 kg in 2 kg
 // steps), whose Assessment seeds the goblet squat at 12 kg × 8 and the one-arm row at 14 kg × 8 (8–12 reps)
