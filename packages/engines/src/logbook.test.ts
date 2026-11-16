@@ -13,6 +13,7 @@ import type {
 import { describe, expect, it, vi } from "vitest";
 import { EXERCISES } from "./data/exercises";
 import { daysWorkout, equipmentChoices } from "./days-workout";
+import { builtInEquipment } from "./equipment";
 import {
   createLogbook,
   finishTimes,
@@ -1629,6 +1630,14 @@ describe("Logbook: the next load for the kg stepper", () => {
 
     expect(logbook.nextLoadKg("goblet-squat", 20, 1, home)).toBe(20);
     expect(logbook.nextLoadKg("goblet-squat", 8, -1, home)).toBe(8);
+  });
+
+  it("steps a kettlebell Exercise through the kettlebells from a load a dumbbell also has (#149)", () => {
+    const { logbook } = setup();
+    const fullGym = builtInEquipment("full_gym", "kg");
+
+    expect(logbook.nextLoadKg("kettlebell-swing", 20, 1, fullGym)).toBe(24);
+    expect(logbook.nextLoadKg("renegade-row", 20, 1, fullGym)).toBe(22.5);
   });
 
   it("steps by 2 kg, never below 0, when the primary Equipment Profile has no loads for the Exercise", () => {
