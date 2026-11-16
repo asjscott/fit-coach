@@ -9,20 +9,25 @@ type ToastContextValue = { showToast: (message: string, options?: ToastOptions) 
 
 const ToastContext = createContext<ToastContextValue>({ showToast: () => {} });
 
-// One app-wide toast; showing another replaces the current message
+// How long a toast stays up. One with an action stays long enough to read it and tap the action (#146)
+const DURATION = 3000;
+const ACTION_DURATION = 10_000;
+
+// One app-wide toast; showing another replaces the current one and starts its own time
 export function ToastProvider({ children }: { children: ReactNode }) {
   const [toast, setToast] = useState<{
+    id: number;
     visible: boolean;
     message: string;
     type: ToastType;
     duration: number;
     action?: ToastAction;
-  }>({ visible: false, message: "", type: "info", duration: 3000 });
+  }>({ id: 0, visible: false, message: "", type: "info", duration: DURATION });
 
   const showToast = useCallback((message: string, options?: ToastOptions) => {
-    const { type = "error", duration = 3000, error, action } = options ?? {};
+    const { type = "error", action, duration = action ? ACTION_DURATION : DURATION, error } = options ?? {};
     if (__DEV__ && type === "error") console.error(error ?? message);
-    setToast({ visible: true, message, type, duration, action });
+    setToast((prev) => ({ id: prev.id + 1, visible: true, message, type, duration, action }));
   }, []);
 
   const value = useMemo(() => ({ showToast }), [showToast]);
@@ -31,6 +36,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
     <ToastContext value={value}>
       {children}
       <Toast
+        key={toast.id}
         message={toast.message}
         type={toast.type}
         duration={toast.duration}

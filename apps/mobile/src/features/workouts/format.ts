@@ -45,11 +45,14 @@ export const timeLabel = (iso: string) => {
 // Two digits, for clocks: "05"
 export const twoDigits = (n: number) => String(n).padStart(2, "0");
 
-// Whole minutes as a value and unit: "49" min under an hour, then "2:05" h
-const minutesStat = (minutes: number) =>
-  minutes < 60
-    ? { value: String(minutes), unit: "min" }
-    : { value: `${Math.floor(minutes / 60)}:${twoDigits(minutes % 60)}`, unit: "h" };
+// Whole minutes as a value and unit: "49" min under an hour, then "2 h 5" min, or "49" h on the hour. Never a clock,
+// which reads oddly past a day: "49:00 h" (#144)
+function minutesStat(minutes: number) {
+  const hours = Math.floor(minutes / 60);
+  const rest = minutes % 60;
+  if (!hours) return { value: String(minutes), unit: "min" };
+  return rest ? { value: `${hours} h ${rest}`, unit: "min" } : { value: String(hours), unit: "h" };
+}
 
 const statLabel = ({ value, unit }: { value: string; unit: string }) => `${value} ${unit}`;
 
@@ -146,13 +149,24 @@ export const weightLabel = (kg: number, unit: WeightUnit) =>
 
 export const setsLabel = (sets: number) => `${sets} ${sets === 1 ? "set" : "sets"}`;
 
-// A PR's new best against the one it beat (#130), weights in the user's unit (#126): "Estimated max 21.3 kg, up from
-// 18.7 kg", "14 reps, up from 12"
+// A PR's new best against the one it beat (#130), weights in the user's unit (#126) and both rounded the same way
+// (#146): "Estimated max 162 lb, up from 154 lb", "20 kg for 8 reps, up from 16 kg", "14 reps, up from 12"
 export function prLabel({ measure, best, previous }: Pr, unit: WeightUnit) {
-  if (measure === "e1rm") return `Estimated max ${weightLabel(best, unit)}, up from ${weightLabel(previous, unit)}`;
-  if (measure === "load") return `${weightLabel(best, unit)} for 8 reps, up from ${weightLabel(previous, unit)}`;
+  if (measure === "e1rm") {
+    const [to, from] = estimatesLabels(best, previous, unit);
+    return `Estimated max ${to}, up from ${from}`;
+  }
+  if (measure === "load") return `${loadLabel(best, unit)} for 8 reps, up from ${loadLabel(previous, unit)}`;
   if (measure === "reps") return `${best} reps, up from ${previous}`;
   return `${best} s, up from ${previous} s`;
+}
+
+// Two estimates in whole units of the user's, or both to the tenth when whole units would read the same
+function estimatesLabels(a: number, b: number, unit: WeightUnit) {
+  const digits = Math.round(fromKg(a, unit)) === Math.round(fromKg(b, unit)) ? 1 : 0;
+  const label = (kg: number) =>
+    `${fromKg(kg, unit).toLocaleString(undefined, { minimumFractionDigits: digits, maximumFractionDigits: digits })} ${unit}`;
+  return [label(a), label(b)];
 }
 
 // The line that celebrates a Workout's PRs: "New PR: Goblet squat", "2 new PRs: Goblet squat, Plank"
@@ -256,7 +270,7 @@ export function setParts(set: Set | SetValues, unit: WeightUnit): [number, strin
 }
 
 // A minute or more reads in minutes, as the walk's "20 min" (#109): "45 s", "1 min 30 s"
-function durationParts(seconds: number): [number, string][] {
+export function durationParts(seconds: number): [number, string][] {
   if (seconds < 60) return [[seconds, "s"]];
   const over = seconds % 60;
   return [[Math.floor(seconds / 60), "min"], ...(over ? [[over, "s"] as [number, string]] : [])];
