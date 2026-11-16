@@ -104,7 +104,7 @@ export function ExerciseLogging({
       ) : null}
       {previousSets ? (
         <Text size="sm" color="subtle" style={styles.note}>
-          {previousSetsLabel(previousSets.sets, unit)}
+          {previousSetsLabel(previousSets.sets, unit, isJumpSlug(slug))}
         </Text>
       ) : null}
       {unilateral ? (
@@ -130,6 +130,7 @@ export function ExerciseLogging({
               set={set}
               index={i}
               unilateral={unilateral}
+              jump={isJumpSlug(slug)}
               editing={editingIndex === i}
               actions={{
                 open: actionsIndex === i,
