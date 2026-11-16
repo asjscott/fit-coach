@@ -180,13 +180,9 @@ export function PlannedWorkoutSheet({
               </View>
             ) : null}
             {supersets.paired || supersets.off ? (
-              // Like Full workout: offered only once it would change something, and kept while chosen
+              // Like Full workout: offered only once it would change something, and kept while chosen. Its note goes
+              // when No supersets is chosen, so it sits below the chip, which stays put under your finger (#147)
               <View style={{ gap: spacing[2] }}>
-                {supersets.paired ? (
-                  <Text size="sm" color="muted">
-                    {SUPERSETS_TO_FIT}
-                  </Text>
-                ) : null}
                 <HStack spacing={2}>
                   <Chip
                     label="No supersets"
@@ -194,6 +190,11 @@ export function PlannedWorkoutSheet({
                     onPress={() => supersets.onChooseOff(!supersets.off)}
                   />
                 </HStack>
+                {supersets.paired ? (
+                  <Text size="sm" color="muted">
+                    {SUPERSETS_TO_FIT}
+                  </Text>
+                ) : null}
               </View>
             ) : null}
             <View>
