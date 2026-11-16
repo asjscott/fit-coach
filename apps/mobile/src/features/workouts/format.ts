@@ -149,13 +149,24 @@ export const weightLabel = (kg: number, unit: WeightUnit) =>
 
 export const setsLabel = (sets: number) => `${sets} ${sets === 1 ? "set" : "sets"}`;
 
-// A PR's new best against the one it beat (#130), weights in the user's unit (#126): "Estimated max 21.3 kg, up from
-// 18.7 kg", "14 reps, up from 12"
+// A PR's new best against the one it beat (#130), weights in the user's unit (#126) and both rounded the same way
+// (#146): "Estimated max 162 lb, up from 154 lb", "20 kg for 8 reps, up from 16 kg", "14 reps, up from 12"
 export function prLabel({ measure, best, previous }: Pr, unit: WeightUnit) {
-  if (measure === "e1rm") return `Estimated max ${weightLabel(best, unit)}, up from ${weightLabel(previous, unit)}`;
-  if (measure === "load") return `${weightLabel(best, unit)} for 8 reps, up from ${weightLabel(previous, unit)}`;
+  if (measure === "e1rm") {
+    const [to, from] = estimatesLabels(best, previous, unit);
+    return `Estimated max ${to}, up from ${from}`;
+  }
+  if (measure === "load") return `${loadLabel(best, unit)} for 8 reps, up from ${loadLabel(previous, unit)}`;
   if (measure === "reps") return `${best} reps, up from ${previous}`;
   return `${best} s, up from ${previous} s`;
+}
+
+// Two estimates in whole units of the user's, or both to the tenth when whole units would read the same
+function estimatesLabels(a: number, b: number, unit: WeightUnit) {
+  const digits = Math.round(fromKg(a, unit)) === Math.round(fromKg(b, unit)) ? 1 : 0;
+  const label = (kg: number) =>
+    `${fromKg(kg, unit).toLocaleString(undefined, { minimumFractionDigits: digits, maximumFractionDigits: digits })} ${unit}`;
+  return [label(a), label(b)];
 }
 
 // The line that celebrates a Workout's PRs: "New PR: Goblet squat", "2 new PRs: Goblet squat, Plank"

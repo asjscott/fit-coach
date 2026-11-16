@@ -16,6 +16,7 @@ The simulators ran what they could on 13 Nov (Session 1 below). The rest falls i
 | ----- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | T2    | All of it, on both phones. It's only valid on a Release build.                                                                                                                                           |
 | C6    | iOS; Android passed on the emulator. Read "the staging database" as the one in `apps/api/.env`: look at `checkIns` in Atlas → Browse Collections.                                                        |
+| PR1   | iOS, after #146: See workout stays up ~10 s to tap; the detail rounds both numbers alike ("162 lb, up from 154 lb"). Android.                                                                            |
 | PR2   | All of it. Run it on the Release build in airplane mode, not the PWA: the PWA can't work offline until #124.                                                                                             |
 | J1    | Failed on the wording ("reps", not "contacts"): recheck once that's fixed. Flip the iOS switch with your finger. Android.                                                                                |
 | W1    | iOS. Both phones: no Elapsed timer on a past Workout, and Time in hours and minutes (#144). Skip the installed web app's date inputs: the web app on Cloudflare runs `main`, which has no past Workouts. |

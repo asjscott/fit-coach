@@ -411,9 +411,22 @@ describe("loads in the user's unit", () => {
 
 // PRs found at upload (#130): what each kind of best reads as, and the line that celebrates them
 describe("prLabel", () => {
-  it("gives a weighted Exercise's estimated one-rep maximum to the tenth of a kg", () => {
+  it("gives a weighted Exercise's estimated one-rep maximum and the one it beat to the same whole unit", () => {
     expect(prLabel({ slug: "goblet-squat", measure: "e1rm", best: 21.33, previous: 18.67 }, "kg")).toBe(
-      "Estimated max 21.3 kg, up from 18.7 kg",
+      "Estimated max 21 kg, up from 19 kg",
+    );
+    // 162.0 lb against 154.3 lb once read "162 lb, up from 154.3 lb" (#146)
+    expect(prLabel({ slug: "barbell-bench-press", measure: "e1rm", best: 73.5, previous: 70 }, "lb")).toBe(
+      "Estimated max 162 lb, up from 154 lb",
+    );
+  });
+
+  it("gives both estimated maximums to the tenth when whole units would read the same", () => {
+    expect(prLabel({ slug: "goblet-squat", measure: "e1rm", best: 21.33, previous: 21.1 }, "kg")).toBe(
+      "Estimated max 21.3 kg, up from 21.1 kg",
+    );
+    expect(prLabel({ slug: "goblet-squat", measure: "e1rm", best: 21.02, previous: 20.6 }, "kg")).toBe(
+      "Estimated max 21.0 kg, up from 20.6 kg",
     );
   });
 
@@ -425,7 +438,10 @@ describe("prLabel", () => {
 
   it("gives a weight in the user's unit (#126)", () => {
     expect(prLabel({ slug: "goblet-squat", measure: "e1rm", best: 20, previous: 16.8 }, "lb")).toBe(
-      "Estimated max 44.1 lb, up from 37 lb",
+      "Estimated max 44 lb, up from 37 lb",
+    );
+    expect(prLabel({ slug: "kettlebell-swing", measure: "load", best: 12.5, previous: 11.34 }, "lb")).toBe(
+      "27.5 lb for 8 reps, up from 25 lb",
     );
   });
 
