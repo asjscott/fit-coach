@@ -10,6 +10,10 @@ const GOAL_NAMES = ["build_muscle", "recomp", "lose_fat", "athletic"] as const;
 const LENGTHS = ["short", "standard", "long"] as const;
 const fullGym = { lifter: "intermediate", profile: "Full gym" } as const;
 
+// Each test simulates weeks of planning, up to every profile and lifter: about 2 seconds alone, past the default 5 when
+// `pnpm test` runs every package at once
+vi.setConfig({ testTimeout: 30_000 });
+
 // What a user sees over a month, so a change to the score or tables that loses them fails here. Each passes whatever
 // order the library is in, so a tie can't quietly decide one
 describe.each([
