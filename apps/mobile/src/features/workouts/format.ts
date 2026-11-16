@@ -198,9 +198,8 @@ export function setsSummary(sets: readonly Set[], unit: WeightUnit, reading?: Se
   if (!sharesFrame || (first.length > 1 && sets[0]?.kind !== "external")) {
     return sets.map((set) => describeSet(set, unit, reading)).join(", ");
   }
-  const lead = first.slice(0, -1).map(([value, label]) => `${value} ${label} `);
   const last = first.at(-1)?.[1];
-  return `${lead.join("")}${parts.map((set) => set.at(-1)?.[0]).join(", ")}${last ? ` ${last}` : ""}`;
+  return `${leadParts(first)}${parts.map((set) => set.at(-1)?.[0]).join(", ")}${last ? ` ${last}` : ""}`;
 }
 
 // Previous Sets as a reference while logging: "Last: 18 kg × 10, 10, 8"
@@ -277,6 +276,14 @@ export function durationParts(seconds: number): [number, string][] {
   const over = seconds % 60;
   return [[Math.floor(seconds / 60), "min"], ...(over ? [[over, "s"] as [number, string]] : [])];
 }
+
+// Every part but the last, each with its unit, to say before the last number: "18 kg × " of 18 kg × 10, "1 min " of
+// 1 min 30 s; empty for one part
+export const leadParts = (parts: readonly [number, string][]) =>
+  parts
+    .slice(0, -1)
+    .map(([value, label]) => `${value} ${label} `)
+    .join("");
 
 // A Set as its Load Type records it: "16 kg × 10", a Jump's "10 contacts"; add " per side" for a one-sided Exercise
 export const describeSet = (set: Set | SetValues, unit: WeightUnit, reading?: SetReading) =>

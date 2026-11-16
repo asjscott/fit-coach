@@ -1,6 +1,6 @@
 import { stepLoadKg, UNKNOWN_LOADS_STEP_KG, type StepDirection } from "@fit/engines";
 import { loadInUnit, toKg, type LoadType, type SetValues, type WeightUnit } from "@fit/shared";
-import { durationParts } from "./format";
+import { durationParts, leadParts } from "./format";
 
 // Entering a Set's values with −/+ steppers: what each step adds, and turning typed text into the values the
 // Logbook checks. A load is typed and stepped in the user's unit, and becomes its exact kg only once logged (#126)
@@ -57,8 +57,7 @@ export function secondsField(text: string): { value: string; unit: string } {
   if (!/^\d+$/.test(trimmed)) return { value: text, unit: "s" };
   const parts = durationParts(Number(trimmed));
   const [value, unit] = parts.at(-1)!;
-  const lead = parts.slice(0, -1).map(([n, label]) => `${n} ${label} `);
-  return { value: `${lead.join("")}${value}`, unit };
+  return { value: `${leadParts(parts)}${value}`, unit };
 }
 
 // For screen readers, what one step of a timed Set adds or takes away: "Plus 1 minute", "Minus 5 seconds"
