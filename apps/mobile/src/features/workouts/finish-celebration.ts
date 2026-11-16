@@ -1,3 +1,4 @@
+import type { Logbook } from "@fit/engines";
 import type { Pr } from "@fit/shared";
 import { untilAborted } from "../../api/until-aborted";
 
@@ -20,4 +21,44 @@ export function celebrationOf({
   const uploaded = untilAborted(upload, finishWindow).catch(() => false);
   const prs = uploaded.then((ok) => (ok ? takePrs() : []));
   return { uploaded, prs };
+}
+
+// Where the Finish window hears the app leave the foreground: React Native's AppState
+export type AppStateEvents = {
+  addEventListener: (type: "change", listener: (state: string) => void) => { remove: () => void };
+};
+
+// Finish's celebration of the Workout it just saved, over the Finish window: FINISH_WINDOW_MS from Save workout, or
+// until the app leaves the foreground. syncing is the upload started for it; the PRs are taken from the Logbook only
+// if this Workout left the phone inside the window, else they stay in its unseenPrs for Today's note (#142)
+export function finishCelebration({
+  logbook,
+  workoutId,
+  syncing,
+  appState,
+}: {
+  logbook: Pick<Logbook, "pending" | "unseenPrs" | "markPrsSeen">;
+  workoutId: string;
+  syncing: Promise<unknown>;
+  appState: AppStateEvents;
+}): { uploaded: Promise<boolean>; prs: Promise<Pr[]> } {
+  const finishWindow = new AbortController();
+  const timer = setTimeout(() => finishWindow.abort(), FINISH_WINDOW_MS);
+  const away = appState.addEventListener("change", (state) => {
+    if (state !== "active") finishWindow.abort();
+  });
+  const celebration = celebrationOf({
+    upload: syncing.then(async () => !(await logbook.pending()).some((p) => p.id === workoutId)),
+    takePrs: async () => {
+      const found = (await logbook.unseenPrs()).find((unseen) => unseen.workoutId === workoutId)?.prs ?? [];
+      await logbook.markPrsSeen([workoutId]);
+      return found;
+    },
+    finishWindow: finishWindow.signal,
+  });
+  celebration.uploaded.then(() => {
+    clearTimeout(timer);
+    away.remove();
+  });
+  return celebration;
 }

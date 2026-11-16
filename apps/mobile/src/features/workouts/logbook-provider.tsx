@@ -25,7 +25,7 @@ import { createContext, use, useCallback, useEffect, useRef, useState, type Reac
 import { AppState, Vibration } from "react-native";
 import { useApi } from "@/api";
 import { deviceStorage } from "./device-storage";
-import { celebrationOf, FINISH_WINDOW_MS } from "./finish-celebration";
+import { finishCelebration } from "./finish-celebration";
 import { useSyncTriggers } from "./hooks/use-sync-triggers";
 
 type LogbookContextValue = {
@@ -289,24 +289,9 @@ export function LogbookProvider({ children }: { children: ReactNode }) {
         setRest(null);
         const { id } = result.workout;
         celebrating.current.add(id);
-        // Ends once the user can't be looking at the toast, so a late upload's PRs go to Today instead (#142)
-        const finishWindow = new AbortController();
-        const timer = setTimeout(() => finishWindow.abort(), FINISH_WINDOW_MS);
-        const away = AppState.addEventListener("change", (state) => {
-          if (state !== "active") finishWindow.abort();
-        });
-        const { uploaded, prs } = celebrationOf({
-          upload: sync().then(async () => !(await logbook.pending()).some((p) => p.id === id)),
-          takePrs: async () => {
-            const found = (await logbook.unseenPrs()).find((unseen) => unseen.workoutId === id)?.prs ?? [];
-            await logbook.markPrsSeen([id]);
-            return found;
-          },
-          finishWindow: finishWindow.signal,
-        });
+        // Only while the user can be looking at the toast, so a late upload's PRs go to Today instead (#142)
+        const { uploaded, prs } = finishCelebration({ logbook, workoutId: id, syncing: sync(), appState: AppState });
         prs.finally(() => {
-          clearTimeout(timer);
-          away.remove();
           celebrating.current.delete(id);
           // An upload that got through after the window has left its PRs for Today's note
           refreshPending();
