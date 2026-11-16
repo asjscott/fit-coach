@@ -15,6 +15,7 @@ import { equipmentSummary } from "@/features/equipment/equipment-summary";
 import { useChosenTests } from "@/features/assessment/hooks/use-chosen-tests";
 import { useStartAssessment } from "@/features/assessment/hooks/use-start-assessment";
 import { useCurrentUser, usePrimaryEquipmentProfile, useWeightUnit } from "@/features/user/current-user-provider";
+import { bodyWeightInUnit } from "@/features/user/body-weight";
 import { genderLabel } from "@/features/user/components/form/fields/user-gender-field";
 import { goalLabel } from "@/features/user/components/form/fields/user-goal-field";
 import { injuryLabel } from "@/features/user/components/form/fields/user-injuries-field";
@@ -27,6 +28,7 @@ export default function ProfileView() {
   const { signOut } = useAuth();
   const { user } = useCurrentUser();
   const equipment = usePrimaryEquipmentProfile();
+  const unit = useWeightUnit();
   const logbook = useLogbook();
   const assessment = useStartAssessment();
   const tests = useChosenTests();
@@ -108,7 +110,7 @@ export default function ProfileView() {
           <Row label="Gender" value={profile.gender && genderLabel(profile.gender)} />
           <Row label="Age" value={profile.birthYear && `${new Date().getFullYear() - profile.birthYear}`} />
           <Row label="Height" value={profile.heightCm && `${profile.heightCm} cm`} />
-          <Row label="Weight" value={profile.weightKg && `${profile.weightKg} kg`} />
+          <Row label="Weight" value={profile.weightKg && `${bodyWeightInUnit(profile.weightKg, unit)} ${unit}`} />
           <Text size="sm" color="muted">
             Member since {new Date(user.onboardedAt).toLocaleDateString()}
           </Text>
