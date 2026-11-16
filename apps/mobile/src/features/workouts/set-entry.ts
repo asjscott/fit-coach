@@ -1,4 +1,4 @@
-import { stepLoadKg, UNKNOWN_LOADS_STEP_KG, type StepDirection } from "@fit/engines";
+import { loadsSteppedFrom, stepLoadKg, UNKNOWN_LOADS_STEP_KG, type StepDirection } from "@fit/engines";
 import { loadInUnit, toKg, type LoadType, type SetValues, type WeightUnit } from "@fit/shared";
 import { durationParts, leadParts } from "./format";
 
@@ -87,12 +87,17 @@ const UNKNOWN_LOADS_STEP: Record<WeightUnit, number> = { kg: UNKNOWN_LOADS_STEP_
 // From a load in the user's unit to the next lighter or heavier one, in the same unit
 export type LoadStep = (load: number, direction: StepDirection) => number;
 
-// Steps through the equipment's loads (kg, lightest first) as the user sees them, so a load whose kg is a hair off the
-// one shown never sticks; by 5 lb or 2 kg when the loads aren't known
-export function loadStep(loadsKg: number[], unit: WeightUnit): LoadStep {
-  if (!loadsKg.length) return (load, direction) => Math.max(0, load + UNKNOWN_LOADS_STEP[unit] * direction);
-  const loads = [...new Set(loadsKg.map((kg) => loadInUnit(kg, unit)))].sort((a, b) => a - b);
-  return (load, direction) => stepLoadKg(load, direction, loads);
+// Steps through the loads of each kind of equipment (kg, as implementLoadsKg gives them) as the user sees them, so a
+// load whose kg is a hair off the one shown never sticks. A step stays on the kind the load is on (#149), so a lb
+// gym's dumbbells step 25 to 30 lb past a 26.5 lb kettlebell. By 5 lb or 2 kg when the loads aren't known
+export function loadStep(implementLoadsKg: readonly (readonly number[])[], unit: WeightUnit): LoadStep {
+  if (!implementLoadsKg.some((loads) => loads.length)) {
+    return (load, direction) => Math.max(0, load + UNKNOWN_LOADS_STEP[unit] * direction);
+  }
+  const implementLoads = implementLoadsKg.map((loadsKg) =>
+    [...new Set(loadsKg.map((kg) => loadInUnit(kg, unit)))].sort((a, b) => a - b),
+  );
+  return (load, direction) => stepLoadKg(load, direction, loadsSteppedFrom(load, implementLoads));
 }
 
 // For screen readers: with the equipment's loads known, a tap's size changes from load to load, so it isn't named
