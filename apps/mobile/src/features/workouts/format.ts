@@ -1,5 +1,6 @@
 import {
   fromKg,
+  inUnitToStep,
   loadInUnit,
   type BuiltInEquipment,
   type InProgressWorkoutExercise,
@@ -143,9 +144,8 @@ export const volumeLabel = (kg: number, unit: WeightUnit) => Math.round(fromKg(k
 // A load to 0.5 of the user's unit, with the unit: "25 lb", "16.5 kg"
 export const loadLabel = (kg: number, unit: WeightUnit) => `${loadInUnit(kg, unit)} ${unit}`;
 
-// An estimate such as an Estimated maximum, to the tenth of the user's unit: "16.8 kg", "37 lb"
-export const weightLabel = (kg: number, unit: WeightUnit) =>
-  `${fromKg(kg, unit).toLocaleString(undefined, { maximumFractionDigits: 1 })} ${unit}`;
+// A weight to the tenth of the user's unit, such as an Estimated maximum or body weight: "16.8 kg", "37 lb"
+export const weightLabel = (kg: number, unit: WeightUnit) => `${inUnitToStep(kg, unit, 0.1).toLocaleString()} ${unit}`;
 
 export const setsLabel = (sets: number) => `${sets} ${sets === 1 ? "set" : "sets"}`;
 

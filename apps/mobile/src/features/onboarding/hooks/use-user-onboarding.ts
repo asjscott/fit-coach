@@ -1,6 +1,6 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { usualWorkoutLength } from "@fit/engines";
-import { UserProfile, type WeightUnit } from "@fit/shared";
+import { bodyWeightAnswer, bodyWeightInUnit, bodyWeightKg, UserProfile, type WeightUnit } from "@fit/shared";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
@@ -14,7 +14,6 @@ import {
   toTrainingSetup,
   TrainingSetup,
 } from "@/features/equipment/training-setup";
-import { bodyWeightAnswer, bodyWeightInUnit, bodyWeightKg } from "@/features/user/body-weight";
 import { useCurrentUser, usePrimaryEquipmentProfile, useWeightUnit } from "@/features/user/current-user-provider";
 import { useNotifications } from "@/hooks/use-notifications";
 import type { Stage, StageAction } from "../form/staged-form";

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { DEFAULT_WEIGHT_UNIT, fromKg, KG_PER_LB, loadInUnit, toKg, WeightUnit } from "./units";
+import { DEFAULT_WEIGHT_UNIT, fromKg, inUnitToStep, KG_PER_LB, loadInUnit, toKg, WeightUnit } from "./units";
 
 // User stories 18 and 19: the user picks pounds or kilograms, and a load entered in pounds always reads back as entered
 describe("WeightUnit", () => {
@@ -41,5 +41,18 @@ describe("fromKg", () => {
   it("converts kg into the user's unit unrounded, for totals such as Volume", () => {
     expect(fromKg(1000, "lb")).toBeCloseTo(2204.6226, 4);
     expect(fromKg(1000, "kg")).toBe(1000);
+  });
+});
+
+describe("inUnitToStep", () => {
+  it("gives kg in the user's unit to the nearest step", () => {
+    expect(inUnitToStep(80, "lb", 0.1)).toBe(176.4); // 176.37 lb
+    expect(inUnitToStep(20, "lb", 0.5)).toBe(44); // 44.09 lb
+    expect(inUnitToStep(16.84, "kg", 0.1)).toBe(16.8);
+  });
+
+  it("reads a weight entered in pounds back as entered, at any step", () => {
+    expect(inUnitToStep(toKg(165.5, "lb"), "lb", 0.5)).toBe(165.5);
+    expect(inUnitToStep(toKg(176.4, "lb"), "lb", 0.1)).toBe(176.4);
   });
 });
