@@ -300,7 +300,6 @@ export default function TodayView() {
                   ratings: checkIn,
                   onChange: keepCheckIn,
                   lighter: today.lighter,
-                  canBeLighter: today.canBeLighter,
                   fullWorkout: today.fullWorkout,
                   onChooseFullWorkout: today.chooseFullWorkout,
                 }

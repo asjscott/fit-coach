@@ -16,6 +16,7 @@ The simulators ran what they could on 13 Nov (Session 1 below). The rest falls i
 | ----- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | T2    | All of it, on both phones. It's only valid on a Release build.                                                                                                                                           |
 | C6    | iOS; Android passed on the emulator. Read "the staging database" as the one in `apps/api/.env`: look at `checkIns` in Atlas → Browse Collections.                                                        |
+| C7    | All of it, on both phones.                                                                                                                                                                               |
 | PR1   | iOS, after #146: See workout stays up ~10 s to tap; the detail rounds both numbers alike ("162 lb, up from 154 lb"). Android.                                                                            |
 | PR2   | All of it. Run it on the Release build in airplane mode, not the PWA: the PWA can't work offline until #124.                                                                                             |
 | J1    | Failed on the wording ("reps", not "contacts"): recheck once that's fixed. Flip the iOS switch with your finger. Android.                                                                                |
@@ -238,6 +239,8 @@ DP1 and RPE2 passed on both simulators. Look at them on a phone only if you have
   - iOS: Result: 🕒 · Android: Result: 🕒 · Notes: Skip for now: needs the next day.
 - [x] **C6** (#125) In airplane mode, check in on Today: the Day's Workout follows the Readiness straight away, as online. Change the check-in once, still offline. Turn airplane mode off and bring the app to the foreground. The `checkIns` collection in the staging database has one document for today, with the changed ratings, not the first.
   - iOS: Result: ✅ · Android: Result: ✅ · Notes: Android emulator, against the in-memory API, not staging. In airplane mode (with the adb port forward to the API cut), changing the check-in made the Workout lighter at once and the API kept the old ratings. Back online and foregrounded, the one check-in for today had the changed ratings. My first try leaked through an open adb keep-alive connection, so it wasn't really offline; the rerun was. ⚠️ Changing a rating adds or removes rows above the ratings ("Paired into supersets to fit the time", "Lighter after your check-in"), so the buttons move under your finger, and it can leave a blank gap where a row was.
+- [ ] **C7** (#147) Open the Next Workout sheet on Today with a check-in, on a Length that pairs supersets (see Supersets below). Rate a few times so the Workout gets lighter and full again: the rating buttons don't move under your finger. "Lighter after your check-in", Full workout and "Paired into supersets to fit the time" come and go below the ratings, and no blank gap is left where one was.
+  - iOS: Result: · Android: Result: · Notes:
 
 ## Supersets (#96)
 
