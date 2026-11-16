@@ -55,7 +55,7 @@ export function UserOnboardingForm({ exit }: { exit: { label: string; onPress: (
           }
         >
           <FormStage<OnboardingValues>
-            fields={["gender", "birthYear", "heightCm", "weightKg"]}
+            fields={["gender", "birthYear", "heightCm", "weight"]}
             title="About you"
             message="We use these to set your starting weights and volume."
           >
