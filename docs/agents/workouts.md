@@ -248,7 +248,7 @@ Schemas: packages/shared/src/planned-workouts.ts
   never picks one; `jumpsForWorkout` puts 2 of them, 3 Sets each, first in the first 2 Workouts of the week, one that
   goes up and one forward or sideways, as far as the 130% cap allows. A jump has no Working Level: its target is `{ unit: "reps" }` holding its
   contacts (`STRENGTH_RATIOS` kind `contacts`), halved when `PlanWorkoutInput.deloadWeek`, which the API sets from
-  `weekOfBlock`. It's logged as a bodyweight Set whose reps are contacts, which the phone labels so (`isJumpSlug`). On a
+  `weekOfBlock`. It's logged as a bodyweight Set whose reps are contacts, which the phone labels so (`setReading`). On a
   built-in choice a jump only stands in for a jump (`alternativeOptions`). The six jumps also need `seed:exercises`.
 - **A Check-in is stored once per user per local date** (#125), the phone's date, sent in the URL. The server keeps the
   one with the latest `checkedInAt`, so a retry or a late upload of an earlier one changes nothing, and the PUT answers

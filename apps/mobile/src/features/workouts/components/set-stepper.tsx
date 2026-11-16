@@ -31,7 +31,7 @@ export type SetStepperProps = {
   // What's typed, e.g. "16.5"
   value: string;
   onChange: (value: string) => void;
-} & (({ field: "load" } & LoadSteps) | { field: Exclude<SetField, "load">; contacts?: boolean });
+} & (({ field: "load" } & LoadSteps) | { field: Exclude<SetField, "load">; jump?: boolean });
 
 // One Set value with − and + either side: a load to the next load, reps by 1, seconds by 5 or, from a minute, by the
 // minute, repeating while held. Any value can still be typed: seconds show in minutes from a minute (#145), as
@@ -39,7 +39,7 @@ export type SetStepperProps = {
 export function SetStepper(props: SetStepperProps) {
   const { field, value, onChange } = props;
   // A jump's reps are its contacts (#105)
-  const contacts = props.field === "reps" && props.contacts;
+  const contacts = props.field === "reps" && props.jump;
   const [typing, setTyping] = useState(false);
   const shown = field === "seconds" && !typing ? secondsField(value) : { value, unit: "s" };
   const unit = props.field === "load" ? props.unit : contacts ? "contacts" : field === "reps" ? "reps" : shown.unit;

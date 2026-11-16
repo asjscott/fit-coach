@@ -13,7 +13,7 @@ import {
 import { pairRestPlan } from "@fit/engines";
 import { getCalendars } from "expo-localization";
 import { bandLevelLabels } from "../equipment/loads";
-import { exerciseName } from "./library";
+import { exerciseName, type SetReading } from "./library";
 
 // How Workouts and Sets read on screen
 
@@ -187,8 +187,8 @@ export function elapsedClockLabel(ms: number) {
 // A Workout Exercise's Sets on one line, each unit said once where it can be: "18 kg × 10, 10, 8",
 // "16 kg × 10, 18 kg × 8", "12, 10 reps", a Jump's "6, 6 contacts", "45, 40 s", "1 min 30 s, 1 min 15 s". Empty with
 // no Sets
-export function setsSummary(sets: readonly Set[], unit: WeightUnit, jump = false) {
-  const parts = sets.map((set) => setParts(set, unit, jump));
+export function setsSummary(sets: readonly Set[], unit: WeightUnit, reading?: SetReading) {
+  const parts = sets.map((set) => setParts(set, unit, reading));
   const first = parts[0];
   if (!first) return "";
   // Everything about a Set but its last number, e.g. 18 "kg ×" for weighted Sets, or "reps". Only a weight is said
@@ -196,7 +196,7 @@ export function setsSummary(sets: readonly Set[], unit: WeightUnit, jump = false
   const frame = (set: [number, string][]) => JSON.stringify([...set.slice(0, -1), set.at(-1)?.[1]]);
   const sharesFrame = parts.every((set) => frame(set) === frame(first));
   if (!sharesFrame || (first.length > 1 && sets[0]?.kind !== "external")) {
-    return sets.map((set) => describeSet(set, unit, jump)).join(", ");
+    return sets.map((set) => describeSet(set, unit, reading)).join(", ");
   }
   const lead = first.slice(0, -1).map(([value, label]) => `${value} ${label} `);
   const last = first.at(-1)?.[1];
@@ -204,8 +204,8 @@ export function setsSummary(sets: readonly Set[], unit: WeightUnit, jump = false
 }
 
 // Previous Sets as a reference while logging: "Last: 18 kg × 10, 10, 8"
-export const previousSetsLabel = (sets: readonly Set[], unit: WeightUnit, jump = false) =>
-  `Last: ${setsSummary(sets, unit, jump)}`;
+export const previousSetsLabel = (sets: readonly Set[], unit: WeightUnit, reading?: SetReading) =>
+  `Last: ${setsSummary(sets, unit, reading)}`;
 
 // A Set's target as a Set reads: "20 kg × 8", "12 reps", "40 s", "Medium band × 12". A timed target of a minute or more
 // reads in minutes, as the walk's "20 min" (#109). A load rounds to 0.5 of the user's unit, which also hides the
@@ -227,9 +227,9 @@ type PlannedSets = NonNullable<InProgressWorkoutExercise["planned"]>;
 
 // What the plan sets for an Exercise: "3 sets · 20 kg × 8", with " per side" for a one-sided Exercise, and a jump's
 // reps as contacts: "3 sets · 10 contacts" (#105). A load is in the user's unit
-export const plannedSetsLabel = ({ sets, target }: PlannedSets, unit: WeightUnit, unilateral = false, jump = false) => {
-  const label = jump && target.unit === "reps" ? `${target.reps} contacts` : setTargetLabel(target, unit);
-  return `${setsLabel(sets)} · ${label}${unilateral ? " per side" : ""}`;
+export const plannedSetsLabel = ({ sets, target }: PlannedSets, unit: WeightUnit, reading?: SetReading) => {
+  const label = reading?.jump && target.unit === "reps" ? `${target.reps} contacts` : setTargetLabel(target, unit);
+  return `${setsLabel(sets)} · ${label}${reading?.unilateral ? " per side" : ""}`;
 };
 
 export const builtInEquipmentLabels: Record<BuiltInEquipment, string> = {
@@ -248,17 +248,16 @@ export function workoutExerciseSummary(
   unit: WeightUnit,
   previous?: readonly Set[],
   planned?: PlannedSets,
-  unilateral?: boolean,
-  jump = false,
+  reading?: SetReading,
 ) {
-  if (sets.length) return `${setsLabel(sets.length)} · ${setsSummary(sets, unit, jump)}`;
-  if (planned) return plannedSetsLabel(planned, unit, unilateral, jump);
-  return previous?.length ? previousSetsLabel(previous, unit, jump) : "Not started";
+  if (sets.length) return `${setsLabel(sets.length)} · ${setsSummary(sets, unit, reading)}`;
+  if (planned) return plannedSetsLabel(planned, unit, reading);
+  return previous?.length ? previousSetsLabel(previous, unit, reading) : "Not started";
 }
 
 // A Set's numbers and the units after them, as it reads: 16 "kg ×" 10, 12 "reps", 45 "s", and a Jump's 10 "contacts"
 // (#141). A load is in the user's unit, to 0.5 of it
-export function setParts(set: Set | SetValues, unit: WeightUnit, jump = false): [number, string][] {
+export function setParts(set: Set | SetValues, unit: WeightUnit, reading?: SetReading): [number, string][] {
   switch (set.kind) {
     case "external":
       return [
@@ -266,7 +265,7 @@ export function setParts(set: Set | SetValues, unit: WeightUnit, jump = false): 
         [set.reps, ""],
       ];
     case "bodyweight":
-      return [[set.reps, jump ? "contacts" : "reps"]];
+      return [[set.reps, reading?.jump ? "contacts" : "reps"]];
     case "timed":
       return durationParts(set.seconds);
   }
@@ -280,8 +279,8 @@ export function durationParts(seconds: number): [number, string][] {
 }
 
 // A Set as its Load Type records it: "16 kg × 10", a Jump's "10 contacts"; add " per side" for a one-sided Exercise
-export const describeSet = (set: Set | SetValues, unit: WeightUnit, jump = false) =>
-  setParts(set, unit, jump)
+export const describeSet = (set: Set | SetValues, unit: WeightUnit, reading?: SetReading) =>
+  setParts(set, unit, reading)
     .map(([value, label]) => (label ? `${value} ${label}` : String(value)))
     .join(" ");
 
