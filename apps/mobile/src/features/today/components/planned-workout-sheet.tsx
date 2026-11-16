@@ -116,7 +116,8 @@ export function PlannedWorkoutSheet({
           <View style={styles.content}>
             <View style={{ gap: spacing[1] }}>
               <Heading size="lg">Next Workout</Heading>
-              <Text size="sm" color="muted">
+              {/* One line however the counts change, so nothing below it moves as you rate (#147) */}
+              <Text size="sm" color="muted" numberOfLines={1}>
                 {todayPlanLine(plannedExercises, estimatedSeconds)}
               </Text>
               {reasons.map((reason) => (
@@ -160,14 +161,10 @@ export function PlannedWorkoutSheet({
               />
             ) : null}
             {/* What the check-in changes comes and goes as you rate, so it sits below the ratings, where it moves
-                nothing above them (#147) */}
+                nothing above them. Its note goes when Full workout is chosen, so it sits below the chip, which stays
+                put under your finger (#147) */}
             {checkIn && lighterRow?.shown ? (
               <View style={{ gap: spacing[2] }}>
-                {lighterRow.note ? (
-                  <Text size="sm" color="muted">
-                    {LIGHTER_AFTER_CHECK_IN}
-                  </Text>
-                ) : null}
                 <HStack spacing={2}>
                   <Chip
                     label="Full workout"
@@ -175,6 +172,11 @@ export function PlannedWorkoutSheet({
                     onPress={() => checkIn.onChooseFullWorkout(!checkIn.fullWorkout)}
                   />
                 </HStack>
+                {lighterRow.note ? (
+                  <Text size="sm" color="muted">
+                    {LIGHTER_AFTER_CHECK_IN}
+                  </Text>
+                ) : null}
               </View>
             ) : null}
             {supersets.paired || supersets.off ? (

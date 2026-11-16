@@ -102,9 +102,9 @@ export function todayLoggedLine(workouts: readonly FinishedWorkoutSets[], weight
 // The plan's sheet says it on its own, and the day's card at the end of todayPlanLine
 export const LIGHTER_AFTER_CHECK_IN = "Lighter after your check-in";
 
-// The check-in's row in the plan's sheet: the note that it made the Workout lighter, and the Full workout chip. It
-// sits below the ratings, so coming and going as you rate moves nothing above them, and takes no space when it's
-// gone (#147)
+// The check-in's row in the plan's sheet: the Full workout chip, and below it the note that the check-in made the
+// Workout lighter. It sits below the ratings, so coming and going as you rate moves nothing above them, and takes no
+// space when it's gone (#147)
 export function checkInLighterRow({ lighter, fullWorkout }: { lighter: boolean; fullWorkout: boolean }) {
   const chip = lighter || fullWorkout;
   return { shown: chip, note: lighter, chip };
