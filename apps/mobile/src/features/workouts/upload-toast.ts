@@ -22,13 +22,11 @@ export function toastWhenUploaded(
       if (ok && assessment === "B") {
         showToast(`Assessment saved.${celebration}`, {
           type: "success",
-          duration: 6000,
           action: { label: "See results", onPress: () => router.push("/assessment-results") },
         });
       } else if (ok && found.length) {
         showToast(`Workout saved.${celebration}`, {
           type: "success",
-          duration: 6000,
           action: {
             label: "See workout",
             onPress: () => router.push({ pathname: "/history/[id]", params: { id: workoutId } }),

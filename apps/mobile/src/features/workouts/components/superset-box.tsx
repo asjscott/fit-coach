@@ -57,7 +57,7 @@ export function SupersetBox({ pair, letter, currentId, onChoose }: SupersetBoxPr
         const { id, slug, sets, planned } = workoutExercise;
         const unilateral = libraryExercise(slug)?.unilateral;
         const done = !!planned && sets.length >= planned.sets;
-        const setsSoFar = sets.map((set) => describeSet(set, unit)).join(", ");
+        const setsSoFar = sets.map((set) => describeSet(set, unit, isJumpSlug(slug))).join(", ");
         const summary = done
           ? `Done · ${setsSoFar}`
           : open && planned

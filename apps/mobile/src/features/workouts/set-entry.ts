@@ -1,5 +1,6 @@
 import { stepLoadKg, UNKNOWN_LOADS_STEP_KG, type StepDirection } from "@fit/engines";
 import { loadInUnit, toKg, type LoadType, type SetValues, type WeightUnit } from "@fit/shared";
+import { durationParts } from "./format";
 
 // Entering a Set's values with −/+ steppers: what each step adds, and turning typed text into the values the
 // Logbook checks. A load is typed and stepped in the user's unit, and becomes its exact kg only once logged (#126)
@@ -49,8 +50,37 @@ export function rpeMissing(asksRpe: boolean, rpe: number | undefined): boolean {
   return asksRpe && rpe === undefined;
 }
 
-// A load has no fixed step: it goes to the next load the equipment has (loadStep)
+// A timed Set's seconds as the stepper shows them, read as the target and the logged Set read (#145): 1200 shows as
+// "20" "min", 90 as "1 min 30" "s". Only whole seconds are shown so: anything else shows as typed
+export function secondsField(text: string): { value: string; unit: string } {
+  const trimmed = text.trim();
+  if (!/^\d+$/.test(trimmed)) return { value: text, unit: "s" };
+  const parts = durationParts(Number(trimmed));
+  const [value, unit] = parts.at(-1)!;
+  const lead = parts.slice(0, -1).map(([n, label]) => `${n} ${label} `);
+  return { value: `${lead.join("")}${value}`, unit };
+}
+
+// For screen readers, what one step of a timed Set adds or takes away: "Plus 1 minute", "Minus 5 seconds"
+export function secondsStepLabel(text: string, direction: StepDirection): string {
+  const typed = parseField(text);
+  const from = Number.isFinite(typed) ? Math.round(typed) : 0;
+  const byMinute = direction === 1 ? from >= MINUTE : from > MINUTE;
+  return `${direction === 1 ? "Plus" : "Minus"} ${byMinute ? "1 minute" : `${STEPS.seconds} seconds`}`;
+}
+
+// A load has no fixed step: it goes to the next load the equipment has (loadStep). Seconds step by 5 under a minute;
+// a minute or more goes to the next or previous whole minute (secondsStep)
 export const STEPS: Record<Exclude<SetField, "load">, number> = { reps: 1, seconds: 5 };
+
+const MINUTE = 60;
+
+// A 20-minute walk steps by the minute and a short hold by 5 s (#145): 55 s → 1 min → 2 min, and 1 min → 55 s
+function secondsStep(seconds: number, direction: StepDirection): number {
+  if (direction === 1 && seconds >= MINUTE) return (Math.floor(seconds / MINUTE) + 1) * MINUTE;
+  if (direction === -1 && seconds > MINUTE) return (Math.ceil(seconds / MINUTE) - 1) * MINUTE;
+  return seconds + STEPS.seconds * direction;
+}
 
 // The step when the equipment's loads aren't known (#58), a round number in each unit
 const UNKNOWN_LOADS_STEP: Record<WeightUnit, number> = { kg: UNKNOWN_LOADS_STEP_KG, lb: 5 };
@@ -90,6 +120,11 @@ export function stepValue(field: Exclude<SetField, "load">, text: string, direct
 export function stepValue(field: SetField, text: string, direction: StepDirection, step?: LoadStep): string {
   const typed = parseField(text);
   const from = Number.isFinite(typed) ? roundTo(typed, RESOLUTION[field]) : 0;
-  const to = field === "load" ? step!(from, direction) : from + STEPS[field] * direction;
+  const to =
+    field === "load"
+      ? step!(from, direction)
+      : field === "seconds"
+        ? secondsStep(from, direction)
+        : from + STEPS[field] * direction;
   return String(Math.max(0, to));
 }

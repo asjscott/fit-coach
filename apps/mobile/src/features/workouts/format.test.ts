@@ -43,8 +43,8 @@ describe("elapsedLabel", () => {
   });
 
   it("reads as hours and minutes after an hour, like the Time Stat", () => {
-    expect(elapsedLabel(minutes(65))).toBe("1:05 h");
-    expect(elapsedLabel(minutes(120) + 30_000)).toBe("2:00 h");
+    expect(elapsedLabel(minutes(65))).toBe("1 h 5 min");
+    expect(elapsedLabel(minutes(120) + 30_000)).toBe("2 h");
   });
 
   it("reads 0 min when the phone's clock is behind the start", () => {
@@ -108,7 +108,13 @@ describe("durationLabel", () => {
   it("gives a finished Workout's length to the nearest minute", () => {
     const startedAt = "2026-10-25T09:00:00.000Z";
     expect(durationLabel({ startedAt, endedAt: "2026-10-25T09:48:30.000Z" })).toBe("49 min");
-    expect(durationLabel({ startedAt, endedAt: "2026-10-25T11:05:00.000Z" })).toBe("2:05 h");
+    expect(durationLabel({ startedAt, endedAt: "2026-10-25T11:05:00.000Z" })).toBe("2 h 5 min");
+  });
+
+  it("gives a span of days in hours and minutes, never as a clock", () => {
+    const startedAt = "2026-10-23T09:00:00.000Z";
+    expect(durationLabel({ startedAt, endedAt: "2026-10-25T10:00:00.000Z" })).toBe("49 h");
+    expect(durationLabel({ startedAt, endedAt: "2026-10-25T10:07:00.000Z" })).toBe("49 h 7 min");
   });
 });
 
@@ -182,6 +188,36 @@ describe("workoutExerciseSummary in a Workout started from a plan", () => {
 
   it("says the target is per side for a one-sided Exercise, as Today does", () => {
     expect(workoutExerciseSummary([], "kg", undefined, planned, true)).toBe("3 sets · 20 kg × 8 per side");
+  });
+});
+
+// #141: a Jump's reps are its contacts wherever its Sets show, as the plan's sheet already says
+describe("a Jump's Sets", () => {
+  const jumps = { sets: 3, target: { unit: "reps", reps: 6 } } as const;
+
+  it("counts an upcoming Jump's target Sets in contacts", () => {
+    expect(workoutExerciseSummary([], "kg", undefined, jumps, false, true)).toBe("3 sets · 6 contacts");
+  });
+
+  it("reads a logged Jump Set in contacts, and its row's big number with contacts after it", () => {
+    const landed: Set = { kind: "bodyweight", reps: 10, loggedAt };
+    expect(describeSet(landed, "kg", true)).toBe("10 contacts");
+    expect(setParts(landed, "kg", true)).toEqual([[10, "contacts"]]);
+  });
+
+  it("summarises logged and Previous Jump Sets in contacts", () => {
+    const landed = (contacts: number): Set => ({ kind: "bodyweight", reps: contacts, loggedAt });
+    expect(setsSummary([landed(6), landed(6)], "kg", true)).toBe("6, 6 contacts");
+    expect(workoutExerciseSummary([landed(6)], "kg", undefined, jumps, false, true)).toBe("1 set · 6 contacts");
+    expect(workoutExerciseSummary([], "kg", [landed(5)], undefined, false, true)).toBe("Last: 5 contacts");
+  });
+
+  it("still says reps for a bodyweight Exercise that isn't a Jump", () => {
+    const reps: Set = { kind: "bodyweight", reps: 12, loggedAt };
+    expect(describeSet(reps, "kg")).toBe("12 reps");
+    expect(workoutExerciseSummary([], "kg", undefined, { sets: 3, target: { unit: "reps", reps: 12 } })).toBe(
+      "3 sets · 12 reps",
+    );
   });
 });
 
@@ -260,8 +296,12 @@ describe("timeStat", () => {
     expect(timeStat(48.5 * 60_000)).toEqual({ value: "49", unit: "min" });
   });
 
-  it("gives an hour or more as hours and minutes", () => {
-    expect(timeStat(125 * 60_000)).toEqual({ value: "2:05", unit: "h" });
+  it("gives an hour or more as hours and minutes, the minutes as the unit", () => {
+    expect(timeStat(125 * 60_000)).toEqual({ value: "2 h 5", unit: "min" });
+  });
+
+  it("gives whole hours in hours alone", () => {
+    expect(timeStat(49 * 60 * 60_000)).toEqual({ value: "49", unit: "h" });
   });
 });
 
@@ -401,9 +441,22 @@ describe("loads in the user's unit", () => {
 
 // PRs found at upload (#130): what each kind of best reads as, and the line that celebrates them
 describe("prLabel", () => {
-  it("gives a weighted Exercise's estimated one-rep maximum to the tenth of a kg", () => {
+  it("gives a weighted Exercise's estimated one-rep maximum and the one it beat to the same whole unit", () => {
     expect(prLabel({ slug: "goblet-squat", measure: "e1rm", best: 21.33, previous: 18.67 }, "kg")).toBe(
-      "Estimated max 21.3 kg, up from 18.7 kg",
+      "Estimated max 21 kg, up from 19 kg",
+    );
+    // 162.0 lb against 154.3 lb once read "162 lb, up from 154.3 lb" (#146)
+    expect(prLabel({ slug: "barbell-bench-press", measure: "e1rm", best: 73.5, previous: 70 }, "lb")).toBe(
+      "Estimated max 162 lb, up from 154 lb",
+    );
+  });
+
+  it("gives both estimated maximums to the tenth when whole units would read the same", () => {
+    expect(prLabel({ slug: "goblet-squat", measure: "e1rm", best: 21.33, previous: 21.1 }, "kg")).toBe(
+      "Estimated max 21.3 kg, up from 21.1 kg",
+    );
+    expect(prLabel({ slug: "goblet-squat", measure: "e1rm", best: 21.02, previous: 20.6 }, "kg")).toBe(
+      "Estimated max 21.0 kg, up from 20.6 kg",
     );
   });
 
@@ -415,7 +468,10 @@ describe("prLabel", () => {
 
   it("gives a weight in the user's unit (#126)", () => {
     expect(prLabel({ slug: "goblet-squat", measure: "e1rm", best: 20, previous: 16.8 }, "lb")).toBe(
-      "Estimated max 44.1 lb, up from 37 lb",
+      "Estimated max 44 lb, up from 37 lb",
+    );
+    expect(prLabel({ slug: "kettlebell-swing", measure: "load", best: 12.5, previous: 11.34 }, "lb")).toBe(
+      "27.5 lb for 8 reps, up from 25 lb",
     );
   });
 
