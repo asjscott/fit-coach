@@ -214,22 +214,18 @@ describe("showsCheckIn", () => {
 });
 
 describe("checkInLighterRow", () => {
-  const full = { lighter: false, fullWorkout: false, canBeLighter: true };
+  const full = { lighter: false, fullWorkout: false };
 
-  it("isn't there when no check-in could make the Workout lighter", () => {
-    expect(checkInLighterRow({ ...full, canBeLighter: false })).toEqual({ reserved: false, note: false, chip: false });
+  it("leaves no row, and no gap, while the check-in leaves the Workout full (#147)", () => {
+    expect(checkInLighterRow(full)).toEqual({ shown: false, note: false, chip: false });
   });
 
-  it("keeps the row's space while the Workout is full, so a rating that makes it lighter doesn't move the chips (#113)", () => {
-    expect(checkInLighterRow(full)).toEqual({ reserved: true, note: false, chip: false });
+  it("shows the note and Full workout once the check-in makes the Workout lighter", () => {
+    expect(checkInLighterRow({ ...full, lighter: true })).toEqual({ shown: true, note: true, chip: true });
   });
 
-  it("shows the note and Full workout in that space once the check-in makes the Workout lighter", () => {
-    expect(checkInLighterRow({ ...full, lighter: true })).toEqual({ reserved: true, note: true, chip: true });
-  });
-
-  it("keeps the note's space while Full workout is chosen, so the chip stays under the finger", () => {
-    expect(checkInLighterRow({ ...full, fullWorkout: true })).toEqual({ reserved: true, note: false, chip: true });
+  it("keeps Full workout, without the note, while it's chosen, so it can be turned off again", () => {
+    expect(checkInLighterRow({ ...full, fullWorkout: true })).toEqual({ shown: true, note: false, chip: true });
   });
 });
 

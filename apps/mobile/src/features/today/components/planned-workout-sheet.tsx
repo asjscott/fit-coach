@@ -1,6 +1,6 @@
 import type { DayExercise } from "@fit/engines";
 import type { BuiltInEquipment, CheckIn, DayLength } from "@fit/shared";
-import { type ReactNode, useRef } from "react";
+import { useRef } from "react";
 import { StyleSheet, View } from "react-native";
 import {
   Actionsheet,
@@ -35,9 +35,8 @@ import { useWeightUnit } from "@/features/user/current-user-provider";
 type SheetCheckIn = {
   ratings: CheckIn;
   onChange: (checkIn: CheckIn) => void;
-  // Whether it took Sets off, whether some rating would, and whether the user chose the Full workout anyway
+  // Whether it took Sets off, and whether the user chose the Full workout anyway
   lighter: boolean;
-  canBeLighter: boolean;
   fullWorkout: boolean;
   onChooseFullWorkout: (fullWorkout: boolean) => void;
 };
@@ -154,6 +153,30 @@ export function PlannedWorkoutSheet({
                 ))}
               </HStack>
             ) : null}
+            {checkIn ? (
+              <CheckInRatings
+                ratings={checkIn.ratings}
+                onRate={(key, rating) => checkIn.onChange({ ...checkIn.ratings, [key]: rating })}
+              />
+            ) : null}
+            {/* What the check-in changes comes and goes as you rate, so it sits below the ratings, where it moves
+                nothing above them (#147) */}
+            {checkIn && lighterRow?.shown ? (
+              <View style={{ gap: spacing[2] }}>
+                {lighterRow.note ? (
+                  <Text size="sm" color="muted">
+                    {LIGHTER_AFTER_CHECK_IN}
+                  </Text>
+                ) : null}
+                <HStack spacing={2}>
+                  <Chip
+                    label="Full workout"
+                    selected={checkIn.fullWorkout}
+                    onPress={() => checkIn.onChooseFullWorkout(!checkIn.fullWorkout)}
+                  />
+                </HStack>
+              </View>
+            ) : null}
             {supersets.paired || supersets.off ? (
               // Like Full workout: offered only once it would change something, and kept while chosen
               <View style={{ gap: spacing[2] }}>
@@ -169,32 +192,6 @@ export function PlannedWorkoutSheet({
                     onPress={() => supersets.onChooseOff(!supersets.off)}
                   />
                 </HStack>
-              </View>
-            ) : null}
-            {checkIn ? (
-              <View style={{ gap: spacing[2] }}>
-                {lighterRow?.reserved ? (
-                  <>
-                    <Reserved hidden={!lighterRow.note}>
-                      <Text size="sm" color="muted">
-                        {LIGHTER_AFTER_CHECK_IN}
-                      </Text>
-                    </Reserved>
-                    <Reserved hidden={!lighterRow.chip}>
-                      <HStack spacing={2}>
-                        <Chip
-                          label="Full workout"
-                          selected={checkIn.fullWorkout}
-                          onPress={() => checkIn.onChooseFullWorkout(!checkIn.fullWorkout)}
-                        />
-                      </HStack>
-                    </Reserved>
-                  </>
-                ) : null}
-                <CheckInRatings
-                  ratings={checkIn.ratings}
-                  onRate={(key, rating) => checkIn.onChange({ ...checkIn.ratings, [key]: rating })}
-                />
               </View>
             ) : null}
             <View>
@@ -259,23 +256,7 @@ export function PlannedWorkoutSheet({
   );
 }
 
-// Hidden, it keeps its space, but can't be seen, tapped or read out
-function Reserved({ hidden, children }: { hidden: boolean; children: ReactNode }) {
-  return (
-    <View
-      style={hidden ? styles.hidden : null}
-      pointerEvents={hidden ? "none" : "auto"}
-      aria-hidden={hidden}
-      accessibilityElementsHidden={hidden}
-      importantForAccessibility={hidden ? "no-hide-descendants" : "auto"}
-    >
-      {children}
-    </View>
-  );
-}
-
 const styles = StyleSheet.create({
-  hidden: { opacity: 0 },
   scroll: { width: "100%" },
   content: { gap: spacing[3], paddingBottom: spacing[3] },
   // Outside the scroll, so Start is in reach however long the list is
