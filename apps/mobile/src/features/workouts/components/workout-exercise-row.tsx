@@ -5,7 +5,7 @@ import { Pressable } from "@/components/pressable";
 import { Text } from "@/components/text";
 import { fonts, spacing, useTheme } from "@/theme";
 import { workoutExerciseSummary } from "../format";
-import { exerciseName, libraryExercise } from "../library";
+import { exerciseName, isJumpSlug, libraryExercise } from "../library";
 import { WorkoutExerciseMenu } from "./workout-exercise-menu";
 import { useWeightUnit } from "@/features/user/current-user-provider";
 
@@ -30,6 +30,7 @@ export function WorkoutExerciseRow({ workoutExercise, position, onPress }: Worko
     previousSets?.sets,
     planned,
     libraryExercise(workoutExercise.slug)?.unilateral,
+    isJumpSlug(workoutExercise.slug),
   );
   const done = sets.length > 0;
 
