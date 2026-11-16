@@ -20,6 +20,7 @@ The simulators ran what they could on 13 Nov (Session 1 below). The rest falls i
 | J1    | Failed on the wording ("reps", not "contacts"): recheck once that's fixed. Flip the iOS switch with your finger. Android.                         |
 | W1    | iOS. Skip the installed web app's date inputs: the web app on Cloudflare runs `main`, which has no past Workouts.                                 |
 | R1    | The "Rest today." card on a real Rest Day, and iOS.                                                                                               |
+| R2    | All of it, on both phones.                                                                                                                        |
 | U1    | The Equipment Profile's weights screen, and the 5 lb / 2 kg step on a home profile with dumbbells but no weights entered. Android.                |
 | LS1   | Android.                                                                                                                                          |
 | LS2   | Android, and the home-profile variant (a cable machine selected).                                                                                 |
@@ -275,6 +276,8 @@ Needs `pnpm --filter @fit/api seed:exercises` run once from the main checkout (i
 
 - [x] **R1** On a Rest Day, the "Rest today." card has a "Recovery workout instead" link. Tap it: a Workout opens with a 20-minute walk, then hip flexor stretch, open book, cat-cow and world's greatest stretch at 2 × 45 s each, logged on the normal timed-Set screen. The walk's target reads "1 set · 20 min". Log it: no rest timer starts, and in place of a Set 2 there's "Next exercise", which opens the hip flexor stretch. A stretch's Set still starts its usual rest (1:10), and still offers a Set 3 after its 2.
   - iOS: Result: ⚠️ · Android: Result: ⚠️ · Notes: Started from "Recovery workout instead" in a training day's sheet, not a Rest Day card, so the "Rest today." card wasn't seen. Walk "1 set · 20 min", then hip flexor stretch, open book, cat-cow and world's greatest stretch at 2 × 45 s. Logging the walk: no rest timer, "Next exercise" opened the hip flexor stretch. Stretch Set: rest 1:10, and Set 3 offered after 2. ⚠️ The walk's stepper reads "1200 s", not minutes (the logged Set reads "20 min"). On a physical phone this was the same as android simulator test
+- [ ] **R2** The walk's stepper reads in minutes (#145). Start a Recovery Workout: the walk's stepper reads "20 min", as its target and the logged Set do. Tap + : "21 min"; − twice: "19 min". Tap into the field: it shows "1140 s" while you type; type 900 and tap away: "15 min". On a stretch, the stepper reads "45 s" and steps by 5 s; from "55 s", + reads "1 min" and − from there "55 s".
+  - iOS: Result: · Android: Result: · Notes:
 
 ## Jumps (#105)
 
