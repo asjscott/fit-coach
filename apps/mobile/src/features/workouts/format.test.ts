@@ -43,8 +43,8 @@ describe("elapsedLabel", () => {
   });
 
   it("reads as hours and minutes after an hour, like the Time Stat", () => {
-    expect(elapsedLabel(minutes(65))).toBe("1:05 h");
-    expect(elapsedLabel(minutes(120) + 30_000)).toBe("2:00 h");
+    expect(elapsedLabel(minutes(65))).toBe("1 h 5 min");
+    expect(elapsedLabel(minutes(120) + 30_000)).toBe("2 h");
   });
 
   it("reads 0 min when the phone's clock is behind the start", () => {
@@ -108,7 +108,13 @@ describe("durationLabel", () => {
   it("gives a finished Workout's length to the nearest minute", () => {
     const startedAt = "2026-10-25T09:00:00.000Z";
     expect(durationLabel({ startedAt, endedAt: "2026-10-25T09:48:30.000Z" })).toBe("49 min");
-    expect(durationLabel({ startedAt, endedAt: "2026-10-25T11:05:00.000Z" })).toBe("2:05 h");
+    expect(durationLabel({ startedAt, endedAt: "2026-10-25T11:05:00.000Z" })).toBe("2 h 5 min");
+  });
+
+  it("gives a span of days in hours and minutes, never as a clock", () => {
+    const startedAt = "2026-10-23T09:00:00.000Z";
+    expect(durationLabel({ startedAt, endedAt: "2026-10-25T10:00:00.000Z" })).toBe("49 h");
+    expect(durationLabel({ startedAt, endedAt: "2026-10-25T10:07:00.000Z" })).toBe("49 h 7 min");
   });
 });
 
@@ -260,8 +266,12 @@ describe("timeStat", () => {
     expect(timeStat(48.5 * 60_000)).toEqual({ value: "49", unit: "min" });
   });
 
-  it("gives an hour or more as hours and minutes", () => {
-    expect(timeStat(125 * 60_000)).toEqual({ value: "2:05", unit: "h" });
+  it("gives an hour or more as hours and minutes, the minutes as the unit", () => {
+    expect(timeStat(125 * 60_000)).toEqual({ value: "2 h 5", unit: "min" });
+  });
+
+  it("gives whole hours in hours alone", () => {
+    expect(timeStat(49 * 60 * 60_000)).toEqual({ value: "49", unit: "h" });
   });
 });
 
