@@ -110,7 +110,7 @@ export const WorkoutUpload = Workout.refine(
   (workout) => lastLoggedAt(workout) - Date.parse(workout.startedAt) <= PAST_WORKOUT_MS,
   { error: `The start can't be more than ${PAST_WORKOUT_DAYS} days ago`, path: ["startedAt"] },
 ).refine((workout) => Date.parse(workout.endedAt) - Date.parse(workout.startedAt) <= MAX_WORKOUT_MS, {
-  error: `A workout can last at most ${MAX_WORKOUT_HOURS} hours`,
+  error: `A Workout can last at most ${MAX_WORKOUT_HOURS} hours`,
   path: ["endedAt"],
 });
 

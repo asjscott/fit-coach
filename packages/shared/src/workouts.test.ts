@@ -108,7 +108,7 @@ describe("WorkoutUpload", () => {
     const parsed = WorkoutUpload.safeParse(lasting("2026-10-24T15:01:00.000Z"));
 
     expect(parsed.error?.issues).toEqual([
-      expect.objectContaining({ message: "A workout can last at most 6 hours", path: ["endedAt"] }),
+      expect.objectContaining({ message: "A Workout can last at most 6 hours", path: ["endedAt"] }),
     ]);
   });
 
