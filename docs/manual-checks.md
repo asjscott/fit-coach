@@ -308,7 +308,7 @@ On the phone builds against the API on your Mac (the installed PWA later), once 
 
 - [x] **PR1** With signal, beat an Exercise's best (more kg at the same reps, or more reps) and Save workout. The toast reads "Workout saved. New PR: …" with "See workout", which opens the Workout in History showing "New PR · …" under that Exercise. Today shows no PR note for it.
   - iOS: Result: ⚠️ · Notes: Native app on the iOS simulator, not the PWA. Bench 135 lb × 6 after the Assessment's 60 kg × 5: toast "Workout saved. New PR: Barbell bench press" with See workout; History row "New PR"; detail "New PR · Estimated max 162 lb, up from 154.3 lb"; no note on Today. ⚠️ The toast was gone before I could tap See workout, and the two numbers round differently (162 vs 154.3).
-- [x] **PR2** In airplane mode, beat a best again and save. Turn airplane mode off and open the app: once it uploads, Today shows a green note naming the PRs with "See workout". Close and reopen the app: the note is gone, and the Workout's History row says "New PR".
+- [ ] **PR2** In airplane mode, beat a best again and save. Straight away (within 10 seconds), pull down Control Center, turn airplane mode off and go back to the app: once it uploads, Today shows a green note naming the PRs with "See workout", and no "New PR" toast. Close and reopen the app: the note is gone, and the Workout's History row says "New PR". Recheck for #142.
   - iOS: Result: ⚠️ · Notes: Nothing about PR is showing
 
 ## Double progression (#132)
