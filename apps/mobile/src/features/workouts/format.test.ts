@@ -185,6 +185,36 @@ describe("workoutExerciseSummary in a Workout started from a plan", () => {
   });
 });
 
+// #141: a Jump's reps are its contacts wherever its Sets show, as the plan's sheet already says
+describe("a Jump's Sets", () => {
+  const jumps = { sets: 3, target: { unit: "reps", reps: 6 } } as const;
+
+  it("counts an upcoming Jump's target Sets in contacts", () => {
+    expect(workoutExerciseSummary([], "kg", undefined, jumps, false, true)).toBe("3 sets · 6 contacts");
+  });
+
+  it("reads a logged Jump Set in contacts, and its row's big number with contacts after it", () => {
+    const landed: Set = { kind: "bodyweight", reps: 10, loggedAt };
+    expect(describeSet(landed, "kg", true)).toBe("10 contacts");
+    expect(setParts(landed, "kg", true)).toEqual([[10, "contacts"]]);
+  });
+
+  it("summarises logged and Previous Jump Sets in contacts", () => {
+    const landed = (contacts: number): Set => ({ kind: "bodyweight", reps: contacts, loggedAt });
+    expect(setsSummary([landed(6), landed(6)], "kg", true)).toBe("6, 6 contacts");
+    expect(workoutExerciseSummary([landed(6)], "kg", undefined, jumps, false, true)).toBe("1 set · 6 contacts");
+    expect(workoutExerciseSummary([], "kg", [landed(5)], undefined, false, true)).toBe("Last: 5 contacts");
+  });
+
+  it("still says reps for a bodyweight Exercise that isn't a Jump", () => {
+    const reps: Set = { kind: "bodyweight", reps: 12, loggedAt };
+    expect(describeSet(reps, "kg")).toBe("12 reps");
+    expect(workoutExerciseSummary([], "kg", undefined, { sets: 3, target: { unit: "reps", reps: 12 } })).toBe(
+      "3 sets · 12 reps",
+    );
+  });
+});
+
 describe("setTargetLabel", () => {
   it.each([
     ["a load", { unit: "kg", kg: 22.5, reps: 8 }, "22.5 kg × 8"],
