@@ -1,6 +1,6 @@
 import type { StepDirection } from "@fit/engines";
 import type { WeightUnit } from "@fit/shared";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { StyleSheet } from "react-native";
 import { Icon, type IconName } from "@/components/icons";
 import { Input, InputField } from "@/components/input";
@@ -8,16 +8,16 @@ import { Pressable } from "@/components/pressable";
 import { Text } from "@/components/text";
 import { bigNumber, radii, spacing, useTheme } from "@/theme";
 import { startRepeating } from "../hold-to-repeat";
-import { fieldLabel, loadStepLabel, stepValue, STEPS, type LoadStep, type SetField } from "../set-entry";
-
-// The unit drawn beside reps and seconds, filled or not; a load's is the user's
-const UNITS: Record<Exclude<SetField, "load">, string> = { reps: "reps", seconds: "s" };
-
-// One step of reps or seconds, for screen readers: "Plus 1 rep", "Minus 5 seconds"
-const STEP_NAMES: Record<Exclude<SetField, "load">, string> = {
-  reps: `${STEPS.reps} rep`,
-  seconds: `${STEPS.seconds} seconds`,
-};
+import {
+  fieldLabel,
+  loadStepLabel,
+  secondsField,
+  secondsStepLabel,
+  stepValue,
+  STEPS,
+  type LoadStep,
+  type SetField,
+} from "../set-entry";
 
 // A load is typed and stepped in the user's unit
 export type LoadSteps = {
@@ -33,13 +33,16 @@ export type SetStepperProps = {
   onChange: (value: string) => void;
 } & (({ field: "load" } & LoadSteps) | { field: Exclude<SetField, "load">; contacts?: boolean });
 
-// One Set value with − and + either side: a load to the next load, reps by 1, seconds by 5, repeating while held. Any
-// value can still be typed
+// One Set value with − and + either side: a load to the next load, reps by 1, seconds by 5 or, from a minute, by the
+// minute, repeating while held. Any value can still be typed: seconds show in minutes from a minute (#145), as
+// seconds while being typed
 export function SetStepper(props: SetStepperProps) {
   const { field, value, onChange } = props;
   // A jump's reps are its contacts (#105)
   const contacts = props.field === "reps" && props.contacts;
-  const unit = props.field === "load" ? props.unit : contacts ? "contacts" : UNITS[props.field];
+  const [typing, setTyping] = useState(false);
+  const shown = field === "seconds" && !typing ? secondsField(value) : { value, unit: "s" };
+  const unit = props.field === "load" ? props.unit : contacts ? "contacts" : field === "reps" ? "reps" : shown.unit;
   // The latest value, so steps repeated while held build on each other before the parent re-renders
   const latest = useRef(value);
   latest.current = value;
@@ -50,21 +53,32 @@ export function SetStepper(props: SetStepperProps) {
         : stepValue(props.field, latest.current, direction);
     onChange(latest.current);
   };
-  const label = (direction: StepDirection) =>
-    props.field === "load"
-      ? loadStepLabel(direction, props.loadsKnown, props.unit)
-      : `${direction === 1 ? "Plus" : "Minus"} ${contacts ? "1 contact" : STEP_NAMES[props.field]}`;
+  const label = (direction: StepDirection) => {
+    if (props.field === "load") return loadStepLabel(direction, props.loadsKnown, props.unit);
+    if (props.field === "seconds") return secondsStepLabel(value, direction);
+    return `${direction === 1 ? "Plus" : "Minus"} ${STEPS.reps} ${contacts ? "contact" : "rep"}`;
+  };
 
   return (
     <Input size="xl" style={styles.root}>
       <StepButton icon="minus" label={label(-1)} onStep={() => step(-1)} />
       <InputField
-        value={value}
+        value={shown.value}
         onChangeText={onChange}
+        onFocus={() => setTyping(true)}
+        onBlur={() => setTyping(false)}
         placeholder="0"
         keyboardType={field === "load" ? "decimal-pad" : "number-pad"}
         selectTextOnFocus
-        accessibilityLabel={props.field === "load" ? fieldLabel(field, props.unit) : contacts ? "contacts" : field}
+        accessibilityLabel={
+          props.field === "load"
+            ? fieldLabel(field, props.unit)
+            : contacts
+              ? "contacts"
+              : shown.unit === "min"
+                ? "minutes"
+                : field
+        }
         style={styles.field}
       />
       <Text color="muted" weight="medium" style={styles.unit} importantForAccessibility="no">
