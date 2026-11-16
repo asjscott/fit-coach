@@ -86,9 +86,9 @@ describe("progressWorkingLevel: double progression", () => {
     // 25 lb × 19 is a maximum of 40.8 lb, which lifts the 30 lb dumbbells 10.8 times; a 12 kg (26.5 lb) bell is between
     const sets = [lifted(lb(25), 19), lifted(lb(25), 19)];
     const progression = progress(gobletSquat(lb(25), 19), sets, { equipmentProfile: fullGym });
+    const level = progression?.level;
     expect(progression?.change).toEqual({ code: "load-up" });
-    expect(loadInUnit(progression!.level.kg!, "lb")).toBe(30);
-    expect(progression?.level.reps).toBe(10);
+    expect(level?.unit === "kg" && { lb: loadInUnit(level.kg, "lb"), reps: level.reps }).toEqual({ lb: 30, reps: 10 });
   });
 
   // Story 33
