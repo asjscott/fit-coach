@@ -57,9 +57,9 @@ DP1 and RPE2 passed on both simulators. Look at them on a phone only if you have
 
 ## Session 2: phones
 
-- Date:
-- iPhone model and iOS version:
-- Android phone model and Android version:
+- Date: 2026-11-16
+- iPhone model and iOS version: iPhone 14 27.0.1
+- Android phone model and Android version: Not completed
 - Build: Release, against the API on the Mac (`pnpm --filter @fit/api dev`)
 - Branch and commit:
 
@@ -222,20 +222,20 @@ DP1 and RPE2 passed on both simulators. Look at them on a phone only if you have
 
 `expo-keep-awake` is a new native module, so these need a new development or release build. Leave the phone's auto-lock at its usual setting (30 s to 1 min makes T2 quick).
 
-- [ ] **T2** Rerun on both phones, on a Release build (`--configuration Release` / `--variant release`, not `pnpm ios`): a development build keeps the whole app awake. Don't watch the screen while you wait. Put the phone face down, or on iPhone turn off Settings › Face ID & Passcode › Attention Aware Features (on Android, Settings › Display › Screen attention). Either setting keeps the screen on while you look at it. Then:
+- [x] **T2** Rerun on both phones, on a Release build (`--configuration Release` / `--variant release`, not `pnpm ios`): a development build keeps the whole app awake. Don't watch the screen while you wait. Put the phone face down, or on iPhone turn off Settings › Face ID & Passcode › Attention Aware Features (on Android, Settings › Display › Screen attention). Either setting keeps the screen on while you look at it. Then:
   1. Before starting, leave the phone on Today past its auto-lock time: it locks. If it doesn't, the cause isn't the Workout, so note that and stop.
   2. Start a Workout and leave it on the logging screen, then on Today: the screen stays on.
   3. Finish, then leave it on Today and again on History: it dims and locks.
   4. Start another and Discard it, then leave it on Today: it locks.
   5. In airplane mode, start, log a Set and finish, so the Workout is Pending, then leave it on Today: it locks.
-  - iOS: Result: ⏭ · Android: Result: ⏭ · Notes: Needs a Release build and a real phone's auto-lock.
+  - iOS: Result: ✅ · Android: Result: ⏭ · Notes: Passes completely on iPhone
 
 ## Daily check-in (#92)
 
 - [ ] **C5** The next day the check-in is gone: the card is back (if there's a plan) and the Workout is full.
   - iOS: Result: 🕒 · Android: Result: 🕒 · Notes: Skip for now: needs the next day.
 - [x] **C6** (#125) In airplane mode, check in on Today: the Day's Workout follows the Readiness straight away, as online. Change the check-in once, still offline. Turn airplane mode off and bring the app to the foreground. The `checkIns` collection in the staging database has one document for today, with the changed ratings, not the first.
-  - iOS: Result: ⏭ · Android: Result: ✅ · Notes: Android emulator, against the in-memory API, not staging. In airplane mode (with the adb port forward to the API cut), changing the check-in made the Workout lighter at once and the API kept the old ratings. Back online and foregrounded, the one check-in for today had the changed ratings. My first try leaked through an open adb keep-alive connection, so it wasn't really offline; the rerun was. ⚠️ Changing a rating adds or removes rows above the ratings ("Paired into supersets to fit the time", "Lighter after your check-in"), so the buttons move under your finger, and it can leave a blank gap where a row was.
+  - iOS: Result: ✅ · Android: Result: ✅ · Notes: Android emulator, against the in-memory API, not staging. In airplane mode (with the adb port forward to the API cut), changing the check-in made the Workout lighter at once and the API kept the old ratings. Back online and foregrounded, the one check-in for today had the changed ratings. My first try leaked through an open adb keep-alive connection, so it wasn't really offline; the rerun was. ⚠️ Changing a rating adds or removes rows above the ratings ("Paired into supersets to fit the time", "Lighter after your check-in"), so the buttons move under your finger, and it can leave a blank gap where a row was.
 
 ## Supersets (#96)
 
@@ -247,7 +247,7 @@ A Workout pairs Exercises only when it wouldn't otherwise fit its Length, so cho
 ## Past Workouts (#129)
 
 - [x] **W1** On Today, tap "Log a past workout" under Start manual workout: a sheet asks "Which day was it?" with Yesterday and the five weekdays before it. Pick one: the Workout opens with "Done <that day>" under its title. Log a Set or two and tap Finish: the times read that day, an hour long, with Edit times already open. Set a start 8 days back and Save: "The start can't be more than 7 days ago" shows under Start. Set it back within the week and Save: in History the Workout sits on its own day, and This Week counts it only if that day is in this week. On the installed web app, check that the date and time inputs are easy to use on the iPhone.
-  - iOS: Result: ⏭ · Android: Result: ⚠️ · Notes: Android emulator, native, not the installed web app. Sheet: "Which day was it?" with Yesterday, Wednesday, Tuesday, Monday, Sunday, Saturday. Saturday opened with "Done Saturday, 10:43 AM". Finish: Saturday, an hour long, Edit times open. Start 8 days back: "The start can't be more than 7 days ago" under Start. Saved: under Last week in History, and This Week stayed at 3. ⚠️ The Elapsed timer counts up on a past Workout, and the invalid 49-hour span read "49:00 h". The web app's date inputs weren't tried.
+  - iOS: Result: ⚠️ · Android: Result: ⚠️ · Notes: Android emulator, native, not the installed web app. Sheet: "Which day was it?" with Yesterday, Wednesday, Tuesday, Monday, Sunday, Saturday. Saturday opened with "Done Saturday, 10:43 AM". Finish: Saturday, an hour long, Edit times open. Start 8 days back: "The start can't be more than 7 days ago" under Start. Saved: under Last week in History, and This Week stayed at 3. ⚠️ The Elapsed timer counts up on a past Workout, and the invalid 49-hour span read "49:00 h". The web app's date inputs weren't tried. Physical phone inputs date inputs work but same error as simulators with elapsed timer counter starting
 
 ## Sentry (#122)
 
@@ -274,21 +274,21 @@ On hold: these were written for a staging deploy, which isn't being built. They 
 Needs `pnpm --filter @fit/api seed:exercises` run once from the main checkout (it needs `apps/api/.env`), so the Exercises tab lists the five Recovery Exercises.
 
 - [x] **R1** On a Rest Day, the "Rest today." card has a "Recovery workout instead" link. Tap it: a Workout opens with a 20-minute walk, then hip flexor stretch, open book, cat-cow and world's greatest stretch at 2 × 45 s each, logged on the normal timed-Set screen. The walk's target reads "1 set · 20 min". Log it: no rest timer starts, and in place of a Set 2 there's "Next exercise", which opens the hip flexor stretch. A stretch's Set still starts its usual rest (1:10), and still offers a Set 3 after its 2.
-  - iOS: Result: ⏭ · Android: Result: ⚠️ · Notes: Started from "Recovery workout instead" in a training day's sheet, not a Rest Day card, so the "Rest today." card wasn't seen. Walk "1 set · 20 min", then hip flexor stretch, open book, cat-cow and world's greatest stretch at 2 × 45 s. Logging the walk: no rest timer, "Next exercise" opened the hip flexor stretch. Stretch Set: rest 1:10, and Set 3 offered after 2. ⚠️ The walk's stepper reads "1200 s", not minutes (the logged Set reads "20 min").
+  - iOS: Result: ⚠️ · Android: Result: ⚠️ · Notes: Started from "Recovery workout instead" in a training day's sheet, not a Rest Day card, so the "Rest today." card wasn't seen. Walk "1 set · 20 min", then hip flexor stretch, open book, cat-cow and world's greatest stretch at 2 × 45 s. Logging the walk: no rest timer, "Next exercise" opened the hip flexor stretch. Stretch Set: rest 1:10, and Set 3 offered after 2. ⚠️ The walk's stepper reads "1200 s", not minutes (the logged Set reads "20 min"). On a physical phone this was the same as android simulator test
 
 ## Jumps (#105)
 
 Needs `pnpm --filter @fit/api seed:exercises` run once from the main checkout (it needs `apps/api/.env`), so the Exercises tab lists the six jumps. Use an athletic profile with no knee or ankle injury, whose Assessment tested the squat rather than estimating it.
 
 - [x] **J1** Profile shows an "Include jumps" switch under Training, off, and only while the Goal is athletic. Turn it on, then open Today: the plan's sheet opens with two jumps, each "3 sets · N contacts" (for example "3 sets · 10 contacts"), one that goes up (pogo hop, squat or countermovement jump, box jump) and one that goes forward or sideways (broad jump or lateral bound). Start the Workout: the jumps come first. Log a jump Set: the stepper says "contacts", with no weight field, and the logged Set uploads. Turn the switch off: Today's plan has no jumps. Turning it back on, or a knee injury in the profile, also works as expected.
-  - iOS: Result: ❌ · Android: Result: ⏭ · Notes: Switch shows under Training, off, for athletic. On: the sheet opened with Pogo hop "3 sets · 10 contacts" and Broad jump "3 sets · 6 contacts", first in the Workout. The stepper says "contacts" with no weight field, and the Set uploaded. Off: no jumps. Knee injury: no jumps (checked through the API). ❌ In the Workout, the upcoming row reads "Broad jump · 3 sets · 6 reps" and the logged Set reads "10 reps", not contacts. Tapping the iOS switch didn't flip it; a swipe did, likely a simulator input quirk, but try it once by hand.
+  - iOS: Result: ❌ · Android: Result: ⏭ · Notes: Switch shows under Training, off, for athletic. On: the sheet opened with Pogo hop "3 sets · 10 contacts" and Broad jump "3 sets · 6 contacts", first in the Workout. The stepper says "contacts" with no weight field, and the Set uploaded. Off: no jumps. Knee injury: no jumps (checked through the API). ❌ In the Workout, the upcoming row reads "Broad jump · 3 sets · 6 reps" and the logged Set reads "10 reps", not contacts. Tapping the iOS switch didn't flip it; a swipe did, likely a simulator input quirk, but try it once by hand. Switch tap does change it on a physical phone
 - [ ] **J2** Over a week with the switch on: the first 2 Workouts have jumps and the rest don't, and the second jump Workout has different jumps from the first. On a Quick Workout the jumps stay, all 3 Sets each, and something else is cut.
   - iOS: Result: 🕒 · Android: Result: 🕒 · Notes: Skip for now: needs a week. Seen on the simulators: after one jump Workout, a 4th (extra) Workout that week planned one jump, Squat jump, different from the Pogo hop.
 
 ## Units (#126)
 
 - [x] **U1** An existing account shows every load in lb with nothing chosen: Profile's "Weights in" has lb picked, and Today's plan, the logging screen (target, Last, Sets, stepper), History, a Workout's detail, Volume everywhere and the Equipment Profile's weights all read in lb. Log a Set of 25 lb: it reads 25 lb in the Set row, History and as Last next time, never 24.9. Pick kg on Profile: the same screens switch to kg, and the 25 lb Set reads 11.5 kg. With the loads unknown (a home profile with dumbbells but no weights entered), the load stepper moves by 5 lb or 2 kg.
-  - iOS: Result: ✅ · Android: Result: ⏭ · Notes: lb picked with nothing chosen. Plan, logging (target, Last, Sets, stepper), History, the detail and Volume all read lb. 25 lb Set read 25 lb in the row, History and as Last; after picking kg, 11.5 kg. Not checked: the Equipment Profile's weights screen, and the 5 lb / 2 kg step with unknown loads. Profile still shows body weight as "80 kg" with lb picked.
+  - iOS: Result: ✅ · Android: Result: ⏭ · Notes: lb picked with nothing chosen. Plan, logging (target, Last, Sets, stepper), History, the detail and Volume all read lb. 25 lb Set read 25 lb in the row, History and as Last; after picking kg, 11.5 kg. Equipment profile reads in lbs. Profile still shows body weight as "80 kg" with lb picked.
 
 ## Load Steps (#127)
 
@@ -304,8 +304,8 @@ On the phone builds against the API on your Mac (the installed PWA later), once 
 
 - [x] **PR1** With signal, beat an Exercise's best (more kg at the same reps, or more reps) and Save workout. The toast reads "Workout saved. New PR: …" with "See workout", which opens the Workout in History showing "New PR · …" under that Exercise. Today shows no PR note for it.
   - iOS: Result: ⚠️ · Notes: Native app on the iOS simulator, not the PWA. Bench 135 lb × 6 after the Assessment's 60 kg × 5: toast "Workout saved. New PR: Barbell bench press" with See workout; History row "New PR"; detail "New PR · Estimated max 162 lb, up from 154.3 lb"; no note on Today. ⚠️ The toast was gone before I could tap See workout, and the two numbers round differently (162 vs 154.3).
-- [ ] **PR2** In airplane mode, beat a best again and save. Turn airplane mode off and open the app: once it uploads, Today shows a green note naming the PRs with "See workout". Close and reopen the app: the note is gone, and the Workout's History row says "New PR".
-  - iOS: Result: ⏭ · Notes: Needs the PWA in airplane mode.
+- [x] **PR2** In airplane mode, beat a best again and save. Turn airplane mode off and open the app: once it uploads, Today shows a green note naming the PRs with "See workout". Close and reopen the app: the note is gone, and the Workout's History row says "New PR".
+  - iOS: Result: ⚠️ · Notes: Nothing about PR is showing
 
 ## Double progression (#132)
 
@@ -330,7 +330,7 @@ On the phone builds against the API on your Mac (the installed PWA later), after
 On the phone builds against the API on your Mac (the installed PWA later), after the Assessment. Route tests cover the hold; the web build walked the chips with the in-memory API; these are for the phone.
 
 - [x] **RPE1** Start the Next Workout and log a weighted Exercise's Sets. Until its last planned Set, nothing asks for RPE. Once the last is logged, "How hard was set N? Optional: 10 is no more reps" and chips 6–10 show under the Sets, with Log set and the rest timer where they were. Go on to the next Exercise without tapping one: nothing stops you. Back on the first, tap 10: it highlights; tap it again and it clears. In a Manual Workout the chips show after every Set, for the latest. Editing a rated Set keeps its RPE.
-  - iOS: Result: ✅ · Notes: Native app on the iOS simulator. No chips until the last planned Set, then "How hard was set 3? Optional: 10 is no more reps" with 6–10. Moving on without rating was fine. 10 highlighted, and tapping again cleared it (tried on a later Exercise, not the first). Editing the rated Set kept its RPE. Manual Workout not tried.
+  - iOS: Result: ✅ · Notes: Native app on the iOS simulator. No chips until the last planned Set, then "How hard was set 3? Optional: 10 is no more reps" with 6–10. Moving on without rating was fine. 10 highlighted, and tapping again cleared it (tried on a later Exercise, not the first). Editing the rated Set kept its RPE. Shows on a manual workout after every set as expected.
 - [x] **RPE2** Rate the last Set of a weighted Exercise 10 where every Set reached its target, and save. Once it uploads, the Next Workout sheet (if it plans the Exercise again) keeps the same weight and target, with "Held: your last Set was RPE 10, all you had." under it.
   - iOS: Result: ✅ · Notes: Lateral raise, every Set at target, last rated 10: next sheet kept 10 lb × 8 with "Held: your last Set was RPE 10, all you had." Same on Android.
 
