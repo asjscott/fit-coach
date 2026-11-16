@@ -249,6 +249,8 @@ describe("Logbook", () => {
     it.each([
       ["an end before the start", at("09:30"), at("09:00"), "The end must be after the start"],
       ["an end in the future", at("09:00"), at("10:01"), "The end can't be in the future"],
+      // #152: a Workout lasts at most 6 hours
+      ["a Workout longer than 6 hours", at("03:00"), at("09:30"), "A workout can last at most 6 hours"],
     ])("rejects %s and keeps the Workout in progress", async (_, startedAt, endedAt, message) => {
       const { logbook, uploader } = setup();
       await logbook.start(at("09:00"));

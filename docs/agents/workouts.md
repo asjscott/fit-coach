@@ -65,6 +65,8 @@ Schemas shared by app and API: packages/shared/src/workouts.ts
   clock and the forgotten check follow the logging. `finishTimes` gives Finish its first times: `pastStart` and an
   hour later, with Edit times open. Its Sets are logged now, so Fatigue counts a Set from its `loggedAt` but never
   after its Workout's `endedAt` (`creditingSets`); the Week Ledger already goes by `startedAt`.
+- **A Workout lasts at most 6 hours** (#152). `WorkoutUpload` holds this rule too, next to the 7 days, so POST
+  /workouts answers 400 and Edit times shows the error under End; as with the 7 days, `Workout` doesn't have it.
 - **The rest timer lives in memory on the LogbookProvider** (#95), not in the Logbook or storage: it belongs to the
   Workout, so it follows the user between Exercises and to Today, and a force-quit loses it. Only Log set starts or
   restarts it; Finish, Discard and sign-out end it. Its length and countdown are pure (`rest-timer.ts` in

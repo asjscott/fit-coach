@@ -98,13 +98,21 @@ const PAST_WORKOUT_MS = PAST_WORKOUT_DAYS * 24 * 60 * 60 * 1000;
 const lastLoggedAt = ({ workoutExercises }: Pick<Workout, "workoutExercises">) =>
   Math.max(...workoutExercises.flatMap(({ sets }) => sets.map(({ loggedAt }) => Date.parse(loggedAt))));
 
-// A Workout as finished on the phone and uploaded: its start no more than 7 days before its last Set. Counted from the
-// Sets rather than the clock, so a Pending Workout uploading late is never refused. Only new Workouts are held to it, so
-// History never fails on a Workout stored before the rule
+// A Workout lasts at most 6 hours (#152)
+export const MAX_WORKOUT_HOURS = 6;
+const MAX_WORKOUT_MS = MAX_WORKOUT_HOURS * 60 * 60 * 1000;
+
+// A Workout as finished on the phone and uploaded: its start no more than 7 days before its last Set, and its end no
+// more than 6 hours after its start. The 7 days count from the Sets rather than the clock, so a Pending Workout
+// uploading late is never refused. Only new Workouts are held to these, so History never fails on a Workout stored
+// before the rules
 export const WorkoutUpload = Workout.refine(
   (workout) => lastLoggedAt(workout) - Date.parse(workout.startedAt) <= PAST_WORKOUT_MS,
   { error: `The start can't be more than ${PAST_WORKOUT_DAYS} days ago`, path: ["startedAt"] },
-);
+).refine((workout) => Date.parse(workout.endedAt) - Date.parse(workout.startedAt) <= MAX_WORKOUT_MS, {
+  error: `A workout can last at most ${MAX_WORKOUT_HOURS} hours`,
+  path: ["endedAt"],
+});
 
 // Previous Sets (GLOSSARY.md, ADR 0002): the Sets of one Exercise from the user's most recent Workout that
 // included it, with that Workout's times so a newer Pending Workout can beat it
