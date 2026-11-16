@@ -1,5 +1,6 @@
 import { toKg, type Set } from "@fit/shared";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { weekStart } from "@fit/engines";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   describeSet,
   durationLabel,
@@ -328,6 +329,33 @@ describe("weekDatesLabel", () => {
 
   it("adds the year to a week from another year", () => {
     expect(weekDatesLabel(new Date(2025, 11, 29), now, "en-GB")).toBe(`29 Dec 2025${range}4 Jan 2026`);
+  });
+
+  // The week of Monday 26 Oct 2026 ends on Sunday 1 Nov, the day North America's clocks go back (#150)
+  describe.each(["America/Vancouver", "America/Edmonton"])("across the clock change in %s", (timeZone) => {
+    const savedTimeZone = process.env.TZ;
+    beforeEach(() => {
+      process.env.TZ = timeZone;
+    });
+    const formatRange = Object.getOwnPropertyDescriptor(Intl.DateTimeFormat.prototype, "formatRange");
+    afterEach(() => {
+      process.env.TZ = savedTimeZone;
+      if (formatRange) Object.defineProperty(Intl.DateTimeFormat.prototype, "formatRange", formatRange);
+    });
+    // As History has it: the Monday of a Workout logged on the Sunday evening, after the change
+    const historyWeekStart = () => weekStart(new Date("2026-11-02T02:30:00.000Z"));
+
+    it("labels the week Monday to Sunday", () => {
+      expect(weekDatesLabel(historyWeekStart(), now, "en-GB")).toBe(`26 Oct${range}1 Nov`);
+      expect(weekDatesLabel(historyWeekStart(), now, "en-US")).toBe(`Oct 26${range}Nov 1`);
+    });
+
+    it("labels the week Monday to Sunday on an engine without formatRange, as iOS's", () => {
+      Reflect.deleteProperty(Intl.DateTimeFormat.prototype, "formatRange");
+      expect(new Intl.DateTimeFormat().formatRange).toBeUndefined();
+      expect(weekDatesLabel(historyWeekStart(), now, "en-GB")).toBe(`26 Oct${range}1 Nov`);
+      expect(weekDatesLabel(historyWeekStart(), now, "en-US")).toBe(`Oct 26${range}Nov 1`);
+    });
   });
 });
 
