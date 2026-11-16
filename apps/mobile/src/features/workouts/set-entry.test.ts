@@ -1,7 +1,16 @@
 import { describe, expect, it } from "vitest";
 import type { StepDirection } from "@fit/engines";
 import { toKg } from "@fit/shared";
-import { draftValues, loadStep, loadStepLabel, rpeMissing, setDraft, stepValue } from "./set-entry";
+import {
+  draftValues,
+  loadStep,
+  loadStepLabel,
+  rpeMissing,
+  secondsField,
+  secondsStepLabel,
+  setDraft,
+  stepValue,
+} from "./set-entry";
 
 describe("stepValue", () => {
   // Stands in for the next load: 10 a step, so it can't be mistaken for any other rule
@@ -44,6 +53,20 @@ describe("stepValue", () => {
     expect(stepValue("seconds", "44.2", 1)).toBe("49");
   });
 
+  // #145: a 20-minute walk steps by the minute, a short hold by 5 s
+  it("steps a timed Set of a minute or more to the next or previous whole minute", () => {
+    expect(stepValue("seconds", "1200", 1)).toBe("1260");
+    expect(stepValue("seconds", "1200", -1)).toBe("1140");
+    expect(stepValue("seconds", "90", 1)).toBe("120");
+    expect(stepValue("seconds", "90", -1)).toBe("60");
+    expect(stepValue("seconds", "60", 1)).toBe("120");
+  });
+
+  it("steps a timed Set under a minute by 5 s, into and out of minutes", () => {
+    expect(stepValue("seconds", "55", 1)).toBe("60");
+    expect(stepValue("seconds", "60", -1)).toBe("55");
+  });
+
   it("starts again from nothing when the field isn't a number", () => {
     expect(stepValue("load", "abc", 1, byTen)).toBe("10");
   });
@@ -82,6 +105,36 @@ describe("loadStepLabel", () => {
   it("names the step in the user's unit when they aren't", () => {
     expect(loadStepLabel(1, false, "kg")).toBe("Plus 2 kg");
     expect(loadStepLabel(-1, false, "lb")).toBe("Minus 5 lb");
+  });
+});
+
+describe("secondsStepLabel", () => {
+  it("names a step of a timed Set of a minute or more as a minute", () => {
+    expect(secondsStepLabel("1200", 1)).toBe("Plus 1 minute");
+    expect(secondsStepLabel("1200", -1)).toBe("Minus 1 minute");
+  });
+
+  it("names a step of a short hold as 5 seconds, including down from a minute", () => {
+    expect(secondsStepLabel("45", 1)).toBe("Plus 5 seconds");
+    expect(secondsStepLabel("60", -1)).toBe("Minus 5 seconds");
+    expect(secondsStepLabel("", 1)).toBe("Plus 5 seconds");
+  });
+});
+
+// #145: the stepper reads as the target and the logged Set do
+describe("secondsField", () => {
+  it("shows a timed Set of a minute or more in minutes, as the target and logged Set read", () => {
+    expect(secondsField("1200")).toEqual({ value: "20", unit: "min" });
+    expect(secondsField("90")).toEqual({ value: "1 min 30", unit: "s" });
+  });
+
+  it("shows a short hold in seconds", () => {
+    expect(secondsField("45")).toEqual({ value: "45", unit: "s" });
+  });
+
+  it("leaves an empty or half-typed field as it is", () => {
+    expect(secondsField("")).toEqual({ value: "", unit: "s" });
+    expect(secondsField("12.")).toEqual({ value: "12.", unit: "s" });
   });
 });
 

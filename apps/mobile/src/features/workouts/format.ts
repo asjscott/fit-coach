@@ -259,7 +259,7 @@ export function setParts(set: Set | SetValues, unit: WeightUnit): [number, strin
 }
 
 // A minute or more reads in minutes, as the walk's "20 min" (#109): "45 s", "1 min 30 s"
-function durationParts(seconds: number): [number, string][] {
+export function durationParts(seconds: number): [number, string][] {
   if (seconds < 60) return [[seconds, "s"]];
   const over = seconds % 60;
   return [[Math.floor(seconds / 60), "min"], ...(over ? [[over, "s"] as [number, string]] : [])];
