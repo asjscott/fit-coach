@@ -9,6 +9,8 @@ import { fonts, fontSizes, lineHeight, sideRailMinWidth, useTheme } from "@/them
 
 const tabs: { name: string; title: string; icon: IconName }[] = [
   { name: "index", title: "Today", icon: "home" },
+  // PROTOTYPE (M7): the Food tab
+  { name: "food", title: "Food", icon: "flame" },
   { name: "history", title: "History", icon: "calendar" },
   { name: "exercises", title: "Exercises", icon: "dumbbell" },
   { name: "profile", title: "Profile", icon: "user" },

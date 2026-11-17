@@ -33,6 +33,8 @@ import { ThisWeekSection } from "../components/this-week-section";
 import { TodayCard, TodayCardLink } from "../components/today-card";
 import { CheckInCard } from "../components/check-in-card";
 import { useCheckIn } from "../hooks/use-check-in";
+import { TodayNutrition } from "@/features/nutrition-prototype/today-nutrition-variants";
+import { PrototypeSwitcher } from "@/features/nutrition-prototype/prototype-switcher";
 import { useDaysWorkout } from "../hooks/use-days-workout";
 import { useDismissedOffer } from "../hooks/use-dismissed-offer";
 import { usePlannedWorkout } from "../hooks/use-planned-workout";
@@ -156,160 +158,166 @@ export default function TodayView() {
   const reasonLines = planReasonLines(plannedWorkout?.reasons, now);
 
   return (
-    <Screen scroll="screen" edges={["top"]}>
-      <Text size="sm" weight="semiBold" color="muted" style={{ marginBottom: spacing[3] }}>
-        {now.toLocaleDateString([], { weekday: "long", day: "numeric", month: "long" })}
-      </Text>
-      {prNote.shown.length ? (
-        <View style={{ marginBottom: spacing[3] }}>
-          <PrNote shown={prNote.shown} now={now} onDismiss={prNote.dismiss} />
-        </View>
-      ) : null}
-      {card === "loading" ? <Spinner /> : null}
-      {card === "resume" && logbook.workout ? (
-        <TodayCard
-          tone="accent"
-          headline="Keep going."
-          line={`Started ${elapsedLabel(now.getTime() - Date.parse(logbook.workout.startedAt))} ago`}
-        >
-          <LoadingButton label="Resume workout" icon="dumbbell" action="inverse" fullWidth onPress={resumeWorkout} />
-        </TodayCard>
-      ) : null}
-      {card === "assessment" && leadingOffer ? (
-        <AssessmentCard offer={leadingOffer} onDismiss={() => dismiss(offerKey(leadingOffer))} />
-      ) : null}
-      {card === "done" ? (
-        <TodayCard tone="success" headline="Done for today." line={todayLoggedLine(finished, unit)}>
-          {today ? <TodayCardLink label={nextWorkout("Train again")} color="accent" onPress={openSheet} /> : null}
-          {connectNote ? <Text color="muted">{connectNote}</Text> : null}
-        </TodayCard>
-      ) : null}
-      {card === "rest" && restDayReason ? (
-        <TodayCard
-          tone="quiet"
-          headline="Rest today."
-          line={`${WHY_REST[restDayReason]} You can still train if you want to.`}
-        >
-          {today ? <TodayCardLink label={nextWorkout("Train anyway")} color="text" onPress={openSheet} /> : null}
-          <TodayCardLink label={RECOVERY_INSTEAD} color="text" onPress={handleStartRecovery} />
-          {connectNote ? <Text color="muted">{connectNote}</Text> : null}
-        </TodayCard>
-      ) : null}
-      {card === "ready" && today ? (
-        <TodayCard
-          tone="accent"
-          headline="Time to train."
-          line={todayPlanLine(today.plannedExercises, today.estimatedSeconds, today.lighter)}
-        >
-          {reasonLines.length ? <Text color="onAccent">{reasonLines[0]}</Text> : null}
-          {plannedWorkout?.cue ? <Text color="onAccent">{plannedWorkout.cue}</Text> : null}
-          <LoadingButton
-            label="Start workout"
-            icon="dumbbell"
-            action="inverse"
-            fullWidth
-            loading={startingPlan}
-            disabled={starting || !today.plannedExercises.length}
-            onPress={handleStartPlan}
-          />
-          <TodayCardLink label="See or change this Workout" color="onAccent" size="sm" onPress={openSheet} />
-        </TodayCard>
-      ) : null}
-      {card === "connect" ? (
-        <TodayCard
-          tone="quiet"
-          headline={plan === "planning" ? "Planning your next Workout." : "Connect to plan your next Workout."}
-        />
-      ) : null}
-      {card === "manual" ? (
-        <TodayCard tone="accent" headline="Time to train." line="Add Exercises as you go.">
-          <LoadingButton
-            label="Start manual workout"
-            icon="dumbbell"
-            action="inverse"
-            fullWidth
-            loading={starting}
-            onPress={handleManual}
-          />
-          <TodayCardLink label={LOG_PAST} color="onAccent" size="sm" onPress={() => setPastSheetIsOpen(true)} />
-        </TodayCard>
-      ) : null}
-      {showsCheckIn({ card, hasDaysWorkout: !!today, checkIn: checkInState }) ? (
-        <View style={{ marginTop: spacing[3] }}>
-          <CheckInCard onCheckIn={keepCheckIn} />
-        </View>
-      ) : null}
-      {state === "offline" ? (
-        <Text size="sm" color="muted" style={{ marginTop: spacing[2] }}>
-          No connection. Workouts save on this phone until there is.
+    <>
+      <Screen scroll="screen" edges={["top"]}>
+        <Text size="sm" weight="semiBold" color="muted" style={{ marginBottom: spacing[3] }}>
+          {now.toLocaleDateString([], { weekday: "long", day: "numeric", month: "long" })}
         </Text>
-      ) : null}
-      {state === "loading" ? null : (
-        <View style={{ marginTop: spacing[3] }}>
-          <ThisWeekSection week={week} state={state} now={now} />
-        </View>
-      )}
-      {card === "loading" || card === "resume" || card === "manual" ? null : (
-        <View style={{ marginTop: spacing[4] }}>
-          <LoadingButton
-            label="Start manual workout"
-            size="md"
-            action="secondary"
-            variant="outline"
-            fullWidth
-            loading={starting}
-            disabled={startingPlan}
-            onPress={handleManual}
-          />
-          <View style={{ marginTop: spacing[3], alignItems: "center" }}>
-            <TodayCardLink label={LOG_PAST} color="muted" size="sm" onPress={() => setPastSheetIsOpen(true)} />
+        <TodayNutrition slot="top" />
+        {prNote.shown.length ? (
+          <View style={{ marginBottom: spacing[3] }}>
+            <PrNote shown={prNote.shown} now={now} onDismiss={prNote.dismiss} />
           </View>
-        </View>
-      )}
-      <PastWorkoutSheet isOpen={pastSheetIsOpen} onClose={() => setPastSheetIsOpen(false)} onPick={handleStartPast} />
-      {offer && !leadingOffer ? (
-        <View style={{ marginTop: spacing[5] }}>
-          <AssessmentSection offer={offer} onDismiss={() => dismiss(offerKey(offer))} />
-        </View>
-      ) : null}
-      {state === "loading" ? null : (
-        <>
-          <Divider spacing={6} />
-          <LastWorkoutSection workout={last} isOffline={state === "offline"} now={now} />
-        </>
-      )}
-      {today ? (
-        <PlannedWorkoutSheet
-          isOpen={sheetIsOpen}
-          onClose={() => setSheetIsOpen(false)}
-          cue={plannedWorkout?.cue}
-          reasons={reasonLines}
-          plannedExercises={today.plannedExercises}
-          estimatedSeconds={today.estimatedSeconds}
-          dropped={today.dropped}
-          workoutLength={today.workoutLength}
-          onChooseLength={today.chooseLength}
-          equipment={today.equipment}
-          equipmentChoices={today.equipmentChoices}
-          onChooseEquipment={today.chooseEquipment}
-          onPickAlternative={today.pickAlternative}
-          supersets={{ paired: today.paired, off: today.noSupersets, onChooseOff: today.chooseNoSupersets }}
-          checkIn={
-            checkIn
-              ? {
-                  ratings: checkIn,
-                  onChange: keepCheckIn,
-                  lighter: today.lighter,
-                  fullWorkout: today.fullWorkout,
-                  onChooseFullWorkout: today.chooseFullWorkout,
-                }
-              : null
-          }
-          onStart={handleStartPlan}
-          onStartRecovery={handleStartRecovery}
-        />
-      ) : null}
-      <ForgottenWorkoutModal isOpen={forgotten} onDone={() => setForgotten(false)} />
-    </Screen>
+        ) : null}
+        {card === "loading" ? <Spinner /> : null}
+        {card === "resume" && logbook.workout ? (
+          <TodayCard
+            tone="accent"
+            headline="Keep going."
+            line={`Started ${elapsedLabel(now.getTime() - Date.parse(logbook.workout.startedAt))} ago`}
+          >
+            <LoadingButton label="Resume workout" icon="dumbbell" action="inverse" fullWidth onPress={resumeWorkout} />
+          </TodayCard>
+        ) : null}
+        {card === "assessment" && leadingOffer ? (
+          <AssessmentCard offer={leadingOffer} onDismiss={() => dismiss(offerKey(leadingOffer))} />
+        ) : null}
+        {card === "done" ? (
+          <TodayCard tone="success" headline="Done for today." line={todayLoggedLine(finished, unit)}>
+            {today ? <TodayCardLink label={nextWorkout("Train again")} color="accent" onPress={openSheet} /> : null}
+            {connectNote ? <Text color="muted">{connectNote}</Text> : null}
+          </TodayCard>
+        ) : null}
+        {card === "rest" && restDayReason ? (
+          <TodayCard
+            tone="quiet"
+            headline="Rest today."
+            line={`${WHY_REST[restDayReason]} You can still train if you want to.`}
+          >
+            {today ? <TodayCardLink label={nextWorkout("Train anyway")} color="text" onPress={openSheet} /> : null}
+            <TodayCardLink label={RECOVERY_INSTEAD} color="text" onPress={handleStartRecovery} />
+            {connectNote ? <Text color="muted">{connectNote}</Text> : null}
+          </TodayCard>
+        ) : null}
+        {card === "ready" && today ? (
+          <TodayCard
+            tone="accent"
+            headline="Time to train."
+            line={todayPlanLine(today.plannedExercises, today.estimatedSeconds, today.lighter)}
+          >
+            {reasonLines.length ? <Text color="onAccent">{reasonLines[0]}</Text> : null}
+            {plannedWorkout?.cue ? <Text color="onAccent">{plannedWorkout.cue}</Text> : null}
+            <LoadingButton
+              label="Start workout"
+              icon="dumbbell"
+              action="inverse"
+              fullWidth
+              loading={startingPlan}
+              disabled={starting || !today.plannedExercises.length}
+              onPress={handleStartPlan}
+            />
+            <TodayCardLink label="See or change this Workout" color="onAccent" size="sm" onPress={openSheet} />
+          </TodayCard>
+        ) : null}
+        {card === "connect" ? (
+          <TodayCard
+            tone="quiet"
+            headline={plan === "planning" ? "Planning your next Workout." : "Connect to plan your next Workout."}
+          />
+        ) : null}
+        {card === "manual" ? (
+          <TodayCard tone="accent" headline="Time to train." line="Add Exercises as you go.">
+            <LoadingButton
+              label="Start manual workout"
+              icon="dumbbell"
+              action="inverse"
+              fullWidth
+              loading={starting}
+              onPress={handleManual}
+            />
+            <TodayCardLink label={LOG_PAST} color="onAccent" size="sm" onPress={() => setPastSheetIsOpen(true)} />
+          </TodayCard>
+        ) : null}
+        {showsCheckIn({ card, hasDaysWorkout: !!today, checkIn: checkInState }) ? (
+          <View style={{ marginTop: spacing[3] }}>
+            <CheckInCard onCheckIn={keepCheckIn} />
+          </View>
+        ) : null}
+        <TodayNutrition slot="afterCard" />
+        {state === "offline" ? (
+          <Text size="sm" color="muted" style={{ marginTop: spacing[2] }}>
+            No connection. Workouts save on this phone until there is.
+          </Text>
+        ) : null}
+        {state === "loading" ? null : (
+          <View style={{ marginTop: spacing[3] }}>
+            <ThisWeekSection week={week} state={state} now={now} />
+          </View>
+        )}
+        <TodayNutrition slot="afterWeek" />
+        {card === "loading" || card === "resume" || card === "manual" ? null : (
+          <View style={{ marginTop: spacing[4] }}>
+            <LoadingButton
+              label="Start manual workout"
+              size="md"
+              action="secondary"
+              variant="outline"
+              fullWidth
+              loading={starting}
+              disabled={startingPlan}
+              onPress={handleManual}
+            />
+            <View style={{ marginTop: spacing[3], alignItems: "center" }}>
+              <TodayCardLink label={LOG_PAST} color="muted" size="sm" onPress={() => setPastSheetIsOpen(true)} />
+            </View>
+          </View>
+        )}
+        <PastWorkoutSheet isOpen={pastSheetIsOpen} onClose={() => setPastSheetIsOpen(false)} onPick={handleStartPast} />
+        {offer && !leadingOffer ? (
+          <View style={{ marginTop: spacing[5] }}>
+            <AssessmentSection offer={offer} onDismiss={() => dismiss(offerKey(offer))} />
+          </View>
+        ) : null}
+        {state === "loading" ? null : (
+          <>
+            <Divider spacing={6} />
+            <LastWorkoutSection workout={last} isOffline={state === "offline"} now={now} />
+          </>
+        )}
+        {today ? (
+          <PlannedWorkoutSheet
+            isOpen={sheetIsOpen}
+            onClose={() => setSheetIsOpen(false)}
+            cue={plannedWorkout?.cue}
+            reasons={reasonLines}
+            plannedExercises={today.plannedExercises}
+            estimatedSeconds={today.estimatedSeconds}
+            dropped={today.dropped}
+            workoutLength={today.workoutLength}
+            onChooseLength={today.chooseLength}
+            equipment={today.equipment}
+            equipmentChoices={today.equipmentChoices}
+            onChooseEquipment={today.chooseEquipment}
+            onPickAlternative={today.pickAlternative}
+            supersets={{ paired: today.paired, off: today.noSupersets, onChooseOff: today.chooseNoSupersets }}
+            checkIn={
+              checkIn
+                ? {
+                    ratings: checkIn,
+                    onChange: keepCheckIn,
+                    lighter: today.lighter,
+                    fullWorkout: today.fullWorkout,
+                    onChooseFullWorkout: today.chooseFullWorkout,
+                  }
+                : null
+            }
+            onStart={handleStartPlan}
+            onStartRecovery={handleStartRecovery}
+          />
+        ) : null}
+        <ForgottenWorkoutModal isOpen={forgotten} onDone={() => setForgotten(false)} />
+      </Screen>
+      <PrototypeSwitcher />
+    </>
   );
 }
