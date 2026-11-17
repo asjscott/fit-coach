@@ -139,26 +139,39 @@ export type LoadsByEquipment = readonly (readonly number[])[];
 // The loads of each kind of equipment the Equipment Profile has for an Exercise, in kg: the dumbbells, kettlebells,
 // bar plus plate pairs or cable stack it has. For a dumbbell or kettlebell Exercise a load is one implement's weight.
 // A kind the profile lists no loads for is left out
-export function loadsByEquipmentKg(
+export const loadsByEquipmentKg = (
   exercise: Pick<Exercise, "equipmentOptions">,
   profile: ProfileWithLoads,
-): number[][] {
-  const { dumbbells, kettlebells, barbell, cable_machine } = profile.loads;
+): number[][] => [...loadsByKindKg(exercise, profile).values()];
+
+// loadsByEquipmentKg keyed by the kind of equipment, in the same order
+export function loadsByKindKg(
+  exercise: Pick<Exercise, "equipmentOptions">,
+  profile: ProfileWithLoads,
+): Map<EquipmentTag, number[]> {
   const tags = [...new Set(ownedOptions(exercise, profile).flat())];
-  return tags
-    .map((tag) => {
-      if (tag === "dumbbells" && dumbbells) return dumbbellLoadsKg(dumbbells);
-      if (tag === "kettlebells" && kettlebells) return kettlebells.weightsKg;
-      if (tag === "barbell" && barbell) return barbellLoadsKg(barbell);
-      if (tag === "cable_machine" && cable_machine) return cableLoadsKg(cable_machine);
-      return [];
-    })
-    .filter((loads) => loads.length > 0)
-    .map(lightestFirst);
+  return new Map(
+    tags.flatMap((tag) => {
+      const loads = loadsOfKindKg(tag, profile.loads);
+      return loads.length ? [[tag, lightestFirst(loads)] as const] : [];
+    }),
+  );
+}
+
+// The loads the profile lists for one kind of equipment, in kg; none for a kind without loads
+function loadsOfKindKg(
+  tag: EquipmentTag,
+  { dumbbells, kettlebells, barbell, cable_machine }: ProfileWithLoads["loads"],
+): number[] {
+  if (tag === "dumbbells" && dumbbells) return dumbbellLoadsKg(dumbbells);
+  if (tag === "kettlebells" && kettlebells) return kettlebells.weightsKg;
+  if (tag === "barbell" && barbell) return barbellLoadsKg(barbell);
+  if (tag === "cable_machine" && cable_machine) return cableLoadsKg(cable_machine);
+  return [];
 }
 
 // Sorted, with loads a rounding error apart kept once
-function lightestFirst(loadsKg: readonly number[]): number[] {
+export function lightestFirst(loadsKg: readonly number[]): number[] {
   const loads = [...loadsKg].sort((a, b) => a - b);
   return loads.filter((load, i) => i === 0 || load - loads[i - 1]! > SAME_LOAD_TOLERANCE);
 }

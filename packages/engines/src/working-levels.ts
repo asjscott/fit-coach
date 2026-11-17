@@ -13,8 +13,9 @@ import { EXERCISES, exerciseBySlug } from "./data/exercises";
 import {
   availableLoadsKg,
   isAvailable,
+  lightestFirst,
   loadAtOrBelowKg,
-  loadsByEquipmentKg,
+  loadsByKindKg,
   ownedOptions,
   type ProfileWithLoads,
 } from "./equipment";
@@ -69,20 +70,23 @@ const startingReps = (exercise: Exercise) => repRange(exercise, "kg")?.min ?? CA
 
 // Every load any of the profiles offers for the Exercise, lightest first
 const loadsInAny = (exercise: Exercise, profiles: readonly ProfileWithLoads[]) =>
-  [...new Set(profiles.flatMap((profile) => availableLoadsKg(exercise, profile)))].sort((a, b) => a - b);
+  lightestFirst(profiles.flatMap((profile) => availableLoadsKg(exercise, profile)));
 
-// The loads of the Exercise's preferred kind of equipment in each profile, lightest first: its first way of doing it
-// the profile owns with loads, as a Load Step stays on (#149)
-const loadsOfPreferredKind = (exercise: Exercise, profiles: readonly ProfileWithLoads[]) =>
-  [...new Set(profiles.flatMap((profile) => loadsByEquipmentKg(exercise, profile)[0] ?? []))].sort((a, b) => a - b);
+// The loads of the Exercise's preferred kind of equipment across the profiles, lightest first: its first way of doing
+// it that any profile owns with loads, as a Load Step stays on (#149). One kind for all the profiles, so a gym's
+// dumbbells and a home's kettlebells don't mix
+function loadsOfPreferredKind(exercise: Exercise, profiles: readonly ProfileWithLoads[]): number[] {
+  const byKind = profiles.map((profile) => loadsByKindKg(exercise, profile));
+  const kind = exercise.equipmentOptions.flat().find((tag) => byKind.some((loads) => loads.has(tag)));
+  return kind ? lightestFirst(byKind.flatMap((loads) => loads.get(kind) ?? [])) : [];
+}
 
 // The heaviest load at or below kg on the Exercise's preferred kind of equipment (#155), so its Load Steps stay there;
-// on any kind only when the preferred kind has none that light
+// on any kind only when the preferred kind has none that light. Both allow loadAtOrBelowKg's rounding error
 function seededLoadKg(kg: number, exercise: Exercise, profiles: readonly ProfileWithLoads[]): number {
   const preferred = loadsOfPreferredKind(exercise, profiles);
-  return preferred.some((load) => load <= kg)
-    ? loadAtOrBelowKg(kg, preferred)
-    : loadAtOrBelowKg(kg, loadsInAny(exercise, profiles));
+  const onPreferred = loadAtOrBelowKg(kg, preferred);
+  return preferred.includes(onPreferred) ? onPreferred : loadAtOrBelowKg(kg, loadsInAny(exercise, profiles));
 }
 
 // ─── Seeding ───
