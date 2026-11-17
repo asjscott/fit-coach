@@ -366,6 +366,23 @@ describe("weekDatesLabel", () => {
       expect(weekDatesLabel(historyWeekStart(), now, "en-GB")).toBe(`26 Oct${range}1 Nov`);
       expect(weekDatesLabel(historyWeekStart(), now, "en-US")).toBe(`Oct 26${range}Nov 1`);
     });
+
+    // iOS's Hermes formats every date with the offset in force now, standard time, an hour west of Monday's (#156)
+    it("labels the week Monday to Sunday on an engine that formats with the offset in force now, as iOS's", () => {
+      const NativeDateTimeFormat = Intl.DateTimeFormat;
+      const standardTime = `Etc/GMT+${mondayOffsetMinutes / 60 + 1}`;
+      function wrongOffsetFormat(locale?: string | string[], options?: Intl.DateTimeFormatOptions) {
+        return new NativeDateTimeFormat(locale, { timeZone: standardTime, ...options });
+      }
+      vi.stubGlobal("Intl", { ...Intl, DateTimeFormat: wrongOffsetFormat });
+      try {
+        expect(new Intl.DateTimeFormat("en-GB", { day: "numeric" }).format(historyWeekStart())).toBe("25");
+        expect(weekDatesLabel(historyWeekStart(), now, "en-GB")).toBe(`26 Oct${range}1 Nov`);
+        expect(weekDatesLabel(historyWeekStart(), now, "en-US")).toBe(`Oct 26${range}Nov 1`);
+      } finally {
+        vi.unstubAllGlobals();
+      }
+    });
   });
 });
 
