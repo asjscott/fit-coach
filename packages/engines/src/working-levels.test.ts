@@ -63,6 +63,32 @@ describe("seedWorkingLevels", () => {
     }).filter((each) => each.slug === "renegade-row");
     expect(level).toMatchObject({ unit: "kg", kg: 8 });
   });
+
+  const seededRenegadeRowKg = (equipmentProfiles: ProfileWithLoads[]) => {
+    // A pull of 160 kg puts Renegade row's target at 18 kg
+    const [level] = seedWorkingLevels({
+      referenceStrengths: { pull: 160 },
+      bodyWeightKg: 80,
+      equipmentProfiles,
+    }).filter((each) => each.slug === "renegade-row");
+    return level?.unit === "kg" ? level.kg : undefined;
+  };
+
+  // Loads entered in pounds are stored as their exact kg, so a dumbbell can sit a rounding error above the target
+  it("keeps to the preferred kind when its load is a rounding error above the target", () => {
+    const dumbbell = 18 + 2e-9;
+    const roundingErrorApart: ProfileWithLoads = {
+      tags: ["dumbbells", "kettlebells"],
+      loads: { dumbbells: { kind: "fixed", weightsKg: [dumbbell] }, kettlebells: { weightsKg: [18 + 1e-9] } },
+    };
+    expect(seededRenegadeRowKg([roundingErrorApart])).toBe(dumbbell);
+  });
+
+  it("seeds on one preferred kind across Equipment Profiles, not each profile's own", () => {
+    const gym: ProfileWithLoads = { tags: ["dumbbells"], loads: { dumbbells: { kind: "fixed", weightsKg: [10, 20] } } };
+    const home: ProfileWithLoads = { tags: ["kettlebells"], loads: { kettlebells: { weightsKg: [16] } } };
+    expect(seededRenegadeRowKg([gym, home])).toBe(10);
+  });
 });
 
 // A profile added since the Assessment has its Working Levels worked out as the Assessment would have seeded them

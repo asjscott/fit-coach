@@ -1,6 +1,6 @@
 import { toKg } from "@fit/shared";
 import { describe, expect, it } from "vitest";
-import { loadOptions, toLoads, toLoadsForm } from "./loads";
+import { LoadsForm, loadOptions, toLoads, toLoadsForm } from "./loads";
 
 const tags = ["dumbbells", "kettlebells", "barbell", "plates"] as const;
 
@@ -70,5 +70,10 @@ describe("an Equipment Profile's loads in the user's unit", () => {
     expect(loadOptions("lb").plates).toContain(45);
     expect(loadOptions("kg").bar).toEqual([7, 10, 15, 20]);
     expect(loadOptions("kg").plates).toContain(1.25);
+  });
+
+  // #154: a number field stores an emptied field as null
+  it("leaves an emptied load blank, so it isn't saved", () => {
+    expect(LoadsForm.safeParse({ cable_machine: { step: null } }).success).toBe(true);
   });
 });

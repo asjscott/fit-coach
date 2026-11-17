@@ -153,6 +153,21 @@ describe("asking for body weight in the user's unit", () => {
   it("asks for a body weight left blank", () => {
     expect(error(undefined, "lb")).toBe("Enter your weight");
   });
+
+  // #154: a number field stores an emptied field as null
+  it("asks for a body weight that was emptied", () => {
+    expect(error(null, "lb")).toBe("Enter your weight");
+  });
+});
+
+// #154: a number field stores an emptied field as null
+describe("asking for a height or birth year that was emptied", () => {
+  const error = (field: "heightCm" | "birthYear") => UserProfile.shape[field].safeParse(null).error?.issues[0]?.message;
+
+  it("asks for each again", () => {
+    expect(error("heightCm")).toBe("Enter your height");
+    expect(error("birthYear")).toBe("Enter your birth year");
+  });
 });
 
 describe("saving a body weight answered in the user's unit", () => {
