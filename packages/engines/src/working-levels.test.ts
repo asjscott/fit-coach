@@ -1,6 +1,8 @@
+import { toKg } from "@fit/shared";
 import { describe, expect, it } from "vitest";
 import { exerciseBySlug } from "./data/exercises";
-import { repRange } from "./working-levels";
+import { builtInEquipment, type ProfileWithLoads } from "./equipment";
+import { repRange, seedWorkingLevels, workingLevelsOn } from "./working-levels";
 
 // Story 28, ADR 0007: each kind of lift is trained in its own range, which progression (#132) climbs within
 describe("repRange", () => {
@@ -22,5 +24,56 @@ describe("repRange", () => {
     ["a timed Exercise", "plank", "seconds"],
   ] as const)("gives %s no range", (_, slug, unit) => {
     expect(repRange(exerciseBySlug(slug)!, unit)).toBeNull();
+  });
+});
+
+// #155: a Working Level is seeded on the Exercise's preferred kind of equipment, its first way of doing it that a
+// profile owns with loads, so its Load Steps (#149) stay on that kind
+describe("seedWorkingLevels", () => {
+  const fullGymInLb = builtInEquipment("full_gym", "lb");
+  const seededKg = (
+    slug: string,
+    referenceStrengths: Parameters<typeof seedWorkingLevels>[0]["referenceStrengths"],
+  ) => {
+    const level = seedWorkingLevels({ referenceStrengths, bodyWeightKg: 80, equipmentProfiles: [fullGymInLb] }).find(
+      (each) => each.slug === slug,
+    );
+    return level?.unit === "kg" ? level.kg : undefined;
+  };
+
+  // A pull of 73 kg puts Renegade row's target near 18 lb: between the 15 and 20 lb dumbbells, above the 8 kg bell
+  it("seeds Renegade row on a dumbbell, not a lighter kettlebell between two dumbbell steps", () => {
+    expect(seededKg("renegade-row", { pull: 73 })).toBeCloseTo(toKg(15, "lb"));
+  });
+
+  // A hinge of 100 kg puts its target at 15 kg
+  it("seeds a single-arm kettlebell swing on a kettlebell", () => {
+    expect(seededKg("single-arm-kettlebell-swing", { hinge: 100 })).toBe(12);
+  });
+
+  it("falls back to another kind when the preferred kind has nothing as light as the target", () => {
+    const heavyDumbbellsLightBells: ProfileWithLoads = {
+      tags: ["dumbbells", "kettlebells"],
+      loads: { dumbbells: { kind: "fixed", weightsKg: [20, 25] }, kettlebells: { weightsKg: [4, 8, 12] } },
+    };
+    const [level] = seedWorkingLevels({
+      referenceStrengths: { pull: 73 },
+      bodyWeightKg: 80,
+      equipmentProfiles: [heavyDumbbellsLightBells],
+    }).filter((each) => each.slug === "renegade-row");
+    expect(level).toMatchObject({ unit: "kg", kg: 8 });
+  });
+});
+
+// A profile added since the Assessment has its Working Levels worked out as the Assessment would have seeded them
+describe("workingLevelsOn", () => {
+  it("works out Renegade row on a lb Full gym added since on a dumbbell", () => {
+    const levels = workingLevelsOn({
+      workingLevels: [],
+      assessment: { bodyWeightKg: 80, patterns: { pull: { referenceStrength: 73, estimated: true } } },
+      equipmentProfile: builtInEquipment("full_gym", "lb"),
+    });
+    const level = levels.get("renegade-row");
+    expect(level?.unit === "kg" && level.kg).toBeCloseTo(toKg(15, "lb"));
   });
 });

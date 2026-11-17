@@ -10,7 +10,14 @@ import {
   type WorkingLevelMover,
 } from "@fit/shared";
 import { EXERCISES, exerciseBySlug } from "./data/exercises";
-import { availableLoadsKg, isAvailable, loadAtOrBelowKg, ownedOptions, type ProfileWithLoads } from "./equipment";
+import {
+  availableLoadsKg,
+  isAvailable,
+  loadAtOrBelowKg,
+  loadsByEquipmentKg,
+  ownedOptions,
+  type ProfileWithLoads,
+} from "./equipment";
 import { epleyLoadKg, epleyReps } from "./e1rm";
 import { STRENGTH_RATIOS } from "./strength-ratios";
 
@@ -63,6 +70,20 @@ const startingReps = (exercise: Exercise) => repRange(exercise, "kg")?.min ?? CA
 // Every load any of the profiles offers for the Exercise, lightest first
 const loadsInAny = (exercise: Exercise, profiles: readonly ProfileWithLoads[]) =>
   [...new Set(profiles.flatMap((profile) => availableLoadsKg(exercise, profile)))].sort((a, b) => a - b);
+
+// The loads of the Exercise's preferred kind of equipment in each profile, lightest first: its first way of doing it
+// the profile owns with loads, as a Load Step stays on (#149)
+const loadsOfPreferredKind = (exercise: Exercise, profiles: readonly ProfileWithLoads[]) =>
+  [...new Set(profiles.flatMap((profile) => loadsByEquipmentKg(exercise, profile)[0] ?? []))].sort((a, b) => a - b);
+
+// The heaviest load at or below kg on the Exercise's preferred kind of equipment (#155), so its Load Steps stay there;
+// on any kind only when the preferred kind has none that light
+function seededLoadKg(kg: number, exercise: Exercise, profiles: readonly ProfileWithLoads[]): number {
+  const preferred = loadsOfPreferredKind(exercise, profiles);
+  return preferred.some((load) => load <= kg)
+    ? loadAtOrBelowKg(kg, preferred)
+    : loadAtOrBelowKg(kg, loadsInAny(exercise, profiles));
+}
 
 // ─── Seeding ───
 
@@ -149,7 +170,7 @@ function seededLevelOf(
   switch (entry.kind) {
     case "weighted": {
       const reps = startingReps(exercise);
-      const kg = loadAtOrBelowKg(epleyLoadKg(maximum, reps + REPS_IN_RESERVE), loadsInAny(exercise, profiles));
+      const kg = seededLoadKg(epleyLoadKg(maximum, reps + REPS_IN_RESERVE), exercise, profiles);
       return { slug, unit: "kg", kg, reps, outgrown: false };
     }
     case "bodyweight":
