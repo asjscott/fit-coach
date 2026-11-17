@@ -18,6 +18,7 @@ import {
   volumeLabel,
   weightLabel,
   weekDatesLabel,
+  weekdayLabel,
   noAlternativeLabel,
   plannedSetsLabel,
   setTargetLabel,
@@ -383,6 +384,45 @@ describe("weekDatesLabel", () => {
         vi.unstubAllGlobals();
       }
     });
+  });
+});
+
+describe("weekdayLabel", () => {
+  const savedTimeZone = process.env.TZ;
+  beforeEach(() => {
+    process.env.TZ = "America/Vancouver";
+  });
+  afterEach(() => {
+    if (savedTimeZone === undefined) delete process.env.TZ;
+    else process.env.TZ = savedTimeZone;
+    vi.unstubAllGlobals();
+    vi.restoreAllMocks();
+  });
+
+  // Sunday 1 Nov 2026 at local midnight, in daylight time, before the clocks go back that morning
+  const sundayBeforeTheChange = () => {
+    const day = new Date(2026, 10, 1);
+    expect(day.getTimezoneOffset()).toBe(7 * 60);
+    return day;
+  };
+
+  it("names the day of the week", () => {
+    expect(weekdayLabel(sundayBeforeTheChange())).toBe("Sunday");
+  });
+
+  // iOS's Hermes formats every date with the offset in force now, standard time, an hour west of Sunday's (#156)
+  it("names the day of the week on an engine that formats with the offset in force now, as iOS's", () => {
+    const NativeDateTimeFormat = Intl.DateTimeFormat;
+    function wrongOffsetFormat(locale?: Intl.LocalesArgument, options?: Intl.DateTimeFormatOptions) {
+      return new NativeDateTimeFormat(locale, { timeZone: "Etc/GMT+8", ...options });
+    }
+    vi.stubGlobal("Intl", { ...Intl, DateTimeFormat: wrongOffsetFormat });
+    vi.spyOn(Date.prototype, "toLocaleDateString").mockImplementation(function (this: Date, locale, options) {
+      return wrongOffsetFormat(locale, options).format(this);
+    });
+    expect(new Intl.DateTimeFormat("en-GB", { weekday: "long" }).format(sundayBeforeTheChange())).toBe("Saturday");
+    expect(sundayBeforeTheChange().toLocaleDateString("en-GB", { weekday: "long" })).toBe("Saturday");
+    expect(weekdayLabel(sundayBeforeTheChange())).toBe("Sunday");
   });
 });
 

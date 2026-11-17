@@ -74,8 +74,13 @@ const midnight = (date: Date) => new Date(date.getFullYear(), date.getMonth(), d
 // Whole calendar days between two moments' dates; rounded, so a daylight-saving day still counts as one
 const daysBetween = (from: Date, to: Date) => Math.round((midnight(to).getTime() - midnight(from).getTime()) / DAY_MS);
 
-// The day of the week in the phone's language: "Tuesday"
-export const weekdayLabel = (date: Date) => date.toLocaleDateString([], { weekday: "long" });
+// A date's calendar day at noon UTC, to format in UTC rather than as an instant: iOS's Hermes formats a local date with
+// the offset in force now, so local midnight before the clocks go back read as the day before (#156)
+const calendarDay = (date: Date) => new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate(), 12));
+
+// The day of the week of a date's calendar day, in the phone's language: "Tuesday"
+export const weekdayLabel = (date: Date) =>
+  new Intl.DateTimeFormat([], { weekday: "long", timeZone: "UTC" }).format(calendarDay(date));
 
 // When a Workout was: "Today, 1:33 PM", "Yesterday, 6:10 PM", "Tuesday, 7:02 AM", then "Sat 17 Oct, 9:40 AM"
 export function relativeDateLabel(iso: string, now = new Date()) {
@@ -123,15 +128,13 @@ export function weekLabel(start: Date, now = new Date()) {
 export function weekDatesLabel(start: Date, now = new Date(), locale?: string) {
   const end = new Date(start.getFullYear(), start.getMonth(), start.getDate() + 6);
   const sameYear = end.getFullYear() === now.getFullYear();
-  // Formats each date's calendar day, at noon UTC, not its instant: iOS's Hermes formats a local date with the offset
-  // in force now, so local midnight before the clocks go back read as the day before (#156)
+  // Formats each date's calendarDay, not its instant (#156)
   const format = new Intl.DateTimeFormat(locale, {
     day: "numeric",
     month: "short",
     year: sameYear ? undefined : "numeric",
     timeZone: "UTC",
   });
-  const calendarDay = (date: Date) => new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate(), 12));
   const [from, to] = [calendarDay(start), calendarDay(end)];
   const label =
     typeof format.formatRange === "function"
