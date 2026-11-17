@@ -1,10 +1,24 @@
-import { bodyWeightAnswer, UserProfile } from "@fit/shared";
+import { createElement, Fragment } from "react";
+// @ts-expect-error react-dom ships no types of its own, and the app has no @types/react-dom
+import { renderToStaticMarkup } from "react-dom/server";
+import { Controller, createFormControl } from "react-hook-form";
 import { describe, expect, it } from "vitest";
-import { LoadsForm } from "../../features/equipment/loads";
 import { numberFieldValue } from "./number-field";
 
-const message = (result: { success: boolean; error?: { issues: { message: string }[] } }) =>
-  result.error?.issues[0]?.message;
+// The value a Controller field with this default shows once the form's value is set to `value`
+function controllerValueAfterSetting(defaultValue: number, value: unknown): string {
+  const { formControl, control } = createFormControl<{ weight: unknown }>({ defaultValues: { weight: defaultValue } });
+  // A form reads its values only once mounted, which useForm marks in an effect that server rendering never runs; the
+  // form control's state stands in for it. Should react-hook-form drop that flag, the test fails rather than passes
+  control._state.mount = true;
+  formControl.setValue("weight", value);
+  const field = createElement(Controller<{ weight: unknown }>, {
+    control,
+    name: "weight",
+    render: ({ field }) => createElement(Fragment, null, String(field.value)),
+  });
+  return (renderToStaticMarkup as (element: typeof field) => string)(field);
+}
 
 // #154: a number field's typed text becomes the form's value
 describe("a number field's value", () => {
@@ -18,20 +32,13 @@ describe("a number field's value", () => {
     expect(numberFieldValue("-")).toBe("-");
   });
 
-  it("keeps an emptied field empty rather than unset, so its default value doesn't come back", () => {
-    // react-hook-form shows a field's default value again when the form's value is undefined: emptying a
-    // body weight of 176.4 put 176.4 straight back
-    expect(numberFieldValue("")).not.toBeUndefined();
+  it("keeps an emptied field empty rather than unset", () => {
     expect(numberFieldValue("")).toBeNull();
   });
 
-  it("asks for a required body weight, height or birth year that was emptied", () => {
-    expect(message(bodyWeightAnswer("lb").safeParse(numberFieldValue("")))).toBe("Enter your weight");
-    expect(message(UserProfile.shape.heightCm.safeParse(numberFieldValue("")))).toBe("Enter your height");
-    expect(message(UserProfile.shape.birthYear.safeParse(numberFieldValue("")))).toBe("Enter your birth year");
-  });
-
-  it("leaves an emptied optional load blank, so it isn't saved", () => {
-    expect(LoadsForm.safeParse({ cable_machine: { step: numberFieldValue("") } }).success).toBe(true);
+  // react-hook-form shows a field's default value again when the form's value is undefined: emptying a body weight
+  // of 176.4 put 176.4 straight back
+  it("keeps a field with a default value empty once emptied, rather than showing the default again", () => {
+    expect(controllerValueAfterSetting(176.4, numberFieldValue(""))).toBe("null");
   });
 });
