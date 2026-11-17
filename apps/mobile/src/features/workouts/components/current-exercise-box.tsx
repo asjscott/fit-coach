@@ -1,4 +1,4 @@
-import { exerciseLoadsKg, isRatedTest, takesAnotherSet, takesNoMoreSets } from "@fit/engines";
+import { exerciseLoadsByEquipmentKg, isRatedTest, takesAnotherSet, takesNoMoreSets } from "@fit/engines";
 import { RPE_SCALE, type InProgressWorkoutExercise, type LoadType, type Set, type SetValues } from "@fit/shared";
 import { useState, type ReactNode } from "react";
 import { StyleSheet, View } from "react-native";
@@ -15,7 +15,7 @@ import { fonts, radii, spacing, useTheme } from "@/theme";
 import { errorMessage } from "@/utils/error-message";
 import { plannedSetsLabel, previousSetsLabel } from "../format";
 import { offersLastSetRpe, withRpe } from "../last-set-rpe";
-import { exerciseName, isJumpSlug, libraryExercise } from "../library";
+import { exerciseName, setReading } from "../library";
 import { useLogbook } from "../logbook-provider";
 import { protocolNote } from "../protocol-note";
 import { draftValues, loadStep, rpeMissing, setDraft, SET_FIELDS, type SetDraft } from "../set-entry";
@@ -81,7 +81,7 @@ export function ExerciseLogging({
   const [actionsIndex, setActionsIndex] = useState<number | null>(null);
   const [deletingIndex, setDeletingIndex] = useState<number | null>(null);
   const { id, slug, loadType, sets, previousSets, planned } = workoutExercise;
-  const unilateral = libraryExercise(slug)?.unilateral ?? false;
+  const reading = setReading(slug);
   const editingSet = editingIndex === null ? undefined : sets[editingIndex];
   const lastSet = sets.at(-1);
   const nextNumber = sets.length + 1;
@@ -92,22 +92,26 @@ export function ExerciseLogging({
   // A test that's done, or the walk once its one Set is logged (#109)
   const done = (!!protocol && takesNoMoreSets(protocol)) || !takesAnotherSet(workoutExercise);
   const asksRpe = !!workout && isRatedTest(workout, loadType);
-  const loadsKg = exerciseLoadsKg(slug, primaryEquipment);
-  const loadSteps: LoadSteps = { step: loadStep(loadsKg, unit), loadsKnown: loadsKg.length > 0, unit };
+  const loadsByEquipmentKg = exerciseLoadsByEquipmentKg(slug, primaryEquipment);
+  const loadSteps: LoadSteps = {
+    step: loadStep(loadsByEquipmentKg, unit),
+    loadsKnown: loadsByEquipmentKg.length > 0,
+    unit,
+  };
 
   return (
     <>
       {planned && !hideTarget ? (
         <Text size="sm" color="muted" style={styles.note}>
-          {`Target: ${plannedSetsLabel(planned, unit, unilateral, isJumpSlug(slug))}`}
+          {`Target: ${plannedSetsLabel(planned, unit, reading)}`}
         </Text>
       ) : null}
       {previousSets ? (
         <Text size="sm" color="subtle" style={styles.note}>
-          {previousSetsLabel(previousSets.sets, unit)}
+          {previousSetsLabel(previousSets.sets, unit, reading)}
         </Text>
       ) : null}
-      {unilateral ? (
+      {reading.unilateral ? (
         <Text size="sm" color="muted" style={styles.note}>
           Log one side; the values count for each side
         </Text>
@@ -129,7 +133,7 @@ export function ExerciseLogging({
               key={set.loggedAt + i}
               set={set}
               index={i}
-              unilateral={unilateral}
+              reading={reading}
               editing={editingIndex === i}
               actions={{
                 open: actionsIndex === i,
@@ -171,7 +175,7 @@ export function ExerciseLogging({
           initial={editingSet}
           asksRpe={asksRpe}
           loadSteps={loadSteps}
-          jump={isJumpSlug(slug)}
+          jump={reading.jump}
           submitLabel={`Save set ${editingIndex + 1}`}
           onSubmit={async (values) => {
             await editSet(id, editingIndex, values);
@@ -195,7 +199,7 @@ export function ExerciseLogging({
           initial={nextSetDraft(workoutExercise, protocol)}
           asksRpe={asksRpe}
           loadSteps={loadSteps}
-          jump={isJumpSlug(slug)}
+          jump={reading.jump}
           submitLabel={`Log set ${nextNumber}`}
           onSubmit={(values) => logSet(id, values)}
         />
@@ -316,7 +320,7 @@ function SetEntry({
         return field === "load" ? (
           <SetStepper key={field} field={field} value={value} onChange={onChange} {...loadSteps} />
         ) : (
-          <SetStepper key={field} field={field} value={value} onChange={onChange} contacts={jump} />
+          <SetStepper key={field} field={field} value={value} onChange={onChange} jump={jump} />
         );
       })}
       {asksRpe ? (

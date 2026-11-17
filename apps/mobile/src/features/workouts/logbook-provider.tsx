@@ -22,9 +22,10 @@ import {
 import * as Crypto from "expo-crypto";
 import { useKeepAwake } from "expo-keep-awake";
 import { createContext, use, useCallback, useEffect, useRef, useState, type ReactNode } from "react";
-import { Vibration } from "react-native";
+import { AppState, Vibration } from "react-native";
 import { useApi } from "@/api";
 import { deviceStorage } from "./device-storage";
+import { finishCelebration } from "./finish-celebration";
 import { useSyncTriggers } from "./hooks/use-sync-triggers";
 
 type LogbookContextValue = {
@@ -90,9 +91,9 @@ type LogbookContextValue = {
 export type AssessmentOptions = Parameters<Logbook["startAssessment"]>[0];
 export type PlannedWorkoutToStart = Parameters<Logbook["startPlannedWorkout"]>[0];
 
-// uploaded settles once the upload attempt does: true when the server has this Workout,
-// false when it stays on the phone as a Pending Workout for the next try. prs settles with it: the PRs the upload found,
-// now seen, or none when it didn't upload, so a later upload's PRs go to Today instead
+// uploaded settles once the upload attempt does, or once Finish stops waiting on it (celebrationOf): true when the
+// server has this Workout, false when it's still on the phone as a Pending Workout. prs settles with it: the PRs the
+// upload found, now seen, or none when it didn't upload in time, so a late upload's PRs go to Today instead
 export type FinishOutcome =
   | { status: "pending"; workoutId: string; uploaded: Promise<boolean>; prs: Promise<Pr[]> }
   | { status: "nothing-to-save" };
@@ -288,15 +289,13 @@ export function LogbookProvider({ children }: { children: ReactNode }) {
         setRest(null);
         const { id } = result.workout;
         celebrating.current.add(id);
-        const uploaded = sync().then(async () => !(await logbook.pending()).some((p) => p.id === id));
-        const prs = uploaded
-          .then(async (ok) => {
-            if (!ok) return [];
-            const found = (await logbook.unseenPrs()).find((unseen) => unseen.workoutId === id)?.prs ?? [];
-            await logbook.markPrsSeen([id]);
-            return found;
-          })
-          .finally(() => celebrating.current.delete(id));
+        // Only while the user can be looking at the toast, so a late upload's PRs go to Today instead (#142)
+        const { uploaded, prs } = finishCelebration({ logbook, workoutId: id, syncing: sync(), appState: AppState });
+        prs.finally(() => {
+          celebrating.current.delete(id);
+          // An upload that got through after the window has left its PRs for Today's note
+          refreshPending();
+        });
         return { status: "pending", workoutId: id, uploaded, prs };
       } finally {
         setSyncsUnderWay((count) => count - 1);

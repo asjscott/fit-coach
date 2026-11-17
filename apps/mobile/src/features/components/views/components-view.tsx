@@ -207,7 +207,7 @@ export default function ComponentsView() {
             <HStack spacing={4}>
               <Stat value="6,420" unit="kg" label="Volume" />
               <Stat value="38" label="Sets" />
-              <Stat value="2:14" unit="h" label="Time" />
+              <Stat value="2 h 14" unit="min" label="Time" />
             </HStack>
             <HStack spacing={4}>
               <Stat size="4xl" value="48:12" label="Elapsed" />

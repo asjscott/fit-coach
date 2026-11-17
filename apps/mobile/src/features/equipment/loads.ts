@@ -71,12 +71,12 @@ const LOAD_OPTIONS: Record<WeightUnit, LoadOptions> = {
 
 export const loadOptions = (unit: WeightUnit) => LOAD_OPTIONS[unit];
 
-// The form's weights are in the user's unit; the profile stores kg (#126)
+// The form's weights are in the user's unit; the profile stores kg (#126). An emptied one is null (#154)
 const optionalWeight = z
   .number({ error: "Enter a weight" })
   .positive("Must be more than 0")
   .max(200, "Must be 200 or less")
-  .optional();
+  .nullish();
 
 // Dropdown and chip values are strings; they become numbers when saved
 const weightChoices = z.array(z.string()).optional();

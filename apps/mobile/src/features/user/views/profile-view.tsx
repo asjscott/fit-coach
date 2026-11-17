@@ -20,6 +20,7 @@ import { goalLabel } from "@/features/user/components/form/fields/user-goal-fiel
 import { injuryLabel } from "@/features/user/components/form/fields/user-injuries-field";
 import { workoutLengthLabel } from "@/features/user/components/form/fields/user-workout-length-field";
 import { SignOutModal, signOutWarning } from "@/features/workouts/components/sign-out-modal";
+import { weightLabel } from "@/features/workouts/format";
 import { useLogbook } from "@/features/workouts/logbook-provider";
 import { useApi } from "@/api";
 
@@ -27,6 +28,7 @@ export default function ProfileView() {
   const { signOut } = useAuth();
   const { user } = useCurrentUser();
   const equipment = usePrimaryEquipmentProfile();
+  const unit = useWeightUnit();
   const logbook = useLogbook();
   const assessment = useStartAssessment();
   const tests = useChosenTests();
@@ -108,7 +110,7 @@ export default function ProfileView() {
           <Row label="Gender" value={profile.gender && genderLabel(profile.gender)} />
           <Row label="Age" value={profile.birthYear && `${new Date().getFullYear() - profile.birthYear}`} />
           <Row label="Height" value={profile.heightCm && `${profile.heightCm} cm`} />
-          <Row label="Weight" value={profile.weightKg && `${profile.weightKg} kg`} />
+          <Row label="Weight" value={profile.weightKg && weightLabel(profile.weightKg, unit)} />
           <Text size="sm" color="muted">
             Member since {new Date(user.onboardedAt).toLocaleDateString()}
           </Text>

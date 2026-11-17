@@ -5,6 +5,7 @@ import { Pressable } from "@/components/pressable";
 import { Text } from "@/components/text";
 import { bigNumber, fonts, radii, spacing, useTheme } from "@/theme";
 import { describeSet, setParts } from "../format";
+import type { SetReading } from "../library";
 import { useWeightUnit } from "@/features/user/current-user-provider";
 
 // What can be done to a logged Set from its row: its ⋯ opens Edit and Delete in the row, and a tick closes them
@@ -20,8 +21,8 @@ export type SetRowActions = {
 export type SetRowProps = {
   set: Set;
   index: number;
-  // The values count for each side
-  unilateral?: boolean;
+  // Per side for a one-sided Exercise, a Jump's reps as contacts (#141)
+  reading?: SetReading;
   // Being corrected below
   editing?: boolean;
   // Ticks the row as logged and gives it a ⋯, e.g. on the In-progress Workout
@@ -30,7 +31,7 @@ export type SetRowProps = {
 
 // A logged Set in a list, its values as big numbers and small units: "Set 1   16 kg × 10 per side". Always one line, so
 // the row keeps its height: the open row gives the tick and "Set" up to the buttons, and long values shrink to fit
-export function SetRow({ set, index, unilateral = false, editing = false, actions }: SetRowProps) {
+export function SetRow({ set, index, reading, editing = false, actions }: SetRowProps) {
   const unit = useWeightUnit();
   const { colors } = useTheme();
   const number = index + 1;
@@ -39,7 +40,7 @@ export function SetRow({ set, index, unilateral = false, editing = false, action
   return (
     <View
       accessible={!actions}
-      accessibilityLabel={`Set ${number}, ${describeSet(set, unit)}${unilateral ? " per side" : ""}`}
+      accessibilityLabel={`Set ${number}, ${describeSet(set, unit, reading)}${reading?.unilateral ? " per side" : ""}`}
       style={[styles.row, { borderTopColor: colors.line }]}
     >
       {actions && !open ? <Icon name="check" color="accent" size={18} /> : null}
@@ -52,7 +53,7 @@ export function SetRow({ set, index, unilateral = false, editing = false, action
         {open ? number : `Set ${number}`}
       </Text>
       <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.6} style={styles.values}>
-        {setParts(set, unit).map(([value, label], i) => (
+        {setParts(set, unit, reading).map(([value, label], i) => (
           <Text key={i}>
             <Text style={styles.number}>{value}</Text>
             {label ? (
@@ -62,7 +63,7 @@ export function SetRow({ set, index, unilateral = false, editing = false, action
             ) : null}
           </Text>
         ))}
-        {unilateral ? (
+        {reading?.unilateral ? (
           <Text size="sm" color="muted">
             {" per side"}
           </Text>

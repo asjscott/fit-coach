@@ -1,5 +1,6 @@
 import {
   fromKg,
+  inUnitToStep,
   loadInUnit,
   type BuiltInEquipment,
   type InProgressWorkoutExercise,
@@ -13,7 +14,7 @@ import {
 import { pairRestPlan } from "@fit/engines";
 import { getCalendars } from "expo-localization";
 import { bandLevelLabels } from "../equipment/loads";
-import { exerciseName } from "./library";
+import { exerciseName, type SetReading } from "./library";
 
 // How Workouts and Sets read on screen
 
@@ -45,11 +46,14 @@ export const timeLabel = (iso: string) => {
 // Two digits, for clocks: "05"
 export const twoDigits = (n: number) => String(n).padStart(2, "0");
 
-// Whole minutes as a value and unit: "49" min under an hour, then "2:05" h
-const minutesStat = (minutes: number) =>
-  minutes < 60
-    ? { value: String(minutes), unit: "min" }
-    : { value: `${Math.floor(minutes / 60)}:${twoDigits(minutes % 60)}`, unit: "h" };
+// Whole minutes as a value and unit: "49" min under an hour, then "2 h 5" min, or "49" h on the hour. Never a clock,
+// which reads oddly past a day: "49:00 h" (#144)
+function minutesStat(minutes: number) {
+  const hours = Math.floor(minutes / 60);
+  const rest = minutes % 60;
+  if (!hours) return { value: String(minutes), unit: "min" };
+  return rest ? { value: `${hours} h ${rest}`, unit: "min" } : { value: String(hours), unit: "h" };
+}
 
 const statLabel = ({ value, unit }: { value: string; unit: string }) => `${value} ${unit}`;
 
@@ -70,8 +74,13 @@ const midnight = (date: Date) => new Date(date.getFullYear(), date.getMonth(), d
 // Whole calendar days between two moments' dates; rounded, so a daylight-saving day still counts as one
 const daysBetween = (from: Date, to: Date) => Math.round((midnight(to).getTime() - midnight(from).getTime()) / DAY_MS);
 
-// The day of the week in the phone's language: "Tuesday"
-export const weekdayLabel = (date: Date) => date.toLocaleDateString([], { weekday: "long" });
+// A date's calendar day at noon UTC, to format in UTC rather than as an instant: iOS's Hermes formats a local date with
+// the offset in force now, so local midnight before the clocks go back read as the day before (#156)
+const calendarDay = (date: Date) => new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate(), 12));
+
+// The day of the week of a date's calendar day, in the phone's language: "Tuesday"
+export const weekdayLabel = (date: Date) =>
+  new Intl.DateTimeFormat([], { weekday: "long", timeZone: "UTC" }).format(calendarDay(date));
 
 // When a Workout was: "Today, 1:33 PM", "Yesterday, 6:10 PM", "Tuesday, 7:02 AM", then "Sat 17 Oct, 9:40 AM"
 export function relativeDateLabel(iso: string, now = new Date()) {
@@ -119,15 +128,18 @@ export function weekLabel(start: Date, now = new Date()) {
 export function weekDatesLabel(start: Date, now = new Date(), locale?: string) {
   const end = new Date(start.getFullYear(), start.getMonth(), start.getDate() + 6);
   const sameYear = end.getFullYear() === now.getFullYear();
+  // Formats each date's calendarDay, not its instant (#156)
   const format = new Intl.DateTimeFormat(locale, {
     day: "numeric",
     month: "short",
     year: sameYear ? undefined : "numeric",
+    timeZone: "UTC",
   });
+  const [from, to] = [calendarDay(start), calendarDay(end)];
   const label =
     typeof format.formatRange === "function"
-      ? format.formatRange(start, end)
-      : `${format.format(start)} – ${format.format(end)}`;
+      ? format.formatRange(from, to)
+      : `${format.format(from)} – ${format.format(to)}`;
   // Intl data versions space the dash differently ("12–18 Oct", "12 – 18 Oct"), so set it one way
   return label.replace(/\s*–\s*/, "\u2009–\u2009");
 }
@@ -140,19 +152,29 @@ export const volumeLabel = (kg: number, unit: WeightUnit) => Math.round(fromKg(k
 // A load to 0.5 of the user's unit, with the unit: "25 lb", "16.5 kg"
 export const loadLabel = (kg: number, unit: WeightUnit) => `${loadInUnit(kg, unit)} ${unit}`;
 
-// An estimate such as an Estimated maximum, to the tenth of the user's unit: "16.8 kg", "37 lb"
-export const weightLabel = (kg: number, unit: WeightUnit) =>
-  `${fromKg(kg, unit).toLocaleString(undefined, { maximumFractionDigits: 1 })} ${unit}`;
+// A weight to the tenth of the user's unit, such as an Estimated maximum or body weight: "16.8 kg", "37 lb"
+export const weightLabel = (kg: number, unit: WeightUnit) => `${inUnitToStep(kg, unit, 0.1).toLocaleString()} ${unit}`;
 
 export const setsLabel = (sets: number) => `${sets} ${sets === 1 ? "set" : "sets"}`;
 
-// A PR's new best against the one it beat (#130), weights in the user's unit (#126): "Estimated max 21.3 kg, up from
-// 18.7 kg", "14 reps, up from 12"
+// A PR's new best against the one it beat (#130), weights in the user's unit (#126) and both rounded the same way
+// (#146): "Estimated max 162 lb, up from 154 lb", "20 kg for 8 reps, up from 16 kg", "14 reps, up from 12"
 export function prLabel({ measure, best, previous }: Pr, unit: WeightUnit) {
-  if (measure === "e1rm") return `Estimated max ${weightLabel(best, unit)}, up from ${weightLabel(previous, unit)}`;
-  if (measure === "load") return `${weightLabel(best, unit)} for 8 reps, up from ${weightLabel(previous, unit)}`;
+  if (measure === "e1rm") {
+    const [to, from] = estimatesLabels(best, previous, unit);
+    return `Estimated max ${to}, up from ${from}`;
+  }
+  if (measure === "load") return `${loadLabel(best, unit)} for 8 reps, up from ${loadLabel(previous, unit)}`;
   if (measure === "reps") return `${best} reps, up from ${previous}`;
   return `${best} s, up from ${previous} s`;
+}
+
+// Two estimates in whole units of the user's, or both to the tenth when whole units would read the same
+function estimatesLabels(a: number, b: number, unit: WeightUnit) {
+  const digits = Math.round(fromKg(a, unit)) === Math.round(fromKg(b, unit)) ? 1 : 0;
+  const label = (kg: number) =>
+    `${fromKg(kg, unit).toLocaleString(undefined, { minimumFractionDigits: digits, maximumFractionDigits: digits })} ${unit}`;
+  return [label(a), label(b)];
 }
 
 // The line that celebrates a Workout's PRs: "New PR: Goblet squat", "2 new PRs: Goblet squat, Plank"
@@ -171,9 +193,10 @@ export function elapsedClockLabel(ms: number) {
 }
 
 // A Workout Exercise's Sets on one line, each unit said once where it can be: "18 kg × 10, 10, 8",
-// "16 kg × 10, 18 kg × 8", "12, 10 reps", "45, 40 s", "1 min 30 s, 1 min 15 s". Empty with no Sets
-export function setsSummary(sets: readonly Set[], unit: WeightUnit) {
-  const parts = sets.map((set) => setParts(set, unit));
+// "16 kg × 10, 18 kg × 8", "12, 10 reps", a Jump's "6, 6 contacts", "45, 40 s", "1 min 30 s, 1 min 15 s". Empty with
+// no Sets
+export function setsSummary(sets: readonly Set[], unit: WeightUnit, reading?: SetReading) {
+  const parts = sets.map((set) => setParts(set, unit, reading));
   const first = parts[0];
   if (!first) return "";
   // Everything about a Set but its last number, e.g. 18 "kg ×" for weighted Sets, or "reps". Only a weight is said
@@ -181,15 +204,15 @@ export function setsSummary(sets: readonly Set[], unit: WeightUnit) {
   const frame = (set: [number, string][]) => JSON.stringify([...set.slice(0, -1), set.at(-1)?.[1]]);
   const sharesFrame = parts.every((set) => frame(set) === frame(first));
   if (!sharesFrame || (first.length > 1 && sets[0]?.kind !== "external")) {
-    return sets.map((set) => describeSet(set, unit)).join(", ");
+    return sets.map((set) => describeSet(set, unit, reading)).join(", ");
   }
-  const lead = first.slice(0, -1).map(([value, label]) => `${value} ${label} `);
   const last = first.at(-1)?.[1];
-  return `${lead.join("")}${parts.map((set) => set.at(-1)?.[0]).join(", ")}${last ? ` ${last}` : ""}`;
+  return `${leadParts(first)}${parts.map((set) => set.at(-1)?.[0]).join(", ")}${last ? ` ${last}` : ""}`;
 }
 
 // Previous Sets as a reference while logging: "Last: 18 kg × 10, 10, 8"
-export const previousSetsLabel = (sets: readonly Set[], unit: WeightUnit) => `Last: ${setsSummary(sets, unit)}`;
+export const previousSetsLabel = (sets: readonly Set[], unit: WeightUnit, reading?: SetReading) =>
+  `Last: ${setsSummary(sets, unit, reading)}`;
 
 // A Set's target as a Set reads: "20 kg × 8", "12 reps", "40 s", "Medium band × 12". A timed target of a minute or more
 // reads in minutes, as the walk's "20 min" (#109). A load rounds to 0.5 of the user's unit, which also hides the
@@ -211,9 +234,9 @@ type PlannedSets = NonNullable<InProgressWorkoutExercise["planned"]>;
 
 // What the plan sets for an Exercise: "3 sets · 20 kg × 8", with " per side" for a one-sided Exercise, and a jump's
 // reps as contacts: "3 sets · 10 contacts" (#105). A load is in the user's unit
-export const plannedSetsLabel = ({ sets, target }: PlannedSets, unit: WeightUnit, unilateral = false, jump = false) => {
-  const label = jump && target.unit === "reps" ? `${target.reps} contacts` : setTargetLabel(target, unit);
-  return `${setsLabel(sets)} · ${label}${unilateral ? " per side" : ""}`;
+export const plannedSetsLabel = ({ sets, target }: PlannedSets, unit: WeightUnit, reading?: SetReading) => {
+  const label = reading?.jump && target.unit === "reps" ? `${target.reps} contacts` : setTargetLabel(target, unit);
+  return `${setsLabel(sets)} · ${label}${reading?.unilateral ? " per side" : ""}`;
 };
 
 export const builtInEquipmentLabels: Record<BuiltInEquipment, string> = {
@@ -226,22 +249,22 @@ export const noAlternativeLabel = (equipment: BuiltInEquipment, name: string) =>
   `No ${builtInEquipmentLabels[equipment]} option for ${name.toLowerCase()}`;
 
 // A collapsed Workout Exercise's line: "3 sets · 18 kg × 10, 10, 8", else its target Sets, else its Previous Sets,
-// else "Not started"
+// else "Not started". A Jump's reps read as contacts (#141)
 export function workoutExerciseSummary(
   sets: readonly Set[],
   unit: WeightUnit,
   previous?: readonly Set[],
   planned?: PlannedSets,
-  unilateral?: boolean,
+  reading?: SetReading,
 ) {
-  if (sets.length) return `${setsLabel(sets.length)} · ${setsSummary(sets, unit)}`;
-  if (planned) return plannedSetsLabel(planned, unit, unilateral);
-  return previous?.length ? previousSetsLabel(previous, unit) : "Not started";
+  if (sets.length) return `${setsLabel(sets.length)} · ${setsSummary(sets, unit, reading)}`;
+  if (planned) return plannedSetsLabel(planned, unit, reading);
+  return previous?.length ? previousSetsLabel(previous, unit, reading) : "Not started";
 }
 
-// A Set's numbers and the units after them, as it reads: 16 "kg ×" 10, 12 "reps", 45 "s". A load is in the user's
-// unit, to 0.5 of it
-export function setParts(set: Set | SetValues, unit: WeightUnit): [number, string][] {
+// A Set's numbers and the units after them, as it reads: 16 "kg ×" 10, 12 "reps", 45 "s", and a Jump's 10 "contacts"
+// (#141). A load is in the user's unit, to 0.5 of it
+export function setParts(set: Set | SetValues, unit: WeightUnit, reading?: SetReading): [number, string][] {
   switch (set.kind) {
     case "external":
       return [
@@ -249,22 +272,30 @@ export function setParts(set: Set | SetValues, unit: WeightUnit): [number, strin
         [set.reps, ""],
       ];
     case "bodyweight":
-      return [[set.reps, "reps"]];
+      return [[set.reps, reading?.jump ? "contacts" : "reps"]];
     case "timed":
       return durationParts(set.seconds);
   }
 }
 
 // A minute or more reads in minutes, as the walk's "20 min" (#109): "45 s", "1 min 30 s"
-function durationParts(seconds: number): [number, string][] {
+export function durationParts(seconds: number): [number, string][] {
   if (seconds < 60) return [[seconds, "s"]];
   const over = seconds % 60;
   return [[Math.floor(seconds / 60), "min"], ...(over ? [[over, "s"] as [number, string]] : [])];
 }
 
-// A Set as its Load Type records it: "16 kg × 10"; add " per side" for a one-sided Exercise
-export const describeSet = (set: Set | SetValues, unit: WeightUnit) =>
-  setParts(set, unit)
+// Every part but the last, each with its unit, to say before the last number: "18 kg × " of 18 kg × 10, "1 min " of
+// 1 min 30 s; empty for one part
+export const leadParts = (parts: readonly [number, string][]) =>
+  parts
+    .slice(0, -1)
+    .map(([value, label]) => `${value} ${label} `)
+    .join("");
+
+// A Set as its Load Type records it: "16 kg × 10", a Jump's "10 contacts"; add " per side" for a one-sided Exercise
+export const describeSet = (set: Set | SetValues, unit: WeightUnit, reading?: SetReading) =>
+  setParts(set, unit, reading)
     .map(([value, label]) => (label ? `${value} ${label}` : String(value)))
     .join(" ");
 

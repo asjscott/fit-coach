@@ -1,7 +1,7 @@
-import type { Set, WorkingLevel } from "@fit/shared";
+import { loadInUnit, toKg, type Set, type WorkingLevel } from "@fit/shared";
 import { describe, expect, it } from "vitest";
 import { exerciseBySlug } from "./data/exercises";
-import type { ProfileWithLoads } from "./equipment";
+import { builtInEquipment, type ProfileWithLoads } from "./equipment";
 import { progressWorkingLevel, type ProgressionInput } from "./progression";
 
 // Fixed dumbbells at home: 8 to 24 kg in 2 kg steps
@@ -77,6 +77,18 @@ describe("progressWorkingLevel: double progression", () => {
       level: gobletSquat(22, 8, { movedBy: movedByThisWorkout, change: { code: "load-up" } }),
       change: { code: "load-up" },
     });
+  });
+
+  // #149: a Load Step stays on one kind of equipment
+  it("puts a dumbbell load up to the next dumbbell, never to a kettlebell between them", () => {
+    const lb = (pounds: number) => toKg(pounds, "lb");
+    const fullGym = builtInEquipment("full_gym", "lb");
+    // 25 lb × 19 is a maximum of 40.8 lb, which lifts the 30 lb dumbbells 10.8 times; a 12 kg (26.5 lb) bell is between
+    const sets = [lifted(lb(25), 19), lifted(lb(25), 19)];
+    const progression = progress(gobletSquat(lb(25), 19), sets, { equipmentProfile: fullGym });
+    const level = progression?.level;
+    expect(progression?.change).toEqual({ code: "load-up" });
+    expect(level?.unit === "kg" && { lb: loadInUnit(level.kg, "lb"), reps: level.reps }).toEqual({ lb: 30, reps: 10 });
   });
 
   // Story 33
@@ -475,6 +487,15 @@ describe("progressWorkingLevel: Ballistic Exercises", () => {
 
   it("counts Workouts held by RPE towards the 3", () => {
     expect(swings(swing(16, { workoutsSinceLoadUp: 2 }), [lifted(16, 8), lifted(16, 8)])).toMatchObject({
+      change: { code: "load-up" },
+    });
+  });
+
+  // #149: on a kg Full gym, 20 kg is a dumbbell too, but a swing's next Load Step is the next bell
+  it("goes up to the next kettlebell from a load a dumbbell also has", () => {
+    const fullGym = builtInEquipment("full_gym", "kg");
+    expect(progress(swing(20), [lifted(20, 8), lifted(20, 8, 7)], { equipmentProfile: fullGym })).toMatchObject({
+      level: { kg: 24, reps: 8 },
       change: { code: "load-up" },
     });
   });

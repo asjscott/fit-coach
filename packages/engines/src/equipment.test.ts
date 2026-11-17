@@ -126,6 +126,41 @@ describe("nextLoadKg, one Load Step up or down", () => {
     expect(nextLoadKg(exercise("goblet-squat"), { tags: ["kettlebells"], loads: {} }, 16, 1)).toBeUndefined();
   });
 
+  // #149: a Load Step is for one kind of equipment
+  describe("on a lb Full gym, for an Exercise done with dumbbells or kettlebells", () => {
+    const fullGym = builtInEquipment("full_gym", "lb");
+
+    it("steps a dumbbell load through the dumbbells, never to a kettlebell between them", () => {
+      expect(step("renegade-row", fullGym, lb(25), 1)).toBe(30);
+      expect(step("renegade-row", fullGym, lb(30), -1)).toBe(25);
+    });
+
+    it("steps a kettlebell load through the kettlebells", () => {
+      expect(nextLoadKg(exercise("renegade-row"), fullGym, 12, 1)).toBe(16);
+      expect(nextLoadKg(exercise("renegade-row"), fullGym, 12, -1)).toBe(8);
+    });
+
+    it("steps a load on neither through the Exercise's first kind of equipment", () => {
+      expect(step("renegade-row", fullGym, lb(27), 1)).toBe(30);
+      expect(step("renegade-row", fullGym, lb(27), -1)).toBe(25);
+    });
+  });
+
+  // #149: on a kg Full gym, 20 kg is both a kettlebell and a dumbbell
+  describe("from a load on more than one kind of equipment, on a kg Full gym", () => {
+    const fullGym = builtInEquipment("full_gym", "kg");
+
+    it("steps a kettlebell Exercise through the kettlebells", () => {
+      expect(nextLoadKg(exercise("kettlebell-swing"), fullGym, 20, 1)).toBe(24);
+      expect(nextLoadKg(exercise("kettlebell-swing"), fullGym, 20, -1)).toBe(16);
+    });
+
+    it("steps through the Exercise's first kind of equipment that has the load", () => {
+      expect(nextLoadKg(exercise("renegade-row"), fullGym, 20, 1)).toBe(22.5);
+      expect(nextLoadKg(exercise("renegade-row"), fullGym, 20, -1)).toBe(17.5);
+    });
+  });
+
   // User story 23
   it("steps a cable by the profile's stored step", () => {
     const profile: ProfileWithLoads = { tags: ["cable_machine"], loads: { cable_machine: { stepKg: lb(10) } } };

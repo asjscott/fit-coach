@@ -1,51 +1,76 @@
 import { describe, expect, it } from "vitest";
-import type { StepDirection } from "@fit/engines";
+import { builtInEquipment, exerciseLoadsByEquipmentKg, type StepDirection } from "@fit/engines";
 import { toKg } from "@fit/shared";
-import { draftValues, loadStep, loadStepLabel, rpeMissing, setDraft, stepValue } from "./set-entry";
+import {
+  draftValues,
+  FIELD_STEPPERS,
+  loadStep,
+  loadStepLabel,
+  loadStepper,
+  rpeMissing,
+  secondsField,
+  secondsStepLabel,
+  setDraft,
+  stepValue,
+} from "./set-entry";
 
 describe("stepValue", () => {
   // Stands in for the next load: 10 a step, so it can't be mistaken for any other rule
-  const byTen = (load: number, direction: StepDirection) => load + 10 * direction;
+  const byTen = loadStepper((load: number, direction: StepDirection) => load + 10 * direction, true, "kg");
 
   it("steps reps by 1 and seconds by 5", () => {
-    expect(stepValue("reps", "8", 1)).toBe("9");
-    expect(stepValue("seconds", "45", -1)).toBe("40");
+    expect(stepValue(FIELD_STEPPERS.reps, "8", 1)).toBe("9");
+    expect(stepValue(FIELD_STEPPERS.seconds, "45", -1)).toBe("40");
   });
 
   it("steps a load to the next load it's given", () => {
-    expect(stepValue("load", "16", 1, byTen)).toBe("26");
-    expect(stepValue("load", "16", -1, byTen)).toBe("6");
+    expect(stepValue(byTen, "16", 1)).toBe("26");
+    expect(stepValue(byTen, "16", -1)).toBe("6");
   });
 
   it("steps an empty field up from nothing", () => {
-    expect(stepValue("load", "", 1, byTen)).toBe("10");
-    expect(stepValue("reps", " ", 1)).toBe("1");
+    expect(stepValue(byTen, "", 1)).toBe("10");
+    expect(stepValue(FIELD_STEPPERS.reps, " ", 1)).toBe("1");
   });
 
   it("never goes below zero", () => {
-    expect(stepValue("load", "1", -1, byTen)).toBe("0");
-    expect(stepValue("reps", "", -1)).toBe("0");
-    expect(stepValue("seconds", "3", -1)).toBe("0");
+    expect(stepValue(byTen, "1", -1)).toBe("0");
+    expect(stepValue(FIELD_STEPPERS.reps, "", -1)).toBe("0");
+    expect(stepValue(FIELD_STEPPERS.seconds, "3", -1)).toBe("0");
   });
 
   it("keeps a typed half load, read with a decimal comma or point", () => {
-    expect(stepValue("load", "16.5", 1, byTen)).toBe("26.5");
-    expect(stepValue("load", "16,5", -1, byTen)).toBe("6.5");
+    expect(stepValue(byTen, "16.5", 1)).toBe("26.5");
+    expect(stepValue(byTen, "16,5", -1)).toBe("6.5");
   });
 
   // User story 19: display rounds to 0.5 of the user's unit
   it("rounds a typed load to the nearest 0.5 before stepping", () => {
-    expect(stepValue("load", "16.2", 1, byTen)).toBe("26");
-    expect(stepValue("load", "16.3", 1, byTen)).toBe("26.5");
+    expect(stepValue(byTen, "16.2", 1)).toBe("26");
+    expect(stepValue(byTen, "16.3", 1)).toBe("26.5");
   });
 
   it("rounds typed reps and seconds to whole numbers", () => {
-    expect(stepValue("reps", "8.6", 1)).toBe("10");
-    expect(stepValue("seconds", "44.2", 1)).toBe("49");
+    expect(stepValue(FIELD_STEPPERS.reps, "8.6", 1)).toBe("10");
+    expect(stepValue(FIELD_STEPPERS.seconds, "44.2", 1)).toBe("49");
+  });
+
+  // #145: a 20-minute walk steps by the minute, a short hold by 5 s
+  it("steps a timed Set of a minute or more to the next or previous whole minute", () => {
+    expect(stepValue(FIELD_STEPPERS.seconds, "1200", 1)).toBe("1260");
+    expect(stepValue(FIELD_STEPPERS.seconds, "1200", -1)).toBe("1140");
+    expect(stepValue(FIELD_STEPPERS.seconds, "90", 1)).toBe("120");
+    expect(stepValue(FIELD_STEPPERS.seconds, "90", -1)).toBe("60");
+    expect(stepValue(FIELD_STEPPERS.seconds, "60", 1)).toBe("120");
+  });
+
+  it("steps a timed Set under a minute by 5 s, into and out of minutes", () => {
+    expect(stepValue(FIELD_STEPPERS.seconds, "55", 1)).toBe("60");
+    expect(stepValue(FIELD_STEPPERS.seconds, "60", -1)).toBe("55");
   });
 
   it("starts again from nothing when the field isn't a number", () => {
-    expect(stepValue("load", "abc", 1, byTen)).toBe("10");
+    expect(stepValue(byTen, "abc", 1)).toBe("10");
   });
 });
 
@@ -53,18 +78,53 @@ describe("stepValue", () => {
 describe("loadStep", () => {
   it("steps to the next load the equipment has, as the user sees it", () => {
     const dumbbells = [toKg(20, "lb"), toKg(25, "lb"), toKg(30, "lb")];
-    expect(loadStep(dumbbells, "lb")(25, 1)).toBe(30);
-    expect(loadStep(dumbbells, "lb")(25, -1)).toBe(20);
-    expect(loadStep([10, 12.5, 15], "kg")(12.5, 1)).toBe(15);
+    expect(loadStep([dumbbells], "lb")(25, 1)).toBe(30);
+    expect(loadStep([dumbbells], "lb")(25, -1)).toBe(20);
+    expect(loadStep([[10, 12.5, 15]], "kg")(12.5, 1)).toBe(15);
   });
 
   it("never sticks on a load whose kg is a hair off the one shown", () => {
-    expect(loadStep([12.5, 15], "lb")(27.5, 1)).toBe(33);
+    expect(loadStep([[12.5, 15]], "lb")(27.5, 1)).toBe(33);
   });
 
   it("stays put past the lightest or heaviest load", () => {
-    expect(loadStep([10, 12.5], "kg")(12.5, 1)).toBe(12.5);
-    expect(loadStep([10, 12.5], "kg")(10, -1)).toBe(10);
+    expect(loadStep([[10, 12.5]], "kg")(12.5, 1)).toBe(12.5);
+    expect(loadStep([[10, 12.5]], "kg")(10, -1)).toBe(10);
+  });
+
+  // #149: on a lb Full gym, an Exercise done with dumbbells or kettlebells
+  describe("with dumbbells in pounds and kettlebells in kg", () => {
+    const dumbbells = [20, 25, 30, 35].map((lb) => toKg(lb, "lb"));
+    const kettlebells = [8, 12, 16];
+    const step = loadStep([dumbbells, kettlebells], "lb");
+
+    it("steps a dumbbell load through the dumbbells, never to a kettlebell between them", () => {
+      expect(step(25, 1)).toBe(30);
+      expect(step(30, -1)).toBe(25);
+    });
+
+    it("steps a kettlebell load through the kettlebells", () => {
+      expect(step(26.5, 1)).toBe(35.5);
+      expect(step(26.5, -1)).toBe(17.5);
+    });
+
+    it("steps a typed load on neither through the first kind of equipment", () => {
+      expect(step(27, 1)).toBe(30);
+    });
+  });
+
+  // #149: on a kg Full gym, 20 kg is both a kettlebell and a dumbbell
+  describe("from a load on more than one kind of equipment, on a kg Full gym", () => {
+    const fullGym = builtInEquipment("full_gym", "kg");
+    const step = (slug: string) => loadStep(exerciseLoadsByEquipmentKg(slug, fullGym), "kg");
+
+    it("steps a kettlebell Exercise through the kettlebells", () => {
+      expect(step("kettlebell-swing")(20, 1)).toBe(24);
+    });
+
+    it("steps through the Exercise's first kind of equipment that has the load", () => {
+      expect(step("renegade-row")(20, 1)).toBe(22.5);
+    });
   });
 
   it("steps by 5 lb or 2 kg when the loads aren't known", () => {
@@ -82,6 +142,57 @@ describe("loadStepLabel", () => {
   it("names the step in the user's unit when they aren't", () => {
     expect(loadStepLabel(1, false, "kg")).toBe("Plus 2 kg");
     expect(loadStepLabel(-1, false, "lb")).toBe("Minus 5 lb");
+  });
+});
+
+describe("secondsStepLabel", () => {
+  it("names a step of a timed Set of a minute or more as a minute", () => {
+    expect(secondsStepLabel("1200", 1)).toBe("Plus 1 minute");
+    expect(secondsStepLabel("1200", -1)).toBe("Minus 1 minute");
+  });
+
+  it("names a step of a short hold as 5 seconds, including down from a minute", () => {
+    expect(secondsStepLabel("45", 1)).toBe("Plus 5 seconds");
+    expect(secondsStepLabel("60", -1)).toBe("Minus 5 seconds");
+    expect(secondsStepLabel("", 1)).toBe("Plus 5 seconds");
+  });
+});
+
+// #145: the stepper reads as the target and the logged Set do
+describe("secondsField", () => {
+  it("shows a timed Set of a minute or more in minutes, as the target and logged Set read", () => {
+    expect(secondsField("1200")).toEqual({ value: "20", unit: "min" });
+    expect(secondsField("90")).toEqual({ value: "1 min 30", unit: "s" });
+  });
+
+  it("shows a short hold in seconds", () => {
+    expect(secondsField("45")).toEqual({ value: "45", unit: "s" });
+  });
+
+  it("leaves an empty or half-typed field as it is", () => {
+    expect(secondsField("")).toEqual({ value: "", unit: "s" });
+    expect(secondsField("12.")).toEqual({ value: "12.", unit: "s" });
+  });
+});
+
+describe("what each field's stepper shows and says", () => {
+  it("names a timed Set's value in minutes from a minute, and in seconds while it's typed", () => {
+    expect(FIELD_STEPPERS.seconds.shown("1200", false)).toEqual({ value: "20", unit: "min", name: "minutes" });
+    expect(FIELD_STEPPERS.seconds.shown("1200", true)).toEqual({ value: "1200", unit: "s", name: "seconds" });
+  });
+
+  // #105: a Jump's dose is contacts
+  it("says contacts for a Jump's reps, and reps otherwise", () => {
+    expect(FIELD_STEPPERS.contacts.shown("6", false)).toEqual({ value: "6", unit: "contacts", name: "contacts" });
+    expect(FIELD_STEPPERS.contacts.stepLabel("6", 1)).toBe("Plus 1 contact");
+    expect(FIELD_STEPPERS.reps.stepLabel("8", -1)).toBe("Minus 1 rep");
+  });
+
+  it("names a load by the user's unit and types it with a decimal point", () => {
+    const pounds = loadStepper(loadStep([], "lb"), false, "lb");
+    expect(pounds.shown("25", false)).toEqual({ value: "25", unit: "lb", name: "lb" });
+    expect(pounds.stepLabel("25", 1)).toBe("Plus 5 lb");
+    expect(pounds.keyboardType).toBe("decimal-pad");
   });
 });
 

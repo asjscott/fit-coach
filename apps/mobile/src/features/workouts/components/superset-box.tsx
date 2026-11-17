@@ -9,7 +9,7 @@ import { HStack } from "@/components/stack";
 import { Text } from "@/components/text";
 import { fonts, radii, spacing, useTheme } from "@/theme";
 import { describeSet, plannedSetsLabel, straightToLabel, supersetNote } from "../format";
-import { exerciseName, isJumpSlug, libraryExercise } from "../library";
+import { exerciseName, setReading } from "../library";
 import { ExerciseBox, ExerciseLogging } from "./current-exercise-box";
 import { RestTimer } from "./rest-timer";
 import { WorkoutExerciseMenu } from "./workout-exercise-menu";
@@ -55,13 +55,13 @@ export function SupersetBox({ pair, letter, currentId, onChoose }: SupersetBoxPr
       {pair.map((workoutExercise, i) => {
         const open = workoutExercise.id === openId;
         const { id, slug, sets, planned } = workoutExercise;
-        const unilateral = libraryExercise(slug)?.unilateral;
+        const reading = setReading(slug);
         const done = !!planned && sets.length >= planned.sets;
-        const setsSoFar = sets.map((set) => describeSet(set, unit)).join(", ");
+        const setsSoFar = sets.map((set) => describeSet(set, unit, reading)).join(", ");
         const summary = done
           ? `Done · ${setsSoFar}`
           : open && planned
-            ? `Target: ${plannedSetsLabel(planned, unit, unilateral, isJumpSlug(slug))}`
+            ? `Target: ${plannedSetsLabel(planned, unit, reading)}`
             : `${sets.length} of ${planned?.sets ?? 0} sets${sets.length ? ` · ${setsSoFar}` : ""}`;
         const label = `${letter}${i + 1}`;
         return (

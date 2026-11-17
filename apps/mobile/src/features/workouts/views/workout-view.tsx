@@ -190,17 +190,23 @@ function WorkoutTitle({ title, startedAt, pastStart }: { title: string; startedA
   );
 }
 
-// Elapsed (ticking), Sets and Volume so far
+// Elapsed (ticking), Sets and Volume so far. A Workout logged afterwards has no Elapsed: its title says its day, and
+// its times are set on Finish (#144)
 function WorkoutStats({ workout }: { workout: InProgressWorkout }) {
   const unit = useWeightUnit();
-  const now = useNow();
   return (
     <View style={styles.stats}>
-      <Stat size="3xl" value={elapsedClockLabel(now - Date.parse(workout.startedAt))} label="Elapsed" />
+      {workout.pastStart ? null : <ElapsedStat startedAt={workout.startedAt} />}
       <Stat size="3xl" value={String(setCount(workout))} label="Sets" />
       <Stat size="3xl" value={volumeLabel(workoutVolume(workout), unit)} unit={unit} label="Volume" />
     </View>
   );
+}
+
+// How long the Workout has run, ticking
+function ElapsedStat({ startedAt }: { startedAt: string }) {
+  const now = useNow();
+  return <Stat size="3xl" value={elapsedClockLabel(now - Date.parse(startedAt))} label="Elapsed" />;
 }
 
 // Reached with no Workout in progress, e.g. by reloading on web after finishing

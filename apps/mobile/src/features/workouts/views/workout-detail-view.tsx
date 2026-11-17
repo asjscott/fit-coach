@@ -16,7 +16,7 @@ import { errorMessage } from "@/utils/error-message";
 import { SetRow } from "../components/set-row";
 import { dateLabel, prLabel, timeStat, volumeLabel, workoutTimesLabel } from "../format";
 import { useHistory } from "../history-provider";
-import { exerciseName, libraryExercise } from "../library";
+import { exerciseName, setReading } from "../library";
 import { useLogbook } from "../logbook-provider";
 import { useWeightUnit } from "@/features/user/current-user-provider";
 
@@ -155,7 +155,6 @@ function WorkoutExerciseSection({
   pr: Pr | undefined;
 }) {
   const { colors } = useTheme();
-  const unilateral = libraryExercise(slug)?.unilateral;
   const unit = useWeightUnit();
   return (
     <View style={[styles.exercise, { borderColor: colors.line }]}>
@@ -166,7 +165,7 @@ function WorkoutExerciseSection({
         </Text>
       ) : null}
       {sets.map((set, i) => (
-        <SetRow key={set.loggedAt + i} set={set} index={i} unilateral={unilateral} />
+        <SetRow key={set.loggedAt + i} set={set} index={i} reading={setReading(slug)} />
       ))}
     </View>
   );

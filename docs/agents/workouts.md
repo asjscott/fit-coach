@@ -44,19 +44,23 @@ Schemas shared by app and API: packages/shared/src/workouts.ts
   rounded, so 25 lb always shows back as 25 lb; `Set.kg` has no step rule. Equipment Profile weights are entered in
   the unit too (`loads.ts`, its own lb and kg size lists).
 - **The load stepper steps through real loads** (#58): `loadStep` in `set-entry.ts` steps the primary Equipment
-  Profile's loads for the Exercise (`exerciseLoadsKg`, the same loads the Assessment suggests from) as the user sees
-  them, so a load a hair off the one shown never sticks, staying put past the lightest or heaviest, and by 5 lb or 2 kg
-  when the loads aren't known. `set-entry.ts` also parses the typed text, steps reps (1) and seconds (5), and names the
-  load step for screen readers (`loadStepLabel`: "Next heavier weight", or "Plus 5 lb" when the loads aren't known).
+  Profile's loads for the Exercise (`exerciseLoadsByEquipmentKg`, one list per kind of equipment, staying on the kind
+  the load is on: see below) as the user sees them, so a load a hair off the one shown never sticks, staying put past
+  the lightest or heaviest, and by 5 lb or 2 kg when the loads aren't known. `set-entry.ts` also parses the typed text,
+  steps reps (1) and seconds (5), and names the load step for screen readers (`loadStepLabel`: "Next heavier weight", or
+  "Plus 5 lb" when the loads aren't known).
 - **One Load Step is the next load the profile has** (#127). `availableLoadsKg` (`packages/engines/src/equipment.ts`)
   lists them: dumbbells, kettlebells, the bar plus plate pairs (summed in the unit the plates are sized in, so pound
-  plates make exact pound loads) and a cable stack from `loads.cable_machine.stepKg`. Progression steps with
-  `nextLoadKg(exercise, profile, kg, direction)`, undefined past the heaviest or lightest; `roundToLoadKg` and
-  `loadAtOrBelowKg` round to them. The API reads every profile through `withDefaultLoads` (`equipmentProfilesOf`,
-  `apps/api/src/users.ts`): a cable machine with no step steps 10 lb or 5 kg by the user's unit, and a profile with
-  all of Full gym's equipment and no free weights listed (the onboarding gym) has Full gym's loads. Full gym's loads
-  follow the unit (`builtInEquipment(choice, unit)`), so the unit is part of `planInputsKey`. The onboarding gym is
-  asked only for its cable step (`loadTagsAsked`).
+  plates make exact pound loads) and a cable stack from `loads.cable_machine.stepKg`; `loadsByEquipmentKg` gives the
+  same loads one list per kind of equipment (`LoadsByEquipment`). Every Load Step goes through `stepThroughLoads`, which
+  stays on one kind (#149): the Exercise's first kind that has the load, or its first kind when none does, so a lb
+  gym's 25 lb dumbbells step to 30 lb, never to a 12 kg (26.5 lb) kettlebell, and a kg gym's 20 kg Kettlebell swing
+  steps to 24 kg, not a 22.5 kg dumbbell. The stepper and the Logbook use `stepperLoad` on top of it; progression
+  steps with `nextLoadKg(exercise, profile, kg, direction)`, undefined past the heaviest or lightest; `roundToLoadKg`
+  and `loadAtOrBelowKg` round to them. The API reads every profile through `withDefaultLoads` (`equipmentProfilesOf`,
+  `apps/api/src/users.ts`): a cable machine with no step steps 10 lb or 5 kg by the user's unit, and a profile with all
+  of Full gym's equipment and no free weights listed (the onboarding gym) has Full gym's loads. Full gym's loads follow the unit (`builtInEquipment(choice, unit)`), so the unit is part of
+  `planInputsKey`. The onboarding gym is asked only for its cable step (`loadTagsAsked`).
 - **A past Workout starts up to 7 days before its last Set** (#129). `WorkoutUpload` (`@fit/shared`) is the rule, and
   both POST /workouts (400) and the Logbook's finish use it, so a Pending Workout always uploads. It counts back from
   the Sets, not the clock, so an upload that comes days late isn't refused; `Workout` itself doesn't have the rule, so
@@ -65,6 +69,8 @@ Schemas shared by app and API: packages/shared/src/workouts.ts
   clock and the forgotten check follow the logging. `finishTimes` gives Finish its first times: `pastStart` and an
   hour later, with Edit times open. Its Sets are logged now, so Fatigue counts a Set from its `loggedAt` but never
   after its Workout's `endedAt` (`creditingSets`); the Week Ledger already goes by `startedAt`.
+- **A Workout lasts at most 6 hours** (#152). `WorkoutUpload` holds this rule too, next to the 7 days, so POST
+  /workouts answers 400 and Edit times shows the error under End; as with the 7 days, `Workout` doesn't have it.
 - **The rest timer lives in memory on the LogbookProvider** (#95), not in the Logbook or storage: it belongs to the
   Workout, so it follows the user between Exercises and to Today, and a force-quit loses it. Only Log set starts or
   restarts it; Finish, Discard and sign-out end it. Its length and countdown are pure (`rest-timer.ts` in
@@ -248,7 +254,7 @@ Schemas: packages/shared/src/planned-workouts.ts
   never picks one; `jumpsForWorkout` puts 2 of them, 3 Sets each, first in the first 2 Workouts of the week, one that
   goes up and one forward or sideways, as far as the 130% cap allows. A jump has no Working Level: its target is `{ unit: "reps" }` holding its
   contacts (`STRENGTH_RATIOS` kind `contacts`), halved when `PlanWorkoutInput.deloadWeek`, which the API sets from
-  `weekOfBlock`. It's logged as a bodyweight Set whose reps are contacts, which the phone labels so (`isJumpSlug`). On a
+  `weekOfBlock`. It's logged as a bodyweight Set whose reps are contacts, which the phone labels so (`setReading`). On a
   built-in choice a jump only stands in for a jump (`alternativeOptions`). The six jumps also need `seed:exercises`.
 - **A Check-in is stored once per user per local date** (#125), the phone's date, sent in the URL. The server keeps the
   one with the latest `checkedInAt`, so a retry or a late upload of an earlier one changes nothing, and the PUT answers
@@ -351,13 +357,21 @@ Phone
 - **e1RM uses the reps logged**, not reps + (10 − RPE), so an Assessment's RPE-rated Sets count as lifted.
 - **The Finish flow owns its Workout's PRs**: the provider keeps them out of `unseenPrs` while that upload is under
   way (`celebrating`), so Today's note never shows what the toast is about to.
+- **Only while the user can be looking** (#142): Finish's claim ends after `FINISH_WINDOW_MS` or as soon as the app
+  leaves the foreground (`finishCelebration`, finish-celebration.ts). With no signal the upload can hang on Clerk's
+  token rather than fail, then get through once airplane mode is off; without the window its PRs went to a toast nobody
+  saw and never reached Today. An upload after the window is a late upload: the toast says it's on the phone, and Today
+  shows the PRs.
 
 ## Route tests (#123)
 
 `pnpm --filter @fit/api test` runs the API's route tests (`apps/api/src/routes/*.test.ts`, Vitest). Each test file
 starts the whole API (`buildApp` in `apps/api/src/app.ts`, which `server.ts` listens on) against its own in-memory
 MongoDB replica set, with Clerk switched off as in `dev:local`, and sends requests with Fastify's `inject`, so nothing
-listens on a port and nothing reaches Clerk. The first run downloads the MongoDB binary, as `dev:local` does.
+listens on a port and nothing reaches Clerk. The first run downloads the MongoDB binary, as `dev:local` does: once,
+in Vitest's `globalSetup` (`apps/api/src/test/download-mongodb.ts`) before any test file starts, since files starting
+their databases together would otherwise race to download it. To try a first run, point `HOME` and
+`MONGOMS_DOWNLOAD_DIR` at empty directories (the binary is found in `~/.cache/mongodb-binaries` too).
 
 To write one:
 

@@ -96,8 +96,9 @@ const MAX_BARBELL_KG = 300;
 // Plates come in multiples of a quarter of their unit (1.25 kg, 2.5 lb), so loads are worked out in quarters to keep
 // the sums exact
 const QUARTERS = 4;
-// Loads entered in pounds are stored as their exact kg, which sums of them can miss by a rounding error
-const ROUNDING_ERROR_KG = 1e-6;
+// How far apart two loads can be and still be the same load, in kg or the user's unit alike: loads entered in pounds
+// are stored as their exact kg, which sums of them can miss by a rounding error
+const SAME_LOAD_TOLERANCE = 1e-6;
 
 const inQuarters = (kg: number, unit: WeightUnit) => fromKg(kg, unit) * QUARTERS;
 const isWholeQuarters = (kg: number, unit: WeightUnit) =>
@@ -131,29 +132,69 @@ function cableLoadsKg({ stepKg }: { stepKg: number }): number[] {
   return Array.from({ length: count }, (_, i) => (i + 1) * stepKg);
 }
 
-// The loads the Equipment Profile offers for an Exercise, lightest first: the dumbbells, kettlebells, bar plus plate
-// pairs or cable stack it has, from every way of doing the Exercise the profile supports. For a dumbbell or kettlebell
-// Exercise a load is one implement's weight. Empty when the profile doesn't say what it has
-export function availableLoadsKg(exercise: Pick<Exercise, "equipmentOptions">, profile: ProfileWithLoads): number[] {
-  const { dumbbells, kettlebells, barbell, cable_machine } = profile.loads;
-  const loads = ownedOptions(exercise, profile)
-    .flat()
-    .flatMap((tag) => {
-      if (tag === "dumbbells" && dumbbells) return dumbbellLoadsKg(dumbbells);
-      if (tag === "kettlebells" && kettlebells) return kettlebells.weightsKg;
-      if (tag === "barbell" && barbell) return barbellLoadsKg(barbell);
-      if (tag === "cable_machine" && cable_machine) return cableLoadsKg(cable_machine);
-      return [];
-    })
-    .sort((a, b) => a - b);
-  return loads.filter((load, i) => i === 0 || load - loads[i - 1] > ROUNDING_ERROR_KG);
+// The loads of each kind of equipment, each lightest first and all in one unit, in the order of the Exercise's ways of
+// doing it, so the first is the kind the Exercise prefers
+export type LoadsByEquipment = readonly (readonly number[])[];
+
+// The loads of each kind of equipment the Equipment Profile has for an Exercise, in kg: the dumbbells, kettlebells,
+// bar plus plate pairs or cable stack it has. For a dumbbell or kettlebell Exercise a load is one implement's weight.
+// A kind the profile lists no loads for is left out
+export const loadsByEquipmentKg = (
+  exercise: Pick<Exercise, "equipmentOptions">,
+  profile: ProfileWithLoads,
+): number[][] => [...loadsByKindKg(exercise, profile).values()];
+
+// loadsByEquipmentKg keyed by the kind of equipment, in the same order
+export function loadsByKindKg(
+  exercise: Pick<Exercise, "equipmentOptions">,
+  profile: ProfileWithLoads,
+): Map<EquipmentTag, number[]> {
+  const tags = [...new Set(ownedOptions(exercise, profile).flat())];
+  return new Map(
+    tags.flatMap((tag) => {
+      const loads = loadsOfKindKg(tag, profile.loads);
+      return loads.length ? [[tag, lightestFirst(loads)] as const] : [];
+    }),
+  );
 }
 
-// By slug, for callers that hold only a Workout Exercise; empty when either the Exercise or the profile is unknown
-export function exerciseLoadsKg(slug: string, profile: ProfileWithLoads | undefined): number[] {
-  const exercise = exerciseBySlug(slug);
-  return exercise && profile ? availableLoadsKg(exercise, profile) : [];
+// The loads the profile lists for one kind of equipment, in kg; none for a kind without loads
+function loadsOfKindKg(
+  tag: EquipmentTag,
+  { dumbbells, kettlebells, barbell, cable_machine }: ProfileWithLoads["loads"],
+): number[] {
+  if (tag === "dumbbells" && dumbbells) return dumbbellLoadsKg(dumbbells);
+  if (tag === "kettlebells" && kettlebells) return kettlebells.weightsKg;
+  if (tag === "barbell" && barbell) return barbellLoadsKg(barbell);
+  if (tag === "cable_machine" && cable_machine) return cableLoadsKg(cable_machine);
+  return [];
 }
+
+// Sorted, with loads a rounding error apart kept once
+export function lightestFirst(loadsKg: readonly number[]): number[] {
+  const loads = [...loadsKg].sort((a, b) => a - b);
+  return loads.filter((load, i) => i === 0 || load - loads[i - 1]! > SAME_LOAD_TOLERANCE);
+}
+
+// The loads the Equipment Profile offers for an Exercise, lightest first, from every kind of equipment it can be done
+// with. Empty when the profile doesn't say what it has
+export const availableLoadsKg = (exercise: Pick<Exercise, "equipmentOptions">, profile: ProfileWithLoads): number[] =>
+  lightestFirst(loadsByEquipmentKg(exercise, profile).flat());
+
+// An Exercise's loads by slug, for callers that hold only a Workout Exercise; empty when either the Exercise or the
+// profile is unknown
+const bySlug =
+  <Loads>(loadsOf: (exercise: Exercise, profile: ProfileWithLoads) => Loads[]) =>
+  (slug: string, profile: ProfileWithLoads | undefined): Loads[] => {
+    const exercise = exerciseBySlug(slug);
+    return exercise && profile ? loadsOf(exercise, profile) : [];
+  };
+
+// availableLoadsKg by slug
+export const exerciseLoadsKg = bySlug(availableLoadsKg);
+
+// loadsByEquipmentKg by slug
+export const exerciseLoadsByEquipmentKg = bySlug(loadsByEquipmentKg);
 
 // −1 for lighter, fewer or shorter; 1 for heavier, more or longer
 export type StepDirection = 1 | -1;
@@ -161,28 +202,47 @@ export type StepDirection = 1 | -1;
 // Matches the 2 kg the stepper took before it knew the equipment (#58)
 export const UNKNOWN_LOADS_STEP_KG = 2;
 
-// The next of the loads up or down from kg, which needn't be one of them; undefined past the heaviest or lightest
-function nextOf(kg: number, direction: StepDirection, loadsKg: number[]): number | undefined {
+// The loads a Load Step from `load` moves through, so it stays on one kind of equipment (#149): those of the
+// Exercise's first kind that has the load, or of its first kind when none does
+function loadsSteppedFrom(load: number, loadsByEquipment: LoadsByEquipment): readonly number[] {
+  const on = loadsByEquipment.find((loads) => loads.some((each) => Math.abs(each - load) <= SAME_LOAD_TOLERANCE));
+  return on ?? loadsByEquipment[0] ?? [];
+}
+
+// One Load Step up or down from `load`, which needn't be one of the loads: the next load on the kind of equipment it's
+// on (loadsSteppedFrom). Loads in any one unit. Undefined past the heaviest or lightest load, or with no loads
+export function stepThroughLoads(
+  load: number,
+  direction: StepDirection,
+  loadsByEquipment: LoadsByEquipment,
+): number | undefined {
+  const loads = loadsSteppedFrom(load, loadsByEquipment);
   return direction === 1
-    ? loadsKg.find((load) => load > kg + ROUNDING_ERROR_KG)
-    : loadsKg.filter((load) => load < kg - ROUNDING_ERROR_KG).at(-1);
+    ? loads.find((each) => each > load + SAME_LOAD_TOLERANCE)
+    : loads.filter((each) => each < load - SAME_LOAD_TOLERANCE).at(-1);
 }
 
-// Past the lightest or heaviest load there's nothing to step to, so kg stays put rather than leaving the equipment
-export function stepLoadKg(kg: number, direction: StepDirection, loadsKg: number[]): number {
-  if (!loadsKg.length) return Math.max(0, kg + UNKNOWN_LOADS_STEP_KG * direction);
-  return nextOf(kg, direction, loadsKg) ?? kg;
+// A stepper's next load: stepThroughLoads, staying put past the lightest or heaviest load rather than leaving the
+// equipment, and moving by unknownStep, never below 0, when the loads aren't known
+export function stepperLoad(
+  load: number,
+  direction: StepDirection,
+  loadsByEquipment: LoadsByEquipment,
+  unknownStep: number,
+): number {
+  if (!loadsByEquipment.some((loads) => loads.length)) return Math.max(0, load + unknownStep * direction);
+  return stepThroughLoads(load, direction, loadsByEquipment) ?? load;
 }
 
-// One Load Step up or down from kg: the next load the Equipment Profile has for the Exercise, whether dumbbells, plate
-// pairs on the bar, kettlebells or the cable stack's step. Undefined past the heaviest or lightest load, or when the
-// profile lists no loads for the Exercise, so there's no step to take
+// One Load Step up or down from kg through the loads the Equipment Profile has for the Exercise (stepThroughLoads):
+// dumbbells, plate pairs on the bar, kettlebells or the cable stack's step. Undefined past the heaviest or lightest
+// load, or when the profile lists no loads for the Exercise, so there's no step to take
 export const nextLoadKg = (
   exercise: Pick<Exercise, "equipmentOptions">,
   profile: ProfileWithLoads,
   kg: number,
   direction: StepDirection,
-): number | undefined => nextOf(kg, direction, availableLoadsKg(exercise, profile));
+): number | undefined => stepThroughLoads(kg, direction, loadsByEquipmentKg(exercise, profile));
 
 export function isSafeFor(exercise: Pick<Exercise, "avoidWith">, injuries: InjuryTag[]): boolean {
   return !exercise.avoidWith.some((tag) => injuries.includes(tag));
@@ -194,7 +254,7 @@ export function isSafeFor(exercise: Pick<Exercise, "avoidWith">, injuries: Injur
 // a barbell Exercise under the empty bar stays under it (#70) and a dumbbell one rounds up only when prescribed. Loads
 // sorted lightest first, as availableLoadsKg gives them
 export function loadAtOrBelowKg(kg: number, loadsKg: readonly number[]): number {
-  return loadsKg.filter((load) => load <= kg + ROUNDING_ERROR_KG).at(-1) ?? kg;
+  return loadsKg.filter((load) => load <= kg + SAME_LOAD_TOLERANCE).at(-1) ?? kg;
 }
 
 export function roundToLoadKg(kg: number, loadsKg: number[]): number {

@@ -1,10 +1,20 @@
 import type { EquipmentProfileInput, LatestAssessment, PlannedWorkout, Set, WorkingLevel } from "@fit/shared";
 import type { LegacyWorkingLevel } from "@fit/engines";
-import { describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ONBOARDED_PROFILE, type TestUser, useRouteTestApi } from "../test/route-test-api";
 import { assessmentPair, held, repsDone, workout } from "../test/workouts";
 
 const api = useRouteTestApi();
+
+// The clock is a Thursday noon in UTC, the test users' timezone, so the Assessment Workouts (50 and 26 hours back) fall
+// on Tuesday and Wednesday of this week whatever day the tests run. On a Monday or Tuesday they'd fall in last week, and
+// the Planned Workout would be a new week's, picking other Exercises. Only Date is faked
+beforeEach(() => {
+  vi.useFakeTimers({ toFake: ["Date"], now: new Date("2026-11-05T12:00:00Z"), shouldAdvanceTime: true });
+});
+afterEach(() => {
+  vi.useRealTimers();
+});
 
 // A home gym with a barbell (20 kg bar, 2.5 and 5 kg plates, so 20, 25, 30, 35 kg...) and fixed dumbbells
 const BARBELL_AND_DUMBBELLS: EquipmentProfileInput = {
