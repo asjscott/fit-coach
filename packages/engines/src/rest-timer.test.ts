@@ -57,6 +57,15 @@ describe("restAfterSet", () => {
     expect(secondsOf(restAfterSet(workout(0, 0), "squat", now))).toBe(90);
   });
 
+  // Seen in check W1: a Workout logged afterwards happened days ago, so a rest counting down now means nothing (#153)
+  it("doesn't rest on a past Workout, while a live one rests as usual", () => {
+    const past = { ...workout(0, 0), pastStart: "2026-11-06T09:00:00.000Z" };
+    expect(restAfterSet(past, "squat", now)).toBeNull();
+    // Nor after a pair's second Set
+    expect(restAfterSet({ ...workout(1, 1), pastStart: past.pastStart }, "row", now)).toBeNull();
+    expect(secondsOf(restAfterSet(workout(0, 0), "squat", now))).toBe(90);
+  });
+
   it("doesn't rest between the two Exercises of a pair", () => {
     expect(restAfterSet(workout(1, 0), "press", now)).toBeNull();
   });
