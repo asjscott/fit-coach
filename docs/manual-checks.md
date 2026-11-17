@@ -30,6 +30,7 @@ The simulators ran what they could on 13 Nov (Session 1 below). The rest falls i
 | RPE1  | The chips after every Set in a Manual Workout. Android.                                                                                                                                                                                                |
 | L1    | Android.                                                                                                                                                                                                                                               |
 | DP2   | Android.                                                                                                                                                                                                                                               |
+| H1    | iOS, after #156. Android read it right on the emulator.                                                                                                                                                                                                |
 
 DP1 and RPE2 passed on both simulators. Look at them on a phone only if you have time.
 
@@ -265,6 +266,10 @@ A Workout pairs Exercises only when it wouldn't otherwise fit its Length, so cho
 
 - [x] **W1** On Today, tap "Log a past workout" under Start manual workout: a sheet asks "Which day was it?" with Yesterday and the five weekdays before it. Pick one: the Workout opens with "Done <that day>" under its title, and no Elapsed timer above its Sets and Volume. Log a Set or two and tap Finish: the times read that day, an hour long, with Edit times already open. Set an end two days after the start: Time reads in hours and minutes ("49 h"), not as a clock. Save: "A Workout can last at most 6 hours" shows under End. Set a start 8 days back and Save: "The start can't be more than 7 days ago" shows under Start. Set it back within the week and Save: in History the Workout sits on its own day, and This Week counts it only if that day is in this week. On the installed web app, check that the date and time inputs are easy to use on the iPhone.
   - iOS: Result: ⏭ · Android: Result: ⚠️ · Notes: Session 3 (simulators, PR #151): Android emulator. Yesterday, Saturday … Tuesday offered on a Monday. Thursday opened with "Done Thursday, 5:24 PM" and no Elapsed timer. Finish: Thursday, an hour, Edit times open. End two days on: Time "49 h", Save: "A Workout can last at most 6 hours" under End. Start 8 days back: "The start can't be more than 7 days ago" under Start. Saved within the week: under Last week on Thursday, This week stayed at 1. ⚠️ Logging a Set on the past Workout still starts the rest timer ("Rest 1:29"), which means nothing after the fact. The web app's date inputs not tried.
+
+## History week labels (#150, #156)
+
+- [ ] **H1** On the iPhone, open History and find a Workout from the week of Monday 26 Oct 2026 (the Assessment's, if it was then). Its week reads "26 Oct – 1 Nov" (or "Oct 26 – Nov 1", as your region orders dates), not "25 Oct – 31 Oct", and the next week "2 Nov – 8 Nov". The clocks went back on Sun 1 Nov, which moved iOS's label a day early.
 
 ## Sentry (#122)
 

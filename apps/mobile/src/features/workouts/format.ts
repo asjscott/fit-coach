@@ -123,15 +123,20 @@ export function weekLabel(start: Date, now = new Date()) {
 export function weekDatesLabel(start: Date, now = new Date(), locale?: string) {
   const end = new Date(start.getFullYear(), start.getMonth(), start.getDate() + 6);
   const sameYear = end.getFullYear() === now.getFullYear();
+  // Formats each date's calendar day, at noon UTC, not its instant: iOS's Hermes formats a local date with the offset
+  // in force now, so local midnight before the clocks go back read as the day before (#156)
   const format = new Intl.DateTimeFormat(locale, {
     day: "numeric",
     month: "short",
     year: sameYear ? undefined : "numeric",
+    timeZone: "UTC",
   });
+  const calendarDay = (date: Date) => new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate(), 12));
+  const [from, to] = [calendarDay(start), calendarDay(end)];
   const label =
     typeof format.formatRange === "function"
-      ? format.formatRange(start, end)
-      : `${format.format(start)} – ${format.format(end)}`;
+      ? format.formatRange(from, to)
+      : `${format.format(from)} – ${format.format(to)}`;
   // Intl data versions space the dash differently ("12–18 Oct", "12 – 18 Oct"), so set it one way
   return label.replace(/\s*–\s*/, "\u2009–\u2009");
 }
