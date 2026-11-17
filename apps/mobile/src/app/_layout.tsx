@@ -1,4 +1,4 @@
-import { ClerkProvider } from "@clerk/expo";
+import { ClerkProvider, useAuth } from "@clerk/expo";
 import { resourceCache } from "@clerk/expo/resource-cache";
 import { tokenCache } from "@clerk/expo/token-cache";
 import {
@@ -14,6 +14,7 @@ import * as SplashScreen from "expo-splash-screen";
 import { useEffect, useMemo } from "react";
 import { StatusBar } from "@/components/status-bar";
 import { ToastProvider } from "@/contexts/toast-context";
+import { setErrorReportingUser } from "@/features/error-reporting/error-reporting";
 import { CurrentUserProvider } from "@/features/user/current-user-provider";
 import { ThemeProvider, useTheme } from "@/theme";
 
@@ -42,6 +43,7 @@ export default function RootLayout() {
     // loading and the signed-in screens stay blank. With it, Clerk starts from the client and session it saved last
     // time and refreshes them once it's back online.
     <ClerkProvider publishableKey={publishableKey} tokenCache={tokenCache} __experimental_resourceCache={resourceCache}>
+      <ErrorReportingUser />
       <CurrentUserProvider>
         <ThemeProvider>
           <ToastProvider>
@@ -51,6 +53,13 @@ export default function RootLayout() {
       </CurrentUserProvider>
     </ClerkProvider>
   );
+}
+
+// Errors reported to Sentry carry the signed-in user's Clerk id, and nothing else about them
+function ErrorReportingUser() {
+  const { userId } = useAuth();
+  useEffect(() => setErrorReportingUser(userId ?? null), [userId]);
+  return null;
 }
 
 // Colours used by navigation chrome (headers, screen backgrounds during transitions)

@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import type { ControllerFieldState, ControllerRenderProps, FieldValues } from "react-hook-form";
 import type { TextInputProps } from "react-native";
 import { Input, InputField, type InputSize } from "../input";
+import { numberFieldValue } from "./number-field";
 
 export type RHFInputProps = Pick<
   TextInputProps,
@@ -10,15 +11,12 @@ export type RHFInputProps = Pick<
   field: ControllerRenderProps<FieldValues, string>;
   fieldState: ControllerFieldState;
   type?: "text" | "password";
-  // Store the value as a number (empty -> undefined) for numeric schema fields
+  // Store the value as a number (empty -> null) for numeric schema fields
   numeric?: boolean;
   size?: InputSize;
   leftSlot?: ReactNode;
   rightSlot?: ReactNode;
 };
-
-// Text-like characters a number field can pass through while the user is still typing
-const isPartialNumber = (text: string) => text.endsWith(".") || text === "-";
 
 export function RHFInput({
   field,
@@ -33,12 +31,7 @@ export function RHFInput({
   keyboardType,
   ...props
 }: RHFInputProps) {
-  const handleChange = (text: string) => {
-    if (!numeric) return field.onChange(text);
-    if (text === "") return field.onChange(undefined);
-    const parsed = Number(text);
-    field.onChange(Number.isFinite(parsed) && !isPartialNumber(text) ? parsed : text);
-  };
+  const handleChange = (text: string) => field.onChange(numeric ? numberFieldValue(text) : text);
 
   return (
     <Input size={size} isInvalid={!!fieldState.error}>

@@ -1,5 +1,5 @@
 import { useAuth } from "@clerk/expo";
-import { User, type EquipmentProfileInput, type UserUpdate } from "@fit/shared";
+import { DEFAULT_WEIGHT_UNIT, User, type EquipmentProfileInput, type UserUpdate } from "@fit/shared";
 import { createContext, use, useCallback, useEffect, useState, type ReactNode } from "react";
 import { ApiError, useApi } from "@/api";
 import { deviceStorage } from "@/features/workouts/device-storage";
@@ -106,4 +106,9 @@ export function useCurrentUser() {
 // The Equipment Profile the user trains with by default; undefined until the user loads
 export function usePrimaryEquipmentProfile() {
   return useCurrentUser().user?.equipmentProfiles.find((profile) => profile.isPrimary);
+}
+
+// The unit every load shows in (#126): the user's choice, lb until they choose or until the user loads
+export function useWeightUnit() {
+  return useCurrentUser().user?.unit ?? DEFAULT_WEIGHT_UNIT;
 }

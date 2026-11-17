@@ -5,21 +5,27 @@ import { FATIGUE_HOURS, FATIGUE_LIMIT } from "./weekly-budget";
 
 const FATIGUE_MS = FATIGUE_HOURS * 3_600_000;
 
-// What fatigue needs from a finished Workout: each Set's own loggedAt
+// What fatigue needs from a finished Workout: each Set's own loggedAt, and when the Workout ended. Without its end, each
+// Set counts from when it was logged
 export type FatigueWorkout = {
   id: string;
+  endedAt?: string;
   workoutExercises: readonly { slug: string; sets: readonly { loggedAt: string }[] }[];
 };
 
 // Each logged Set of an Exercise that credits Muscles: one in the library and not a Recovery Exercise. A Workout passed
-// twice counts once
+// twice counts once. A Set counts from when it was logged, but never after its Workout ended, so a past Workout logged
+// afterwards (#129) counts from its own day
 export function* creditingSets(workouts: readonly FatigueWorkout[]) {
   const once = new Map(workouts.map((workout) => [workout.id, workout])).values();
-  for (const { workoutExercises } of once) {
+  for (const { endedAt, workoutExercises } of once) {
     for (const { slug, sets } of workoutExercises) {
       const exercise = exerciseBySlug(slug);
       if (!exercise || exercise.recovery) continue;
-      for (const { loggedAt } of sets) yield { exercise, loggedAt };
+      for (const set of sets) {
+        const loggedAt = endedAt && Date.parse(set.loggedAt) > Date.parse(endedAt) ? endedAt : set.loggedAt;
+        yield { exercise, loggedAt };
+      }
     }
   }
 }

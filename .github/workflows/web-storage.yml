@@ -1,0 +1,45 @@
+name: Web storage
+# The browser check of the web device store (apps/mobile/e2e). Runs only when what it exercises changes
+on:
+  push:
+    branches: [dev, main]
+    paths:
+      - apps/mobile/e2e/**
+      - apps/mobile/src/app/storage-check.tsx
+      - apps/mobile/src/features/workouts/device-storage*
+      - packages/engines/src/logbook.ts
+      - apps/mobile/package.json
+      - pnpm-lock.yaml
+      - .github/workflows/web-storage.yml
+  pull_request:
+    paths:
+      - apps/mobile/e2e/**
+      - apps/mobile/src/app/storage-check.tsx
+      - apps/mobile/src/features/workouts/device-storage*
+      - packages/engines/src/logbook.ts
+      - apps/mobile/package.json
+      - pnpm-lock.yaml
+      - .github/workflows/web-storage.yml
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  web-storage:
+    runs-on: ubuntu-latest
+    # Usually about 4 minutes; a hang stops here instead of using up the month's minutes
+    timeout-minutes: 10
+    # Playwright's image has the browsers and their system packages, so nothing is fetched with apt
+    # (an apt mirror outage once hung this job for 2 hours). Keep its tag on @playwright/test's version
+    container:
+      image: mcr.microsoft.com/playwright:v1.49.1-noble
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter @fit/mobile test:web

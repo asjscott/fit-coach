@@ -1,5 +1,5 @@
 import { ASSESSMENT_PATTERNS, pendingB, withPending, workingLevelSections } from "@fit/engines";
-import type { AssessmentTest, TestedPattern, WorkingLevel } from "@fit/shared";
+import type { AssessmentTest, TestedPattern, WeightUnit, WorkingLevel } from "@fit/shared";
 import { StyleSheet, View } from "react-native";
 import { LoadingButton } from "@/components/loading-button";
 import { Loading } from "@/components/loading";
@@ -8,7 +8,7 @@ import { SectionLabel } from "@/components/section-label";
 import { Text } from "@/components/text";
 import { spacing, useTheme } from "@/theme";
 import { patternLabels } from "@/features/exercises/labels";
-import { useCurrentUser, usePrimaryEquipmentProfile } from "@/features/user/current-user-provider";
+import { useCurrentUser, usePrimaryEquipmentProfile, useWeightUnit } from "@/features/user/current-user-provider";
 import { describeSet, weightLabel } from "@/features/workouts/format";
 import { exerciseName } from "@/features/workouts/library";
 import { useLogbook } from "@/features/workouts/logbook-provider";
@@ -25,13 +25,13 @@ const ESTIMATED = "Estimated from your other results";
 const ONE_SET_CAPTIONS = { bodyweight: "Rep maximum", timed: "Held" } as const;
 
 // "16.8 kg" Estimated maximum. A bodyweight or timed test shows its one Set: a bodyweight maximum's kg, of body
-// weight × a share, means little to the user
-function maximumLabel({ topSet, maximum, loadLimited }: AssessmentTest) {
-  if (topSet.kind !== "external") return { value: describeSet(topSet), caption: ONE_SET_CAPTIONS[topSet.kind] };
-  const kg = weightLabel(maximum);
+// weight × a share, means little to the user. In the user's unit
+function maximumLabel({ topSet, maximum, loadLimited }: AssessmentTest, unit: WeightUnit) {
+  if (topSet.kind !== "external") return { value: describeSet(topSet, unit), caption: ONE_SET_CAPTIONS[topSet.kind] };
+  const weight = weightLabel(maximum, unit);
   return loadLimited
-    ? { value: `at least ${kg}`, caption: "Limited by your equipment" }
-    : { value: kg, caption: "Estimated maximum" };
+    ? { value: `at least ${weight}`, caption: "Limited by your equipment" }
+    : { value: weight, caption: "Estimated maximum" };
 }
 
 // "Results once synced" while a B is Pending, since the server works out the Assessment once it has both
@@ -109,10 +109,11 @@ export default function AssessmentResultsView() {
 // "Goblet squat" and "12 kg × 8"
 function WorkingLevelRow({ level }: { level: WorkingLevel }) {
   const { colors } = useTheme();
+  const unit = useWeightUnit();
   return (
     <View style={[styles.levelRow, { borderTopColor: colors.line }]}>
       <Text style={{ flex: 1 }}>{exerciseName(level.slug)}</Text>
-      <Text weight="semiBold">{workingLevelLabel(level)}</Text>
+      <Text weight="semiBold">{workingLevelLabel(level, unit)}</Text>
     </View>
   );
 }
@@ -140,14 +141,15 @@ function EstimatedRow({ pattern }: { pattern: TestedPattern }) {
 // "Goblet squat", its top Set "14 kg × 5 at RPE 9", and "16.8 kg" Estimated maximum
 function TestRow({ test }: { test: AssessmentTest }) {
   const { colors } = useTheme();
+  const unit = useWeightUnit();
   const rpe = test.topSet.rpe === undefined ? "" : ` at RPE ${test.topSet.rpe}`;
-  const maximum = maximumLabel(test);
+  const maximum = maximumLabel(test, unit);
   return (
     <View style={[styles.row, { borderTopColor: colors.line }]}>
       <View style={{ flex: 1 }}>
         <Text weight="semiBold">{exerciseName(test.slug)}</Text>
         <Text size="sm" color="muted">
-          {`Top Set ${describeSet(test.topSet)}${rpe}`}
+          {`Top Set ${describeSet(test.topSet, unit)}${rpe}`}
         </Text>
       </View>
       <View style={styles.maximum}>

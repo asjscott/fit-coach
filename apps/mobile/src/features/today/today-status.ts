@@ -1,5 +1,6 @@
 import { restDay, summarizeWorkout, type FinishedWorkoutSets, type RestDayReason } from "@fit/engines";
-import { estimatedTimeLabel, kgLabel, timeStat } from "../workouts/format";
+import type { WeightUnit } from "@fit/shared";
+import { estimatedTimeLabel, timeStat, volumeLabel } from "../workouts/format";
 
 // What Today knows about the user's Workouts: History loading, loaded (with or without any Workouts yet), or
 // unavailable offline, when only the Pending Workouts on the phone are known (ADR 0001)
@@ -85,34 +86,28 @@ export function todayCard({
 
 const counted = (n: number, noun: string) => `${n} ${noun}${n === 1 ? "" : "s"}`;
 
-// What the day's Workouts came to: "18 Sets · 44 min · 6,240 kg"
-export function todayLoggedLine(workouts: readonly FinishedWorkoutSets[]) {
+// What the day's Workouts came to, Volume in the user's unit: "18 Sets · 44 min · 6,240 kg"
+export function todayLoggedLine(workouts: readonly FinishedWorkoutSets[], weightUnit: WeightUnit) {
   const summaries = workouts.map(summarizeWorkout);
   const total = (field: "sets" | "durationMs" | "volumeKg") => summaries.reduce((sum, s) => sum + s[field], 0);
   const { value, unit } = timeStat(total("durationMs"));
   const volumeKg = total("volumeKg");
-  return [counted(total("sets"), "Set"), `${value} ${unit}`, ...(volumeKg ? [`${kgLabel(volumeKg)} kg`] : [])].join(
-    " · ",
-  );
+  return [
+    counted(total("sets"), "Set"),
+    `${value} ${unit}`,
+    ...(volumeKg ? [`${volumeLabel(volumeKg, weightUnit)} ${weightUnit}`] : []),
+  ].join(" · ");
 }
 
 // The plan's sheet says it on its own, and the day's card at the end of todayPlanLine
 export const LIGHTER_AFTER_CHECK_IN = "Lighter after your check-in";
 
-// The check-in's row in the plan's sheet: the note that it made the Workout lighter, and the Full workout chip. Its
-// space is reserved, empty where it has nothing to show, whenever a check-in could make the Workout lighter, so a
-// rating that makes it lighter or full again doesn't move the chips under the finger (#113)
-export function checkInLighterRow({
-  lighter,
-  fullWorkout,
-  canBeLighter,
-}: {
-  lighter: boolean;
-  fullWorkout: boolean;
-  canBeLighter: boolean;
-}) {
+// The check-in's row in the plan's sheet: the Full workout chip, and below it the note that the check-in made the
+// Workout lighter. It sits below the ratings, so coming and going as you rate moves nothing above them, and takes no
+// space when it's gone (#147)
+export function checkInLighterRow({ lighter, fullWorkout }: { lighter: boolean; fullWorkout: boolean }) {
   const chip = lighter || fullWorkout;
-  return { reserved: chip || canBeLighter, note: lighter, chip };
+  return { shown: chip, note: lighter, chip };
 }
 
 // The plan's sheet, when the Workout pairs Exercises to fit its Length (#96), and under each paired Exercise. The

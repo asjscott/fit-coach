@@ -9,6 +9,7 @@
     "@fit/engines": "workspace:*",
     "@fit/shared": "workspace:*",
     "@hookform/resolvers": "^6.0.0",
+    "@sentry/react": "~11.10.0",
     "expo": "^58.0.19",
     "expo-auth-session": "~58.0.14",
     "expo-constants": "~58.0.13",

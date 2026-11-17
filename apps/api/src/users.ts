@@ -1,5 +1,5 @@
 import { ObjectId, type WithId } from "mongodb";
-import { usualWorkoutLength } from "@fit/engines";
+import { usualWorkoutLength, withDefaultLoads } from "@fit/engines";
 import {
   BodyProfile,
   EquipmentProfile,
@@ -9,7 +9,9 @@ import {
   User,
   UserProfile,
   type UserUpdate,
+  type WeightUnit,
   type WorkoutLength,
+  DEFAULT_WEIGHT_UNIT,
 } from "@fit/shared";
 import type { z } from "zod";
 import { db } from "./db";
@@ -23,6 +25,8 @@ type UserDoc = {
   equipmentProfiles: EquipmentProfile[];
   // Absent until the phone first sends it
   timeZone?: string;
+  // The unit loads show in; absent until the user chooses, which means DEFAULT_WEIGHT_UNIT. Loads are stored in kg
+  unit?: WeightUnit;
 };
 
 export const users = db.collection<UserDoc>("users");
@@ -41,6 +45,11 @@ export function findUser(clerkUserId: string) {
   return users.findOne({ clerkUserId });
 }
 
+// The stored Equipment Profiles, with a cable or machine the user hasn't set a step for stepping by the default in
+// their unit (#127). The default isn't stored, so it follows a change of unit until the user saves a step
+export const equipmentProfilesOf = (user: Pick<UserDoc, "equipmentProfiles" | "unit">) =>
+  (user.equipmentProfiles ?? []).map((profile) => withDefaultLoads(profile, user.unit ?? DEFAULT_WEIGHT_UNIT));
+
 // What logging and planning need from a user. Onboarding requires weight and gender, and they can't be removed after
 export type OnboardedUser = {
   bodyProfile: BodyProfile;
@@ -48,6 +57,9 @@ export type OnboardedUser = {
   injuries: InjuryTag[];
   workoutLength: WorkoutLength;
   timeZone: string;
+  unit: WeightUnit;
+  // The "Include jumps" switch, off until the user turns it on (#105)
+  includeJumps: boolean;
 } & TrainingPlanProfile;
 
 // What a Weekly Budget is set by. Onboarding requires these too
@@ -61,10 +73,12 @@ export async function findOnboardedUser(clerkUserId: string): Promise<OnboardedU
   return {
     bodyProfile: BodyProfile.parse(user.profile),
     ...TrainingPlanProfile.parse(user.profile),
-    equipmentProfiles: user.equipmentProfiles,
+    equipmentProfiles: equipmentProfilesOf(user),
     injuries: user.profile.injuries ?? [],
+    includeJumps: user.profile.includeJumps ?? false,
     workoutLength: usualWorkoutLength(user.profile),
     timeZone: user.timeZone ?? "UTC",
+    unit: user.unit ?? DEFAULT_WEIGHT_UNIT,
   };
 }
 
@@ -79,8 +93,9 @@ export async function createUser(clerkUserId: string) {
   return { user: result.value, created: !result.lastErrorObject?.updatedExisting };
 }
 
-// Merges profile fields into the stored profile and sets the timezone when given; null if the user doesn't exist
-export async function updateUser(clerkUserId: string, { profile = {}, timeZone }: UserUpdate) {
+// Merges profile fields into the stored profile and sets the timezone and unit when given; null if the user doesn't
+// exist
+export async function updateUser(clerkUserId: string, { profile = {}, timeZone, unit }: UserUpdate) {
   // $literal stops string values beginning with "$" being read as field paths
   const user = await users.findOneAndUpdate(
     { clerkUserId },
@@ -89,6 +104,7 @@ export async function updateUser(clerkUserId: string, { profile = {}, timeZone }
         $set: {
           profile: { $mergeObjects: ["$profile", { $literal: profile }] },
           ...(timeZone && { timeZone: { $literal: timeZone } }),
+          ...(unit && { unit: { $literal: unit } }),
         },
       },
     ],
@@ -186,7 +202,8 @@ export function toUser(user: WithId<UserDoc>): User {
     id: user._id.toHexString(),
     profile: user.profile,
     onboardedAt: user.onboardedAt?.toISOString() ?? null,
-    equipmentProfiles: user.equipmentProfiles ?? [],
+    equipmentProfiles: equipmentProfilesOf(user),
     ...(user.timeZone && { timeZone: user.timeZone }),
+    unit: user.unit ?? DEFAULT_WEIGHT_UNIT,
   });
 }

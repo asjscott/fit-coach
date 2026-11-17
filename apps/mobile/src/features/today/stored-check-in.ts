@@ -7,8 +7,8 @@ const KEY = "today.checkIn";
 
 const StoredCheckIn = CheckIn.extend({ date: z.string() });
 
-// Today's check-in, kept on the phone by the local date it was made on, so it lasts the day and nothing more. Nothing
-// goes to the server
+// Today's check-in, kept on the phone by the local date it was made on, so it lasts the day and nothing more. Readiness
+// reads only this copy, so it works offline. The upload is the Logbook's queue (Logbook.queueCheckIn)
 export function createStoredCheckIn(storage: DeviceStorage) {
   return {
     read: async (now: Date): Promise<CheckIn | null> => {

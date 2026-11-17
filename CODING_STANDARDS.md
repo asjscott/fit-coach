@@ -26,8 +26,10 @@ Reach for the shared piece first; a second copy of any of these is a finding:
 - Rules without UI belong in `@fit/engines` (the Logbook, pure functions such as `pickerRows`) or as schemas in
   `@fit/shared`; screens and routes stay thin and call them.
 - Tests drive those seams through their public interface and assert what a user would observe; expected values come from
-  the spec or a worked example, never recomputed the way the code does. Screens and API routes are not unit-tested;
-  exercise routes with `pnpm --filter @fit/api dev:local` and web storage with `pnpm --filter @fit/mobile test:web`.
+  the spec or a worked example, never recomputed the way the code does. Screens are not unit-tested. API routes have
+  route tests (#123, `apps/api/src/routes/*.test.ts`): they drive the whole API through HTTP and read results back
+  through routes, as "Route tests" in `docs/agents/workouts.md` says. Exercise routes by hand with
+  `pnpm --filter @fit/api dev:local` and web storage with `pnpm --filter @fit/mobile test:web`.
 
 ## Comments
 

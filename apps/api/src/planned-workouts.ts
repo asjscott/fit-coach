@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 import type { WithId } from "mongodb";
-import { isSamePlan, planInputsKey, planIsDue, planWorkout } from "@fit/engines";
+import { isSamePlan, planInputsKey, planIsDue, planWorkout, weekOfBlock } from "@fit/engines";
 import { PlannedWorkout } from "@fit/shared";
 import { findLatestAssessment } from "./assessments";
 import { client, db } from "./db";
@@ -65,6 +65,9 @@ async function rebuildPlannedWorkout(clerkUserId: string, user: OnboardedUser) {
     assessment: latest.assessment,
     goal: user.goal,
     daysPerWeek: user.daysPerWeek,
+    includeJumps: user.includeJumps,
+    unit: user.unit,
+    deloadWeek: weekOfBlock(latest.assessment, now, user.timeZone)?.deload ?? false,
   });
 
   // The Muscles held back are stored as the recovering reason
@@ -131,6 +134,13 @@ export async function rebuildAfterUpload(
     if (current && (current.builtAt ?? current.createdAt) >= uploadedAt) return;
   }
   await rebuildPlannedWorkout(clerkUserId, user);
+}
+
+// For every deleted Workout (#143), so the plan no longer counts it. A rebuild that gives the same plan, as after
+// deleting a Recovery Workout, keeps it with its id. Before onboarding there's nothing to plan from
+export async function rebuildAfterDelete(clerkUserId: string) {
+  const user = await findOnboardedUser(clerkUserId);
+  if (user) await rebuildPlannedWorkout(clerkUserId, user);
 }
 
 function toPlannedWorkout({

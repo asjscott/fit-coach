@@ -23,6 +23,7 @@ const offer = (
     now: new Date("2026-10-23T09:00:00Z"),
     tests: chooseTests({ tags: ["dumbbells"] }, []),
     dismissed: null,
+    timeZone: "UTC",
     ...more,
   });
 
@@ -128,6 +129,52 @@ describe("assessmentOffer", () => {
     const workouts = [workout("a1", "01", "A")];
     const dismissed = offerKey(offer(workouts, null, { now: new Date("2026-10-10T09:00:00Z") })!);
     expect(offer(workouts, null, { now: new Date("2026-10-16T09:00:00Z"), dismissed })).toMatchObject({ redoA: true });
+  });
+});
+
+// Stories 69, 70: the Block started by an Assessment whose B was on Monday 12 October has its deload week, the 5th, from
+// Monday 9 November
+describe("assessmentOffer: the retake in the deload week (#137)", () => {
+  const workouts = [workout("b1", "12", "B"), workout("a1", "10", "A")];
+  const on = (date: string, more?: Partial<AssessmentOfferInput>) =>
+    offer(workouts, assessment("x1", "12"), { now: new Date(`${date}T09:00:00Z`), ...more });
+
+  // Story 69
+  it("offers to retake the Assessment in the deload week", () => {
+    expect(on("2026-11-09")).toMatchObject({ kind: "retake", deloadWeek: "2026-11-09", untested: [] });
+    expect(on("2026-11-15")).toMatchObject({ kind: "retake" });
+  });
+
+  it("links to the Results in the Block's other weeks", () => {
+    expect(on("2026-11-08")).toMatchObject({ kind: "results" });
+  });
+
+  // Story 70
+  it("goes once the deload week ends, the next Block starting as usual", () => {
+    expect(on("2026-11-16")).toMatchObject({ kind: "results" });
+  });
+
+  it("comes back in the next deload week once dismissed", () => {
+    const dismissed = offerKey(on("2026-11-10")!);
+    expect(on("2026-11-11", { dismissed })).toBeNull();
+    expect(on("2026-12-14", { dismissed })).toMatchObject({ kind: "retake", deloadWeek: "2026-12-14" });
+  });
+
+  it("offers B once the retake's A is done", () => {
+    const withA = [{ ...workout("a2", "12", "A"), startedAt: "2026-11-10T09:00:00.000Z" }, ...workouts];
+    const retaking = offer(withA, assessment("x1", "12"), { now: new Date("2026-11-11T09:00:00Z") });
+    expect(retaking).toMatchObject({ kind: "start", part: "B", aWorkoutId: "a2" });
+  });
+
+  it("follows the user's timezone for the deload week", () => {
+    // 05:00 on Monday 9 November in UTC is still Sunday in Los Angeles
+    const sunday = { now: new Date("2026-11-09T05:00:00Z"), timeZone: "America/Los_Angeles" };
+    expect(offer(workouts, assessment("x1", "12"), sunday)).toMatchObject({ kind: "results" });
+  });
+
+  it("links to the Results when no test suits the user any longer", () => {
+    const tests = { ...chooseTests({ tags: [] }, []), squat: null, hinge: null, core: null };
+    expect(on("2026-11-10", { tests })).toMatchObject({ kind: "results" });
   });
 });
 

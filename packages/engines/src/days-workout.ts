@@ -73,8 +73,8 @@ function onEquipment(
 ): { placed: Placed[]; dropped: string[] } {
   if (!equipment) {
     return {
-      placed: plannedExercises.map(({ slug, sets, target, fourthSetAfter }, place) => ({
-        exercise: { slug, sets, target },
+      placed: plannedExercises.map(({ slug, sets, target, fourthSetAfter, change }, place) => ({
+        exercise: { slug, sets, target, ...(change && { change }) },
         place,
         fourthSetAfter,
       })),
@@ -106,8 +106,11 @@ function onEquipment(
       const option = chosen.get(exercise);
       if (!option) return [];
       const dayExercise = { slug: option.slug, sets: exercise.sets, target: option.target };
-      const { fourthSetAfter } = exercise;
-      if (option.slug === exercise.slug) return [{ exercise: dayExercise, place, fourthSetAfter }];
+      const { fourthSetAfter, change } = exercise;
+      // The reason its Working Level changed stays with the Exercise, as an Alternative Exercise's level is its own
+      if (option.slug === exercise.slug) {
+        return [{ exercise: { ...dayExercise, ...(change && { change }) }, place, fourthSetAfter }];
+      }
       const otherOptions = optionsOf(exercise).filter(({ slug }) => !taken.has(slug));
       return [{ exercise: { ...dayExercise, replaces: exercise.slug, otherOptions }, place, fourthSetAfter }];
     }),

@@ -114,6 +114,11 @@ export function assess(
       bodyWeightKg: profile.weightKg,
       patterns,
     },
-    workingLevels: seedWorkingLevels({ referenceStrengths, bodyWeightKg: profile.weightKg, equipmentProfiles }),
+    workingLevels: seedWorkingLevels({
+      referenceStrengths,
+      bodyWeightKg: profile.weightKg,
+      equipmentProfiles,
+      movedBy: { workoutId: b.id, startedAt: b.startedAt },
+    }),
   };
 }

@@ -171,6 +171,26 @@ describe("daysWorkout", () => {
     });
   });
 
+  // Story 42, #132: why an Exercise's Working Level changed goes with it, but not with an Alternative Exercise, whose
+  // level is its own
+  describe("the reason a Working Level changed", () => {
+    const changed: PlannedExercise = {
+      ...planned("goblet-squat"),
+      change: { code: "load-up" },
+      alternatives: { bodyweight_only: [{ slug: "bodyweight-squat", target: { unit: "reps", reps: 12 } }] },
+    };
+    const changeOf = (choices: DayChoices) =>
+      daysWorkout({ plannedExercises: [changed] }, choices).plannedExercises[0]?.change;
+
+    it("stays with the Exercise", () => {
+      expect(changeOf({ workoutLength: "long" })).toEqual({ code: "load-up" });
+    });
+
+    it("isn't given to an Alternative Exercise", () => {
+      expect(changeOf({ workoutLength: "long", equipment: "bodyweight_only" })).toBeUndefined();
+    });
+  });
+
   describe("estimated time", () => {
     it("is the warm-up and the Sets kept", () => {
       expect(daysWorkout(longPlan, { workoutLength: "long" }).estimatedSeconds).toBe(3315);

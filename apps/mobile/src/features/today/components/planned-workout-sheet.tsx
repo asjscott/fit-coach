@@ -1,6 +1,6 @@
 import type { DayExercise } from "@fit/engines";
 import type { BuiltInEquipment, CheckIn, DayLength } from "@fit/shared";
-import { type ReactNode, useRef } from "react";
+import { useRef } from "react";
 import { StyleSheet, View } from "react-native";
 import {
   Actionsheet,
@@ -17,7 +17,7 @@ import { HStack } from "@/components/stack";
 import { Text } from "@/components/text";
 import { dayLengthOptions } from "@/features/user/components/form/fields/user-workout-length-field";
 import { builtInEquipmentLabels, noAlternativeLabel, plannedSetsLabel } from "@/features/workouts/format";
-import { exerciseName, libraryExercise } from "@/features/workouts/library";
+import { exerciseName, setReading } from "@/features/workouts/library";
 import { spacing, useTheme } from "@/theme";
 import {
   checkInLighterRow,
@@ -27,15 +27,16 @@ import {
   supersetWithLabel,
   todayPlanLine,
 } from "../today-status";
+import { progressionChangeLine } from "../plan-reasons";
 import { CheckInRatings } from "./check-in-card";
 import { TodayCardLink } from "./today-card";
+import { useWeightUnit } from "@/features/user/current-user-provider";
 
 type SheetCheckIn = {
   ratings: CheckIn;
   onChange: (checkIn: CheckIn) => void;
-  // Whether it took Sets off, whether some rating would, and whether the user chose the Full workout anyway
+  // Whether it took Sets off, and whether the user chose the Full workout anyway
   lighter: boolean;
-  canBeLighter: boolean;
   fullWorkout: boolean;
   onChooseFullWorkout: (fullWorkout: boolean) => void;
 };
@@ -90,6 +91,7 @@ export function PlannedWorkoutSheet({
   onStart,
   onStartRecovery,
 }: PlannedWorkoutSheetProps) {
+  const unit = useWeightUnit();
   const { colors } = useTheme();
   // iOS can't present the Workout until the sheet has gone
   const startOnClosed = useRef<(() => void) | null>(null);
@@ -114,7 +116,8 @@ export function PlannedWorkoutSheet({
           <View style={styles.content}>
             <View style={{ gap: spacing[1] }}>
               <Heading size="lg">Next Workout</Heading>
-              <Text size="sm" color="muted">
+              {/* One line however the counts change, so nothing below it moves as you rate (#147) */}
+              <Text size="sm" color="muted" numberOfLines={1}>
                 {todayPlanLine(plannedExercises, estimatedSeconds)}
               </Text>
               {reasons.map((reason) => (
@@ -151,14 +154,35 @@ export function PlannedWorkoutSheet({
                 ))}
               </HStack>
             ) : null}
-            {supersets.paired || supersets.off ? (
-              // Like Full workout: offered only once it would change something, and kept while chosen
+            {checkIn ? (
+              <CheckInRatings
+                ratings={checkIn.ratings}
+                onRate={(key, rating) => checkIn.onChange({ ...checkIn.ratings, [key]: rating })}
+              />
+            ) : null}
+            {/* What the check-in changes comes and goes as you rate, so it sits below the ratings, where it moves
+                nothing above them. Its note goes when Full workout is chosen, so it sits below the chip, which stays
+                put under your finger (#147) */}
+            {checkIn && lighterRow?.shown ? (
               <View style={{ gap: spacing[2] }}>
-                {supersets.paired ? (
+                <HStack spacing={2}>
+                  <Chip
+                    label="Full workout"
+                    selected={checkIn.fullWorkout}
+                    onPress={() => checkIn.onChooseFullWorkout(!checkIn.fullWorkout)}
+                  />
+                </HStack>
+                {lighterRow.note ? (
                   <Text size="sm" color="muted">
-                    {SUPERSETS_TO_FIT}
+                    {LIGHTER_AFTER_CHECK_IN}
                   </Text>
                 ) : null}
+              </View>
+            ) : null}
+            {supersets.paired || supersets.off ? (
+              // Like Full workout: offered only once it would change something, and kept while chosen. Its note goes
+              // when No supersets is chosen, so it sits below the chip, which stays put under your finger (#147)
+              <View style={{ gap: spacing[2] }}>
                 <HStack spacing={2}>
                   <Chip
                     label="No supersets"
@@ -166,41 +190,25 @@ export function PlannedWorkoutSheet({
                     onPress={() => supersets.onChooseOff(!supersets.off)}
                   />
                 </HStack>
-              </View>
-            ) : null}
-            {checkIn ? (
-              <View style={{ gap: spacing[2] }}>
-                {lighterRow?.reserved ? (
-                  <>
-                    <Reserved hidden={!lighterRow.note}>
-                      <Text size="sm" color="muted">
-                        {LIGHTER_AFTER_CHECK_IN}
-                      </Text>
-                    </Reserved>
-                    <Reserved hidden={!lighterRow.chip}>
-                      <HStack spacing={2}>
-                        <Chip
-                          label="Full workout"
-                          selected={checkIn.fullWorkout}
-                          onPress={() => checkIn.onChooseFullWorkout(!checkIn.fullWorkout)}
-                        />
-                      </HStack>
-                    </Reserved>
-                  </>
+                {supersets.paired ? (
+                  <Text size="sm" color="muted">
+                    {SUPERSETS_TO_FIT}
+                  </Text>
                 ) : null}
-                <CheckInRatings
-                  ratings={checkIn.ratings}
-                  onRate={(key, rating) => checkIn.onChange({ ...checkIn.ratings, [key]: rating })}
-                />
               </View>
             ) : null}
             <View>
-              {plannedExercises.map(({ slug, sets, target, replaces, otherOptions, supersetWith }) => (
+              {plannedExercises.map(({ slug, sets, target, replaces, otherOptions, supersetWith, change }) => (
                 <View key={slug} style={[styles.exercise, { borderTopColor: colors.line }]}>
                   <Text>{exerciseName(slug)}</Text>
                   <Text size="sm" color="muted">
-                    {plannedSetsLabel({ sets, target }, libraryExercise(slug)?.unilateral)}
+                    {plannedSetsLabel({ sets, target }, unit, setReading(slug))}
                   </Text>
+                  {progressionChangeLine(change, slug) ? (
+                    <Text size="sm" color="muted">
+                      {progressionChangeLine(change, slug)}
+                    </Text>
+                  ) : null}
                   {supersetWith ? (
                     <Text size="sm" color="muted">
                       {supersetWithLabel(exerciseName(supersetWith))}
@@ -251,23 +259,7 @@ export function PlannedWorkoutSheet({
   );
 }
 
-// Hidden, it keeps its space, but can't be seen, tapped or read out
-function Reserved({ hidden, children }: { hidden: boolean; children: ReactNode }) {
-  return (
-    <View
-      style={hidden ? styles.hidden : null}
-      pointerEvents={hidden ? "none" : "auto"}
-      aria-hidden={hidden}
-      accessibilityElementsHidden={hidden}
-      importantForAccessibility={hidden ? "no-hide-descendants" : "auto"}
-    >
-      {children}
-    </View>
-  );
-}
-
 const styles = StyleSheet.create({
-  hidden: { opacity: 0 },
   scroll: { width: "100%" },
   content: { gap: spacing[3], paddingBottom: spacing[3] },
   // Outside the scroll, so Start is in reach however long the list is

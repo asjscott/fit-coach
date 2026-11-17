@@ -1,8 +1,10 @@
 import type {
   BodyProfile,
+  DatedCheckIn,
   EquipmentProfile,
   PlannedExercise,
   PlannedWorkout,
+  Pr,
   PreviousSets,
   SetValues,
   UserProfile,
@@ -11,8 +13,10 @@ import type {
 import { describe, expect, it, vi } from "vitest";
 import { EXERCISES } from "./data/exercises";
 import { daysWorkout, equipmentChoices } from "./days-workout";
+import { builtInEquipment } from "./equipment";
 import {
   createLogbook,
+  finishTimes,
   LogbookError,
   type DeviceStorage,
   type PlannedWorkoutSource,
@@ -39,7 +43,13 @@ function memoryStorage(): DeviceStorage {
 // Records what reached the server
 function fakeUploader() {
   const uploaded: Workout[] = [];
-  return { uploaded, upload: async (workout: Workout) => void uploaded.push(workout) };
+  const uploadedCheckIns: DatedCheckIn[] = [];
+  return {
+    uploaded,
+    upload: async (workout: Workout): Promise<Pr[] | void> => void uploaded.push(workout),
+    uploadedCheckIns,
+    uploadCheckIn: async (checkIn: DatedCheckIn) => void uploadedCheckIns.push(checkIn),
+  };
 }
 
 // The server's answer for each Exercise; Exercises not listed have none
@@ -180,14 +190,15 @@ describe("Logbook", () => {
     expect((await logbook.inProgress())?.workoutExercises[0].sets).toEqual([]);
   });
 
-  it("refuses a weight that isn't in 0.25 kg steps, saying why", async () => {
+  // User story 19: a load entered in pounds is stored as its exact kg, never rounded
+  it("keeps a weight entered in pounds as its exact kg", async () => {
     const { logbook } = setup();
     await logbook.start(at("09:00"));
     const squat = await logbook.addWorkoutExercise(exercise("goblet-squat"));
 
-    await expect(logbook.logSet(squat.id, { kind: "external", kg: 20.1, reps: 10 }, at("09:05"))).rejects.toThrow(
-      new LogbookError("Use 0.25 kg steps"),
-    );
+    await logbook.logSet(squat.id, { kind: "external", kg: 11.33980925, reps: 10 }, at("09:05"));
+
+    expect((await logbook.inProgress())?.workoutExercises[0].sets[0]).toMatchObject({ kg: 11.33980925 });
   });
 
   describe("finishing", () => {
@@ -239,17 +250,116 @@ describe("Logbook", () => {
     it.each([
       ["an end before the start", at("09:30"), at("09:00"), "The end must be after the start"],
       ["an end in the future", at("09:00"), at("10:01"), "The end can't be in the future"],
+      // #152: a Workout lasts at most 6 hours
+      ["a Workout longer than 6 hours", at("03:00"), at("09:30"), "A Workout can last at most 6 hours"],
     ])("rejects %s and keeps the Workout in progress", async (_, startedAt, endedAt, message) => {
       const { logbook, uploader } = setup();
       await logbook.start(at("09:00"));
       const plank = await logbook.addWorkoutExercise(exercise("plank"));
       await logbook.logSet(plank.id, { kind: "timed", seconds: 60 }, at("09:05"));
 
-      await expect(logbook.finish({ startedAt, endedAt, now: at("10:00") })).rejects.toThrow(new LogbookError(message));
+      await expect(logbook.finish({ startedAt, endedAt, now: at("10:00") })).rejects.toThrow(
+        new LogbookError(message, "endedAt"),
+      );
       await logbook.sync();
 
       expect(uploader.uploaded).toEqual([]);
       expect(await logbook.inProgress()).not.toBeNull();
+    });
+
+    // #129: Edit times allows any start in the last 7 days, and names the start as what's wrong
+    it("rejects a start more than 7 days back, naming the start", async () => {
+      const { logbook, uploader } = setup();
+      await logbook.start(at("09:00"));
+      const plank = await logbook.addWorkoutExercise(exercise("plank"));
+      await logbook.logSet(plank.id, { kind: "timed", seconds: 60 }, at("09:05"));
+
+      const finishing = logbook.finish({
+        startedAt: new Date("2026-10-17T09:00:00.000Z"),
+        endedAt: new Date("2026-10-17T10:00:00.000Z"),
+        now: at("09:10"),
+      });
+
+      await expect(finishing).rejects.toThrow(new LogbookError("The start can't be more than 7 days ago", "startedAt"));
+      await logbook.sync();
+      expect(uploader.uploaded).toEqual([]);
+    });
+
+    it("keeps a start 7 days back", async () => {
+      const { logbook, uploader } = setup();
+      await logbook.start(at("09:00"));
+      const plank = await logbook.addWorkoutExercise(exercise("plank"));
+      await logbook.logSet(plank.id, { kind: "timed", seconds: 60 }, at("09:05"));
+
+      await logbook.finish({
+        startedAt: new Date("2026-10-17T09:05:00.000Z"),
+        endedAt: new Date("2026-10-17T10:00:00.000Z"),
+        now: at("09:10"),
+      });
+      await logbook.sync();
+
+      expect(uploader.uploaded[0]?.startedAt).toBe("2026-10-17T09:05:00.000Z");
+    });
+  });
+
+  // #129, user story 24: a Workout not logged live, started for an earlier day, so it doesn't look like a skip
+  describe("a Manual Workout for an earlier day", () => {
+    const tuesdayEvening = new Date("2026-10-20T18:00:00.000Z");
+
+    it("finishes on its own day, an hour long unless the times are edited", async () => {
+      const { logbook, uploader } = setup();
+      const workout = await logbook.start(at("09:00"), tuesdayEvening);
+      const plank = await logbook.addWorkoutExercise(exercise("plank"));
+      await logbook.logSet(plank.id, { kind: "timed", seconds: 60 }, at("09:05"));
+
+      const times = finishTimes(workout, at("09:10"));
+      await logbook.finish({ ...times, now: at("09:10") });
+      await logbook.sync();
+
+      expect(times).toEqual({ startedAt: tuesdayEvening, endedAt: new Date("2026-10-20T19:00:00.000Z") });
+      expect(uploader.uploaded[0]).toMatchObject({
+        startedAt: "2026-10-20T18:00:00.000Z",
+        endedAt: "2026-10-20T19:00:00.000Z",
+      });
+    });
+
+    it("isn't forgotten for having started days ago", async () => {
+      const { logbook } = setup();
+      await logbook.start(at("09:00"), tuesdayEvening);
+
+      expect(await logbook.isStale(at("10:00"))).toBe(false);
+    });
+
+    it("finishes on its own day when it was forgotten", async () => {
+      const { logbook, uploader } = setup();
+      await logbook.start(at("09:00"), tuesdayEvening);
+      const plank = await logbook.addWorkoutExercise(exercise("plank"));
+      await logbook.logSet(plank.id, { kind: "timed", seconds: 60 }, at("09:05"));
+
+      await logbook.finishAtLastSet();
+      await logbook.sync();
+
+      expect(uploader.uploaded[0]).toMatchObject({
+        startedAt: "2026-10-20T18:00:00.000Z",
+        endedAt: "2026-10-20T19:00:00.000Z",
+      });
+    });
+
+    it.each([
+      ["more than 7 days back", new Date("2026-10-17T08:59:00.000Z")],
+      ["in the future", at("09:01")],
+    ])("can't start %s", async (_, startedAt) => {
+      const { logbook } = setup();
+
+      await expect(logbook.start(at("09:00"), startedAt)).rejects.toThrow(LogbookError);
+      expect(await logbook.inProgress()).toBeNull();
+    });
+
+    it("finishes a live Workout from its start to now", async () => {
+      const { logbook } = setup();
+      const workout = await logbook.start(at("09:00"));
+
+      expect(finishTimes(workout, at("09:40"))).toEqual({ startedAt: at("09:00"), endedAt: at("09:40") });
     });
   });
 
@@ -403,6 +513,112 @@ describe("Logbook", () => {
 
     expect(uploader.uploaded).toEqual([first]);
     expect(await logbook.pending()).toEqual([]);
+  });
+});
+
+// Spec #119 stories 10 and 11 (#125): Check-ins go up with Pending Workouts and retry the same way. Readiness reads the
+// phone's own copy of the day's Check-in, so nothing here waits on the server
+describe("Logbook: queued Check-ins", () => {
+  const checkIn = (date: string, time: string, sleep = 3): DatedCheckIn => ({
+    date,
+    sleep,
+    energy: 3,
+    soreness: 2,
+    checkedInAt: `${date}T${time}:00.000Z`,
+  });
+
+  it("uploads a queued Check-in once", async () => {
+    const { logbook, uploader } = setup();
+    const morning = checkIn("2026-10-24", "07:00");
+
+    await logbook.queueCheckIn(morning);
+    await logbook.sync();
+    await logbook.sync();
+
+    expect(uploader.uploadedCheckIns).toEqual([morning]);
+  });
+
+  it("keeps a Check-in made offline queued, even over a restart, until the signal is back", async () => {
+    const { logbook, uploader, storage } = setup();
+    const uploadCheckIn = uploader.uploadCheckIn;
+    uploader.uploadCheckIn = async () => {
+      throw new Error("No signal");
+    };
+    const morning = checkIn("2026-10-24", "07:00");
+    await logbook.queueCheckIn(morning);
+
+    await expect(logbook.sync()).rejects.toThrow("No signal");
+    expect(uploader.uploadedCheckIns).toEqual([]);
+
+    const rebuilt = setup(storage);
+    rebuilt.uploader.uploadCheckIn = uploadCheckIn;
+    await rebuilt.logbook.sync();
+    await rebuilt.logbook.sync();
+
+    expect(uploader.uploadedCheckIns).toEqual([morning]);
+  });
+
+  it("uploads only the latest Check-in for a date when the user changes it before it uploads", async () => {
+    const { logbook, uploader } = setup();
+    const yesterday = checkIn("2026-10-23", "07:00");
+    const morning = checkIn("2026-10-24", "07:00", 1);
+    const changed = checkIn("2026-10-24", "07:05", 4);
+
+    await logbook.queueCheckIn(yesterday);
+    await logbook.queueCheckIn(morning);
+    await logbook.queueCheckIn(changed);
+    await logbook.sync();
+
+    expect(uploader.uploadedCheckIns).toEqual([yesterday, changed]);
+  });
+
+  it("still uploads a Check-in changed while the earlier one was uploading", async () => {
+    const { logbook, uploader } = setup();
+    const morning = checkIn("2026-10-24", "07:00", 1);
+    const changed = checkIn("2026-10-24", "07:05", 4);
+    const uploadCheckIn = uploader.uploadCheckIn;
+    uploader.uploadCheckIn = async (sent) => {
+      // The user changes it while the first one is on its way
+      if (sent.checkedInAt === morning.checkedInAt) await logbook.queueCheckIn(changed);
+      return uploadCheckIn(sent);
+    };
+
+    await logbook.queueCheckIn(morning);
+    await logbook.sync();
+    await logbook.sync();
+
+    expect(uploader.uploadedCheckIns).toEqual([morning, changed]);
+  });
+
+  it("uploads Pending Workouts and Check-ins independently: one failing doesn't hold up the other", async () => {
+    const { logbook, uploader } = setup();
+    const morning = checkIn("2026-10-24", "07:00");
+    uploader.uploadCheckIn = async () => {
+      throw new Error("Server error");
+    };
+    await logbook.queueCheckIn(morning);
+    const workout = await finishPlank(logbook, "09:00");
+
+    await expect(logbook.sync()).rejects.toThrow("Server error");
+
+    expect(uploader.uploaded).toEqual([workout]);
+    expect(await logbook.pending()).toEqual([]);
+  });
+
+  it("refuses a Check-in with a rating outside 1 to 5", async () => {
+    const { logbook } = setup();
+
+    await expect(logbook.queueCheckIn({ ...checkIn("2026-10-24", "07:00"), sleep: 6 })).rejects.toThrow(LogbookError);
+  });
+
+  it("clears queued Check-ins on sign-out, so none upload as the next user", async () => {
+    const { logbook, uploader } = setup();
+    await logbook.queueCheckIn(checkIn("2026-10-24", "07:00"));
+
+    await logbook.clear();
+    await logbook.sync();
+
+    expect(uploader.uploadedCheckIns).toEqual([]);
   });
 });
 
@@ -1234,9 +1450,9 @@ describe("Logbook: Planned Workouts", () => {
       expect(await draftFor(plank)).toEqual({ kind: "timed", seconds: 40 });
     });
 
-    it("rounds a load to the 0.25 kg steps a Set can log, which a 25 lb dumbbell isn't on", async () => {
-      const target = { unit: "kg", kg: 11.34, reps: 8 } as const;
-      expect(await draftFor({ ...gobletSquat, target })).toEqual({ kind: "external", kg: 11.25, reps: 8 });
+    it("keeps a load as its kg, as a 25 lb dumbbell is on no kg step", async () => {
+      const target = { unit: "kg", kg: 11.33980925, reps: 8 } as const;
+      expect(await draftFor({ ...gobletSquat, target })).toEqual({ kind: "external", kg: 11.33980925, reps: 8 });
     });
 
     it("gives a band level no weight to start from, on an Exercise that logs kg", async () => {
@@ -1414,6 +1630,14 @@ describe("Logbook: the next load for the kg stepper", () => {
 
     expect(logbook.nextLoadKg("goblet-squat", 20, 1, home)).toBe(20);
     expect(logbook.nextLoadKg("goblet-squat", 8, -1, home)).toBe(8);
+  });
+
+  it("steps a kettlebell Exercise through the kettlebells from a load a dumbbell also has (#149)", () => {
+    const { logbook } = setup();
+    const fullGym = builtInEquipment("full_gym", "kg");
+
+    expect(logbook.nextLoadKg("kettlebell-swing", 20, 1, fullGym)).toBe(24);
+    expect(logbook.nextLoadKg("renegade-row", 20, 1, fullGym)).toBe(22.5);
   });
 
   it("steps by 2 kg, never below 0, when the primary Equipment Profile has no loads for the Exercise", () => {
@@ -1778,5 +2002,45 @@ describe("the Planned Workout on the phone", () => {
     await logbook.clear();
 
     expect(await logbook.plannedWorkout()).toEqual({ plannedWorkout: null, stale: false });
+  });
+});
+
+// PRs found at upload (#130, spec #119 stories 78 and 79): the phone keeps those it hasn't shown, for a note on Today
+describe("Logbook: PRs from an upload", () => {
+  const pr: Pr = { slug: "plank", measure: "seconds", best: 60, previous: 45 };
+
+  it("keeps the PRs an upload finds, with their Workout, until they're seen", async () => {
+    const { logbook, uploader } = setup();
+    uploader.upload = async () => [pr];
+    const finished = await finishPlank(logbook, "09:00");
+
+    await logbook.sync();
+
+    expect(await logbook.unseenPrs()).toEqual([{ workoutId: finished.id, startedAt: finished.startedAt, prs: [pr] }]);
+    await logbook.markPrsSeen([finished.id]);
+    expect(await logbook.unseenPrs()).toEqual([]);
+  });
+
+  it("keeps nothing for an upload with no PRs", async () => {
+    const { logbook, uploader } = setup();
+    uploader.upload = async () => [];
+    await finishPlank(logbook, "09:00");
+
+    await logbook.sync();
+
+    expect(await logbook.unseenPrs()).toEqual([]);
+  });
+
+  it("keeps unseen PRs through a restart, and forgets them on signing out", async () => {
+    const storage = memoryStorage();
+    const { logbook, uploader } = setup(storage);
+    uploader.upload = async () => [pr];
+    await finishPlank(logbook, "09:00");
+    await logbook.sync();
+
+    const rebuilt = setup(storage);
+    expect(await rebuilt.logbook.unseenPrs()).toHaveLength(1);
+    await rebuilt.logbook.clear();
+    expect(await rebuilt.logbook.unseenPrs()).toEqual([]);
   });
 });

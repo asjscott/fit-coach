@@ -1,18 +1,30 @@
-import type { PlannedWorkout, UserProfile, WorkoutLength } from "@fit/shared";
+import type { PlannedWorkout, UserProfile, WeightUnit, WorkoutLength } from "@fit/shared";
 import type { ProfileWithLoads } from "./equipment";
 import { localDateOf, mondayOf } from "./week-ledger";
 
 // The Profile fields that shape a plan: changing any of them rebuilds it
-export type PlanInputs = Pick<UserProfile, "goal" | "daysPerWeek" | "injuries"> & {
+export type PlanInputs = Pick<UserProfile, "goal" | "daysPerWeek" | "injuries" | "includeJumps"> & {
   workoutLength: WorkoutLength;
+  // Full gym's loads follow it
+  unit: WeightUnit;
   equipmentProfile: ProfileWithLoads;
 };
 
 // What a stored plan was built from, saved with it. Sorted, so the same equipment and injuries in a new order are no
-// change. The Equipment Profile's name and id aren't here: renaming one changes nothing about the plan
-export function planInputsKey({ goal, daysPerWeek, workoutLength, injuries, equipmentProfile }: PlanInputs) {
+// change. The Equipment Profile's name and id aren't here: renaming one changes nothing about the plan. The jumps
+// switch is only there when on, so plans built before it aren't rebuilt
+export function planInputsKey({
+  goal,
+  daysPerWeek,
+  workoutLength,
+  injuries,
+  includeJumps,
+  unit,
+  equipmentProfile,
+}: PlanInputs) {
   const { tags, loads } = equipmentProfile;
-  return JSON.stringify([goal, daysPerWeek, workoutLength, [...injuries].sort(), [...tags].sort(), loads]);
+  const key = [goal, daysPerWeek, workoutLength, [...injuries].sort(), [...tags].sort(), loads, unit];
+  return JSON.stringify(includeJumps ? [...key, "jumps"] : key);
 }
 
 // Whether a plan should be built now: none yet, a new week, a new day, or a Profile change. A new day in the user's

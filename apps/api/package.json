@@ -9,6 +9,7 @@
     "build": "tsup",
     "start": "node dist/server.js",
     "typecheck": "tsc --noEmit",
+    "test": "vitest run",
     "seed:exercises": "tsx --env-file=.env scripts/seed-exercises.ts"
   },
   "keywords": [],
@@ -20,6 +21,7 @@
     "@fastify/cors": "^11.3.1",
     "@fit/engines": "workspace:*",
     "@fit/shared": "workspace:*",
+    "@sentry/node": "~11.10.0",
     "fastify": "^5.12.7",
     "fastify-type-provider-zod": "^7.0.0",
     "mongodb": "^7.7.0",
@@ -30,6 +32,7 @@
     "mongodb-memory-server": "^10.4.3",
     "tsup": "^9.0.0",
     "tsx": "^4.23.15",
-    "typescript": "~6.0.3"
+    "typescript": "~6.0.3",
+    "vitest": "^5.0.5"
   }
 }

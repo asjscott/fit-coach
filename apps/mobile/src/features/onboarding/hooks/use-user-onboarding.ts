@@ -1,12 +1,12 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { usualWorkoutLength } from "@fit/engines";
-import { UserProfile } from "@fit/shared";
+import { bodyWeightAnswer, bodyWeightInUnit, bodyWeightKg, UserProfile, type WeightUnit } from "@fit/shared";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { LoadsForm, pruneLoads, toLoadsForm } from "@/features/equipment/loads";
 import {
-  asksForLoads,
+  loadTagsAsked,
   EquipmentByGroup,
   groupTags,
   selectedTags,
@@ -14,43 +14,49 @@ import {
   toTrainingSetup,
   TrainingSetup,
 } from "@/features/equipment/training-setup";
-import { useCurrentUser, usePrimaryEquipmentProfile } from "@/features/user/current-user-provider";
+import { useCurrentUser, usePrimaryEquipmentProfile, useWeightUnit } from "@/features/user/current-user-provider";
 import { useNotifications } from "@/hooks/use-notifications";
 import type { Stage, StageAction } from "../form/staged-form";
 
 // ----------------------------------------------------------------------
 
-// The profile plus the answers that become the primary equipment profile
-export const OnboardingValues = UserProfile.extend({
-  trainingSetup: TrainingSetup,
-  equipment: EquipmentByGroup,
-  loads: LoadsForm,
-});
-export type OnboardingValues = z.infer<typeof OnboardingValues>;
+// The profile plus the answers that become the primary equipment profile. Body weight is answered in the user's
+// unit and saved in kg (#148)
+export const onboardingValues = (unit: WeightUnit) =>
+  UserProfile.omit({ weightKg: true }).extend({
+    weight: bodyWeightAnswer(unit),
+    trainingSetup: TrainingSetup,
+    equipment: EquipmentByGroup,
+    loads: LoadsForm,
+  });
+export type OnboardingValues = z.infer<ReturnType<typeof onboardingValues>>;
 
 // One form across every stage, saved once at the end
 export function useUserOnboarding() {
   // The view only renders the form once the user has loaded
   const { user, updateUser, saveEquipmentProfile } = useCurrentUser();
   const { handleError } = useNotifications();
-  const profile = user?.profile ?? {};
+  const { weightKg, ...profile } = user?.profile ?? {};
   const primaryEquipment = usePrimaryEquipmentProfile();
+  // Weights and body weight are entered in the user's unit and saved in kg
+  const unit = useWeightUnit();
 
   // Captured once so the completion message doesn't flip when the save stamps onboardedAt
   const [isEditing] = useState(!!user?.onboardedAt);
   const [stage, setStage] = useState<Stage>(1);
 
   const onboardingForm = useForm<OnboardingValues>({
-    resolver: zodResolver(OnboardingValues),
+    resolver: zodResolver(onboardingValues(unit)),
     mode: "onBlur",
     defaultValues: {
       ...profile,
+      weight: weightKg && bodyWeightInUnit(weightKg, unit),
       daysPerWeek: profile.daysPerWeek ?? 3,
       // A new user must choose; an existing user without one edits from Standard
       workoutLength: isEditing ? usualWorkoutLength(profile) : profile.workoutLength,
       trainingSetup: primaryEquipment && toTrainingSetup(primaryEquipment),
       equipment: groupTags(primaryEquipment?.tags ?? []),
-      loads: toLoadsForm(primaryEquipment?.loads),
+      loads: toLoadsForm(primaryEquipment?.loads, unit),
     },
   });
 
@@ -74,19 +80,19 @@ export function useUserOnboarding() {
 
     // Drop weights for equipment no longer selected, so a stale half-filled answer can't block saving
     const { trainingSetup, equipment, loads } = getValues();
-    const tags = asksForLoads(trainingSetup) ? selectedTags(trainingSetup, equipment) : [];
+    const tags = loadTagsAsked(trainingSetup, selectedTags(trainingSetup, equipment));
     setValue("loads", pruneLoads(loads, tags));
 
     setStage(stage + 1);
   };
 
-  const save = async ({ trainingSetup, equipment, loads, ...values }: OnboardingValues) => {
+  const save = async ({ trainingSetup, equipment, loads, weight, ...values }: OnboardingValues) => {
     try {
       // Updates the primary profile by id if there is one, so retrying or editing never adds a second
-      await saveEquipmentProfile(toEquipmentInput(trainingSetup, equipment, loads), primaryEquipment?.id);
+      await saveEquipmentProfile(toEquipmentInput(trainingSetup, equipment, loads, unit), primaryEquipment?.id);
 
       // The server stamps onboardedAt once the required fields and an equipment profile are saved
-      const updated = await updateUser({ profile: values });
+      const updated = await updateUser({ profile: { ...values, weightKg: bodyWeightKg(weight, unit, weightKg) } });
       if (!updated.onboardedAt) throw new Error("Some answers are missing, go back and check them");
       setStage("complete");
     } catch (err) {

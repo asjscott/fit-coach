@@ -23,12 +23,14 @@ export const startRest = (slug: string, now: Date): Rest => ({
 
 // The rest after a Set of a Workout Exercise just logged (#96). In a superset there's none while the other Exercise
 // is behind and has Sets left, as the user goes straight to it, and after the pair's second Set it's the longer of
-// the two rests. Once the other has all its Sets, the one left rests as usual. The walk has no rest after it
+// the two rests. Once the other has all its Sets, the one left rests as usual. The walk has no rest after it, and
+// nor does a Set of a Workout logged afterwards, which happened on another day (#153)
 export function restAfterSet(
-  { workoutExercises }: Pick<InProgressWorkout, "workoutExercises">,
+  { workoutExercises, pastStart }: Pick<InProgressWorkout, "workoutExercises" | "pastStart">,
   workoutExerciseId: string,
   now: Date,
 ): Rest | null {
+  if (pastStart) return null;
   const logged = workoutExercises.find(({ id }) => id === workoutExerciseId);
   if (!logged || takesOneSet(logged.slug)) return null;
   const partner = supersetPartner(workoutExercises, logged);

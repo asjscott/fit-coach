@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { BandLevel, BuiltInEquipment } from "./equipment";
 import { Muscle } from "./exercises";
+import { ProgressionChange } from "./progression";
 
 const reps = z.number().int().positive();
 
@@ -32,6 +33,8 @@ export const PlannedExercise = AlternativeExercise.extend({
   // On each built-in choice the primary doesn't already match: the Exercise itself if it stays, else its Alternative
   // Exercises best first, else nothing as it drops out. Plans stored before Alternative Exercises don't have it
   alternatives: z.partialRecord(BuiltInEquipment, z.array(AlternativeExercise).max(MAX_ALTERNATIVE_OPTIONS)).optional(),
+  // Why its Working Level changed when the Exercise was last done (#132), shown with it. Absent when nothing changed
+  change: ProgressionChange.optional(),
 });
 export type PlannedExercise = z.infer<typeof PlannedExercise>;
 

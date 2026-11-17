@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { InProgressWorkout, Workout, WorkoutsQuery } from "./workouts";
+import { InProgressWorkout, Workout, WorkoutsQuery, WorkoutUpload } from "./workouts";
 
 const loggedAt = "2026-10-24T09:10:00.000Z";
 
@@ -58,9 +58,10 @@ describe("Workout", () => {
     expect(parsed.workoutExercises[0]).toEqual(gobletSquat);
   });
 
-  it("rejects a weight that isn't in 0.25 kg steps", () => {
-    const awkward = { ...gobletSquat, sets: [{ kind: "external", kg: 22.3, reps: 10, loggedAt }] };
-    expect(Workout.safeParse(workout([awkward])).success).toBe(false);
+  // User story 19: a load entered in pounds is stored as its exact kg, so 25 lb never comes back as 24.9
+  it("keeps a weight entered in pounds as its exact kg", () => {
+    const pounds = { ...gobletSquat, sets: [{ kind: "external", kg: 11.33980925, reps: 10, loggedAt }] };
+    expect(Workout.parse(workout([pounds])).workoutExercises[0].sets[0]).toMatchObject({ kg: 11.33980925 });
   });
 
   it("keeps a Set's RPE", () => {
@@ -92,6 +93,27 @@ describe("Workout", () => {
 
   it("rejects an Assessment Workout other than A or B", () => {
     expect(Workout.safeParse({ ...workout([gobletSquat]), assessment: "C" }).success).toBe(false);
+  });
+});
+
+// #152: a Workout lasts at most 6 hours. Only uploads are held to it, so History never fails on one stored before
+describe("WorkoutUpload", () => {
+  const lasting = (endedAt: string) => workout([gobletSquat], { startedAt: "2026-10-24T09:00:00.000Z", endedAt });
+
+  it("accepts a Workout of exactly 6 hours", () => {
+    expect(WorkoutUpload.safeParse(lasting("2026-10-24T15:00:00.000Z")).success).toBe(true);
+  });
+
+  it("rejects a Workout longer than 6 hours, naming the end", () => {
+    const parsed = WorkoutUpload.safeParse(lasting("2026-10-24T15:01:00.000Z"));
+
+    expect(parsed.error?.issues).toEqual([
+      expect.objectContaining({ message: "A Workout can last at most 6 hours", path: ["endedAt"] }),
+    ]);
+  });
+
+  it("leaves a stored Workout of any length to the plain Workout", () => {
+    expect(Workout.safeParse(lasting("2026-10-26T10:00:00.000Z")).success).toBe(true);
   });
 });
 

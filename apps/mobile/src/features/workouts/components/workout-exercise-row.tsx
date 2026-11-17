@@ -5,8 +5,9 @@ import { Pressable } from "@/components/pressable";
 import { Text } from "@/components/text";
 import { fonts, spacing, useTheme } from "@/theme";
 import { workoutExerciseSummary } from "../format";
-import { exerciseName, libraryExercise } from "../library";
+import { exerciseName, setReading } from "../library";
 import { WorkoutExerciseMenu } from "./workout-exercise-menu";
+import { useWeightUnit } from "@/features/user/current-user-provider";
 
 export type WorkoutExerciseRowProps = {
   workoutExercise: InProgressWorkoutExercise;
@@ -19,15 +20,11 @@ export type WorkoutExerciseRowProps = {
 // A Workout Exercise that isn't current, collapsed to one row: a tick once it has Sets (else its number), its
 // name and a one-line summary of its Sets (its target or Previous Sets before any), and its ⋯ menu. Pressing the row makes it current
 export function WorkoutExerciseRow({ workoutExercise, position, onPress }: WorkoutExerciseRowProps) {
+  const unit = useWeightUnit();
   const { colors } = useTheme();
   const name = exerciseName(workoutExercise.slug);
   const { sets, previousSets, planned } = workoutExercise;
-  const summary = workoutExerciseSummary(
-    sets,
-    previousSets?.sets,
-    planned,
-    libraryExercise(workoutExercise.slug)?.unilateral,
-  );
+  const summary = workoutExerciseSummary(sets, unit, previousSets?.sets, planned, setReading(workoutExercise.slug));
   const done = sets.length > 0;
 
   return (

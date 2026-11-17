@@ -1,16 +1,19 @@
 import type { Assessment, TestedPattern, Workout } from "@fit/shared";
 import { latestAssessmentWorkout } from "./assessment-pairing";
 import { canAssess, partTests, type ChosenTests } from "./assessment-tests";
+import { weekOfBlock } from "./block";
+import { mondayOf } from "./week-ledger";
 
 // What Today offers about the Assessment: to start A, to start B (and redo A when it's stale), that the Results come
-// once B syncs, or a link to the Results. Each names the Workout or Assessment it's about. A start names the Patterns
+// once B syncs, a link to the Results, or in the deload week to retake it (#137), named by that week's Monday. Each names the Workout or Assessment it's about. A start names the Patterns
 // it can't test; when A or B has no test at all, the Assessment is unavailable instead
 export type AssessmentOffer =
   | { kind: "start"; part: "A"; untested: TestedPattern[] }
   | { kind: "start"; part: "B"; aWorkoutId: string; redoA: boolean; untested: TestedPattern[] }
   | { kind: "unavailable" }
   | { kind: "syncing"; bWorkoutId: string }
-  | { kind: "results"; assessmentId: string };
+  | { kind: "results"; assessmentId: string }
+  | { kind: "retake"; deloadWeek: string; untested: TestedPattern[] };
 
 // What a dismissed offer is remembered by: the whole offer, so one going stale (Redo A) comes back
 export const offerKey = (offer: AssessmentOffer) => JSON.stringify(offer);
@@ -31,6 +34,8 @@ export type AssessmentOfferInput = {
   tests: ChosenTests;
   // The key of the offer the user dismissed last, if any
   dismissed: string | null;
+  // The user's, whose weeks the Block's are
+  timeZone: string;
 };
 
 // The newest A and B, and whether that A still awaits a B: as pairing has it, the newest B belongs to the latest A
@@ -60,6 +65,7 @@ function currentOffer({
   latestAssessment,
   now,
   tests,
+  timeZone,
 }: Omit<AssessmentOfferInput, "dismissed">): AssessmentOffer | null {
   const start = (offer: { part: "A" } | { part: "B"; aWorkoutId: string; redoA: boolean }): AssessmentOffer =>
     canAssess(tests)
@@ -80,6 +86,10 @@ function currentOffer({
   }
   if (latest === undefined) return null;
   // The Assessment is a snapshot, so it stands even once its Workouts are deleted from History
+  // The deload week offers a retake, which keeps the Block's progress; ignored, the next Block starts as usual
+  if (latest && weekOfBlock(latest, now, timeZone)?.deload && canAssess(tests)) {
+    return { kind: "retake", deloadWeek: mondayOf(now, timeZone), untested: partTests(tests, "A").untested };
+  }
   if (latest) return { kind: "results", assessmentId: latest.id };
   if (!a) return start({ part: "A" });
   // B is done but its Assessment hasn't been worked out yet

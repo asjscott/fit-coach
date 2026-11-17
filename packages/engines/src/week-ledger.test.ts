@@ -67,6 +67,11 @@ describe("weekLedger", () => {
     });
   });
 
+  // Story 13 (#105): jumps add to strength work and never replace it
+  it("credits a jump Set 0.5 to quads and glutes only", () => {
+    expect(weekLedger([workout("w1", tuesday, "broad-jump", 3)], week)).toEqual({ quads: 1.5, glutes: 1.5 });
+  });
+
   it("adds up every Workout of the week, Manual and Assessment alike", () => {
     const workouts = [
       workout("w1", "2026-11-02T18:00:00.000Z", "goblet-squat", 2),

@@ -2,10 +2,11 @@ import type { ThisWeek } from "@fit/engines";
 import { StyleSheet, View } from "react-native";
 import { Ring } from "@/components/ring";
 import { Text } from "@/components/text";
-import { kgLabel, timeStat, weekDatesLabel } from "@/features/workouts/format";
+import { timeStat, volumeLabel, weekDatesLabel } from "@/features/workouts/format";
 import { radii, spacing, useTheme } from "@/theme";
 import type { TodayState } from "../today-status";
 import { DayCircles } from "./day-circles";
+import { useWeightUnit } from "@/features/user/current-user-provider";
 
 const workoutsLabel = (n: number) => `${n} ${n === 1 ? "Workout" : "Workouts"}`;
 
@@ -20,6 +21,7 @@ export function ThisWeekSection({
   state: Exclude<TodayState, "loading">;
   now: Date;
 }) {
+  const unit = useWeightUnit();
   const { colors } = useTheme();
   const { workoutCount: done, target } = week;
   const dates = weekDatesLabel(week.start, now);
@@ -48,7 +50,7 @@ export function ThisWeekSection({
                 {week.sets === 1 ? "Set" : "Sets"}
               </Text>
               <Text size="xs" color="muted">
-                {`${kgLabel(week.volumeKg)} kg · ${time.value} ${time.unit}`}
+                {`${volumeLabel(week.volumeKg, unit)} ${unit} · ${time.value} ${time.unit}`}
               </Text>
             </>
           ) : (
