@@ -146,6 +146,21 @@ describe("nextLoadKg, one Load Step up or down", () => {
     });
   });
 
+  // #149: on a kg Full gym, 20 kg is both a kettlebell and a dumbbell
+  describe("from a load on more than one kind of equipment, on a kg Full gym", () => {
+    const fullGym = builtInEquipment("full_gym", "kg");
+
+    it("steps a kettlebell Exercise through the kettlebells", () => {
+      expect(nextLoadKg(exercise("kettlebell-swing"), fullGym, 20, 1)).toBe(24);
+      expect(nextLoadKg(exercise("kettlebell-swing"), fullGym, 20, -1)).toBe(16);
+    });
+
+    it("steps through the Exercise's first kind of equipment that has the load", () => {
+      expect(nextLoadKg(exercise("renegade-row"), fullGym, 20, 1)).toBe(22.5);
+      expect(nextLoadKg(exercise("renegade-row"), fullGym, 20, -1)).toBe(17.5);
+    });
+  });
+
   // User story 23
   it("steps a cable by the profile's stored step", () => {
     const profile: ProfileWithLoads = { tags: ["cable_machine"], loads: { cable_machine: { stepKg: lb(10) } } };

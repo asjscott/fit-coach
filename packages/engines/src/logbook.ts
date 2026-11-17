@@ -31,9 +31,9 @@ import {
 import { canAssess, chooseTests, partTests } from "./assessment-tests";
 import { exerciseBySlug } from "./data/exercises";
 import {
-  exerciseImplementLoadsKg,
-  loadsSteppedFrom,
-  stepLoadKg,
+  exerciseLoadsByEquipmentKg,
+  stepperLoad,
+  UNKNOWN_LOADS_STEP_KG,
   type ProfileWithLoads,
   type StepDirection,
 } from "./equipment";
@@ -569,7 +569,7 @@ export function createLogbook({
     // The Logbook rather than the screen decides, so Manual and Assessment Workouts step through the same loads (#58),
     // staying on the kind of equipment the load is on (#149)
     nextLoadKg: (slug: string, kg: number, direction: StepDirection, equipmentProfile: ProfileWithLoads | undefined) =>
-      stepLoadKg(kg, direction, loadsSteppedFrom(kg, exerciseImplementLoadsKg(slug, equipmentProfile))),
+      stepperLoad(kg, direction, exerciseLoadsByEquipmentKg(slug, equipmentProfile), UNKNOWN_LOADS_STEP_KG),
 
     // Turns the in-progress Workout into a Pending Workout; sync() uploads it. Workout
     // Exercises with no Sets are dropped; with no Sets at all there is nothing to save,

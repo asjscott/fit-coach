@@ -18,5 +18,12 @@ export const toKg = (value: number, unit: WeightUnit) => value * KG_PER_UNIT[uni
 // kg in the user's unit, unrounded: for totals such as Volume, which round their own way
 export const fromKg = (kg: number, unit: WeightUnit) => kg / KG_PER_UNIT[unit];
 
+// kg in the user's unit to the nearest step, such as 0.5 or 0.1. Rounded in whole steps per unit, so 0.1 gives 176.4
+// rather than 176.40000000000001
+export function inUnitToStep(kg: number, unit: WeightUnit, step: number) {
+  const stepsPerUnit = Math.round(1 / step);
+  return Math.round(fromKg(kg, unit) * stepsPerUnit) / stepsPerUnit;
+}
+
 // A load as the user sees it: in their unit, to the nearest 0.5. 25 lb is stored as 11.3398... kg and shows as 25
-export const loadInUnit = (kg: number, unit: WeightUnit) => Math.round(fromKg(kg, unit) * 2) / 2;
+export const loadInUnit = (kg: number, unit: WeightUnit) => inUnitToStep(kg, unit, 0.5);

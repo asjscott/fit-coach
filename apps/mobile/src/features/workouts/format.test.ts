@@ -332,18 +332,28 @@ describe("weekDatesLabel", () => {
   });
 
   // The week of Monday 26 Oct 2026 ends on Sunday 1 Nov, the day North America's clocks go back (#150)
-  describe.each(["America/Vancouver", "America/Edmonton"])("across the clock change in %s", (timeZone) => {
+  // With Monday's offset from UTC, in minutes, so each test can check the zone took hold: process.env.TZ changes the
+  // zone only where tests run in a child process, as Vitest's default forks pool does
+  describe.each([
+    ["America/Vancouver", 7 * 60],
+    ["America/Edmonton", 6 * 60],
+  ])("across the clock change in %s", (timeZone, mondayOffsetMinutes) => {
     const savedTimeZone = process.env.TZ;
     beforeEach(() => {
       process.env.TZ = timeZone;
     });
     const formatRange = Object.getOwnPropertyDescriptor(Intl.DateTimeFormat.prototype, "formatRange");
     afterEach(() => {
-      process.env.TZ = savedTimeZone;
+      // Assigning undefined would store the string "undefined", which reads as UTC for every later test
+      if (savedTimeZone === undefined) delete process.env.TZ;
+      else process.env.TZ = savedTimeZone;
       if (formatRange) Object.defineProperty(Intl.DateTimeFormat.prototype, "formatRange", formatRange);
     });
     // As History has it: the Monday of a Workout logged on the Sunday evening, after the change
-    const historyWeekStart = () => weekStart(new Date("2026-11-02T02:30:00.000Z"));
+    const historyWeekStart = () => {
+      expect(new Date(2026, 9, 26).getTimezoneOffset()).toBe(mondayOffsetMinutes);
+      return weekStart(new Date("2026-11-02T02:30:00.000Z"));
+    };
 
     it("labels the week Monday to Sunday", () => {
       expect(weekDatesLabel(historyWeekStart(), now, "en-GB")).toBe(`26 Oct${range}1 Nov`);

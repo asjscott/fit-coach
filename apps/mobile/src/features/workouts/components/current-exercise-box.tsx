@@ -1,4 +1,4 @@
-import { exerciseImplementLoadsKg, isRatedTest, takesAnotherSet, takesNoMoreSets } from "@fit/engines";
+import { exerciseLoadsByEquipmentKg, isRatedTest, takesAnotherSet, takesNoMoreSets } from "@fit/engines";
 import { RPE_SCALE, type InProgressWorkoutExercise, type LoadType, type Set, type SetValues } from "@fit/shared";
 import { useState, type ReactNode } from "react";
 import { StyleSheet, View } from "react-native";
@@ -92,10 +92,10 @@ export function ExerciseLogging({
   // A test that's done, or the walk once its one Set is logged (#109)
   const done = (!!protocol && takesNoMoreSets(protocol)) || !takesAnotherSet(workoutExercise);
   const asksRpe = !!workout && isRatedTest(workout, loadType);
-  const implementLoadsKg = exerciseImplementLoadsKg(slug, primaryEquipment);
+  const loadsByEquipmentKg = exerciseLoadsByEquipmentKg(slug, primaryEquipment);
   const loadSteps: LoadSteps = {
-    step: loadStep(implementLoadsKg, unit),
-    loadsKnown: implementLoadsKg.length > 0,
+    step: loadStep(loadsByEquipmentKg, unit),
+    loadsKnown: loadsByEquipmentKg.length > 0,
     unit,
   };
 

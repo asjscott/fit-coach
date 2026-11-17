@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type { StepDirection } from "@fit/engines";
+import { builtInEquipment, exerciseLoadsByEquipmentKg, type StepDirection } from "@fit/engines";
 import { toKg } from "@fit/shared";
 import {
   draftValues,
@@ -110,6 +110,20 @@ describe("loadStep", () => {
 
     it("steps a typed load on neither through the first kind of equipment", () => {
       expect(step(27, 1)).toBe(30);
+    });
+  });
+
+  // #149: on a kg Full gym, 20 kg is both a kettlebell and a dumbbell
+  describe("from a load on more than one kind of equipment, on a kg Full gym", () => {
+    const fullGym = builtInEquipment("full_gym", "kg");
+    const step = (slug: string) => loadStep(exerciseLoadsByEquipmentKg(slug, fullGym), "kg");
+
+    it("steps a kettlebell Exercise through the kettlebells", () => {
+      expect(step("kettlebell-swing")(20, 1)).toBe(24);
+    });
+
+    it("steps through the Exercise's first kind of equipment that has the load", () => {
+      expect(step("renegade-row")(20, 1)).toBe(22.5);
     });
   });
 

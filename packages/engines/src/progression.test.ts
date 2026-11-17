@@ -491,6 +491,15 @@ describe("progressWorkingLevel: Ballistic Exercises", () => {
     });
   });
 
+  // #149: on a kg Full gym, 20 kg is a dumbbell too, but a swing's next Load Step is the next bell
+  it("goes up to the next kettlebell from a load a dumbbell also has", () => {
+    const fullGym = builtInEquipment("full_gym", "kg");
+    expect(progress(swing(20), [lifted(20, 8), lifted(20, 8, 7)], { equipmentProfile: fullGym })).toMatchObject({
+      level: { kg: 24, reps: 8 },
+      change: { code: "load-up" },
+    });
+  });
+
   it("holds at the heaviest kettlebell the profile has", () => {
     expect(swings(swing(24), [lifted(24, 8), lifted(24, 8, 6)])).toMatchObject({
       level: { kg: 24, reps: 8, outgrown: false },
