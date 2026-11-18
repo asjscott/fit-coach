@@ -139,6 +139,7 @@ if (cmd === "tour") {
       await go("/");
       for (const [title, name] of [
         ["Today", "today"],
+        ["Food", "food"],
         ["History", "history"],
         ["Profile", "profile"],
       ]) {

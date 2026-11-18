@@ -4,6 +4,7 @@ import type { IconName } from "@/components/icons";
 // tabs (#159)
 export const TABS: { name: string; title: string; icon: IconName }[] = [
   { name: "index", title: "Today", icon: "home" },
+  { name: "food", title: "Food", icon: "flame" },
   { name: "history", title: "History", icon: "calendar" },
   { name: "profile", title: "Profile", icon: "user" },
 ];

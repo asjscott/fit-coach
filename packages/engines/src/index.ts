@@ -13,6 +13,7 @@ export * from "./days-workout";
 export * from "./e1rm";
 export * from "./equipment";
 export * from "./fatigue";
+export * from "./food-portion";
 export { isJump, JUMP_SETS, JUMP_WORKOUTS_PER_WEEK, JUMPS_PER_WORKOUT } from "./jumps";
 export * from "./local-dates";
 export * from "./logbook";

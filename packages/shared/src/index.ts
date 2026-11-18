@@ -3,6 +3,7 @@ import { z } from "zod";
 export * from "./assessments";
 export * from "./check-in";
 export * from "./exercises";
+export * from "./food";
 export * from "./equipment";
 export * from "./error-reporting";
 export * from "./health";

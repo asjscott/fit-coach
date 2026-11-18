@@ -1,0 +1,247 @@
+{
+  "totalHits": 166,
+  "currentPage": 1,
+  "totalPages": 34,
+  "foodSearchCriteria": {
+    "dataType": ["Foundation"],
+    "query": "apple raw",
+    "generalSearchInput": "apple raw",
+    "pageNumber": 1,
+    "numberOfResultsPerPage": 50,
+    "pageSize": 5,
+    "requireAllWords": false,
+    "foodTypes": ["Foundation"]
+  },
+  "foods": [
+    {
+      "fdcId": 1750340,
+      "description": "Apples, fuji, with skin, raw",
+      "scientificName": "Malus domestica",
+      "dataType": "Foundation",
+      "ndbNumber": 9504,
+      "publishedDate": "2020-10-30",
+      "foodCategory": "Fruits and Fruit Juices",
+      "mostRecentAcquisitionDate": "2020-05-05",
+      "foodNutrients": [
+        {
+          "nutrientId": 1089,
+          "nutrientName": "Iron, Fe",
+          "nutrientNumber": "303",
+          "unitName": "MG",
+          "value": 0.015
+        },
+        {
+          "nutrientId": 1090,
+          "nutrientName": "Magnesium, Mg",
+          "nutrientNumber": "304",
+          "unitName": "MG",
+          "value": 4.67
+        },
+        {
+          "nutrientId": 1091,
+          "nutrientName": "Phosphorus, P",
+          "nutrientNumber": "305",
+          "unitName": "MG",
+          "value": 9.78
+        },
+        {
+          "nutrientId": 1092,
+          "nutrientName": "Potassium, K",
+          "nutrientNumber": "306",
+          "unitName": "MG",
+          "value": 104
+        },
+        {
+          "nutrientId": 1093,
+          "nutrientName": "Sodium, Na",
+          "nutrientNumber": "307",
+          "unitName": "MG",
+          "value": 1.01
+        },
+        {
+          "nutrientId": 1095,
+          "nutrientName": "Zinc, Zn",
+          "nutrientNumber": "309",
+          "unitName": "MG",
+          "value": 0.0168
+        },
+        {
+          "nutrientId": 1098,
+          "nutrientName": "Copper, Cu",
+          "nutrientNumber": "312",
+          "unitName": "MG",
+          "value": 0.0328
+        },
+        {
+          "nutrientId": 1101,
+          "nutrientName": "Manganese, Mn",
+          "nutrientNumber": "315",
+          "unitName": "MG",
+          "value": 0.0326
+        },
+        {
+          "nutrientId": 1165,
+          "nutrientName": "Thiamin",
+          "nutrientNumber": "404",
+          "unitName": "MG",
+          "value": 0.00625
+        },
+        {
+          "nutrientId": 1166,
+          "nutrientName": "Riboflavin",
+          "nutrientNumber": "405",
+          "unitName": "MG",
+          "value": 0.0675
+        },
+        {
+          "nutrientId": 1167,
+          "nutrientName": "Niacin",
+          "nutrientNumber": "406",
+          "unitName": "MG",
+          "value": 0.0906
+        },
+        {
+          "nutrientId": 2000,
+          "nutrientName": "Total Sugars",
+          "nutrientNumber": "269",
+          "unitName": "G",
+          "value": 13.3
+        },
+        {
+          "nutrientId": 1175,
+          "nutrientName": "Vitamin B-6",
+          "nutrientNumber": "415",
+          "unitName": "MG",
+          "value": 0.0354
+        },
+        {
+          "nutrientId": 1177,
+          "nutrientName": "Folate, total",
+          "nutrientNumber": "417",
+          "unitName": "UG",
+          "value": 0.0
+        },
+        {
+          "nutrientId": 1051,
+          "nutrientName": "Water",
+          "nutrientNumber": "255",
+          "unitName": "G",
+          "value": 83.6
+        },
+        {
+          "nutrientId": 1002,
+          "nutrientName": "Nitrogen",
+          "nutrientNumber": "202",
+          "unitName": "G",
+          "value": 0.0238
+        },
+        {
+          "nutrientId": 1004,
+          "nutrientName": "Total lipid (fat)",
+          "nutrientNumber": "204",
+          "unitName": "G",
+          "value": 0.162
+        },
+        {
+          "nutrientId": 1007,
+          "nutrientName": "Ash",
+          "nutrientNumber": "207",
+          "unitName": "G",
+          "value": 0.428
+        },
+        {
+          "nutrientId": 1010,
+          "nutrientName": "Sucrose",
+          "nutrientNumber": "210",
+          "unitName": "G",
+          "value": 1.7
+        },
+        {
+          "nutrientId": 1011,
+          "nutrientName": "Glucose",
+          "nutrientNumber": "211",
+          "unitName": "G",
+          "value": 3.04
+        },
+        {
+          "nutrientId": 1012,
+          "nutrientName": "Fructose",
+          "nutrientNumber": "212",
+          "unitName": "G",
+          "value": 8.59
+        },
+        {
+          "nutrientId": 1013,
+          "nutrientName": "Lactose",
+          "nutrientNumber": "213",
+          "unitName": "G",
+          "value": 0.0
+        },
+        {
+          "nutrientId": 1014,
+          "nutrientName": "Maltose",
+          "nutrientNumber": "214",
+          "unitName": "G",
+          "value": 0.0
+        },
+        {
+          "nutrientId": 1079,
+          "nutrientName": "Fiber, total dietary",
+          "nutrientNumber": "291",
+          "unitName": "G",
+          "value": 2.08
+        },
+        {
+          "nutrientId": 1087,
+          "nutrientName": "Calcium, Ca",
+          "nutrientNumber": "301",
+          "unitName": "MG",
+          "value": 5.98
+        },
+        {
+          "nutrientId": 1003,
+          "nutrientName": "Protein",
+          "nutrientNumber": "203",
+          "unitName": "G",
+          "value": 0.148
+        },
+        {
+          "nutrientId": 1005,
+          "nutrientName": "Carbohydrate, by difference",
+          "nutrientNumber": "205",
+          "unitName": "G",
+          "value": 15.7
+        },
+        {
+          "nutrientId": 2047,
+          "nutrientName": "Energy (Atwater General Factors)",
+          "nutrientNumber": "957",
+          "unitName": "KCAL",
+          "value": 64.7
+        },
+        {
+          "nutrientId": 2048,
+          "nutrientName": "Energy (Atwater Specific Factors)",
+          "nutrientNumber": "958",
+          "unitName": "KCAL",
+          "value": 58.2
+        },
+        {
+          "nutrientId": 1050,
+          "nutrientName": "Carbohydrate, by summation",
+          "nutrientNumber": "205.2",
+          "unitName": "G",
+          "value": 15.4
+        },
+        {
+          "nutrientId": 1063,
+          "nutrientName": "Sugars, Total",
+          "nutrientNumber": "269.3",
+          "unitName": "G",
+          "value": 13.3
+        }
+      ],
+      "foodMeasures": []
+    }
+  ]
+}

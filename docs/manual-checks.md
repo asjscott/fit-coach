@@ -9,7 +9,7 @@ Result codes: **✅ pass** · **❌ fail** · **⚠️ works but feels off** · 
 ## What's left
 
 - **Run on the phone now:** R1, U1, U2, LS2, PR1, TB1–TB3. Each is a part no run has covered yet.
-- **M7, once it's on the phones:** DT1–DT5, WI1–WI6.
+- **M7, once it's on the phones:** DT1–DT5, WI1–WI6, F1–F4.
 - **Run when you next train:** P9 and S1, a full Workout with a timer, resting as the timer says. Both can be one session.
 - **🕒 Due later, while you use the app:** C5 (the day after a check-in), P16 (a Monday), J2 (after a week with jumps on), P17 (after a few weeks), DL1 and DL2 (the 5th week of a Block: the week starting 4 Mondays after the Monday of the week Assessment B was done).
 - **On hold:** E1–E3 need Sentry set up on production.
@@ -263,11 +263,24 @@ Body weight is a weekly Weigh-in now, and the latest one is the weight everythin
 - [ ] **WI6** Offline, Log weight's Save shows "Couldn't log your weight" and Profile keeps the weight it had. Back online, logging works.
   - Result: · Notes:
 
+## Finding food (#162)
+
+`apps/api/.env` needs `USDA_API_KEY` (a free key from https://fdc.nal.usda.gov/api-key-signup). Without it the API logs "USDA_API_KEY isn't set" at start and every search finds nothing. Nothing is logged yet: these only search and look at portions.
+
+- [ ] **F1** The tab bar is Today, Food, History and Profile. On Food, type "egg" in Search foods: after a moment, generic foods ("Eggs, Grade A, Large, egg whole") come first, each with its kcal per 100 g, then branded ones with their brand ("Egg bagels, egg", Lender's). Names read in normal case, not capitals.
+  - Result: · Notes:
+- [ ] **F2** Tap "Eggs, Grade A, Large, egg whole": it opens at 100 g with "148 kcal · 12.4 g protein · 0 g fibre". Type 50: it reads "74 kcal · 6.2 g protein · 0 g fibre". Clear the box: "Enter how much". Tap the food again to close it; opening another closes the first.
+  - Result: · Notes:
+- [ ] **F3** Tap a branded food with a label serving, such as Lender's "Egg bagels, egg": it opens on its serving ("1 bagel"), showing "× 1 bagel · 81 g" and what one holds. Type 2: the grams and figures double. Tap Grams: it switches to 100 g. A branded food whose serving is in ml (JUST Egg) offers grams only.
+  - Result: · Notes:
+- [ ] **F4** In airplane mode, a search says "Searching for food needs a connection." and nothing breaks; back online, searching again works. With the API running without `USDA_API_KEY`, a search shows "No foods match", never an error.
+  - Result: · Notes:
+
 ## Tabs and the Exercise library (#159)
 
 The Exercises tab is gone: the Exercise library is Profile's first row, so Food fits without five tabs.
 
-- [ ] **TB1** On the iPhone and on Android, the tab bar shows Today, History and Profile, in that order, each label whole (no clipped descenders), and nothing else. The current tab is in the accent colour.
+- [ ] **TB1** On the iPhone and on Android, the tab bar shows Today, Food, History and Profile, in that order (Food since #162), each label whole (no clipped descenders), and nothing else. The current tab is in the accent colour.
   - Result: · Notes:
 
 - [ ] **TB2** On Profile, the first row is "Exercise library" with a chevron. Tapping it opens the library titled "Exercise library", with Profile still the current tab. Tap an Exercise: its detail opens. Back (the header's arrow, and on the iPhone a swipe from the left edge; on Android the system back) returns to the library, and again to Profile.
