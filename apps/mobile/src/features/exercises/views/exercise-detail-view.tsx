@@ -76,7 +76,7 @@ export default function ExerciseDetailView() {
                 label="Easier"
                 action="secondary"
                 icon="chevronDown"
-                href={`/exercises/${exercise.regression}`}
+                href={`/profile/exercises/${exercise.regression}`}
                 style={{ flex: 1 }}
               />
             )}
@@ -85,7 +85,7 @@ export default function ExerciseDetailView() {
                 label="Harder"
                 action="secondary"
                 icon="chevronUp"
-                href={`/exercises/${exercise.progression}`}
+                href={`/profile/exercises/${exercise.progression}`}
                 style={{ flex: 1 }}
               />
             )}
