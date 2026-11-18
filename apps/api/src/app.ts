@@ -6,12 +6,14 @@ import { assessmentRoutes } from "./routes/assessments";
 import { checkInRoutes } from "./routes/check-ins";
 import { dayRoutes } from "./routes/days";
 import { exerciseRoutes } from "./routes/exercises";
+import { foodRoutes } from "./routes/foods";
 import { plannedWorkoutRoutes } from "./routes/planned-workouts";
 import { userRoutes } from "./routes/users";
 import { workoutRoutes } from "./routes/workouts";
 import { HealthResponse } from "@fit/shared";
 import { registerAuth } from "./auth";
 import { ensureCheckInIndexes } from "./check-ins";
+import { realFoodSources, type FoodSources } from "./food-sources";
 import { pingDb } from "./db";
 import { registerTestErrorRoute, reportRouteErrorsWithUser } from "./error-reporting";
 import { ensurePlannedWorkoutIndexes } from "./planned-workouts";
@@ -19,9 +21,12 @@ import { ensureUserIndexes, migrateUsers } from "./users";
 import { ensureWorkoutIndexes } from "./workouts";
 
 // The API with every route registered and its indexes made, not yet listening. Reads MONGODB_URI (db.ts) and
-// DEV_AUTH_USER_ID (auth.ts) when first imported. server.ts listens on it; the route tests inject into it
-export async function buildApp({ logger }: { logger: boolean }) {
+// DEV_AUTH_USER_ID (auth.ts) when first imported. server.ts listens on it; the route tests inject into it, passing fake
+// food sources. The real ones read USDA_API_KEY, which only the API's environment holds
+export async function buildApp({ logger, foodSources }: { logger: boolean; foodSources?: FoodSources }) {
   const app = Fastify({ logger });
+  if (!foodSources && !process.env.USDA_API_KEY) app.log.warn("USDA_API_KEY isn't set: food search finds nothing");
+  const sources = foodSources ?? realFoodSources({ usdaApiKey: process.env.USDA_API_KEY });
 
   app.setValidatorCompiler(validatorCompiler); // checks incoming requests
   app.setSerializerCompiler(serializerCompiler); // checks outgoing responses on routes that declare schema.response
@@ -60,6 +65,7 @@ export async function buildApp({ logger }: { logger: boolean }) {
   await app.register(plannedWorkoutRoutes);
   await app.register(checkInRoutes);
   await app.register(dayRoutes);
+  await app.register(foodRoutes, { foodSources: sources });
   registerTestErrorRoute(app);
 
   app.get("/health", async () => {

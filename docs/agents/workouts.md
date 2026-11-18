@@ -462,3 +462,5 @@ maps would fix that and isn't set up.
   - For offline, abort the API in the same route and override `navigator.onLine`. Don't use `context.setOffline`: in
     dev, routes load from Metro on demand, so it fails with a red "Failed to fetch" that a phone never shows.
   - It can't show a real sign-in, Clerk with no signal, or native storage. Those stay in `docs/manual-checks.md`.
+  - Food search finds nothing without `USDA_API_KEY`. USDA's public `DEMO_KEY` gives a few real searches an hour:
+    `USDA_API_KEY=DEMO_KEY pnpm --filter @fit/mobile web:signed-in`. Never commit a real key.

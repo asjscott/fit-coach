@@ -4,6 +4,7 @@
 import { randomUUID } from "node:crypto";
 import type { EquipmentProfileInput, UserProfile } from "@fit/shared";
 import type { FastifyInstance } from "fastify";
+import type { FoodSources } from "../food-sources";
 import { MongoMemoryReplSet } from "mongodb-memory-server";
 import { afterAll, beforeAll } from "vitest";
 
@@ -51,8 +52,12 @@ export type RouteTestApi = {
   }): Promise<TestUser>;
 };
 
-// Call once at the top of a test file: starts the API before its tests and stops it after
-export function useRouteTestApi(): RouteTestApi {
+// Never reaches the network: a test file that searches for food passes its own fake
+const NO_FOODS: FoodSources = { search: async () => ({ generic: [], branded: [] }) };
+
+// Call once at the top of a test file: starts the API before its tests and stops it after. Food search finds nothing
+// unless the file passes its own fake food sources
+export function useRouteTestApi({ foodSources = NO_FOODS }: { foodSources?: FoodSources } = {}): RouteTestApi {
   let mongo: MongoMemoryReplSet;
   let app: FastifyInstance;
   let closeDb: () => Promise<void>;
@@ -66,7 +71,7 @@ export function useRouteTestApi(): RouteTestApi {
     // Imported only now, since the database client and auth read the environment when they load
     const { buildApp } = await import("../app");
     const { client } = await import("../db");
-    app = await buildApp({ logger: false });
+    app = await buildApp({ logger: false, foodSources });
     closeDb = () => client.close();
   });
 
