@@ -1,111 +1,131 @@
-import type { Food } from "@fit/shared";
-import { useState } from "react";
-import { FlatList, StyleSheet, View } from "react-native";
+import { loggableDates } from "@fit/engines";
+import type { Food, FoodEntry, FoodEntryAdd, FoodEntryChange, Meal } from "@fit/shared";
+import { useRef, useState } from "react";
+import { StyleSheet, type TextInputInstance, View } from "react-native";
 import { Alert, AlertText } from "@/components/alert";
-import { Icon } from "@/components/icons";
 import { Input, InputField, InputIcon, InputSlot } from "@/components/input";
-import { Pressable } from "@/components/pressable";
 import { Screen } from "@/components/screen";
 import { Spinner } from "@/components/spinner";
 import { Text } from "@/components/text";
-import { spacing, useTheme } from "@/theme";
-import { FoodPortionPanel } from "../components/food-portion-panel";
+import { DayRings } from "@/features/nutrition/components/day-rings";
+import { useDay } from "@/features/nutrition/hooks/use-day";
+import { useTimeZone } from "@/features/user/current-user-provider";
+import { spacing } from "@/theme";
+import { DayStepper } from "../components/day-stepper";
+import { FoodResult } from "../components/food-result";
+import { MealsCard } from "../components/meals-card";
+import { useFoodEntries } from "../hooks/use-food-entries";
 import { useFoodSearch } from "../hooks/use-food-search";
+import { dayStepLabel } from "../today-so-far";
 
 const keyOf = (food: Food) => `${food.source}:${food.id}`;
 
-// The Food tab: search for a food and see what a portion of it holds (#162). Nothing is logged yet
+// The Food tab's Today so far (prototype variant J): the day stepper, three equal rings, search, then the day's meals.
+// Logging needs a connection; offline it says so, and nothing the user chose is cleared by a failed write
 export default function FoodView() {
+  const timeZone = useTimeZone();
+  const [daysBefore, setDaysBefore] = useState(0);
+  // Today and the 6 days before it, in the user's timezone, as the API counts them
+  const date = loggableDates(new Date(), timeZone)[daysBefore];
+  const { day: loaded, isOffline, refresh } = useDay(date);
+  // The last day loaded can be another one while the chosen day is on its way
+  const day = loaded?.date === date ? loaded : undefined;
+  const entries = useFoodEntries(refresh);
+
   const [query, setQuery] = useState("");
   const [openKey, setOpenKey] = useState<string | null>(null);
+  const [openMeal, setOpenMeal] = useState<Meal | null>(null);
+  // The meal whose "Add to" was tapped, which a food found next goes into unless the user picks another
+  const [addingTo, setAddingTo] = useState<Meal | null>(null);
+  const search = useRef<TextInputInstance>(null);
   const { foods, isSearching, error } = useFoodSearch(query);
+  const searching = query.trim().length >= 2;
+
+  const addTo = (meal: Meal) => {
+    setAddingTo(meal);
+    search.current?.focus();
+  };
+
+  const log = async (add: FoodEntryAdd) => {
+    const ok = await entries.add(date, add);
+    if (ok) {
+      setQuery("");
+      setOpenKey(null);
+      setAddingTo(null);
+      setOpenMeal(add.meal);
+    }
+    return ok;
+  };
 
   return (
-    <Screen padded={false} scroll="content" edges={["bottom"]}>
-      <FlatList
-        data={foods ?? []}
-        keyExtractor={keyOf}
-        keyboardShouldPersistTaps="handled"
-        keyboardDismissMode="on-drag"
-        contentContainerStyle={{ paddingHorizontal: spacing[6], paddingVertical: spacing[4] }}
-        ListHeaderComponent={
-          <View style={styles.header}>
-            <Input>
-              <InputSlot>
-                <InputIcon name="search" />
-              </InputSlot>
-              <InputField
-                value={query}
-                onChangeText={setQuery}
-                placeholder="Search foods"
-                autoCorrect={false}
-                returnKeyType="search"
-                accessibilityLabel="Search foods"
-              />
-            </Input>
+    <Screen scroll="screen" edges={["bottom"]}>
+      <View style={styles.page}>
+        <DayStepper daysBefore={daysBefore} onChange={setDaysBefore} />
+        {isOffline ? (
+          <Alert action="muted">
+            <AlertText>Logging food needs a connection. Nothing is saved on this phone until you have one.</AlertText>
+          </Alert>
+        ) : null}
+        {day ? <DayRings day={day} only={["kcal", "protein", "fibre"]} size={72} /> : isOffline ? null : <Spinner />}
+        <Input>
+          <InputSlot>
+            <InputIcon name="search" />
+          </InputSlot>
+          <InputField
+            ref={search}
+            value={query}
+            onChangeText={setQuery}
+            placeholder={addingTo ? `Search foods for ${addingTo}` : "Search foods"}
+            autoCorrect={false}
+            returnKeyType="search"
+            accessibilityLabel="Search foods"
+          />
+        </Input>
+        {searching ? (
+          <View>
             {error ? (
               <Alert action="muted">
                 <AlertText>{error}</AlertText>
               </Alert>
             ) : null}
             {isSearching ? <Spinner /> : null}
+            {foods?.map((food) => (
+              <FoodResult
+                key={keyOf(food)}
+                food={food}
+                open={openKey === keyOf(food)}
+                onToggle={() => setOpenKey((key) => (key === keyOf(food) ? null : keyOf(food)))}
+                meal={addingTo}
+                onLog={log}
+              />
+            ))}
+            {foods && !foods.length && !isSearching && !error ? (
+              <Text color="muted" centered style={{ marginTop: spacing[4] }}>
+                No foods match “{query.trim()}”.
+              </Text>
+            ) : null}
           </View>
-        }
-        renderItem={({ item }) => (
-          <FoodResult
-            food={item}
-            open={openKey === keyOf(item)}
-            onToggle={() => setOpenKey((key) => (key === keyOf(item) ? null : keyOf(item)))}
+        ) : day ? (
+          <MealsCard
+            day={day}
+            title={daysBefore === 0 ? "Today so far" : dayStepLabel(daysBefore)}
+            openMeal={openMeal}
+            onOpenMeal={setOpenMeal}
+            onAddTo={addTo}
+            onChange={async (entry: FoodEntry, change: FoodEntryChange) => {
+              const ok = await entries.change(entry.id, change);
+              // A Food Entry moved to another meal is shown there
+              if (ok && change.meal) setOpenMeal(change.meal);
+              return ok;
+            }}
+            onDelete={(entry: FoodEntry) => entries.remove(entry.id)}
           />
-        )}
-        ListEmptyComponent={
-          foods && !isSearching && !error ? (
-            <Text color="muted" centered style={{ marginTop: spacing[6] }}>
-              No foods match “{query.trim()}”.
-            </Text>
-          ) : undefined
-        }
-      />
+        ) : null}
+      </View>
     </Screen>
   );
 }
 
-// One food found: its name, brand and kcal per 100 g, opening to choose a portion
-function FoodResult({ food, open, onToggle }: { food: Food; open: boolean; onToggle: () => void }) {
-  const { colors } = useTheme();
-  const detail = [food.brand, `${Math.round(food.per100g.kcal).toLocaleString()} kcal per 100 g`]
-    .filter(Boolean)
-    .join(" · ");
-  return (
-    <View style={[styles.result, { borderTopColor: colors.line }]}>
-      <Pressable
-        accessibilityRole="button"
-        accessibilityState={{ expanded: open }}
-        style={styles.resultRow}
-        onPress={onToggle}
-      >
-        <View style={styles.resultText}>
-          <Text weight="semiBold">{food.name}</Text>
-          <Text size="sm" color="subtle">
-            {detail}
-          </Text>
-        </View>
-        <Icon name={open ? "chevronUp" : "chevronDown"} color="subtle" size={20} />
-      </Pressable>
-      {open ? <FoodPortionPanel food={food} /> : null}
-    </View>
-  );
-}
-
 const styles = StyleSheet.create({
-  header: { gap: spacing[3], marginBottom: spacing[3] },
-  result: { borderTopWidth: StyleSheet.hairlineWidth },
-  resultRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: spacing[3],
-    minHeight: 56,
-    paddingVertical: spacing[3],
-  },
-  resultText: { flex: 1, gap: 2 },
+  page: { gap: spacing[4] },
 });

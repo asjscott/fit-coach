@@ -29,5 +29,5 @@ export function portionChoice(choice: PortionUnit, amount: string): PortionChoic
 const grams = (value: number) => value.toLocaleString(undefined, { maximumFractionDigits: 1 });
 
 // "441 kcal · 16 g protein · 1.9 g fibre": what a portion holds, as the Food tab shows it before it's logged
-export const portionLine = ({ kcal, proteinG, fibreG }: Pick<Nutrients, "kcal" | "proteinG" | "fibreG">) =>
+export const portionLine = ({ kcal, proteinG, fibreG }: Nutrients) =>
   `${Math.round(kcal).toLocaleString()} kcal · ${grams(proteinG)} g protein · ${grams(fibreG)} g fibre`;

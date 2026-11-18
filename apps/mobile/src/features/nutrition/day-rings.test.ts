@@ -6,6 +6,7 @@ const day = (eaten: Partial<Day["totals"]> = {}, waterMl = 0): Day => ({
   date: "2026-11-18",
   targets: { kcal: 2650, proteinG: 160, fatG: 64, carbsG: 359, fibreG: 106, waterMl: 2750 },
   totals: { kcal: 0, proteinG: 0, fatG: 0, carbsG: 0, fibreG: 0, ...eaten },
+  meals: [],
   waterMl,
 });
 

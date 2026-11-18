@@ -5,6 +5,7 @@ import Bell from "lucide-react-native/icons/bell";
 import Calendar from "lucide-react-native/icons/calendar";
 import Check from "lucide-react-native/icons/check";
 import ChevronDown from "lucide-react-native/icons/chevron-down";
+import ChevronLeft from "lucide-react-native/icons/chevron-left";
 import ChevronRight from "lucide-react-native/icons/chevron-right";
 import ChevronUp from "lucide-react-native/icons/chevron-up";
 import Circle from "lucide-react-native/icons/circle";
@@ -44,6 +45,7 @@ export const IconMap = {
   calendar: Calendar,
   check: Check,
   chevronDown: ChevronDown,
+  chevronLeft: ChevronLeft,
   chevronRight: ChevronRight,
   chevronUp: ChevronUp,
   circle: Circle,

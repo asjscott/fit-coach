@@ -9,7 +9,7 @@ Result codes: **✅ pass** · **❌ fail** · **⚠️ works but feels off** · 
 ## What's left
 
 - **Run on the phone now:** R1, U1, U2, LS2, PR1, TB1–TB3. Each is a part no run has covered yet.
-- **M7, once it's on the phones:** DT1–DT5, WI1–WI6, F1–F4.
+- **M7, once it's on the phones:** DT1–DT5, WI1–WI6, F1–F4, FL1–FL6.
 - **Run when you next train:** P9 and S1, a full Workout with a timer, resting as the timer says. Both can be one session.
 - **🕒 Due later, while you use the app:** C5 (the day after a check-in), P16 (a Monday), J2 (after a week with jumps on), P17 (after a few weeks), DL1 and DL2 (the 5th week of a Block: the week starting 4 Mondays after the Monday of the week Assessment B was done).
 - **On hold:** E1–E3 need Sentry set up on production.
@@ -265,7 +265,7 @@ Body weight is a weekly Weigh-in now, and the latest one is the weight everythin
 
 ## Finding food (#162)
 
-`apps/api/.env` needs `USDA_API_KEY` (a free key from https://fdc.nal.usda.gov/api-key-signup). Without it the API logs "USDA_API_KEY isn't set" at start and every search finds nothing. Nothing is logged yet: these only search and look at portions.
+`apps/api/.env` needs `USDA_API_KEY` (a free key from https://fdc.nal.usda.gov/api-key-signup). Without it the API logs "USDA_API_KEY isn't set" at start and every search finds nothing.
 
 - [ ] **F1** The tab bar is Today, Food, History and Profile. On Food, type "egg" in Search foods: after a moment, generic foods ("Eggs, Grade A, Large, egg whole") come first, each with its kcal per 100 g, then branded ones with their brand ("Egg bagels, egg", Lender's). Names read in normal case, not capitals.
   - Result: · Notes:
@@ -274,6 +274,23 @@ Body weight is a weekly Weigh-in now, and the latest one is the weight everythin
 - [ ] **F3** Tap a branded food with a label serving, such as Lender's "Egg bagels, egg": it opens on its serving ("1 bagel"), showing "× 1 bagel · 81 g" and what one holds. Type 2: the grams and figures double. Tap Grams: it switches to 100 g. A branded food whose serving is in ml (JUST Egg) offers grams only.
   - Result: · Notes:
 - [ ] **F4** In airplane mode, a search says "Searching for food needs a connection." and nothing breaks; back online, searching again works. With the API running without `USDA_API_KEY`, a search shows "No foods match", never an error.
+  - Result: · Notes:
+
+## Logging food (#163)
+
+Needs `USDA_API_KEY` as for F1–F4. The Food tab opens on today: the day stepper, three rings (kcal left, protein left, fibre), Search foods (no Scan yet, #164) and Today so far with Breakfast, Lunch, Dinner and Snacks. Water's glasses come with #166.
+
+- [ ] **FL1** On Today, tap any ring: the Food tab opens. Open Breakfast ("Nothing yet") and tap "+ Add to breakfast": the search box takes the cursor and reads "Search foods for breakfast". Search "egg", open "Eggs, Grade A, Large, egg whole", choose 2 and Grams or a serving, and Breakfast is already picked: tap "Add to breakfast". The search clears, Breakfast is open with "Eggs, Grade A, Large, egg whole, …" and its kcal, its line says "1 food · … kcal", and the header and rings take it off what's left. Back on Today, its kcal and protein rings say the same.
+  - Result: · Notes:
+- [ ] **FL2** Search a food without tapping an Add first: it opens with no meal picked and the button reads "Choose a meal" until one is. Log two foods into Lunch: Lunch says "2 foods" and the sum of their kcal.
+  - Result: · Notes:
+- [ ] **FL3** Tap a logged food: it opens on the portion it was logged with. Change the amount (the figures follow as you type), pick Dinner and Save: it leaves Breakfast, Dinner opens with it, and the totals and rings change to the new portion. Tap it again, Delete, confirm: it's gone and the totals drop. Cancel on the confirmation leaves it.
+  - Result: · Notes:
+- [ ] **FL4** Step back with ‹: "Yesterday", then "2 days ago" down to "6 days ago", where ‹ greys out; › greys out on Today. Each day shows its own meals and rings. Log a food on "3 days ago": it shows there and not on Today. Step back to Today: Today's meals are as you left them.
+  - Result: · Notes:
+- [ ] **FL5** With your phone's timezone moved to one where it's already tomorrow (or late in the evening, before midnight), "Today" on the Food tab is today where the phone says, and a food logged then counts for that day.
+  - Result: · Notes:
+- [ ] **FL6** In airplane mode, open the Food tab (or step to another day): it says "Logging food needs a connection. Nothing is saved on this phone until you have one." With a day already showing, change a portion and Save, or Add a food: a toast says logging needs a connection and nothing was saved, and what you chose stays open to try again. Back online, Save again: it's saved once, with nothing doubled.
   - Result: · Notes:
 
 ## Tabs and the Exercise library (#159)

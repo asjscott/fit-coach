@@ -171,7 +171,7 @@ export default function TodayView() {
       </Text>
       {day ? (
         <View style={{ marginBottom: spacing[4] }}>
-          <DayRings day={day} />
+          <DayRings day={day} onPress={() => router.navigate("/food")} pressHint="Opens Food" />
         </View>
       ) : null}
       {user &&

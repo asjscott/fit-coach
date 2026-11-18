@@ -32,10 +32,14 @@ function portionOf(food: Food, choice: PortionChoice): Portion | null {
   return { grams: serving.grams * choice.count, serving: { label: serving.label, count: choice.count } };
 }
 
-const toEntry = ({ _id, clerkUserId: _, loggedAt, ...doc }: FoodEntryDoc): FoodEntry => ({
-  ...doc,
+const toEntry = ({ _id, date, meal, loggedAt, food, portion, nutrients }: FoodEntryDoc): FoodEntry => ({
   id: _id.toHexString(),
+  date,
+  meal,
   loggedAt: loggedAt.toISOString(),
+  food,
+  portion,
+  nutrients,
 });
 
 // Logs a food into a meal of the date, its portion's nutrients worked out now and kept (ADR 0002). Null when the
