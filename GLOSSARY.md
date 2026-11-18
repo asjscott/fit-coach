@@ -198,6 +198,14 @@ _Avoid_: Weight entry, weight log, body weight (for one entry)
 The day of the week the user weighs in, Monday unless they choose another, when Today asks for the week's Weigh-in.
 _Avoid_: Weigh day, check-in day
 
+**Diet**:
+What the user eats and avoids: any, pescatarian, vegetarian or vegan, and the foods they avoid, such as dairy, gluten, nuts or pork. It only decides which Food Ideas the Coach offers.
+_Avoid_: Dietary preference, restrictions, allergies (alone)
+
+**Food Idea**:
+A food from the Coach's own list, with a set portion, that it suggests to fill what's left of the day's calories and protein. It never suggests one the user's Diet rules out.
+_Avoid_: Suggestion, recommendation, meal plan
+
 **Activity**:
 Training done outside the app, such as a run, a ride or a game of a sport: its type, duration and effort, logged by hand, told to the Coach or imported from Strava, on the day it was done. It adds Fatigue to the Muscles its type works and credits part of its calories to the day.
 _Avoid_: Cardio, exercise (for this), conditioning session
