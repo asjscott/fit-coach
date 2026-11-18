@@ -6,7 +6,8 @@ import { Pressable, StyleSheet, View } from "react-native";
 import { Icon, type IconName } from "@/components/icons";
 import { Text } from "@/components/text";
 import { radii, spacing, useTheme } from "@/theme";
-import { useProto } from "./prototype-data";
+import { setProto, useProto } from "./prototype-data";
+import { DIETS } from "./variants-ghi";
 
 export type TabSpec = { name: string; title: string; icon: IconName };
 
@@ -81,14 +82,21 @@ export function ProfileNavLinks() {
             { icon: "dumbbell", label: "Exercise library", to: "/exercises" },
           ]
         : [];
-  if (!rows.length) return null;
+  const { diet } = useProto();
+  const nextDiet = DIETS[(DIETS.indexOf(diet as (typeof DIETS)[number]) + 1) % DIETS.length]!;
   return (
     <View style={[styles.group, { backgroundColor: colors.surface, borderColor: colors.line }]}>
-      {rows.map((r, i) => (
+      {/* The diet the Coach's food ideas respect; tap to cycle */}
+      <Pressable onPress={() => setProto({ diet: nextDiet })} style={styles.row}>
+        <Icon name="flame" size={18} />
+        <Text style={{ flex: 1 }}>Diet</Text>
+        <Text color="muted">{diet === "None" ? "Any" : diet}</Text>
+      </Pressable>
+      {rows.map((r) => (
         <Pressable
           key={r.label}
           onPress={() => router.navigate(r.to)}
-          style={[styles.row, i > 0 && { borderTopWidth: StyleSheet.hairlineWidth, borderColor: colors.line }]}
+          style={[styles.row, { borderTopWidth: StyleSheet.hairlineWidth, borderColor: colors.line }]}
         >
           <Icon name={r.icon} size={18} />
           <Text style={{ flex: 1 }}>{r.label}</Text>

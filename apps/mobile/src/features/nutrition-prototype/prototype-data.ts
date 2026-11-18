@@ -52,8 +52,8 @@ export function nudge(eaten: { kcal: number; protein: number }) {
 export const fmt = (n: number) => Math.round(n).toLocaleString();
 
 // One in-memory store for the shared prototype state: the variant, water drunk and whether the Weigh-in is logged
-type State = { variant: string; nav: string; water: number; weighedIn: boolean };
-let state: State = { variant: "A", nav: "0", water: 1250, weighedIn: false };
+type State = { variant: string; nav: string; water: number; weighedIn: boolean; diet: string };
+let state: State = { variant: "J", nav: "1", water: 1250, weighedIn: false, diet: "None" };
 const listeners = new Set<() => void>();
 export const setProto = (patch: Partial<State>) => {
   state = { ...state, ...patch };
@@ -71,6 +71,10 @@ export const VARIANTS = [
   { key: "D", name: "Equation diary (MyFitnessPal)" },
   { key: "E", name: "Colour + coach (Noom)" },
   { key: "F", name: "Timeline + log bar (MacroFactor)" },
+  { key: "G", name: "Ring row · B's page + C's search" },
+  { key: "H", name: "Big ring · ideas lead" },
+  { key: "I", name: "Coach headline · Food in two halves" },
+  { key: "J", name: "Final: Today G · Food I, reordered" },
 ];
 // The tab bar: 0 is today's five tabs, for comparison
 export const NAVS = [

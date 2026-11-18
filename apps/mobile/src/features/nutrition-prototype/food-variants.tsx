@@ -7,6 +7,7 @@ import { Ring } from "@/components/ring";
 import { Text } from "@/components/text";
 import { radii, spacing, useTheme } from "@/theme";
 import { FoodD, FoodE, FoodF } from "./variants-def";
+import { FoodG, FoodH, FoodI, FoodJ } from "./variants-ghi";
 import { eatenBase, fmt, type Meal, meals, nudge, recent, saved, setProto, targets, useProto } from "./prototype-data";
 
 const mealKcal = (m: Meal) => Math.round(m.entries.reduce((t, e) => t + e.kcal, 0));
@@ -18,6 +19,10 @@ export function FoodVariant() {
   if (variant === "D") return <FoodD />;
   if (variant === "E") return <FoodE />;
   if (variant === "F") return <FoodF />;
+  if (variant === "G") return <FoodG />;
+  if (variant === "H") return <FoodH />;
+  if (variant === "I") return <FoodI />;
+  if (variant === "J") return <FoodJ />;
   return <FoodA />;
 }
 

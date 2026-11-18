@@ -1,5 +1,5 @@
 // PROTOTYPE (M7), throwaway: the floating bar that flips the food variants (◀ ▶, or ← →) and the tab bar options
-// (◀ ▶, or ↑ ↓). Both land in the URL as ?variant= and ?nav=. Never in production builds
+// (◀ ▶, or ↑ ↓). Both land in the URL as ?variant= and ?nav=. Never against the production API
 import { router, useLocalSearchParams } from "expo-router";
 import { useEffect } from "react";
 import { Platform, Pressable, View } from "react-native";
@@ -76,7 +76,8 @@ export function PrototypeSwitcher() {
     return () => window.removeEventListener("keydown", onKey);
   });
 
-  if (!__DEV__) return null;
+  // Shown in Release builds too, as the phones run those against the Mac; hidden only when pointed at production
+  if (process.env.EXPO_PUBLIC_API_URL?.includes("onrender.com")) return null;
   return (
     <View
       pointerEvents="box-none"

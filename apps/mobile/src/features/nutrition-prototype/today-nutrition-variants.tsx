@@ -10,6 +10,7 @@ import { useWeightUnit } from "@/features/user/current-user-provider";
 import { radii, spacing, useTheme } from "@/theme";
 import { eatenBase, fmt, nudge, setProto, targets, useProto } from "./prototype-data";
 import { TodayD, TodayE, TodayF } from "./variants-def";
+import { TodayG, TodayH, TodayI } from "./variants-ghi";
 
 export type TodaySlot = "top" | "afterCard" | "afterWeek";
 
@@ -45,6 +46,9 @@ export function TodayNutrition({ slot }: { slot: TodaySlot }) {
   if (variant === "D" && slot === "afterCard") return <TodayD />;
   if (variant === "E" && slot === "afterCard") return <TodayE />;
   if (variant === "F" && slot === "afterCard") return <TodayF />;
+  if ((variant === "G" || variant === "J") && slot === "top") return <TodayG />;
+  if (variant === "H" && slot === "top") return <TodayH />;
+  if (variant === "I" && slot === "top") return <TodayI />;
   return null;
 }
 
