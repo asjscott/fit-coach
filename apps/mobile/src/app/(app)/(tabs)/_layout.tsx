@@ -3,16 +3,10 @@ import { BottomTabBar } from "expo-router/tabs";
 import { Platform, StyleSheet, useWindowDimensions, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Column } from "@/components/column";
-import { Icon, type IconName } from "@/components/icons";
+import { Icon } from "@/components/icons";
+import { TABS } from "@/features/navigation/tabs";
 import { ResumePill } from "@/features/workouts/components/resume-pill";
 import { fonts, fontSizes, lineHeight, sideRailMinWidth, useTheme } from "@/theme";
-
-const tabs: { name: string; title: string; icon: IconName }[] = [
-  { name: "index", title: "Today", icon: "home" },
-  { name: "history", title: "History", icon: "calendar" },
-  { name: "exercises", title: "Exercises", icon: "dumbbell" },
-  { name: "profile", title: "Profile", icon: "user" },
-];
 
 // The default bar is 49 tall, which clips Inter's descenders in the labels
 const bottomBarHeight = 56;
@@ -66,7 +60,7 @@ export default function TabsLayout() {
         sceneStyle: { backgroundColor: colors.bg },
       }}
     >
-      {tabs.map(({ name, title, icon }) => (
+      {TABS.map(({ name, title, icon }) => (
         <Tabs.Screen
           key={name}
           name={name}

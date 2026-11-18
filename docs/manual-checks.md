@@ -8,7 +8,7 @@ Result codes: **✅ pass** · **❌ fail** · **⚠️ works but feels off** · 
 
 ## What's left
 
-- **Run on the phone now:** R1, U1, U2, LS2, PR1. Each is a part no run has covered yet.
+- **Run on the phone now:** R1, U1, U2, LS2, PR1, TB1–TB3. Each is a part no run has covered yet.
 - **Run when you next train:** P9 and S1, a full Workout with a timer, resting as the timer says. Both can be one session.
 - **🕒 Due later, while you use the app:** C5 (the day after a check-in), P16 (a Monday), J2 (after a week with jumps on), P17 (after a few weeks), DL1 and DL2 (the 5th week of a Block: the week starting 4 Mondays after the Monday of the week Assessment B was done).
 - **On hold:** E1–E3 need Sentry set up on production.
@@ -228,6 +228,19 @@ A Workout pairs Exercises only when it wouldn't otherwise fit its Length. Pairs 
 - [ ] **DL1** In the deload week, open the Next Workout sheet on Today: the Exercises and Sets are as usual, weighted targets about 10% lighter (on a real dumbbell, plate or stack step), and bodyweight, band and timed targets about 70% of last week's (never under 5 reps or 15 s unless they were already). Below the plan, a "Retake the Assessment" section explains that only the Exercises it tests, and any not done this Block, get new levels, with Start assessment A. The wording reads well and doesn't feel pushy.
   - Result: · Notes:
 - [ ] **DL2** Dismiss the retest with the ×: it stays gone for the rest of the week. On the Monday after, the plan is back to the usual loads and there's no retest. Or, instead, take A and B in the deload week: the Results open as usual, and next week an Exercise you trained this Block but the Assessment didn't test keeps the target it had reached.
+  - Result: · Notes:
+
+## Tabs and the Exercise library (#159)
+
+The Exercises tab is gone: the Exercise library is Profile's first row, so Food fits without five tabs.
+
+- [ ] **TB1** On the iPhone and on Android, the tab bar shows Today, History and Profile, in that order, each label whole (no clipped descenders), and nothing else. The current tab is in the accent colour.
+  - Result: · Notes:
+
+- [ ] **TB2** On Profile, the first row is "Exercise library" with a chevron. Tapping it opens the library titled "Exercise library", with Profile still the current tab. Tap an Exercise: its detail opens. Back (the header's arrow, and on the iPhone a swipe from the left edge; on Android the system back) returns to the library, and again to Profile.
+  - Result: · Notes:
+
+- [ ] **TB3** On an Exercise's detail with Easier or Harder, tap it: that Exercise's detail opens over it, and back returns to the first. With a Workout in progress, the Resume pill shows on the library and on the detail, and pressing it reopens the Workout.
   - Result: · Notes:
 
 ## Sentry (#122)
