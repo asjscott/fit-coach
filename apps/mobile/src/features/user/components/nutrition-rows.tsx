@@ -1,5 +1,15 @@
-import { type ActivityLevel, FibreTarget } from "@fit/shared";
+import { type ActivityLevel, DEFAULT_WEIGH_IN_DAY, FibreTarget, Weekday } from "@fit/shared";
 import { useState } from "react";
+import {
+  Actionsheet,
+  ActionsheetBackdrop,
+  ActionsheetContent,
+  ActionsheetDragIndicator,
+  ActionsheetDragIndicatorWrapper,
+  ActionsheetItem,
+  ActionsheetItemText,
+  ActionsheetSectionHeaderText,
+} from "@/components/actionsheet";
 import { ChoiceCards, CompactChoiceCards } from "@/components/choice-cards";
 import { FormControl, FormControlError, FormControlErrorText } from "@/components/form-control";
 import { Heading } from "@/components/heading";
@@ -23,7 +33,80 @@ import {
   activityLevelLabel,
   activityLevelOptions,
 } from "@/features/user/components/form/fields/user-activity-level-field";
-import { useCurrentUser } from "@/features/user/current-user-provider";
+import { LogWeighInModal } from "@/features/nutrition/components/log-weigh-in-modal";
+import { weighInDateLabel } from "@/features/nutrition/weigh-in";
+import { useCurrentUser, useWeightUnit } from "@/features/user/current-user-provider";
+import { weightLabel } from "@/features/workouts/format";
+
+// The latest Weigh-in, which is the body weight everything reads, and Log weight on any day (spec #158 stories 11
+// and 14). The weight itself isn't edited anywhere else
+export function WeighInRow() {
+  const { user } = useCurrentUser();
+  const unit = useWeightUnit();
+  const [isOpen, setIsOpen] = useState(false);
+  const latest = user?.latestWeighIn;
+
+  return (
+    <Stack spacing={2}>
+      <HStack justify="between" spacing={4}>
+        <Text color="muted">Weight</Text>
+        <Text weight="semiBold" style={{ flexShrink: 1, textAlign: "right" }}>
+          {latest ? `${weightLabel(latest.kg, unit)} · ${weighInDateLabel(latest.date)}` : "—"}
+        </Text>
+      </HStack>
+      <LoadingButton label="Log weight" size="sm" action="secondary" icon="weight" onPress={() => setIsOpen(true)} />
+      {isOpen ? <LogWeighInModal onClose={() => setIsOpen(false)} /> : null}
+    </Stack>
+  );
+}
+
+const WEEKDAY_LABELS: Record<Weekday, string> = {
+  monday: "Monday",
+  tuesday: "Tuesday",
+  wednesday: "Wednesday",
+  thursday: "Thursday",
+  friday: "Friday",
+  saturday: "Saturday",
+  sunday: "Sunday",
+};
+
+// The day Today asks for the week's Weigh-in, Monday unless the user picks another (spec #158 story 8)
+export function WeighInDayRow() {
+  const { user, updateUser } = useCurrentUser();
+  const { showToast } = useToast();
+  const [isOpen, setIsOpen] = useState(false);
+  const weighInDay = user?.profile.weighInDay ?? DEFAULT_WEIGH_IN_DAY;
+
+  const choose = async (choice: Weekday) => {
+    setIsOpen(false);
+    if (choice === weighInDay) return;
+    try {
+      await updateUser({ profile: { weighInDay: choice } });
+    } catch (err) {
+      showToast("Couldn't change your Weigh-in Day", { error: err });
+    }
+  };
+
+  return (
+    <>
+      <EditRow label="Weigh-in Day" value={WEEKDAY_LABELS[weighInDay]} onPress={() => setIsOpen(true)} />
+      <Actionsheet isOpen={isOpen} onClose={() => setIsOpen(false)}>
+        <ActionsheetBackdrop />
+        <ActionsheetContent>
+          <ActionsheetDragIndicatorWrapper>
+            <ActionsheetDragIndicator />
+          </ActionsheetDragIndicatorWrapper>
+          <ActionsheetSectionHeaderText>Which day do you weigh in?</ActionsheetSectionHeaderText>
+          {Weekday.options.map((day) => (
+            <ActionsheetItem key={day} onPress={() => choose(day)}>
+              <ActionsheetItemText>{WEEKDAY_LABELS[day]}</ActionsheetItemText>
+            </ActionsheetItem>
+          ))}
+        </ActionsheetContent>
+      </Actionsheet>
+    </>
+  );
+}
 
 // A Profile row that opens its editor
 function EditRow({ label, value, onPress }: { label: string; value: string; onPress: () => void }) {

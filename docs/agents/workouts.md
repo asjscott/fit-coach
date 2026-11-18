@@ -125,6 +125,11 @@ Schemas: packages/shared/src/assessments.ts; Set.rpe and Workout.assessment in w
 
 - **The In-progress Workout keeps the `bodyProfile` (weight, gender) it started with**, and `protocolState`'s first
   load reads it from there, not from the current profile.
+- **`profile.weightKg` is the latest Weigh-in's** (#161, `apps/api/src/weigh-ins.ts`): `PUT /weigh-ins/:date` keeps
+  it in step, so `BodyProfile` readers (the Assessment, the Daily Targets) never read Weigh-ins themselves. PATCH
+  /user takes a weight only before onboarding, where it becomes the first Weigh-in; after that it's a 400. A Weigh-in
+  never touches Working Levels. The date window (today and the 6 days before, in the user's timezone) is
+  `loggableDates` / `isLoggableDate` in `@fit/engines`, for Food Entries and water too.
 - **Only weighted tests are rated.** A bodyweight or timed test is one unrated Set to the most reps or seconds the user
   can do, and that Set is its maximum; the Logbook refuses an unrated weighted test Set.
 - **A done test takes no more Sets** (#52): the Logbook refuses one once `hasTestResult` (a bodyweight or timed test's

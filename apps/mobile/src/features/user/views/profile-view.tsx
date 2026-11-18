@@ -18,14 +18,13 @@ import { useToast } from "@/contexts/toast-context";
 import { equipmentSummary } from "@/features/equipment/equipment-summary";
 import { useChosenTests } from "@/features/assessment/hooks/use-chosen-tests";
 import { useStartAssessment } from "@/features/assessment/hooks/use-start-assessment";
-import { ActivityLevelRow, FibreTargetRow } from "@/features/user/components/nutrition-rows";
+import { ActivityLevelRow, FibreTargetRow, WeighInDayRow, WeighInRow } from "@/features/user/components/nutrition-rows";
 import { useCurrentUser, usePrimaryEquipmentProfile, useWeightUnit } from "@/features/user/current-user-provider";
 import { genderLabel } from "@/features/user/components/form/fields/user-gender-field";
 import { goalLabel } from "@/features/user/components/form/fields/user-goal-field";
 import { injuryLabel } from "@/features/user/components/form/fields/user-injuries-field";
 import { workoutLengthLabel } from "@/features/user/components/form/fields/user-workout-length-field";
 import { SignOutModal, signOutWarning } from "@/features/workouts/components/sign-out-modal";
-import { weightLabel } from "@/features/workouts/format";
 import { useLogbook } from "@/features/workouts/logbook-provider";
 import { useApi } from "@/api";
 import { radii, spacing, useTheme } from "@/theme";
@@ -34,7 +33,6 @@ export default function ProfileView() {
   const { signOut } = useAuth();
   const { user } = useCurrentUser();
   const equipment = usePrimaryEquipmentProfile();
-  const unit = useWeightUnit();
   const logbook = useLogbook();
   const assessment = useStartAssessment();
   const tests = useChosenTests();
@@ -92,6 +90,8 @@ export default function ProfileView() {
         <Section label="Nutrition">
           <ActivityLevelRow />
           <FibreTargetRow />
+          <WeighInRow />
+          <WeighInDayRow />
         </Section>
         <Divider />
         {/* Retaking lives here for now: Today only offers the first Assessment, then its Results */}
@@ -122,7 +122,6 @@ export default function ProfileView() {
           <Row label="Gender" value={profile.gender && genderLabel(profile.gender)} />
           <Row label="Age" value={profile.birthYear && `${new Date().getFullYear() - profile.birthYear}`} />
           <Row label="Height" value={profile.heightCm && `${profile.heightCm} cm`} />
-          <Row label="Weight" value={profile.weightKg && weightLabel(profile.weightKg, unit)} />
           <Text size="sm" color="muted">
             Member since {new Date(user.onboardedAt).toLocaleDateString()}
           </Text>

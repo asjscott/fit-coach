@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { LocalDate } from "./check-in";
 import { EquipmentProfile } from "./equipment";
 import { DEFAULT_WEIGHT_UNIT, fromKg, inUnitToStep, toKg, WeightUnit } from "./units";
 
@@ -23,6 +24,13 @@ export type ActivityLevel = z.infer<typeof ActivityLevel>;
 
 // What the Daily Targets count a user as until they choose an Activity Level
 export const DEFAULT_ACTIVITY_LEVEL: ActivityLevel = "lightly_active";
+
+// A day of the week, Monday first as the weeks run
+export const Weekday = z.enum(["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"]);
+export type Weekday = z.infer<typeof Weekday>;
+
+// The day Today asks for the week's Weigh-in, for a user who never chose one (GLOSSARY.md)
+export const DEFAULT_WEIGH_IN_DAY: Weekday = "monday";
 
 // The user's own daily fibre target in grams, in place of the rule that follows their calories
 export const FibreTarget = z
@@ -50,6 +58,8 @@ export const UserProfile = z.object({
   activityLevel: ActivityLevel.optional(),
   // Absent when the Daily Targets follow the rule; PATCHing null clears it
   fibreTargetG: FibreTarget.optional(),
+  // Absent until the user chooses one, which means DEFAULT_WEIGH_IN_DAY
+  weighInDay: Weekday.optional(),
 });
 
 export type UserProfile = z.infer<typeof UserProfile>;
@@ -79,6 +89,18 @@ export function bodyWeightAnswer(unit: WeightUnit) {
     .max(max, `Must be ${max} ${unit} or less`);
 }
 
+// The user's body weight for one week, Monday to Sunday, in their timezone (GLOSSARY.md): the local date it was taken
+// and its exact kg
+export const WeighIn = z.object({ date: LocalDate, kg: z.number() });
+export type WeighIn = z.infer<typeof WeighIn>;
+
+// Body for PUT /weigh-ins/:date: the weight as entered, in the unit it was entered in, so the server stores its exact kg
+export const WeighInUpload = z.object({ weight: z.number(), unit: WeightUnit }).superRefine(({ weight, unit }, ctx) => {
+  const answer = bodyWeightAnswer(unit).safeParse(weight);
+  if (!answer.success) ctx.addIssue({ code: "custom", message: answer.error.issues[0].message, path: ["weight"] });
+});
+export type WeighInUpload = z.infer<typeof WeighInUpload>;
+
 // What the Assessment's strength estimates scale with: the typical strength for this body weight and gender
 export const BodyProfile = UserProfile.pick({ weightKg: true, gender: true });
 export type BodyProfile = z.infer<typeof BodyProfile>;
@@ -98,6 +120,10 @@ export const User = z.object({
   timeZone: z.string().optional(),
   // The unit every load shows in; a user who has never chosen gets the default
   unit: WeightUnit.default(DEFAULT_WEIGHT_UNIT),
+  // The latest Weigh-in, whose kg the server keeps profile.weightKg at; null before onboarding
+  latestWeighIn: WeighIn.nullable().default(null),
+  // Whether the week holding today, in the user's timezone, has a Weigh-in, as of when the user was read
+  weighedInThisWeek: z.boolean().default(false),
 });
 export type User = z.infer<typeof User>;
 

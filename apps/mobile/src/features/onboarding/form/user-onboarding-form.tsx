@@ -58,8 +58,9 @@ export function UserOnboardingForm({ exit }: { exit: { label: string; onPress: (
             )
           }
         >
+          {/* Once onboarded, the weight is the latest Weigh-in, logged from Profile (#161) */}
           <FormStage<OnboardingValues>
-            fields={["gender", "birthYear", "heightCm", "weight"]}
+            fields={isEditing ? ["gender", "birthYear", "heightCm"] : ["gender", "birthYear", "heightCm", "weight"]}
             title="About you"
             message="We use these to set your starting weights and volume."
           >
@@ -69,9 +70,11 @@ export function UserOnboardingForm({ exit }: { exit: { label: string; onPress: (
               <Box flex>
                 <UserHeightField />
               </Box>
-              <Box flex>
-                <UserWeightField />
-              </Box>
+              {isEditing ? null : (
+                <Box flex>
+                  <UserWeightField />
+                </Box>
+              )}
             </HStack>
           </FormStage>
           <FormStage<OnboardingValues>

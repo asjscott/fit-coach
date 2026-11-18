@@ -1,17 +1,8 @@
 import type { FoodEntry, Meal, Portion } from "@fit/shared";
 
-const DAY_MS = 24 * 60 * 60 * 1000;
-
-// How far back the day stepper goes: today and the 6 days before it, the days the API lets the user log into
-export const OLDEST_DAY = 6;
-
 // The day stepper's words for a day so many days before today
 export const dayStepLabel = (daysBefore: number) =>
   daysBefore === 0 ? "Today" : daysBefore === 1 ? "Yesterday" : `${daysBefore} days ago`;
-
-// The local date so many calendar days before another, both YYYY-MM-DD
-export const dateBefore = (date: string, days: number) =>
-  new Date(Date.parse(date) - days * DAY_MS).toISOString().slice(0, 10);
 
 export const mealName = (meal: Meal) => meal[0].toUpperCase() + meal.slice(1);
 

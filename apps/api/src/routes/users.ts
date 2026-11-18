@@ -3,8 +3,22 @@ import type { FastifyPluginAsyncZod } from "fastify-type-provider-zod";
 import { EquipmentProfileInput, ErrorResponse, User, UserUpdate } from "@fit/shared";
 import { z } from "zod";
 import { requireAuth, userIdOf } from "../auth";
+import { badRequest } from "../bad-request";
 import { currentOrRebuiltPlannedWorkout } from "../planned-workouts";
 import { createEquipmentProfile, createUser, findUser, toUser, updateEquipmentProfile, updateUser } from "../users";
+import { keepFirstWeighIn, weighInSummary } from "../weigh-ins";
+
+type UserDoc = NonNullable<Awaited<ReturnType<typeof findUser>>>;
+
+// The user as the app reads it, with their latest Weigh-in
+export const userResponse = async (user: UserDoc) =>
+  toUser(user, await weighInSummary(user.clerkUserId, user.timeZone ?? "UTC"));
+
+// A change that onboards the user makes their onboarding weight their first Weigh-in
+async function changedUserResponse(user: UserDoc) {
+  await keepFirstWeighIn(user);
+  return userResponse(user);
+}
 
 // A Profile change that shapes the plan takes effect straight away. A failure doesn't fail the change, which is saved:
 // the rebuild stays due, and the phone's next ask for a plan runs it
@@ -21,7 +35,7 @@ export const userRoutes: FastifyPluginAsyncZod = async (app) => {
   app.get("/user", { schema: { response: { 200: User, 404: ErrorResponse } } }, async (req, reply) => {
     const user = await findUser(userIdOf(req)!);
     if (!user) return reply.code(404).send({ error: "user not found" });
-    return toUser(user);
+    return userResponse(user);
   });
 
   // Idempotent: 201 when created, 200 with the existing record otherwise
@@ -30,20 +44,24 @@ export const userRoutes: FastifyPluginAsyncZod = async (app) => {
     return reply
       .code(created ? 201 : 200)
       .header("Location", "/user")
-      .send(toUser(user));
+      .send(await userResponse(user));
   });
 
   // Sets onboardedAt as a side effect once the required profile fields are complete
-  // and the user has an equipment profile. A change that shapes the plan rebuilds it
+  // and the user has an equipment profile. A change that shapes the plan rebuilds it. Once onboarded, the weight is the
+  // latest Weigh-in's (400)
   app.patch(
     "/user",
     { schema: { body: UserUpdate, response: { 200: User, 404: ErrorResponse } } },
     async (req, reply) => {
       const clerkUserId = userIdOf(req)!;
+      if (req.body.profile?.weightKg !== undefined && (await findUser(clerkUserId))?.onboardedAt) {
+        throw badRequest("Log a Weigh-in to change your weight");
+      }
       const user = await updateUser(clerkUserId, req.body);
       if (!user) return reply.code(404).send({ error: "user not found" });
       await rebuildPlanIfDue(clerkUserId, req.log);
-      return toUser(user);
+      return changedUserResponse(user);
     },
   );
 
@@ -55,7 +73,7 @@ export const userRoutes: FastifyPluginAsyncZod = async (app) => {
       const user = await createEquipmentProfile(userIdOf(req)!, req.body);
       if (!user) return reply.code(404).send({ error: "user not found" });
       await rebuildPlanIfDue(userIdOf(req)!, req.log);
-      return reply.code(201).send(toUser(user));
+      return reply.code(201).send(await changedUserResponse(user));
     },
   );
 
@@ -73,7 +91,7 @@ export const userRoutes: FastifyPluginAsyncZod = async (app) => {
       const user = await updateEquipmentProfile(userIdOf(req)!, req.params.id, req.body);
       if (!user) return reply.code(404).send({ error: "equipment profile not found" });
       await rebuildPlanIfDue(userIdOf(req)!, req.log);
-      return toUser(user);
+      return changedUserResponse(user);
     },
   );
 };

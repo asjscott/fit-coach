@@ -80,7 +80,7 @@ describe("POST /days/:date/food-entries", () => {
 
     const tooOld = await log(localDate("UTC", 7));
     expect(tooOld.statusCode).toBe(400);
-    expect(tooOld.body).toEqual({ error: "the date must be today or one of the 6 days before it" });
+    expect(tooOld.body).toMatchObject({ message: "A Food Entry must be from the last 7 days" });
     expect((await log(localDate("UTC", -1))).statusCode).toBe(400);
     expect(mealOf(await dayOf(user, localDate("UTC", 7)), "snacks")).toEqual([]);
   });

@@ -10,6 +10,7 @@ import { foodEntryRoutes } from "./routes/food-entries";
 import { foodRoutes } from "./routes/foods";
 import { plannedWorkoutRoutes } from "./routes/planned-workouts";
 import { userRoutes } from "./routes/users";
+import { weighInRoutes } from "./routes/weigh-ins";
 import { workoutRoutes } from "./routes/workouts";
 import { HealthResponse } from "@fit/shared";
 import { registerAuth } from "./auth";
@@ -20,6 +21,7 @@ import { pingDb } from "./db";
 import { registerTestErrorRoute, reportRouteErrorsWithUser } from "./error-reporting";
 import { ensurePlannedWorkoutIndexes } from "./planned-workouts";
 import { ensureUserIndexes, migrateUsers } from "./users";
+import { ensureWeighInIndexes, migrateWeighIns } from "./weigh-ins";
 import { ensureWorkoutIndexes } from "./workouts";
 
 // The API with every route registered and its indexes made, not yet listening. Reads MONGODB_URI (db.ts) and
@@ -56,11 +58,15 @@ export async function buildApp({ logger, foodSources }: { logger: boolean; foodS
 
   await ensureCheckInIndexes().catch((err) => app.log.error(err, "Failed to create check-in indexes"));
 
+  await ensureWeighInIndexes().catch((err) => app.log.error(err, "Failed to create weigh-in indexes"));
+
   await ensureFoodEntryIndexes().catch((err) => app.log.error(err, "Failed to create food entry indexes"));
 
   await migrateUsers().catch((err) => app.log.error(err, "Failed to migrate users"));
 
   await migrateWorkingLevels().catch((err) => app.log.error(err, "Failed to migrate working levels"));
+
+  await migrateWeighIns().catch((err) => app.log.error(err, "Failed to migrate weigh-ins"));
 
   await app.register(userRoutes);
   await app.register(exerciseRoutes);
@@ -69,6 +75,7 @@ export async function buildApp({ logger, foodSources }: { logger: boolean; foodS
   await app.register(plannedWorkoutRoutes);
   await app.register(checkInRoutes);
   await app.register(dayRoutes);
+  await app.register(weighInRoutes);
   await app.register(foodRoutes, { foodSources: sources });
   await app.register(foodEntryRoutes);
   registerTestErrorRoute(app);

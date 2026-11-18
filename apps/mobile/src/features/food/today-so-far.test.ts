@@ -1,7 +1,7 @@
 import type { FoodEntry } from "@fit/shared";
 import { describe, expect, it } from "vitest";
 import { portionChoice } from "./food-portion";
-import { dateBefore, dayStepLabel, entryPortion, mealLine, mealName } from "./today-so-far";
+import { dayStepLabel, entryPortion, mealLine, mealName } from "./today-so-far";
 
 const entry = (kcal: number, portion: FoodEntry["portion"] = { grams: 100 }): FoodEntry => ({
   id: "e1",
@@ -25,15 +25,6 @@ describe("dayStepLabel", () => {
     expect(dayStepLabel(0)).toBe("Today");
     expect(dayStepLabel(1)).toBe("Yesterday");
     expect(dayStepLabel(6)).toBe("6 days ago");
-  });
-});
-
-describe("dateBefore", () => {
-  it("counts back calendar days, across a month and a year", () => {
-    expect(dateBefore("2026-11-18", 0)).toBe("2026-11-18");
-    expect(dateBefore("2026-11-18", 6)).toBe("2026-11-12");
-    expect(dateBefore("2026-03-02", 2)).toBe("2026-02-28");
-    expect(dateBefore("2027-01-01", 1)).toBe("2026-12-31");
   });
 });
 
