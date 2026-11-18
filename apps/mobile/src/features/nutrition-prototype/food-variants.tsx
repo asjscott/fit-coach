@@ -6,6 +6,7 @@ import { Progress, ProgressFilledTrack } from "@/components/progress";
 import { Ring } from "@/components/ring";
 import { Text } from "@/components/text";
 import { radii, spacing, useTheme } from "@/theme";
+import { FoodD, FoodE, FoodF } from "./variants-def";
 import { eatenBase, fmt, type Meal, meals, nudge, recent, saved, setProto, targets, useProto } from "./prototype-data";
 
 const mealKcal = (m: Meal) => Math.round(m.entries.reduce((t, e) => t + e.kcal, 0));
@@ -14,6 +15,9 @@ export function FoodVariant() {
   const { variant } = useProto();
   if (variant === "B") return <FoodB />;
   if (variant === "C") return <FoodC />;
+  if (variant === "D") return <FoodD />;
+  if (variant === "E") return <FoodE />;
+  if (variant === "F") return <FoodF />;
   return <FoodA />;
 }
 

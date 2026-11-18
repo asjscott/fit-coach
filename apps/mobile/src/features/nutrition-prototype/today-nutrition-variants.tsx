@@ -9,6 +9,7 @@ import { Text } from "@/components/text";
 import { useWeightUnit } from "@/features/user/current-user-provider";
 import { radii, spacing, useTheme } from "@/theme";
 import { eatenBase, fmt, nudge, setProto, targets, useProto } from "./prototype-data";
+import { TodayD, TodayE, TodayF } from "./variants-def";
 
 export type TodaySlot = "top" | "afterCard" | "afterWeek";
 
@@ -41,6 +42,9 @@ export function TodayNutrition({ slot }: { slot: TodaySlot }) {
   if (variant === "B" && slot === "top") return <WeighInCard />;
   if (variant === "B" && slot === "afterWeek") return <RingTiles />;
   if (variant === "C" && slot === "top") return <CoachLine />;
+  if (variant === "D" && slot === "afterCard") return <TodayD />;
+  if (variant === "E" && slot === "afterCard") return <TodayE />;
+  if (variant === "F" && slot === "afterCard") return <TodayF />;
   return null;
 }
 

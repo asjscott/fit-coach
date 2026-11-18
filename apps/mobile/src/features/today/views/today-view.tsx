@@ -34,6 +34,7 @@ import { TodayCard, TodayCardLink } from "../components/today-card";
 import { CheckInCard } from "../components/check-in-card";
 import { useCheckIn } from "../hooks/use-check-in";
 import { TodayNutrition } from "@/features/nutrition-prototype/today-nutrition-variants";
+import { TodayNavExtras } from "@/features/nutrition-prototype/nav-variants";
 import { PrototypeSwitcher } from "@/features/nutrition-prototype/prototype-switcher";
 import { useDaysWorkout } from "../hooks/use-days-workout";
 import { useDismissedOffer } from "../hooks/use-dismissed-offer";
@@ -163,6 +164,7 @@ export default function TodayView() {
         <Text size="sm" weight="semiBold" color="muted" style={{ marginBottom: spacing[3] }}>
           {now.toLocaleDateString([], { weekday: "long", day: "numeric", month: "long" })}
         </Text>
+        <TodayNavExtras slot="top" />
         <TodayNutrition slot="top" />
         {prNote.shown.length ? (
           <View style={{ marginBottom: spacing[3] }}>
@@ -254,6 +256,7 @@ export default function TodayView() {
             <ThisWeekSection week={week} state={state} now={now} />
           </View>
         )}
+        <TodayNavExtras slot="afterWeek" />
         <TodayNutrition slot="afterWeek" />
         {card === "loading" || card === "resume" || card === "manual" ? null : (
           <View style={{ marginTop: spacing[4] }}>

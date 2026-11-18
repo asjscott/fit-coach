@@ -23,6 +23,8 @@ import { SignOutModal, signOutWarning } from "@/features/workouts/components/sig
 import { weightLabel } from "@/features/workouts/format";
 import { useLogbook } from "@/features/workouts/logbook-provider";
 import { useApi } from "@/api";
+// PROTOTYPE (M7): what the tab bar options move into Profile
+import { ProfileNavLinks } from "@/features/nutrition-prototype/nav-variants";
 
 export default function ProfileView() {
   const { signOut } = useAuth();
@@ -69,6 +71,7 @@ export default function ProfileView() {
   return (
     <Screen scroll="screen" edges={["bottom"]}>
       <Stack spacing={5}>
+        <ProfileNavLinks />
         <Section label="Training">
           <Row label="Goal" value={profile.goal && goalLabel(profile.goal)} />
           <Row label="Days per week" value={profile.daysPerWeek} />

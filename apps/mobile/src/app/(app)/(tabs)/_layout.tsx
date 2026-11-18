@@ -3,24 +3,18 @@ import { BottomTabBar } from "expo-router/tabs";
 import { Platform, StyleSheet, useWindowDimensions, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Column } from "@/components/column";
-import { Icon, type IconName } from "@/components/icons";
+import { Icon } from "@/components/icons";
 import { ResumePill } from "@/features/workouts/components/resume-pill";
+import { useTabs } from "@/features/nutrition-prototype/nav-variants";
 import { fonts, fontSizes, lineHeight, sideRailMinWidth, useTheme } from "@/theme";
-
-const tabs: { name: string; title: string; icon: IconName }[] = [
-  { name: "index", title: "Today", icon: "home" },
-  // PROTOTYPE (M7): the Food tab
-  { name: "food", title: "Food", icon: "flame" },
-  { name: "history", title: "History", icon: "calendar" },
-  { name: "exercises", title: "Exercises", icon: "dumbbell" },
-  { name: "profile", title: "Profile", icon: "user" },
-];
 
 // The default bar is 49 tall, which clips Inter's descenders in the labels
 const bottomBarHeight = 56;
 const sideRailWidth = 240;
 
 export default function TabsLayout() {
+  // PROTOTYPE (M7): the tab bar options
+  const tabs = useTabs();
   const { colors } = useTheme();
   const { width } = useWindowDimensions();
   const insets = useSafeAreaInsets();
@@ -68,12 +62,13 @@ export default function TabsLayout() {
         sceneStyle: { backgroundColor: colors.bg },
       }}
     >
-      {tabs.map(({ name, title, icon }) => (
+      {tabs.map(({ name, title, icon, hidden }) => (
         <Tabs.Screen
           key={name}
           name={name}
           options={{
             title,
+            href: hidden ? null : undefined,
             tabBarIcon: ({ color, size }) => <Icon name={icon} rawColor={String(color)} size={size} />,
           }}
         />
