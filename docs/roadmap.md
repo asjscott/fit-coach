@@ -125,7 +125,7 @@ M9 Rewards is cut down to PR detection (M6) and a Weekly Streak (M8). M11 Meal p
 **Goal:** log food quickly against daily targets, with no LLM needed for the core.
 
 - **Profile:** a new activity level (4 options).
-- **Weight log.** A quick "Log weight" on Today and a `weights` collection; the profile's weight follows the latest entry.
+- **Weigh-ins, weekly.** One Weigh-in per week, on a Weigh-in Day (Monday by default), asked for on Today that day; the profile's weight follows the latest one (decided 2026-11-16, replacing a daily weight log).
 - **Targets.** Mifflin-St Jeor × activity level; −20% for lose_fat, +10% for build_muscle, maintenance otherwise. Protein 2.0 g/kg for lose_fat and build_muscle, 1.6 g/kg otherwise. Fat at least 0.8 g/kg; carbs fill the rest.
 - **Home bars** on Today for kcal and protein against target, with a nudge on what's left ("60 g of protein to go"). Food never changes the Planned Workout; the Check-in covers a bad day.
 - **Food log.** One list per day, in Breakfast, Lunch, Dinner and Snacks, for today or an earlier day. Each Food Entry keeps a snapshot of the food's macros and the portion, as [ADR 0002](adr/0002-previous-sets-are-a-snapshot.md) does for Sets.
@@ -148,7 +148,7 @@ M9 Rewards is cut down to PR detection (M6) and a Weekly Streak (M8). M11 Meal p
 - **Web push.** VAPID keys on the server, a subscription saved per device. iOS only delivers it to the installed PWA (iOS 16.4+).
 - **Scheduled jobs.** A GitHub Actions workflow runs hourly and POSTs to `/jobs/run` with a secret. That wakes the Render instance, which, for each user, runs whatever is due in that user's timezone and records that it ran, so a late or repeated call never sends twice. Agenda is dropped.
 - **Evening summary, due at 6 pm so it arrives by 7, templated:** "Push day done ✅ · 1,840 / 2,300 kcal · 120 g protein · Tomorrow: Legs, Standard", or "Tomorrow: Rest Day · next up Legs" when the Rest Day rule says so, with tomorrow's kcal and protein targets. It says "tomorrow" again ([ADR 0008](adr/0008-a-few-invited-users-and-tomorrow.md) reverses that part of [0004](adr/0004-spec-77-replaces-the-plans-m5.md)).
-- **Sunday weekly review**, in the app and announced by push: Workouts done against planned and the Weekly Streak; the Weekly Budget met per Muscle; PRs and Exercises that progressed or dropped; average kcal and protein against target; the 7-day average weight change; the Readiness trend from Check-ins.
+- **Sunday weekly review**, in the app and announced by push: Workouts done against planned and the Weekly Streak; the Weekly Budget met per Muscle; PRs and Exercises that progressed or dropped; average kcal and protein against target; the change since last week's Weigh-in; the Readiness trend from Check-ins.
 - **Weekly Streak.** A week counts when the user finishes at least `daysPerWeek − 1` Workouts, Recovery Workouts included. No freezes. Weeks run Monday to Sunday, as the Week Ledger does.
 - The PDF's event bus is dropped unless the spec finds a need. An LLM sentence in the summary is optional, through M7's interface.
 
@@ -158,8 +158,8 @@ M9 Rewards is cut down to PR detection (M6) and a Weekly Streak (M8). M11 Meal p
 
 **Goal:** see whether it's working, over months.
 
-- **Weight trend:** the 7-day average against daily entries.
-- **Adaptive TDEE:** once 3 weeks of weight and intake data exist, it replaces the activity level in the targets.
+- **Weight trend:** the weekly Weigh-ins over time.
+- **Adaptive TDEE:** once 4 Weigh-ins and the intake between them exist, it replaces the activity level in the targets.
 - **Strength graph:** estimated 1RM per Exercise over time, with the Working Level line; the user picks from Exercises they've done.
 - **Assessment against retest:** the same chart with Block boundaries marked.
 

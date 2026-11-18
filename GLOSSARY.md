@@ -175,8 +175,28 @@ _Avoid_: Streak (alone), consistency score
 ### Nutrition and activity
 
 **Food Entry**:
-One food the user ate, in a meal of a day: the portion and a snapshot of that food's calories and macros when it was logged, so a later change to the food doesn't change the day.
+One food the user ate, in a meal of a day: the portion and a snapshot of that food's calories, protein, carbs, fat and fibre when it was logged, so a later change to the food doesn't change the day.
 _Avoid_: Meal log, food log item, intake
+
+**Saved Food**:
+A food that belongs to the user, made by them from a label when no source had it, and found again by its name or barcode. The foods they logged lately are Recent, not Saved Foods.
+_Avoid_: Favourite, custom food, my foods
+
+**Activity Level**:
+How much the user moves in daily life, their strength Workouts included but never their Activities: sedentary, lightly active, active or very active.
+_Avoid_: Activity (for this), lifestyle, exercise level
+
+**Daily Targets**:
+The calories, protein, fat, carbs, fibre and water the Coach sets the user for each day, the same every day, from their latest Weigh-in, Activity Level and Goal. Fibre is the user's to change; the others follow the rules.
+_Avoid_: Macros, budget (the Weekly Budget is for Sets), goals
+
+**Weigh-in**:
+The user's body weight for one week, Monday to Sunday: at most one per week, a later one replacing it. The latest is the body weight everything else reads.
+_Avoid_: Weight entry, weight log, body weight (for one entry)
+
+**Weigh-in Day**:
+The day of the week the user weighs in, Monday unless they choose another, when Today asks for the week's Weigh-in.
+_Avoid_: Weigh day, check-in day
 
 **Activity**:
 Training done outside the app, such as a run, a ride or a game of a sport: its type, duration and effort, logged by hand, told to the Coach or imported from Strava, on the day it was done. It adds Fatigue to the Muscles its type works and credits part of its calories to the day.
