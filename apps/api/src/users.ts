@@ -15,6 +15,7 @@ import {
 } from "@fit/shared";
 import type { z } from "zod";
 import { db } from "./db";
+import type { WeighInSummary } from "./weigh-ins";
 
 // The shape of a user document in MongoDB
 type UserDoc = {
@@ -197,9 +198,10 @@ async function markOnboardedIfComplete(user: WithId<UserDoc>) {
   return updated ?? (await users.findOne({ _id: user._id })) ?? user;
 }
 
-// Convert a database document into the shape the app expects
-export function toUser(user: WithId<UserDoc>): User {
+// Convert a database document into the shape the app expects, with what its Weigh-ins say
+export function toUser(user: WithId<UserDoc>, weighIns: WeighInSummary): User {
   return User.parse({
+    ...weighIns,
     id: user._id.toHexString(),
     profile: user.profile,
     onboardedAt: user.onboardedAt?.toISOString() ?? null,

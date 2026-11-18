@@ -28,12 +28,13 @@ import type { Stage, StageAction } from "../form/staged-form";
 // ----------------------------------------------------------------------
 
 // The profile plus the answers that become the primary equipment profile. Body weight is answered in the user's
-// unit and saved in kg (#148). Onboarding always asks the Activity Level, which the server lets an older user lack.
-// The fibre target is edited on Profile, never here
-export const onboardingValues = (unit: WeightUnit) =>
+// unit and saved in kg (#148), by a new user only: it becomes their first Weigh-in, and after that a Weigh-in sets it
+// (#161). Onboarding always asks the Activity Level, which the server lets an older user lack. The fibre target is
+// edited on Profile, never here
+export const onboardingValues = (unit: WeightUnit, isEditing: boolean) =>
   UserProfile.omit({ weightKg: true, fibreTargetG: true }).extend({
     activityLevel: ActivityLevel,
-    weight: bodyWeightAnswer(unit),
+    weight: isEditing ? bodyWeightAnswer(unit).optional() : bodyWeightAnswer(unit),
     trainingSetup: TrainingSetup,
     equipment: EquipmentByGroup,
     loads: LoadsForm,
@@ -56,7 +57,7 @@ export function useUserOnboarding() {
   const [stage, setStage] = useState<Stage>(1);
 
   const onboardingForm = useForm<OnboardingValues>({
-    resolver: zodResolver(onboardingValues(unit)),
+    resolver: zodResolver(onboardingValues(unit, isEditing)),
     mode: "onBlur",
     defaultValues: {
       ...profile,
@@ -101,8 +102,14 @@ export function useUserOnboarding() {
       // Updates the primary profile by id if there is one, so retrying or editing never adds a second
       await saveEquipmentProfile(toEquipmentInput(trainingSetup, equipment, loads, unit), primaryEquipment?.id);
 
-      // The server stamps onboardedAt once the required fields and an equipment profile are saved
-      const updated = await updateUser({ profile: { ...values, weightKg: bodyWeightKg(weight, unit, weightKg) } });
+      // The server stamps onboardedAt once the required fields and an equipment profile are saved, and makes the
+      // weight the first Weigh-in. Once onboarded, only a Weigh-in changes it
+      const updated = await updateUser({
+        profile: {
+          ...values,
+          ...(weight !== undefined && !user?.onboardedAt && { weightKg: bodyWeightKg(weight, unit, weightKg) }),
+        },
+      });
       if (!updated.onboardedAt) throw new Error("Some answers are missing, go back and check them");
       setStage("complete");
     } catch (err) {

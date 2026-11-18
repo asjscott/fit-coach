@@ -10,7 +10,7 @@ import { Spinner } from "@/components/spinner";
 import { Text } from "@/components/text";
 import { useChosenTests } from "@/features/assessment/hooks/use-chosen-tests";
 import { useLatestAssessment } from "@/features/assessment/hooks/use-latest-assessment";
-import { useCurrentUser, useWeightUnit } from "@/features/user/current-user-provider";
+import { useCurrentUser, useTimeZone, useWeightUnit } from "@/features/user/current-user-provider";
 import { ForgottenWorkoutModal } from "@/features/workouts/components/forgotten-workout-modal";
 import { PastWorkoutSheet } from "@/features/workouts/components/past-workout-sheet";
 import { elapsedLabel, estimatedTimeLabel } from "@/features/workouts/format";
@@ -25,7 +25,9 @@ import {
 import { useRefreshHistory } from "@/features/workouts/hooks/use-refresh-history";
 import { useLogbook } from "@/features/workouts/logbook-provider";
 import { DayRings } from "@/features/nutrition/components/day-rings";
+import { WeighInReminderRow } from "@/features/nutrition/components/weigh-in-reminder-row";
 import { useDay } from "@/features/nutrition/hooks/use-day";
+import { showsWeighInReminder } from "@/features/nutrition/weigh-in";
 import { spacing } from "@/theme";
 import { ActivityLevelCard } from "../components/activity-level-card";
 import { AssessmentCard, AssessmentSection } from "../components/assessment-section";
@@ -77,6 +79,7 @@ export default function TodayView() {
   const { user } = useCurrentUser();
   const daysPerWeek = user?.profile.daysPerWeek;
   const unit = useWeightUnit();
+  const timeZone = useTimeZone();
   const { latest: latestAssessment } = useLatestAssessment();
   const { plannedWorkout: latestPlan, stale: planIsStale } = usePlannedWorkout();
   const { dismissed, dismiss } = useDismissedOffer();
@@ -169,6 +172,17 @@ export default function TodayView() {
       {day ? (
         <View style={{ marginBottom: spacing[4] }}>
           <DayRings day={day} />
+        </View>
+      ) : null}
+      {user &&
+      showsWeighInReminder({
+        weighInDay: user.profile.weighInDay,
+        latestWeighIn: user.latestWeighIn,
+        now,
+        timeZone,
+      }) ? (
+        <View style={{ marginBottom: spacing[4] }}>
+          <WeighInReminderRow />
         </View>
       ) : null}
       {activityPrompt.asks ? (

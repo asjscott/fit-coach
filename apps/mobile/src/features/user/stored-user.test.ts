@@ -18,6 +18,8 @@ const user: User = {
   onboardedAt: "2026-10-01T09:00:00.000Z",
   equipmentProfiles: [],
   unit: "lb",
+  latestWeighIn: { date: "2026-10-01", kg: 80 },
+  weighedInThisWeek: false,
 };
 
 describe("the User on the phone", () => {

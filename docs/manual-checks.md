@@ -9,7 +9,7 @@ Result codes: **✅ pass** · **❌ fail** · **⚠️ works but feels off** · 
 ## What's left
 
 - **Run on the phone now:** R1, U1, U2, LS2, PR1, TB1–TB3. Each is a part no run has covered yet.
-- **M7, once it's on the phones:** DT1–DT5.
+- **M7, once it's on the phones:** DT1–DT5, WI1–WI6.
 - **Run when you next train:** P9 and S1, a full Workout with a timer, resting as the timer says. Both can be one session.
 - **🕒 Due later, while you use the app:** C5 (the day after a check-in), P16 (a Monday), J2 (after a week with jumps on), P17 (after a few weeks), DL1 and DL2 (the 5th week of a Block: the week starting 4 Mondays after the Monday of the week Assessment B was done).
 - **On hold:** E1–E3 need Sentry set up on production.
@@ -244,6 +244,23 @@ M7 checks run on the phones' Release builds against the API on the Mac.
 - [ ] **DT4** An account onboarded before M7 (no Activity Level) sees "How active are you?" under the rings on Today. Picking a level saves it and the card goes, and the kcal ring changes unless lightly active was picked. On a second such account, "Not now" hides it for good, also after a force-quit, with the rings counting it as lightly active.
   - Result: · Notes:
 - [ ] **DT5** Offline, Today shows no rings and nothing breaks; back online, they come back on the next visit to Today.
+  - Result: · Notes:
+
+## Weigh-ins (#161)
+
+Body weight is a weekly Weigh-in now, and the latest one is the weight everything reads. When the `dev` API first starts with this change, it gives every existing account a first Weigh-in from its stored weight.
+
+- [ ] **WI1** On an account onboarded before this change, Profile's Nutrition section shows Weight as the weight it had, dated the day it onboarded, with Log weight under it, and Weigh-in Day as Monday. The Profile section has no Weight row any more, and Edit profile doesn't ask for a weight.
+  - Result: · Notes:
+- [ ] **WI2** On the Weigh-in Day (set it to today's weekday on Profile if today isn't Monday), Today shows "Log this week's weight" under the rings. Set the Weigh-in Day to another day: the row goes. Set it back and log a Weigh-in from the row: the row goes and stays gone after a force-quit, and the rings show the targets for the new weight.
+  - Result: · Notes:
+- [ ] **WI3** With Weights in set to lb, Log weight shows the latest in lb. Log 180: Profile shows 180 lb, not 179.9 or 180.1. Switch to kg: it shows 81.6 kg. Log 82 in kg, then switch back to lb: 180.8 lb.
+  - Result: · Notes:
+- [ ] **WI4** Log weight offers Today, Yesterday and the 5 weekdays before, Today picked. Log a weight for an earlier day this week, then another for today: Profile shows only the second, dated today, and the rings follow it. Log one for a day last week (when the days offered reach into it): Profile still shows this week's.
+  - Result: · Notes:
+- [ ] **WI5** A new account's onboarding asks the weight as before. Once it's done, Profile shows that weight dated today, and Today doesn't ask for this week's weight even on the Weigh-in Day.
+  - Result: · Notes:
+- [ ] **WI6** Offline, Log weight's Save shows "Couldn't log your weight" and Profile keeps the weight it had. Back online, logging works.
   - Result: · Notes:
 
 ## Tabs and the Exercise library (#159)
