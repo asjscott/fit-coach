@@ -17,6 +17,20 @@ export type DayLength = z.infer<typeof DayLength>;
 
 export const WORKOUT_LENGTH_MINUTES: Record<DayLength, number> = { quick: 20, short: 30, standard: 45, long: 60 };
 
+// How much the user moves in daily life, strength Workouts included but never Activities (GLOSSARY.md)
+export const ActivityLevel = z.enum(["sedentary", "lightly_active", "active", "very_active"]);
+export type ActivityLevel = z.infer<typeof ActivityLevel>;
+
+// What the Daily Targets count a user as until they choose an Activity Level
+export const DEFAULT_ACTIVITY_LEVEL: ActivityLevel = "lightly_active";
+
+// The user's own daily fibre target in grams, in place of the rule that follows their calories
+export const FibreTarget = z
+  .number({ error: "Enter grams of fibre" })
+  .int("Use a whole number")
+  .min(10, "Must be 10 g or more")
+  .max(150, "Must be 150 g or less");
+
 export const UserProfile = z.object({
   gender: z.enum(["male", "female"], { error: "Choose one" }),
   birthYear: z
@@ -32,6 +46,10 @@ export const UserProfile = z.object({
   injuries: z.array(InjuryTag, { error: "Choose any that apply, or None" }),
   // The one-time "Include jumps" switch, off by default: jumps are for the athletic Goal only (#105)
   includeJumps: z.boolean().optional(),
+  // Onboarding asks for it. A user onboarded before it existed has none, and Today asks them once
+  activityLevel: ActivityLevel.optional(),
+  // Absent when the Daily Targets follow the rule; PATCHing null clears it
+  fibreTargetG: FibreTarget.optional(),
 });
 
 export type UserProfile = z.infer<typeof UserProfile>;
@@ -65,8 +83,9 @@ export function bodyWeightAnswer(unit: WeightUnit) {
 export const BodyProfile = UserProfile.pick({ weightKg: true, gender: true });
 export type BodyProfile = z.infer<typeof BodyProfile>;
 
-// Fields that must be filled before a user counts as onboarded; injuries and the jumps switch are optional
-export const OnboardingProfile = UserProfile.omit({ injuries: true, includeJumps: true });
+// Fields that must be filled before a user counts as onboarded; injuries, the jumps switch, the Activity Level and the
+// fibre target are optional
+export const OnboardingProfile = UserProfile.omit({ injuries: true, includeJumps: true, fibreTargetG: true });
 export type OnboardingProfile = z.infer<typeof OnboardingProfile>;
 
 export const User = z.object({
@@ -91,9 +110,9 @@ function isTimeZone(timeZone: string) {
   }
 }
 
-// Body for PATCH /user; profile fields are merged into the stored profile
+// Body for PATCH /user; profile fields are merged into the stored profile, and a fibre target of null clears it
 export const UserUpdate = z.strictObject({
-  profile: UserProfile.partial().optional(),
+  profile: UserProfile.partial().extend({ fibreTargetG: FibreTarget.nullable().optional() }).optional(),
   timeZone: z.string().refine(isTimeZone, { error: "Unknown timezone" }).optional(),
   unit: WeightUnit.optional(),
 });

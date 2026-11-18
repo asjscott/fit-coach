@@ -24,7 +24,10 @@ import {
 } from "@/features/workouts/hooks/use-open-workout";
 import { useRefreshHistory } from "@/features/workouts/hooks/use-refresh-history";
 import { useLogbook } from "@/features/workouts/logbook-provider";
+import { DayRings } from "@/features/nutrition/components/day-rings";
+import { useDay } from "@/features/nutrition/hooks/use-day";
 import { spacing } from "@/theme";
+import { ActivityLevelCard } from "../components/activity-level-card";
 import { AssessmentCard, AssessmentSection } from "../components/assessment-section";
 import { LastWorkoutSection } from "../components/last-workout-section";
 import { PlannedWorkoutSheet } from "../components/planned-workout-sheet";
@@ -32,6 +35,7 @@ import { PrNote } from "../components/pr-note";
 import { ThisWeekSection } from "../components/this-week-section";
 import { TodayCard, TodayCardLink } from "../components/today-card";
 import { CheckInCard } from "../components/check-in-card";
+import { useActivityLevelPrompt } from "../hooks/use-activity-level-prompt";
 import { useCheckIn } from "../hooks/use-check-in";
 import { useDaysWorkout } from "../hooks/use-days-workout";
 import { useDismissedOffer } from "../hooks/use-dismissed-offer";
@@ -79,6 +83,8 @@ export default function TodayView() {
   const tests = useChosenTests();
   const [sheetIsOpen, setSheetIsOpen] = useState(false);
   const prNote = usePrNote();
+  const { day } = useDay();
+  const activityPrompt = useActivityLevelPrompt();
   useRefreshHistory();
 
   const plan = todayPlan({
@@ -160,6 +166,16 @@ export default function TodayView() {
       <Text size="sm" weight="semiBold" color="muted" style={{ marginBottom: spacing[3] }}>
         {now.toLocaleDateString([], { weekday: "long", day: "numeric", month: "long" })}
       </Text>
+      {day ? (
+        <View style={{ marginBottom: spacing[4] }}>
+          <DayRings day={day} />
+        </View>
+      ) : null}
+      {activityPrompt.asks ? (
+        <View style={{ marginBottom: spacing[4] }}>
+          <ActivityLevelCard onSkip={activityPrompt.skip} />
+        </View>
+      ) : null}
       {prNote.shown.length ? (
         <View style={{ marginBottom: spacing[3] }}>
           <PrNote shown={prNote.shown} now={now} onDismiss={prNote.dismiss} />

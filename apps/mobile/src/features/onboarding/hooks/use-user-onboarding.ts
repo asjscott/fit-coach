@@ -1,6 +1,13 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { usualWorkoutLength } from "@fit/engines";
-import { bodyWeightAnswer, bodyWeightInUnit, bodyWeightKg, UserProfile, type WeightUnit } from "@fit/shared";
+import {
+  ActivityLevel,
+  bodyWeightAnswer,
+  bodyWeightInUnit,
+  bodyWeightKg,
+  UserProfile,
+  type WeightUnit,
+} from "@fit/shared";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
@@ -21,9 +28,11 @@ import type { Stage, StageAction } from "../form/staged-form";
 // ----------------------------------------------------------------------
 
 // The profile plus the answers that become the primary equipment profile. Body weight is answered in the user's
-// unit and saved in kg (#148)
+// unit and saved in kg (#148). Onboarding always asks the Activity Level, which the server lets an older user lack.
+// The fibre target is edited on Profile, never here
 export const onboardingValues = (unit: WeightUnit) =>
-  UserProfile.omit({ weightKg: true }).extend({
+  UserProfile.omit({ weightKg: true, fibreTargetG: true }).extend({
+    activityLevel: ActivityLevel,
     weight: bodyWeightAnswer(unit),
     trainingSetup: TrainingSetup,
     equipment: EquipmentByGroup,
@@ -36,6 +45,7 @@ export function useUserOnboarding() {
   // The view only renders the form once the user has loaded
   const { user, updateUser, saveEquipmentProfile } = useCurrentUser();
   const { handleError } = useNotifications();
+  // The form's schema drops the fibre target, so saving the form never changes it
   const { weightKg, ...profile } = user?.profile ?? {};
   const primaryEquipment = usePrimaryEquipmentProfile();
   // Weights and body weight are entered in the user's unit and saved in kg

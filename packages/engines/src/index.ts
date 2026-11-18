@@ -7,6 +7,7 @@ export { isRatedTest, takesNoMoreSets, TEST_REPS, type ProtocolState, type TestP
 export * from "./assessment-tests";
 export * from "./block";
 export * from "./check-in";
+export * from "./daily-targets";
 export * from "./data/exercises";
 export * from "./days-workout";
 export * from "./e1rm";

@@ -6,6 +6,7 @@ export * from "./exercises";
 export * from "./equipment";
 export * from "./error-reporting";
 export * from "./health";
+export * from "./nutrition";
 export * from "./planned-workouts";
 export * from "./progression";
 export * from "./units";

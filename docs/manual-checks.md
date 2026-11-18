@@ -9,6 +9,7 @@ Result codes: **✅ pass** · **❌ fail** · **⚠️ works but feels off** · 
 ## What's left
 
 - **Run on the phone now:** R1, U1, U2, LS2, PR1. Each is a part no run has covered yet.
+- **M7, once it's on the phones:** DT1–DT5.
 - **Run when you next train:** P9 and S1, a full Workout with a timer, resting as the timer says. Both can be one session.
 - **🕒 Due later, while you use the app:** C5 (the day after a check-in), P16 (a Monday), J2 (after a week with jumps on), P17 (after a few weeks), DL1 and DL2 (the 5th week of a Block: the week starting 4 Mondays after the Monday of the week Assessment B was done).
 - **On hold:** E1–E3 need Sentry set up on production.
@@ -228,6 +229,21 @@ A Workout pairs Exercises only when it wouldn't otherwise fit its Length. Pairs 
 - [ ] **DL1** In the deload week, open the Next Workout sheet on Today: the Exercises and Sets are as usual, weighted targets about 10% lighter (on a real dumbbell, plate or stack step), and bodyweight, band and timed targets about 70% of last week's (never under 5 reps or 15 s unless they were already). Below the plan, a "Retake the Assessment" section explains that only the Exercises it tests, and any not done this Block, get new levels, with Start assessment A. The wording reads well and doesn't feel pushy.
   - Result: · Notes:
 - [ ] **DL2** Dismiss the retest with the ×: it stays gone for the rest of the week. On the Monday after, the plan is back to the usual loads and there's no retest. Or, instead, take A and B in the deload week: the Results open as usual, and next week an Exercise you trained this Block but the Assessment didn't test keeps the target it had reached.
+  - Result: · Notes:
+
+## Daily Targets (#160)
+
+M7 checks run on the phones' Release builds against the API on the Mac.
+
+- [ ] **DT1** Today opens with four equal rings above the Today card: kcal left, g protein left, fibre and water. With nothing eaten, kcal and protein show the whole targets, fibre and water show 0 of theirs (water in L), and every ring is empty. Tapping a ring does nothing.
+  - Result: · Notes:
+- [ ] **DT2** On Profile, change the Goal (Edit profile), the Activity Level and the fibre target in turn. Back on Today, the rings show the new targets each time. Clearing the fibre target ("Follow calories") puts the fibre ring back to 40 g per 1,000 kcal.
+  - Result: · Notes:
+- [ ] **DT3** A new account's onboarding asks "How active are you?" after the Goal, with the four levels described by job and steps, and won't go on without one. Profile then shows it under Nutrition.
+  - Result: · Notes:
+- [ ] **DT4** An account onboarded before M7 (no Activity Level) sees "How active are you?" under the rings on Today. Picking a level saves it and the card goes, and the kcal ring changes unless lightly active was picked. On a second such account, "Not now" hides it for good, also after a force-quit, with the rings counting it as lightly active.
+  - Result: · Notes:
+- [ ] **DT5** Offline, Today shows no rings and nothing breaks; back online, they come back on the next visit to Today.
   - Result: · Notes:
 
 ## Sentry (#122)

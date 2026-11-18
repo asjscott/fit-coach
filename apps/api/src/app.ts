@@ -4,6 +4,7 @@ import { serializerCompiler, validatorCompiler } from "fastify-type-provider-zod
 import { ensureAssessmentIndexes, migrateWorkingLevels } from "./assessments";
 import { assessmentRoutes } from "./routes/assessments";
 import { checkInRoutes } from "./routes/check-ins";
+import { dayRoutes } from "./routes/days";
 import { exerciseRoutes } from "./routes/exercises";
 import { plannedWorkoutRoutes } from "./routes/planned-workouts";
 import { userRoutes } from "./routes/users";
@@ -58,6 +59,7 @@ export async function buildApp({ logger }: { logger: boolean }) {
   await app.register(assessmentRoutes);
   await app.register(plannedWorkoutRoutes);
   await app.register(checkInRoutes);
+  await app.register(dayRoutes);
   registerTestErrorRoute(app);
 
   app.get("/health", async () => {

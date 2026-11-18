@@ -10,16 +10,18 @@ export type RingProps = {
   target: number;
   size?: number;
   stroke?: number;
+  // Words for the middle in place of the count, such as the kcal left, drawn smaller so they fit
+  centre?: string;
 };
 
 // Progress towards a target as an accent arc on a hairline-coloured track, with the count in the middle.
 // Decorative: the text beside it says the same in words
-export function Ring({ done, target, size = 44, stroke = 6 }: RingProps) {
+export function Ring({ done, target, size = 44, stroke = 6, centre }: RingProps) {
   const { colors } = useTheme();
   const radius = (size - stroke) / 2;
   const circumference = 2 * Math.PI * radius;
-  const progress = target > 0 ? Math.min(done, target) / target : 0;
-  const fontSize = size >= 64 ? fontSizes.xl : fontSizes.sm;
+  const progress = target > 0 ? Math.max(0, Math.min(done, target)) / target : 0;
+  const fontSize = size >= 64 && centre === undefined ? fontSizes.xl : fontSizes.sm;
 
   return (
     <View
@@ -43,7 +45,7 @@ export function Ring({ done, target, size = 44, stroke = 6 }: RingProps) {
         ) : null}
       </Svg>
       <Text weight="bold" style={{ fontSize }}>
-        {done}
+        {centre ?? done}
       </Text>
     </View>
   );

@@ -7,7 +7,8 @@ import type { FastifyInstance } from "fastify";
 import { MongoMemoryReplSet } from "mongodb-memory-server";
 import { afterAll, beforeAll } from "vitest";
 
-// A user who has finished onboarding, which POST /workouts needs: 80 kg, male, building muscle 3 days a week
+// A user who has finished onboarding, which POST /workouts needs: 80 kg, male, lightly active, building muscle 3 days
+// a week
 export const ONBOARDED_PROFILE: UserProfile = {
   gender: "male",
   birthYear: 1990,
@@ -17,6 +18,7 @@ export const ONBOARDED_PROFILE: UserProfile = {
   daysPerWeek: 3,
   workoutLength: "standard",
   injuries: [],
+  activityLevel: "lightly_active",
 };
 
 // A home Equipment Profile of fixed dumbbells, primary, so the Coach plans from it

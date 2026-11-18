@@ -14,6 +14,7 @@ import { useToast } from "@/contexts/toast-context";
 import { equipmentSummary } from "@/features/equipment/equipment-summary";
 import { useChosenTests } from "@/features/assessment/hooks/use-chosen-tests";
 import { useStartAssessment } from "@/features/assessment/hooks/use-start-assessment";
+import { ActivityLevelRow, FibreTargetRow } from "@/features/user/components/nutrition-rows";
 import { useCurrentUser, usePrimaryEquipmentProfile, useWeightUnit } from "@/features/user/current-user-provider";
 import { genderLabel } from "@/features/user/components/form/fields/user-gender-field";
 import { goalLabel } from "@/features/user/components/form/fields/user-goal-field";
@@ -80,6 +81,11 @@ export default function ProfileView() {
           />
           <UnitRow />
           {profile.goal === "athletic" ? <IncludeJumps on={profile.includeJumps ?? false} /> : null}
+        </Section>
+        <Divider />
+        <Section label="Nutrition">
+          <ActivityLevelRow />
+          <FibreTargetRow />
         </Section>
         <Divider />
         {/* Retaking lives here for now: Today only offers the first Assessment, then its Results */}

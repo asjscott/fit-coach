@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import {
+  asksActivityLevel,
   checkInLighterRow,
   showsCheckIn,
   supersetWithLabel,
@@ -233,5 +234,21 @@ describe("supersetWithLabel", () => {
   it("names the partner exactly as the library does", () => {
     expect(supersetWithLabel("Barbell Romanian deadlift")).toBe("Superset with Barbell Romanian deadlift");
     expect(supersetWithLabel("Prone Y-T-W raise")).toBe("Superset with Prone Y-T-W raise");
+  });
+});
+
+// Spec #158 story 4: an existing user with no Activity Level is asked once
+describe("asksActivityLevel", () => {
+  it("asks a user who has no Activity Level and hasn't skipped the question", () => {
+    expect(asksActivityLevel({ activityLevel: undefined, skipped: false })).toBe(true);
+  });
+
+  it("never asks again once the user has answered or skipped", () => {
+    expect(asksActivityLevel({ activityLevel: "active", skipped: false })).toBe(false);
+    expect(asksActivityLevel({ activityLevel: undefined, skipped: true })).toBe(false);
+  });
+
+  it("waits until the phone knows whether the question was skipped", () => {
+    expect(asksActivityLevel({ activityLevel: undefined, skipped: undefined })).toBe(false);
   });
 });

@@ -94,7 +94,7 @@ export async function createUser(clerkUserId: string) {
 }
 
 // Merges profile fields into the stored profile and sets the timezone and unit when given; null if the user doesn't
-// exist
+// exist. A fibre target of null is removed, so the stored profile never holds one
 export async function updateUser(clerkUserId: string, { profile = {}, timeZone, unit }: UserUpdate) {
   // $literal stops string values beginning with "$" being read as field paths
   const user = await users.findOneAndUpdate(
@@ -107,6 +107,7 @@ export async function updateUser(clerkUserId: string, { profile = {}, timeZone, 
           ...(unit && { unit: { $literal: unit } }),
         },
       },
+      ...(profile.fibreTargetG === null ? [{ $unset: "profile.fibreTargetG" }] : []),
     ],
     { returnDocument: "after" },
   );

@@ -10,6 +10,10 @@ import { TrainingSetupField } from "@/features/equipment/components/form/fields/
 import { EquipmentLoadsField } from "@/features/equipment/components/form/fields/equipment-loads-field";
 import { loadScreens } from "@/features/equipment/loads";
 import { loadTagsAsked, selectableGroups, selectedTags } from "@/features/equipment/training-setup";
+import {
+  ACTIVITY_LEVEL_NOTE,
+  UserActivityLevelField,
+} from "@/features/user/components/form/fields/user-activity-level-field";
 import { UserBirthYearField } from "@/features/user/components/form/fields/user-birth-year-field";
 import { UserDaysPerWeekField } from "@/features/user/components/form/fields/user-days-per-week-field";
 import { UserGoalField } from "@/features/user/components/form/fields/user-goal-field";
@@ -76,6 +80,13 @@ export function UserOnboardingForm({ exit }: { exit: { label: string; onPress: (
             message="Pick what matters most right now. You can change it later."
           >
             <UserGoalField />
+          </FormStage>
+          <FormStage<OnboardingValues>
+            fields={["activityLevel"]}
+            title="How active are you?"
+            message={`We use this to set your daily calories. ${ACTIVITY_LEVEL_NOTE}`}
+          >
+            <UserActivityLevelField />
           </FormStage>
           <FormStage<OnboardingValues>
             fields={["daysPerWeek", "workoutLength"]}
