@@ -1,6 +1,6 @@
 import { Day } from "@fit/shared";
 import { useCallback, useState } from "react";
-import { useApi } from "@/api";
+import { ApiError, useApi } from "@/api";
 import { useCurrentUser } from "@/features/user/current-user-provider";
 import { useReloadOnVisit } from "@/features/workouts/hooks/use-reload-on-visit";
 import { errorMessage } from "@/utils/error-message";
@@ -13,19 +13,23 @@ export function useDay(date = "today") {
   const { user } = useCurrentUser();
   const [day, setDay] = useState<Day | undefined>(undefined);
   const [error, setError] = useState<string | null>(null);
+  // The API couldn't be reached at all, as opposed to answering with an error
+  const [isOffline, setIsOffline] = useState(false);
   const profile = user?.profile;
 
   const refresh = useCallback(async () => {
     try {
       setDay(Day.parse(await api(`/days/${date}`)));
       setError(null);
+      setIsOffline(false);
     } catch (err) {
       setError(errorMessage(err));
+      setIsOffline(!(err instanceof ApiError));
     }
     // The profile is a dependency only so a change to it reloads the day
   }, [api, date, profile]);
 
   useReloadOnVisit(refresh);
 
-  return { day, error, refresh };
+  return { day, error, isOffline, refresh };
 }

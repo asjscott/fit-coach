@@ -22,6 +22,12 @@ describe("GET /days/:date", () => {
       // 2,406.25 × 1.1 = 2,646.875; carbs (2,650 − 160 × 4 − 64 × 9) ÷ 4 = 358.5; water 35 ml × 80 = 2,800
       targets: { kcal: 2650, proteinG: 160, fatG: 64, carbsG: 359, fibreG: 106, waterMl: 2750 },
       totals: { kcal: 0, proteinG: 0, fatG: 0, carbsG: 0, fibreG: 0 },
+      meals: [
+        { meal: "breakfast", entries: [] },
+        { meal: "lunch", entries: [] },
+        { meal: "dinner", entries: [] },
+        { meal: "snacks", entries: [] },
+      ],
       waterMl: 0,
     });
   });

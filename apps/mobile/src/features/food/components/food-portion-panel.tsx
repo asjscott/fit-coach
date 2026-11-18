@@ -1,29 +1,17 @@
 import { portionNutrients } from "@fit/engines";
 import type { Food } from "@fit/shared";
-import { useState } from "react";
 import { ScrollView, StyleSheet, View } from "react-native";
 import { Chip } from "@/components/chip";
 import { Input, InputField } from "@/components/input";
 import { Text } from "@/components/text";
 import { spacing } from "@/theme";
-import { portionGrams, portionLine, type PortionUnit } from "../food-portion";
+import { portionLine } from "../food-portion";
+import type { PortionState } from "../hooks/use-portion";
 
-const DEFAULT_GRAMS = "100";
-
-// A portion of a food to look at before it's logged: grams, or a count of one of its own servings, and what that
-// portion holds (spec #158 stories 71 and 72)
-export function FoodPortionPanel({ food }: { food: Food }) {
-  const firstServing = food.servings[0];
-  const [unit, setUnit] = useState<PortionUnit>(
-    firstServing ? { unit: "serving", serving: firstServing } : { unit: "g" },
-  );
-  const [amount, setAmount] = useState(firstServing ? "1" : DEFAULT_GRAMS);
-  const grams = portionGrams(unit, amount);
-
-  const choose = (next: PortionUnit) => {
-    setUnit(next);
-    setAmount(next.unit === "g" ? DEFAULT_GRAMS : "1");
-  };
+// A portion of a food: grams, or a count of one of its own servings, and what that portion holds (spec #158 stories
+// 71 and 72). The portion's state comes from usePortion, so the screen around it can log or save it
+export function FoodPortionPanel({ food, portion }: { food: Food; portion: PortionState }) {
+  const { unit, amount, setAmount, choose, grams } = portion;
 
   return (
     <View style={styles.panel}>
@@ -62,7 +50,7 @@ export function FoodPortionPanel({ food }: { food: Food }) {
 }
 
 const styles = StyleSheet.create({
-  panel: { gap: spacing[3], paddingBottom: spacing[4] },
+  panel: { gap: spacing[3] },
   units: { gap: spacing[2] },
   amountRow: { flexDirection: "row", alignItems: "center", gap: spacing[3] },
   amount: { width: 96 },

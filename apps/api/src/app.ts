@@ -6,6 +6,7 @@ import { assessmentRoutes } from "./routes/assessments";
 import { checkInRoutes } from "./routes/check-ins";
 import { dayRoutes } from "./routes/days";
 import { exerciseRoutes } from "./routes/exercises";
+import { foodEntryRoutes } from "./routes/food-entries";
 import { foodRoutes } from "./routes/foods";
 import { plannedWorkoutRoutes } from "./routes/planned-workouts";
 import { userRoutes } from "./routes/users";
@@ -13,6 +14,7 @@ import { workoutRoutes } from "./routes/workouts";
 import { HealthResponse } from "@fit/shared";
 import { registerAuth } from "./auth";
 import { ensureCheckInIndexes } from "./check-ins";
+import { ensureFoodEntryIndexes } from "./food-entries";
 import { realFoodSources, type FoodSources } from "./food-sources";
 import { pingDb } from "./db";
 import { registerTestErrorRoute, reportRouteErrorsWithUser } from "./error-reporting";
@@ -54,6 +56,8 @@ export async function buildApp({ logger, foodSources }: { logger: boolean; foodS
 
   await ensureCheckInIndexes().catch((err) => app.log.error(err, "Failed to create check-in indexes"));
 
+  await ensureFoodEntryIndexes().catch((err) => app.log.error(err, "Failed to create food entry indexes"));
+
   await migrateUsers().catch((err) => app.log.error(err, "Failed to migrate users"));
 
   await migrateWorkingLevels().catch((err) => app.log.error(err, "Failed to migrate working levels"));
@@ -66,6 +70,7 @@ export async function buildApp({ logger, foodSources }: { logger: boolean; foodS
   await app.register(checkInRoutes);
   await app.register(dayRoutes);
   await app.register(foodRoutes, { foodSources: sources });
+  await app.register(foodEntryRoutes);
   registerTestErrorRoute(app);
 
   app.get("/health", async () => {

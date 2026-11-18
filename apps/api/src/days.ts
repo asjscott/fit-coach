@@ -1,5 +1,6 @@
 import { dailyTargets, localDateOf } from "@fit/engines";
-import { type Day, type DayTotals, UserProfile } from "@fit/shared";
+import { type Day, UserProfile } from "@fit/shared";
+import { findMeals } from "./food-entries";
 import { findUser } from "./users";
 
 // What a day is worked out from. Onboarding requires all but the Activity Level and the fibre target
@@ -13,9 +14,6 @@ const DayProfile = UserProfile.pick({
   fibreTargetG: true,
 });
 
-// Nothing eaten: the Food Entries that add up to a day's totals come with the Food tab
-const NOTHING_EATEN: DayTotals = { kcal: 0, proteinG: 0, fatG: 0, carbsG: 0, fibreG: 0 };
-
 // One local date of the user's eating against their Daily Targets, "today" being today in their timezone. Null before
 // onboarding, when there's no profile to work the targets out from. Each later M7 ticket adds its part of the day here
 export async function findDay(clerkUserId: string, date: string): Promise<Day | null> {
@@ -27,7 +25,8 @@ export async function findDay(clerkUserId: string, date: string): Promise<Day | 
   return {
     date: localDate,
     targets: dailyTargets(profile, weightKg, localDate),
-    totals: NOTHING_EATEN,
+    // The totals are worked out from the Food Entries whenever the day is read, never stored
+    ...(await findMeals(clerkUserId, localDate)),
     waterMl: 0,
   };
 }
