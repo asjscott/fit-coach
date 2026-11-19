@@ -1,5 +1,14 @@
 import { describe, expect, it } from "vitest";
-import { isLoggableDate, loggableDates, mondayOfDate, weekdayOf } from "./local-dates";
+import { dayBefore, isLoggableDate, loggableDates, mondayOfDate, weekdayOf } from "./local-dates";
+
+describe("dayBefore", () => {
+  it("is the calendar date before, across a month, a year and daylight saving", () => {
+    expect(dayBefore("2026-11-18")).toBe("2026-11-17");
+    expect(dayBefore("2026-03-01")).toBe("2026-02-28");
+    expect(dayBefore("2027-01-01")).toBe("2026-12-31");
+    expect(dayBefore("2026-11-02")).toBe("2026-11-01");
+  });
+});
 
 // Wednesday 18 November 2026, 03:30 in UTC: still Tuesday 17th in Los Angeles
 const now = new Date("2026-11-18T03:30:00Z");

@@ -53,6 +53,10 @@ export type SavedFoodInput = z.input<typeof SavedFoodInput>;
 export const SavedFoods = z.object({ foods: z.array(Food) });
 export type SavedFoods = z.infer<typeof SavedFoods>;
 
+// GET /foods/recent: the foods the user has logged, each once as last logged, most recent first
+export const RecentFoods = z.object({ foods: z.array(Food) });
+export type RecentFoods = z.infer<typeof RecentFoods>;
+
 // GET /foods/search?q=: what to search for
 export const FoodSearchQuery = z.object({ q: z.string().trim().min(1).max(100) });
 

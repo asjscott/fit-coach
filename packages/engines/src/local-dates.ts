@@ -18,6 +18,13 @@ export function loggableDates(now: Date, timeZone: string): string[] {
   });
 }
 
+// The calendar date before this one, as Copy from yesterday reads it
+export function dayBefore(date: string): string {
+  const day = calendarDay(date);
+  day.setUTCDate(day.getUTCDate() - 1);
+  return isoDate(day);
+}
+
 export const isLoggableDate = (date: string, now: Date, timeZone: string) =>
   loggableDates(now, timeZone).includes(date);
 

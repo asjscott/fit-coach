@@ -218,3 +218,132 @@ describe("Food Entries", () => {
     expect(mealOf(await dayOf(user, entry.date), "breakfast")).toEqual([entry]);
   });
 });
+
+type Copied = { entries: FoodEntry[] };
+
+describe("POST /days/:date/meals/:meal/copy-from-yesterday", () => {
+  // Spec #158 stories 52 and 53: yesterday's breakfast goes into today's, after what's already there
+  it("copies the day before's entries in that meal after any already there, never replacing them", async () => {
+    const user = await api.signIn();
+    const yesterday = localDate("UTC", 1);
+    const date = today();
+    const eggs = await logEggs(user, yesterday);
+    await user.post(`/days/${yesterday}/food-entries`, { meal: "breakfast", food: toast, portion: { grams: 40 } });
+    await user.post(`/days/${yesterday}/food-entries`, { meal: "lunch", food: toast, portion: { grams: 80 } });
+    const already = await user.post(`/days/${date}/food-entries`, {
+      meal: "breakfast",
+      food: toast,
+      portion: { grams: 120 },
+    });
+
+    const copied = await user.post(`/days/${date}/meals/breakfast/copy-from-yesterday`);
+
+    expect(copied.statusCode).toBe(201);
+    const breakfast = mealOf(await dayOf(user, date), "breakfast");
+    expect(breakfast.map((e) => [e.food.name, e.portion.grams])).toEqual([
+      ["Bread, whole-wheat", 120],
+      ["Eggs, Grade A, Large, egg whole", 100],
+      ["Bread, whole-wheat", 40],
+    ]);
+    expect(breakfast[0]).toEqual(already.body);
+    // Each copy is a new Food Entry with the same snapshot
+    expect(breakfast[1]).toMatchObject({ date, meal: "breakfast", food: egg, portion: eggs.portion });
+    expect(breakfast[1].nutrients).toEqual(eggs.nutrients);
+    expect(breakfast[1].id).not.toBe(eggs.id);
+    expect(copied.body).toEqual({ entries: breakfast.slice(1) });
+    expect(mealOf(await dayOf(user, date), "lunch")).toEqual([]);
+  });
+
+  // Story 54: today's portion can change without touching yesterday
+  it("makes copies that change and delete without touching yesterday", async () => {
+    const user = await api.signIn();
+    const yesterday = localDate("UTC", 1);
+    const eggs = await logEggs(user, yesterday);
+
+    const first = (await user.post("/days/today/meals/breakfast/copy-from-yesterday")).body as Copied;
+    await user.patch(`/food-entries/${first.entries[0].id}`, { portion: { grams: 150 } });
+    const again = (await user.post("/days/today/meals/breakfast/copy-from-yesterday")).body as Copied;
+    await user.delete(`/food-entries/${again.entries[0].id}`);
+
+    expect(mealOf(await dayOf(user, yesterday), "breakfast")).toEqual([eggs]);
+    expect(mealOf(await dayOf(user, today()), "breakfast")).toMatchObject([{ portion: { grams: 150 } }]);
+  });
+
+  it("copies nothing from an empty meal, and refuses a date that can't be logged or a meal there isn't", async () => {
+    const user = await api.signIn();
+    await logEggs(user, localDate("UTC", 1));
+
+    const nothing = await user.post("/days/today/meals/lunch/copy-from-yesterday");
+    const tooOld = await user.post(`/days/${localDate("UTC", 7)}/meals/breakfast/copy-from-yesterday`);
+
+    expect(nothing.body).toEqual({ entries: [] });
+    expect(tooOld.statusCode).toBe(400);
+    expect((await user.post("/days/today/meals/elevenses/copy-from-yesterday")).statusCode).toBe(400);
+  });
+
+  // "Rules for every write": everything is scoped to the signed-in user
+  it("copies only the signed-in user's entries", async () => {
+    const owner = await api.signIn();
+    const other = await api.signIn();
+    await logEggs(owner, localDate("UTC", 1));
+
+    expect((await other.post("/days/today/meals/breakfast/copy-from-yesterday")).body).toEqual({ entries: [] });
+  });
+});
+
+const recentOf = async (user: TestUser) => {
+  const { statusCode, body } = await user.get("/foods/recent");
+  expect(statusCode).toBe(200);
+  return (body as { foods: Food[] }).foods;
+};
+
+describe("GET /foods/recent", () => {
+  // Spec #158 story 62 and "Saved Foods and Recent": the foods logged, distinct and most recent first
+  it("lists the foods the user has logged, each once, most recently logged first", async () => {
+    const user = await api.signIn();
+    const banana: Food = { ...toast, id: "1105314", name: "Bananas, raw", brand: undefined };
+    await logEggs(user, localDate("UTC", 2));
+    await user.post("/days/today/food-entries", { meal: "lunch", food: toast, portion: { grams: 40 } });
+    await user.post("/days/today/food-entries", { meal: "snacks", food: banana, portion: { grams: 120 } });
+    // Eggs again, logged last, but for an earlier day: Recent goes by when it was logged
+    await logEggs(user, localDate("UTC", 1));
+
+    expect(await recentOf(user)).toEqual([egg, banana, toast]);
+  });
+
+  it("is empty before anything is logged, and lists about 20 foods at most", async () => {
+    const user = await api.signIn();
+    expect(await recentOf(user)).toEqual([]);
+
+    for (let i = 0; i < 25; i++) {
+      await user.post("/days/today/food-entries", {
+        meal: "snacks",
+        food: { ...egg, id: `egg-${i}` },
+        portion: { grams: 50 },
+      });
+    }
+
+    const recent = await recentOf(user);
+    expect(recent).toHaveLength(20);
+    expect(recent[0].id).toBe("egg-24");
+    expect(recent[19].id).toBe("egg-5");
+  });
+
+  // A food copied or logged from Recent is still the one food
+  it("counts a copied food once", async () => {
+    const user = await api.signIn();
+    await logEggs(user, localDate("UTC", 1));
+    await user.post("/days/today/meals/breakfast/copy-from-yesterday");
+
+    expect(await recentOf(user)).toEqual([egg]);
+  });
+
+  it("lists only the signed-in user's foods", async () => {
+    const owner = await api.signIn();
+    const other = await api.signIn();
+    await logEggs(owner);
+
+    expect(await recentOf(other)).toEqual([]);
+    expect(await recentOf(owner)).toEqual([egg]);
+  });
+});

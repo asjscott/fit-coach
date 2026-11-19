@@ -45,6 +45,13 @@ export const FoodEntryChange = z
   .refine((change) => change.meal || change.portion, "change the meal or the portion");
 export type FoodEntryChange = z.infer<typeof FoodEntryChange>;
 
+// POST /days/:date/meals/:meal/copy-from-yesterday: the meal copied from the day before
+export const CopyMealParams = z.object({ date: z.union([z.literal("today"), LocalDate]), meal: Meal });
+
+// What a copy added: new Food Entries, in the order they were logged the day before
+export const CopiedFoodEntries = z.object({ entries: z.array(FoodEntry) });
+export type CopiedFoodEntries = z.infer<typeof CopiedFoodEntries>;
+
 // One meal of a day and its Food Entries, oldest logged first
 export const DayMeal = z.object({ meal: Meal, entries: z.array(FoodEntry) });
 export type DayMeal = z.infer<typeof DayMeal>;

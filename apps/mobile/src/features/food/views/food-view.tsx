@@ -1,6 +1,6 @@
 import { loggableDates } from "@fit/engines";
 import type { Food, FoodEntry, FoodEntryAdd, FoodEntryChange, Meal } from "@fit/shared";
-import { useRef, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import { StyleSheet, type TextInputInstance, View } from "react-native";
 import { Alert, AlertText } from "@/components/alert";
 import { Input, InputField, InputIcon, InputSlot } from "@/components/input";
@@ -13,14 +13,18 @@ import { useDay } from "@/features/nutrition/hooks/use-day";
 import { useTimeZone } from "@/features/user/current-user-provider";
 import { spacing } from "@/theme";
 import { DayStepper } from "../components/day-stepper";
+import { type FoodHalf, FoodHalves } from "../components/food-halves";
 import { FoodResult } from "../components/food-result";
 import { MealsCard } from "../components/meals-card";
+import { RecentAndSavedList } from "../components/recent-and-saved-list";
 import { SavedFoodEditor } from "../components/saved-food-editor";
 import { ScanButton } from "../components/scan-button";
 import { WaterGlasses } from "../components/water-glasses";
 import { useFoodEntries } from "../hooks/use-food-entries";
 import { useFoodSearch } from "../hooks/use-food-search";
+import { useRecentAndSaved } from "../hooks/use-recent-and-saved";
 import { useSavedFoods } from "../hooks/use-saved-foods";
+import { copyLabel } from "../recent-and-saved";
 import { dayStepLabel } from "../today-so-far";
 
 const keyOf = (food: Food) => `${food.source}:${food.id}`;
@@ -28,18 +32,28 @@ const keyOf = (food: Food) => `${food.source}:${food.id}`;
 // Create food (with the barcode scanned, when it came from a scan), or a Saved Food being edited
 type Editing = { barcode?: string } | { food: Food };
 
-// The Food tab's Today so far (prototype variant J): the day stepper, three equal rings, the water glasses, search
-// and Scan, then the day's meals. Logging needs a connection; offline it says so, and nothing the user chose is
-// cleared by a failed write
+// The Food tab (prototype variant J), in two halves under a two-part control. Today so far: the day stepper, three
+// equal rings, the water glasses, search and Scan, then the day's meals. Ideas and recent: Recent and Saved Foods as
+// one-tap choices. Logging needs a connection; offline it says so, and nothing the user chose is cleared by a failed
+// write
 export default function FoodView() {
   const timeZone = useTimeZone();
+  // Opens on Today so far (spec #158 story 43)
+  const [half, setHalf] = useState<FoodHalf>("today");
   const [daysBefore, setDaysBefore] = useState(0);
   // Today and the 6 days before it, in the user's timezone, as the API counts them
   const date = loggableDates(new Date(), timeZone)[daysBefore];
   const { day: loaded, isOffline, refresh } = useDay(date);
   // The last day loaded can be another one while the chosen day is on its way
   const day = loaded?.date === date ? loaded : undefined;
-  const entries = useFoodEntries(refresh);
+  const recent = useRecentAndSaved();
+  const { refresh: refreshRecent } = recent;
+  // A food logged, copied or saved changes the day and Recent alike
+  const reload = useCallback(() => {
+    refresh();
+    refreshRecent();
+  }, [refresh, refreshRecent]);
+  const entries = useFoodEntries(reload);
 
   const [query, setQuery] = useState("");
   const [openKey, setOpenKey] = useState<string | null>(null);
@@ -56,6 +70,8 @@ export default function FoodView() {
   const [found, setFound] = useState<Food | null>(null);
   const [lookingUp, setLookingUp] = useState(false);
   const [editing, setEditing] = useState<Editing | null>(null);
+  // The Recent or Saved Food open to log on the Ideas and recent half
+  const [chosen, setChosen] = useState<string | null>(null);
 
   // Spec #158 stories 65 to 68: a scan finds the food to log, or offers Create food when nothing has the barcode
   const scanned = async (code: string) => {
@@ -78,108 +94,145 @@ export default function FoodView() {
       setQuery("");
       setFound(null);
       setOpenKey(null);
+      setChosen(null);
       setAddingTo(null);
       setOpenMeal(add.meal);
+      // A food added from Ideas and recent is shown in its meal
+      setHalf("today");
     }
     return ok;
+  };
+
+  const savedFoodChanged = () => {
+    setSearchVersion((v) => v + 1);
+    refreshRecent();
   };
 
   return (
     <Screen scroll="screen" edges={["bottom"]}>
       <View style={styles.page}>
-        <DayStepper daysBefore={daysBefore} onChange={setDaysBefore} />
+        <FoodHalves half={half} onChange={setHalf} />
         {isOffline ? (
           <Alert action="muted">
             <AlertText>Logging food needs a connection. Nothing is saved on this phone until you have one.</AlertText>
           </Alert>
         ) : null}
-        {day ? <DayRings day={day} only={["kcal", "protein", "fibre"]} size={72} /> : isOffline ? null : <Spinner />}
-        {day ? <WaterGlasses key={day.date} day={day} onSaved={refresh} /> : null}
-        <View style={styles.searchRow}>
-          <Input style={styles.search}>
-            <InputSlot>
-              <InputIcon name="search" />
-            </InputSlot>
-            <InputField
-              ref={search}
-              value={query}
-              onChangeText={setQuery}
-              placeholder={addingTo ? `Search foods for ${addingTo}` : "Search foods"}
-              autoCorrect={false}
-              returnKeyType="search"
-              accessibilityLabel="Search foods"
-            />
-          </Input>
-          <ScanButton onScanned={scanned} />
-        </View>
-        {lookingUp ? <Spinner /> : null}
-        {found ? (
-          <View>
-            <Text size="sm" weight="semiBold" color="muted">
-              {found.source === "saved" ? "From your Saved Foods" : "Scanned"}
-            </Text>
-            <FoodResult
-              food={found}
-              open
-              onToggle={() => setFound(null)}
+        {half === "ideas" ? (
+          <>
+            {/* The Coach's summary and its Food Ideas go first here, above Recent and Saved (stories 56 to 61) */}
+            {daysBefore > 0 ? (
+              <Text size="sm" color="muted">
+                {`Adding to ${dayStepLabel(daysBefore).toLowerCase()}.`}
+              </Text>
+            ) : null}
+            <RecentAndSavedList
+              choices={recent.choices}
+              error={recent.error}
+              chosen={chosen}
+              onChoose={setChosen}
               meal={addingTo}
               onLog={log}
               onEdit={(food) => setEditing({ food })}
             />
-          </View>
-        ) : null}
-        {searching ? (
-          <View>
-            {error ? (
-              <Alert action="muted">
-                <AlertText>{error}</AlertText>
-              </Alert>
+          </>
+        ) : (
+          <>
+            <DayStepper daysBefore={daysBefore} onChange={setDaysBefore} />
+            {day ? (
+              <DayRings day={day} only={["kcal", "protein", "fibre"]} size={72} />
+            ) : isOffline ? null : (
+              <Spinner />
+            )}
+            {day ? <WaterGlasses key={day.date} day={day} onSaved={refresh} /> : null}
+            <View style={styles.searchRow}>
+              <Input style={styles.search}>
+                <InputSlot>
+                  <InputIcon name="search" />
+                </InputSlot>
+                <InputField
+                  ref={search}
+                  value={query}
+                  onChangeText={setQuery}
+                  placeholder={addingTo ? `Search foods for ${addingTo}` : "Search foods"}
+                  autoCorrect={false}
+                  returnKeyType="search"
+                  accessibilityLabel="Search foods"
+                />
+              </Input>
+              <ScanButton onScanned={scanned} />
+            </View>
+            {lookingUp ? <Spinner /> : null}
+            {found ? (
+              <View>
+                <Text size="sm" weight="semiBold" color="muted">
+                  {found.source === "saved" ? "From your Saved Foods" : "Scanned"}
+                </Text>
+                <FoodResult
+                  food={found}
+                  open
+                  onToggle={() => setFound(null)}
+                  meal={addingTo}
+                  onLog={log}
+                  onEdit={(food) => setEditing({ food })}
+                />
+              </View>
             ) : null}
-            {isSearching ? <Spinner /> : null}
-            {foods?.map((food) => (
-              <FoodResult
-                key={keyOf(food)}
-                food={food}
-                open={openKey === keyOf(food)}
-                onToggle={() => setOpenKey((key) => (key === keyOf(food) ? null : keyOf(food)))}
-                meal={addingTo}
-                onLog={log}
-                onEdit={(food) => setEditing({ food })}
+            {searching ? (
+              <View>
+                {error ? (
+                  <Alert action="muted">
+                    <AlertText>{error}</AlertText>
+                  </Alert>
+                ) : null}
+                {isSearching ? <Spinner /> : null}
+                {foods?.map((food) => (
+                  <FoodResult
+                    key={keyOf(food)}
+                    food={food}
+                    open={openKey === keyOf(food)}
+                    onToggle={() => setOpenKey((key) => (key === keyOf(food) ? null : keyOf(food)))}
+                    meal={addingTo}
+                    onLog={log}
+                    onEdit={(food) => setEditing({ food })}
+                  />
+                ))}
+                {foods && !foods.length && !isSearching && !error ? (
+                  <Text color="muted" centered style={{ marginTop: spacing[4] }}>
+                    No foods match “{query.trim()}”.
+                  </Text>
+                ) : null}
+                {foods && !isSearching ? (
+                  <LoadingButton
+                    label="Create food from its label"
+                    size="sm"
+                    action="secondary"
+                    variant="link"
+                    icon="plus"
+                    onPress={() => setEditing({})}
+                    style={styles.create}
+                  />
+                ) : null}
+              </View>
+            ) : day ? (
+              <MealsCard
+                day={day}
+                title={daysBefore === 0 ? "Today so far" : dayStepLabel(daysBefore)}
+                openMeal={openMeal}
+                onOpenMeal={setOpenMeal}
+                onAddTo={addTo}
+                copyLabel={copyLabel(daysBefore)}
+                onCopy={(meal: Meal) => entries.copy(date, meal)}
+                onChange={async (entry: FoodEntry, change: FoodEntryChange) => {
+                  const ok = await entries.change(entry.id, change);
+                  // A Food Entry moved to another meal is shown there
+                  if (ok && change.meal) setOpenMeal(change.meal);
+                  return ok;
+                }}
+                onDelete={(entry: FoodEntry) => entries.remove(entry.id)}
               />
-            ))}
-            {foods && !foods.length && !isSearching && !error ? (
-              <Text color="muted" centered style={{ marginTop: spacing[4] }}>
-                No foods match “{query.trim()}”.
-              </Text>
             ) : null}
-            {foods && !isSearching ? (
-              <LoadingButton
-                label="Create food from its label"
-                size="sm"
-                action="secondary"
-                variant="link"
-                icon="plus"
-                onPress={() => setEditing({})}
-                style={styles.create}
-              />
-            ) : null}
-          </View>
-        ) : day ? (
-          <MealsCard
-            day={day}
-            title={daysBefore === 0 ? "Today so far" : dayStepLabel(daysBefore)}
-            openMeal={openMeal}
-            onOpenMeal={setOpenMeal}
-            onAddTo={addTo}
-            onChange={async (entry: FoodEntry, change: FoodEntryChange) => {
-              const ok = await entries.change(entry.id, change);
-              // A Food Entry moved to another meal is shown there
-              if (ok && change.meal) setOpenMeal(change.meal);
-              return ok;
-            }}
-            onDelete={(entry: FoodEntry) => entries.remove(entry.id)}
-          />
-        ) : null}
+          </>
+        )}
       </View>
       {editing ? (
         <SavedFoodEditor
@@ -188,17 +241,20 @@ export default function FoodView() {
           onClose={() => setEditing(null)}
           onSaved={(food) => {
             setEditing(null);
-            setSearchVersion((v) => v + 1);
+            savedFoodChanged();
+            // A Saved Food fixed from Ideas and recent stays open there to log
+            if (half === "ideas") setChosen(keyOf(food));
             // A food just made or fixed opens to log it: in the search it came from, or on its own after a scan
-            if (searching) {
+            else if (searching) {
               setFound(null);
               setOpenKey(keyOf(food));
             } else setFound(food);
           }}
           onDeleted={() => {
             setEditing(null);
-            setSearchVersion((v) => v + 1);
+            savedFoodChanged();
             setFound(null);
+            setChosen(null);
           }}
         />
       ) : null}

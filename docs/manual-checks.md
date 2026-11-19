@@ -9,7 +9,7 @@ Result codes: **✅ pass** · **❌ fail** · **⚠️ works but feels off** · 
 ## What's left
 
 - **Run on the phone now:** R1, U1, U2, LS2, PR1, TB1–TB3. Each is a part no run has covered yet.
-- **M7, once it's on the phones:** DT1–DT5, WI1–WI6, F1–F4, FL1–FL6, SC1–SC6, WA1–WA5, TC1–TC5.
+- **M7, once it's on the phones:** DT1–DT5, WI1–WI6, F1–F4, FL1–FL6, SC1–SC6, CR1–CR6, WA1–WA5, TC1–TC5.
 - **Run when you next train:** P9 and S1, a full Workout with a timer, resting as the timer says. Both can be one session.
 - **🕒 Due later, while you use the app:** C5 (the day after a check-in), P16 (a Monday), J2 (after a week with jumps on), P17 (after a few weeks), DL1 and DL2 (the 5th week of a Block: the week starting 4 Mondays after the Monday of the week Assessment B was done).
 - **On hold:** E1–E3 need Sentry set up on production.
@@ -309,6 +309,23 @@ Needs a Release build made after `npx expo prebuild` (step 10), since the camera
 - [ ] **SC5** Open the Saved Food from search, tap "Edit saved food", change its kcal and Save: the food shows the new figures, and logging it again uses them. The entry you logged in SC3 still shows the old kcal on its day. Edit it again and "Delete from Saved Foods": it's gone from search, scanning it offers Create food again, and the logged entry is still there.
   - Result: · Notes:
 - [ ] **SC6** In airplane mode, scan a barcode: a toast says finding food needs a connection, and nothing else happens. Create food's Save offline says the same and keeps the form open. Back online, both work.
+  - Result: · Notes:
+
+## Copy from yesterday and Recent (#165)
+
+The Food tab has a two-part control at the top: _Today so far_ (the day, as FL1–FL6) and _Ideas and recent_. The Coach's summary and Food Ideas join Ideas and recent later; for now it holds Recent and Saved Foods.
+
+- [ ] **CR1** The Food tab opens on "Today so far", highlighted in the two-part control. Tap "Ideas and recent": the day stepper, rings, glasses and meals give way to "RECENT AND SAVED". Tap "Today so far": they're back as you left them.
+  - Result: · Notes:
+- [ ] **CR2** With yesterday's Breakfast logged (two foods, say) and one food already in today's: open today's Breakfast and tap "Copy from yesterday". Yesterday's foods appear after the one already there, nothing is replaced, and the line, header and rings add them. Change the portion of one copy and Save, then step back to "Yesterday": its Breakfast is as it was.
+  - Result: · Notes:
+- [ ] **CR3** Open a meal that had nothing yesterday and tap "Copy from yesterday": a toast says nothing was logged in it the day before, and nothing is added. Step back to "Yesterday": the button reads "Copy from the day before" and copies from 2 days ago into yesterday.
+  - Result: · Notes:
+- [ ] **CR4** On "Ideas and recent", your Saved Foods come first, starred, then the foods you've logged, most recent first, each once (a food logged twice, or copied, shows once). Tap one: it opens to choose a portion and a meal, as a search result does; tap it again to close it. Pick Snacks and "Add to snacks": the tab goes back to Today so far with Snacks open and the food in it, and that food is now first in Recent.
+  - Result: · Notes:
+- [ ] **CR5** Edit a Saved Food's kcal (from search, SC5), then open it from "Ideas and recent": it shows the new figures, and it's listed once. On a fresh account with nothing logged or saved, "Ideas and recent" says the foods you log and save show there.
+  - Result: · Notes:
+- [ ] **CR6** In airplane mode, tap "Copy from yesterday": a toast says logging food needs a connection and nothing is copied. Open "Ideas and recent" with nothing loaded yet: it says recent and saved foods need a connection. Back online, both work.
   - Result: · Notes:
 
 ## Water (#166)

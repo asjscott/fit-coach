@@ -2,6 +2,7 @@ import type { Day, FoodEntry, FoodEntryChange, Meal } from "@fit/shared";
 import { useState } from "react";
 import { StyleSheet, View } from "react-native";
 import { Icon } from "@/components/icons";
+import { LoadingButton } from "@/components/loading-button";
 import { Pressable } from "@/components/pressable";
 import { Text } from "@/components/text";
 import { radii, spacing, useTheme } from "@/theme";
@@ -10,13 +11,15 @@ import { entryPortion, mealLine, mealName } from "../today-so-far";
 import { EntryEditor } from "./entry-editor";
 
 // The day's four meals under its totals (prototype variant J's Today so far): each shows its number of foods and kcal,
-// and opens, one at a time, to its Food Entries and "Add to (meal)" (spec #158 stories 49 to 51)
+// and opens, one at a time, to its Food Entries, "Add to (meal)" and "Copy from yesterday" (spec #158 stories 49 to 53)
 export function MealsCard({
   day,
   title,
   openMeal,
   onOpenMeal,
   onAddTo,
+  copyLabel,
+  onCopy,
   onChange,
   onDelete,
 }: {
@@ -25,11 +28,21 @@ export function MealsCard({
   openMeal: Meal | null;
   onOpenMeal: (meal: Meal | null) => void;
   onAddTo: (meal: Meal) => void;
+  // "Copy from yesterday" on today, as `copyLabel` in recent-and-saved.ts words it
+  copyLabel: string;
+  // Copies the day before's entries in the meal after its own (stories 52 and 53), answering whether that worked
+  onCopy: (meal: Meal) => Promise<boolean>;
   onChange: (entry: FoodEntry, change: FoodEntryChange) => Promise<boolean>;
   onDelete: (entry: FoodEntry) => Promise<boolean>;
 }) {
   const { colors } = useTheme();
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [copying, setCopying] = useState<Meal | null>(null);
+  const copy = async (meal: Meal) => {
+    setCopying(meal);
+    await onCopy(meal);
+    setCopying(null);
+  };
   // A saved change closes the entry; a failed one leaves it open as the user left it
   const closingOnSuccess = async (write: Promise<boolean>) => {
     const ok = await write;
@@ -92,11 +105,23 @@ export function MealsCard({
                     ) : null}
                   </View>
                 ))}
-                <Pressable onPress={() => onAddTo(meal)} accessibilityRole="button" style={styles.add}>
-                  <Text size="sm" color="accent" weight="semiBold">
-                    {`+ Add to ${mealName(meal).toLowerCase()}`}
-                  </Text>
-                </Pressable>
+                <View style={styles.rowBetween}>
+                  <Pressable onPress={() => onAddTo(meal)} accessibilityRole="button" style={styles.add}>
+                    <Text size="sm" color="accent" weight="semiBold">
+                      {`+ Add to ${mealName(meal).toLowerCase()}`}
+                    </Text>
+                  </Pressable>
+                  <LoadingButton
+                    label={copyLabel}
+                    size="sm"
+                    action="secondary"
+                    variant="link"
+                    icon="copy"
+                    loading={copying === meal}
+                    disabled={copying !== null}
+                    onPress={() => copy(meal)}
+                  />
+                </View>
               </>
             ) : null}
           </View>

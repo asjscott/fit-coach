@@ -1,4 +1,4 @@
-import { portionNutrients } from "@fit/engines";
+import { dayBefore, portionNutrients } from "@fit/engines";
 import {
   type DayMeal,
   type DayTotals,
@@ -22,6 +22,8 @@ const foodEntries = db.collection<FoodEntryDoc>("foodEntries");
 export async function ensureFoodEntryIndexes() {
   // A day's entries, in the order they were logged
   await foodEntries.createIndex({ clerkUserId: 1, date: 1, loggedAt: 1, _id: 1 });
+  // Recent: the user's entries, last logged first
+  await foodEntries.createIndex({ clerkUserId: 1, loggedAt: -1, _id: -1 });
 }
 
 // The grams a portion choice comes to, with the serving it was chosen as. Null for a serving the food doesn't have
@@ -63,6 +65,56 @@ export async function addFoodEntry(
   };
   await foodEntries.insertOne(doc);
   return toEntry(doc);
+}
+
+// Copy from yesterday: the meal's Food Entries on the day before go into the same meal of the date, after any already
+// there (spec #158 stories 52 to 54). Each copy is a new Food Entry, the food, portion and snapshot as they were
+export async function copyMealFromDayBefore(clerkUserId: string, date: string, meal: Meal): Promise<FoodEntry[]> {
+  const before = await foodEntries
+    .find({ clerkUserId, date: dayBefore(date), meal })
+    .sort({ loggedAt: 1, _id: 1 })
+    .toArray();
+  if (!before.length) return [];
+  // One time for them all, after everything already logged; the ObjectIds keep their order
+  const loggedAt = new Date();
+  const copies: FoodEntryDoc[] = before.map(({ food, portion, nutrients }) => ({
+    _id: new ObjectId(),
+    clerkUserId,
+    date,
+    meal,
+    loggedAt,
+    food,
+    portion,
+    nutrients,
+  }));
+  await foodEntries.insertMany(copies);
+  return copies.map(toEntry);
+}
+
+// How many foods Recent lists ("about 20", spec #158)
+export const RECENT_FOODS = 20;
+
+// Recent: the foods the user has logged, each once as it was last logged, most recently logged first. Worked out from
+// the Food Entries, not stored
+export async function recentFoods(clerkUserId: string): Promise<Food[]> {
+  const latest = await foodEntries
+    .aggregate<{ food: Food }>([
+      { $match: { clerkUserId } },
+      { $sort: { loggedAt: -1, _id: -1 } },
+      {
+        $group: {
+          _id: { source: "$food.source", id: "$food.id" },
+          food: { $first: "$food" },
+          loggedAt: { $first: "$loggedAt" },
+          entryId: { $first: "$_id" },
+        },
+      },
+      { $sort: { loggedAt: -1, entryId: -1 } },
+      { $limit: RECENT_FOODS },
+      { $project: { _id: 0, food: 1 } },
+    ])
+    .toArray();
+  return latest.map(({ food }) => food);
 }
 
 // The user's Food Entry by its id, or null when they have none with that id

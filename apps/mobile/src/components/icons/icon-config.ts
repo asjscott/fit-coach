@@ -13,6 +13,7 @@ import CircleAlert from "lucide-react-native/icons/circle-alert";
 import CircleCheck from "lucide-react-native/icons/circle-check";
 import CircleX from "lucide-react-native/icons/circle-x";
 import Clock from "lucide-react-native/icons/clock";
+import Copy from "lucide-react-native/icons/copy";
 import Dumbbell from "lucide-react-native/icons/dumbbell";
 import Ellipsis from "lucide-react-native/icons/ellipsis";
 import Eye from "lucide-react-native/icons/eye";
@@ -30,6 +31,7 @@ import Scale from "lucide-react-native/icons/scale";
 import ScanBarcode from "lucide-react-native/icons/scan-barcode";
 import Search from "lucide-react-native/icons/search";
 import Settings from "lucide-react-native/icons/settings";
+import Star from "lucide-react-native/icons/star";
 import Sun from "lucide-react-native/icons/sun";
 import Target from "lucide-react-native/icons/target";
 import Trash from "lucide-react-native/icons/trash";
@@ -54,6 +56,7 @@ export const IconMap = {
   circleCheck: CircleCheck,
   circleX: CircleX,
   clock: Clock,
+  copy: Copy,
   dark: Moon,
   dumbbell: Dumbbell,
   ellipsis: Ellipsis,
@@ -71,6 +74,7 @@ export const IconMap = {
   search: Search,
   settings: Settings,
   signOut: LogOut,
+  star: Star,
   target: Target,
   trash: Trash,
   triangleAlert: TriangleAlert,

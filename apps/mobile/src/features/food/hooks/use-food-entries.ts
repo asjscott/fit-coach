@@ -1,4 +1,4 @@
-import { FoodEntry, type FoodEntryAdd, type FoodEntryChange } from "@fit/shared";
+import { CopiedFoodEntries, FoodEntry, type FoodEntryAdd, type FoodEntryChange, type Meal } from "@fit/shared";
 import { useCallback, useMemo } from "react";
 import { ApiError, useApi } from "@/api";
 import { useToast } from "@/contexts/toast-context";
@@ -31,6 +31,14 @@ export function useFoodEntries(onSaved: () => void) {
         write("Couldn't log that food", async () =>
           FoodEntry.parse(await api(`/days/${date}/food-entries`, { method: "POST", body: JSON.stringify(add) })),
         ),
+      // Copy from yesterday (spec #158 stories 52 to 54). Says so when the day before had nothing in that meal
+      copy: (date: string, meal: Meal) =>
+        write("Couldn't copy that meal", async () => {
+          const { entries } = CopiedFoodEntries.parse(
+            await api(`/days/${date}/meals/${meal}/copy-from-yesterday`, { method: "POST" }),
+          );
+          if (!entries.length) showToast(`Nothing was logged in ${meal} the day before.`, { type: "info" });
+        }),
       change: (id: string, change: FoodEntryChange) =>
         write("Couldn't change that food", () =>
           api(`/food-entries/${id}`, { method: "PATCH", body: JSON.stringify(change) }),
@@ -38,6 +46,6 @@ export function useFoodEntries(onSaved: () => void) {
       remove: (id: string) =>
         write("Couldn't delete that food", () => api(`/food-entries/${id}`, { method: "DELETE" })),
     }),
-    [api, write],
+    [api, showToast, write],
   );
 }

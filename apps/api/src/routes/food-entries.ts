@@ -1,10 +1,26 @@
 import type { FastifyPluginAsyncZod } from "fastify-type-provider-zod";
 import { LOGGABLE_DAYS, loggableDates } from "@fit/engines";
-import { ErrorResponse, FoodEntry, FoodEntryAdd, FoodEntryChange, LocalDate } from "@fit/shared";
+import {
+  CopiedFoodEntries,
+  CopyMealParams,
+  ErrorResponse,
+  FoodEntry,
+  FoodEntryAdd,
+  FoodEntryChange,
+  LocalDate,
+  RecentFoods,
+} from "@fit/shared";
 import { z } from "zod";
 import { requireAuth, userIdOf } from "../auth";
 import { badRequest } from "../bad-request";
-import { addFoodEntry, changeFoodEntry, deleteFoodEntry, findFoodEntry } from "../food-entries";
+import {
+  addFoodEntry,
+  changeFoodEntry,
+  copyMealFromDayBefore,
+  deleteFoodEntry,
+  findFoodEntry,
+  recentFoods,
+} from "../food-entries";
 import { findUser } from "../users";
 
 // A local date, or "today" in the user's timezone, as GET /days/:date takes
@@ -27,6 +43,11 @@ export const foodEntryRoutes: FastifyPluginAsyncZod = async (app) => {
   // Every route in this file needs a signed-in user
   app.addHook("preHandler", requireAuth);
 
+  // Recent: the foods the user has logged, each once, most recently logged first (spec #158 story 62)
+  app.get("/foods/recent", { schema: { response: { 200: RecentFoods } } }, async (req) => ({
+    foods: await recentFoods(userIdOf(req)!),
+  }));
+
   // 201 with the new Food Entry. Every source logs through this: search, Saved Foods, Food Ideas and Tell the coach
   app.post(
     "/days/:date/food-entries",
@@ -37,6 +58,18 @@ export const foodEntryRoutes: FastifyPluginAsyncZod = async (app) => {
       const entry = await addFoodEntry(clerkUserId, date, req.body);
       if (!entry) throw badRequest(NO_SUCH_SERVING);
       return reply.code(201).send(entry);
+    },
+  );
+
+  // Copy from yesterday: 201 with the new Food Entries, after any already in the meal. None when the day before had
+  // nothing in it
+  app.post(
+    "/days/:date/meals/:meal/copy-from-yesterday",
+    { schema: { params: CopyMealParams, response: { 201: CopiedFoodEntries } } },
+    async (req, reply) => {
+      const clerkUserId = userIdOf(req)!;
+      const date = await loggableDate(clerkUserId, req.params.date);
+      return reply.code(201).send({ entries: await copyMealFromDayBefore(clerkUserId, date, req.params.meal) });
     },
   );
 
