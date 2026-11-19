@@ -32,7 +32,8 @@ import { dayStepLabel } from "../today-so-far";
 const keyOf = (food: Food) => `${food.source}:${food.id}`;
 
 // Create food (with the barcode scanned, when it came from a scan), or a Saved Food being edited
-type Editing = { barcode?: string } | { food: Food };
+// Create food from a scan keeps the barcode, and from a search starts with the words as its name
+type Editing = { barcode?: string; name?: string } | { food: Food };
 
 // The Food tab (prototype variant J), in two halves under a two-part control. Today so far: the day stepper, three
 // equal rings, the water glasses, search and Scan, then the day's meals. Ideas and recent: the Coach's summary with
@@ -219,7 +220,7 @@ export default function FoodView() {
                     action="secondary"
                     variant="link"
                     icon="plus"
-                    onPress={() => setEditing({})}
+                    onPress={() => setEditing({ name: query.trim() })}
                     style={styles.create}
                   />
                 ) : null}
@@ -249,6 +250,7 @@ export default function FoodView() {
         <SavedFoodEditor
           food={"food" in editing ? editing.food : undefined}
           barcode={"barcode" in editing ? editing.barcode : undefined}
+          name={"name" in editing ? editing.name : undefined}
           onClose={() => setEditing(null)}
           onSaved={(food) => {
             setEditing(null);

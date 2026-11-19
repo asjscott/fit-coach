@@ -26,10 +26,11 @@ type FieldOptions = { numeric?: boolean; half?: boolean; placeholder?: string; a
 
 // Create food, from a label, when nothing has the barcode (spec #158 stories 67 and 68), or editing a Saved Food,
 // which can also be deleted there (story 70). Logged Food Entries keep their own copy, so neither changes a day.
-// Rendered only while open, so each opening starts from the food or an empty label
+// Rendered only while open, so each opening starts from the food or an empty label (named as searched)
 export function SavedFoodEditor({
   food,
   barcode,
+  name,
   onSaved,
   onDeleted,
   onClose,
@@ -38,12 +39,16 @@ export function SavedFoodEditor({
   food?: Food;
   // The barcode scanned, which Create food links the new Saved Food to
   barcode?: string;
+  // What Create food's name starts as: the words searched for
+  name?: string;
   onSaved: (food: Food) => void;
   onDeleted?: () => void;
   onClose: () => void;
 }) {
   const savedFoods = useSavedFoods();
-  const [form, setForm] = useState<SavedFoodForm>(() => (food ? savedFoodForm(food) : EMPTY_FORM));
+  const [form, setForm] = useState<SavedFoodForm>(() =>
+    food ? savedFoodForm(food) : { ...EMPTY_FORM, name: name ?? "" },
+  );
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState<"saving" | "deleting" | null>(null);
   const linkedBarcode = food ? food.barcode : barcode;
