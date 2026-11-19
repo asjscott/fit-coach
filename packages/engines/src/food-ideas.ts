@@ -1,5 +1,6 @@
 import type { Diet, DietKind, Food, FoodIdea, FoodIdeaKind, Meal } from "@fit/shared";
 import { FOOD_IDEAS } from "./data/food-ideas";
+import { portionNutrients } from "./food-portion";
 
 // The kinds of Food Idea each Diet eats
 const KINDS: Record<DietKind, FoodIdeaKind[]> = {
@@ -27,18 +28,12 @@ export function foodIdeas(diet: Diet, kcalLeft: number, proteinLeft: number, ide
 
 // A Food Idea as the one food shape, to log through the same route as any food: its portion is its one serving
 export function ideaFood({ id, name, portion, nutrients }: FoodIdea): Food {
-  const per100 = (value: number) => (value * 100) / portion.grams;
+  // The portion's figures scaled to 100 g: as if the portion weighed 100 g for each 100 g it holds
   return {
     source: "idea",
     id,
     name,
-    per100g: {
-      kcal: per100(nutrients.kcal),
-      proteinG: per100(nutrients.proteinG),
-      carbsG: per100(nutrients.carbsG),
-      fatG: per100(nutrients.fatG),
-      fibreG: per100(nutrients.fibreG),
-    },
+    per100g: portionNutrients(nutrients, (100 * 100) / portion.grams),
     servings: [portion],
   };
 }

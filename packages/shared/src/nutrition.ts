@@ -16,16 +16,6 @@ export const DailyTargets = z.object({
 });
 export type DailyTargets = z.infer<typeof DailyTargets>;
 
-// What a day's Food Entries add up to, worked out from them whenever the day is read
-export const DayTotals = z.object({
-  kcal: z.number(),
-  proteinG: z.number(),
-  fatG: z.number(),
-  carbsG: z.number(),
-  fibreG: z.number(),
-});
-export type DayTotals = z.infer<typeof DayTotals>;
-
 // What a Food Idea is, which the Diet allows or rules out: meat and fish are neither, vegetarian has no meat or fish,
 // vegan nothing from an animal
 export const FoodIdeaKind = z.enum(["meat", "fish", "vegetarian", "vegan"]);
@@ -47,8 +37,8 @@ export type FoodIdea = z.infer<typeof FoodIdea>;
 export const Day = z.object({
   date: LocalDate,
   targets: DailyTargets,
-  // Worked out from the meals' Food Entries
-  totals: DayTotals,
+  // What the meals' Food Entries add up to, worked out whenever the day is read
+  totals: Nutrients,
   // Breakfast, lunch, dinner and snacks, in that order, each with its Food Entries
   meals: z.array(DayMeal),
   // The water the user has logged that day, in ml

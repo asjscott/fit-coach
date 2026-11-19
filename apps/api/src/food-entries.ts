@@ -1,13 +1,13 @@
-import { dayBefore, portionNutrients, portionOf } from "@fit/engines";
+import { dayBefore, portionNutrients, portionOf, sumNutrients } from "@fit/engines";
 import {
   type DayMeal,
-  type DayTotals,
   type Food,
   type FoodEntry,
   type FoodEntryAdd,
   type FoodEntryChange,
   MEALS,
   type Meal,
+  type Nutrients,
 } from "@fit/shared";
 import { ObjectId } from "mongodb";
 import { db } from "./db";
@@ -184,21 +184,10 @@ export async function deleteFoodEntry(clerkUserId: string, id: string): Promise<
   return (await foodEntries.deleteOne({ clerkUserId, _id: new ObjectId(id) })).deletedCount === 1;
 }
 
-const NOTHING: DayTotals = { kcal: 0, proteinG: 0, carbsG: 0, fatG: 0, fibreG: 0 };
-
 // A date's four meals with their Food Entries, and the totals they add up to
-export async function findMeals(clerkUserId: string, date: string): Promise<{ meals: DayMeal[]; totals: DayTotals }> {
+export async function findMeals(clerkUserId: string, date: string): Promise<{ meals: DayMeal[]; totals: Nutrients }> {
   const entries = (await foodEntries.find({ clerkUserId, date }).sort({ loggedAt: 1, _id: 1 }).toArray()).map(toEntry);
-  const totals = entries.reduce(
-    (sum, { nutrients: n }) => ({
-      kcal: sum.kcal + n.kcal,
-      proteinG: sum.proteinG + n.proteinG,
-      carbsG: sum.carbsG + n.carbsG,
-      fatG: sum.fatG + n.fatG,
-      fibreG: sum.fibreG + n.fibreG,
-    }),
-    NOTHING,
-  );
+  const totals = sumNutrients(entries.map((entry) => entry.nutrients));
   const meals = MEALS.map((meal: Meal) => ({ meal, entries: entries.filter((e) => e.meal === meal) }));
   return { meals, totals };
 }

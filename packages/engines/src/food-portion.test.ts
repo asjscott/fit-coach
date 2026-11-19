@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { Food } from "@fit/shared";
-import { portionNutrients, portionOf } from "./food-portion";
+import { portionNutrients, portionOf, sumNutrients } from "./food-portion";
 
 // A whole egg, per 100 g, as USDA gives it
 const egg = { kcal: 148, proteinG: 12.4, carbsG: 0.96, fatG: 9.96, fibreG: 0 };
@@ -23,6 +23,18 @@ describe("portionNutrients", () => {
 
   it("holds nothing for no grams", () => {
     expect(portionNutrients(egg, 0)).toEqual({ kcal: 0, proteinG: 0, carbsG: 0, fatG: 0, fibreG: 0 });
+  });
+});
+
+describe("sumNutrients", () => {
+  it("adds up what each portion holds: two eggs and a slice of toast", () => {
+    const eggs = { kcal: 140, proteinG: 12, carbsG: 1, fatG: 10, fibreG: 0 };
+    const toast = { kcal: 200, proteinG: 8, carbsG: 32, fatG: 3.2, fibreG: 6.4 };
+    expect(sumNutrients([eggs, toast])).toEqual({ kcal: 340, proteinG: 20, carbsG: 33, fatG: 13.2, fibreG: 6.4 });
+  });
+
+  it("is nothing for no portions", () => {
+    expect(sumNutrients([])).toEqual({ kcal: 0, proteinG: 0, carbsG: 0, fatG: 0, fibreG: 0 });
   });
 });
 
