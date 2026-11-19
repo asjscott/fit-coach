@@ -1,14 +1,9 @@
 import type { Day } from "@fit/shared";
 import { describe, expect, it } from "vitest";
+import { localDate } from "../test/dates";
 import { useRouteTestApi } from "../test/route-test-api";
 
 const api = useRouteTestApi();
-
-// The local date in a timezone, so many days before today
-const localDate = (timeZone: string, daysBefore = 0) =>
-  new Intl.DateTimeFormat("en-CA", { timeZone, dateStyle: "short" }).format(
-    new Date(Date.now() - daysBefore * 24 * 60 * 60 * 1000),
-  );
 
 describe("PUT /days/:date/water", () => {
   // Spec #158 story 46: the glasses set the day's water, which the day route reads back

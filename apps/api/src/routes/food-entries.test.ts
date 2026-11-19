@@ -1,5 +1,6 @@
 import type { Day, Food, FoodEntry } from "@fit/shared";
 import { describe, expect, it } from "vitest";
+import { localDate } from "../test/dates";
 import { useRouteTestApi } from "../test/route-test-api";
 
 const api = useRouteTestApi();
@@ -22,12 +23,6 @@ const toast: Food = {
   per100g: { kcal: 250, proteinG: 10, carbsG: 40, fatG: 4, fibreG: 8 },
   servings: [{ label: "1 slice", grams: 40 }],
 };
-
-// The local date in a timezone, so many days before today
-const localDate = (timeZone: string, daysBefore = 0) =>
-  new Intl.DateTimeFormat("en-CA", { timeZone, dateStyle: "short" }).format(
-    new Date(Date.now() - daysBefore * 24 * 60 * 60 * 1000),
-  );
 
 const today = () => localDate("UTC");
 

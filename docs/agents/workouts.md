@@ -408,7 +408,8 @@ it("stores an upload once however often it's retried", async () => {
   `at(startedHoursAgo, exercises, extra)`, `upload`, `workingLevels`, `currentPlan` and `plannedExercise`. Use these
   rather than copying them into a test file.
 - **The server reads the clock**, and plans are due on a new day in the user's timezone (UTC for test users), so build
-  times from now rather than fixed dates.
+  times from now rather than fixed dates. `localDate(timeZone, daysBefore)` in `apps/api/src/test/dates.ts` gives a
+  day's date there.
 - **Name tests in GLOSSARY.md terms and say which user story or issue they pin**, as `routes/workouts.test.ts` does.
 - **Never import `db.ts` or a module that does at the top of a test file.** The database client reads `MONGODB_URI` when
   it loads, so the harness sets it before importing the app. Reach the server only through `api.signIn()`.

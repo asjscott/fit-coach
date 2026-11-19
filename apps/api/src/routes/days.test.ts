@@ -1,14 +1,13 @@
 import { ideaFood } from "@fit/engines";
 import type { Day, Food, FoodEntry, User } from "@fit/shared";
 import { describe, expect, it } from "vitest";
+import { localDate } from "../test/dates";
 import { ONBOARDED_PROFILE, useRouteTestApi } from "../test/route-test-api";
 
 const api = useRouteTestApi();
 
 // ONBOARDED_PROFILE is 80 kg, 180 cm, born 1990, male, building muscle and lightly active. On a 2026 date its BMR is
 // 10 × 80 + 6.25 × 180 − 5 × 36 + 5 = 1,750 kcal, and maintenance 1,750 × 1.375 = 2,406.25
-const localDate = (timeZone: string) =>
-  new Intl.DateTimeFormat("en-CA", { timeZone, dateStyle: "short" }).format(new Date());
 
 describe("GET /days/:date", () => {
   // Spec #158 stories 20 to 30: Daily Targets from the profile, with nothing eaten yet
