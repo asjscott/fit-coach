@@ -14,7 +14,7 @@ export type DayRing = {
 
 const whole = (value: number) => Math.round(value).toLocaleString();
 // Water in litres, to the 250 ml of a glass: 2.75, 1.5, 3
-const litres = (ml: number) => (ml / 1000).toLocaleString(undefined, { maximumFractionDigits: 2 });
+export const litres = (ml: number) => (ml / 1000).toLocaleString(undefined, { maximumFractionDigits: 2 });
 const progressOf = (done: number, target: number) => (target > 0 ? Math.min(1, Math.max(0, done / target)) : 0);
 
 // What's left of a target, never below none
