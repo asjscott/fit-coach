@@ -1,7 +1,7 @@
-import { MongoServerError } from "mongodb";
 import { localDateOf, mondayOf, mondayOfDate } from "@fit/engines";
 import type { WeighIn } from "@fit/shared";
 import { db } from "./db";
+import { ignoringDuplicateKey, upsertRacing } from "./duplicate-key";
 import { users } from "./users";
 
 // The shape of a Weigh-in document in MongoDB: one per user per week, keyed by the week's Monday in their timezone
@@ -13,8 +13,6 @@ export async function ensureWeighInIndexes() {
   // At most one Weigh-in per user per week
   await weighIns.createIndex({ clerkUserId: 1, week: 1 }, { unique: true });
 }
-
-const DUPLICATE_KEY = 11000;
 
 // What the user's record says about their Weigh-ins
 export type WeighInSummary = { latestWeighIn: WeighIn | null; weighedInThisWeek: boolean };
@@ -32,10 +30,12 @@ const latestWeighIn = (clerkUserId: string) => weighIns.findOne({ clerkUserId },
 // Stores the Weigh-in for the date's week, replacing any the week already has, then keeps the profile's weight at the
 // latest Weigh-in's, which is what the Assessment and the Daily Targets read
 export async function keepWeighIn(clerkUserId: string, date: string, kg: number) {
-  await weighIns.updateOne(
-    { clerkUserId, week: mondayOfDate(date) },
-    { $set: { date, kg, loggedAt: new Date() } },
-    { upsert: true },
+  await upsertRacing(() =>
+    weighIns.updateOne(
+      { clerkUserId, week: mondayOfDate(date) },
+      { $set: { date, kg, loggedAt: new Date() } },
+      { upsert: true },
+    ),
   );
   const latest = await latestWeighIn(clerkUserId);
   if (latest) await users.updateOne({ clerkUserId }, { $set: { "profile.weightKg": latest.kg } });
@@ -50,21 +50,14 @@ export async function keepFirstWeighIn(user: {
   timeZone?: string;
 }) {
   const { clerkUserId, onboardedAt, profile } = user;
-  if (!onboardedAt || profile.weightKg == null) return;
+  const kg = profile.weightKg;
+  if (!onboardedAt || kg == null) return;
   if (await weighIns.findOne({ clerkUserId })) return;
   const date = localDateOf(onboardedAt, user.timeZone ?? "UTC");
-  try {
-    await weighIns.insertOne({
-      clerkUserId,
-      week: mondayOfDate(date),
-      date,
-      kg: profile.weightKg,
-      loggedAt: onboardedAt,
-    });
-  } catch (err) {
-    // Another request kept it first
-    if (!(err instanceof MongoServerError && err.code === DUPLICATE_KEY)) throw err;
-  }
+  // Another request may have kept it first
+  await ignoringDuplicateKey(() =>
+    weighIns.insertOne({ clerkUserId, week: mondayOfDate(date), date, kg, loggedAt: onboardedAt }),
+  );
 }
 
 // One-off for users onboarded before Weigh-ins (#161): each one's stored weight becomes their first Weigh-in, in the

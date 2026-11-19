@@ -1,6 +1,7 @@
 import { type Food, type Nutrients, SavedFoodInput } from "@fit/shared";
 import { ObjectId } from "mongodb";
 import { db } from "./db";
+import { isDuplicateKey } from "./duplicate-key";
 import { barcodeKey } from "./food-sources/barcode";
 
 // The shape of a Saved Food document in MongoDB: a food the user made from a label (spec #158, "Saved Foods and
@@ -18,8 +19,6 @@ type SavedFoodDoc = {
 };
 
 const savedFoods = db.collection<SavedFoodDoc>("savedFoods");
-
-const DUPLICATE_KEY = 11000;
 
 export async function ensureSavedFoodIndexes() {
   // One Saved Food per barcode per user, so a scan finds one food
@@ -66,8 +65,6 @@ function fieldsOf(input: SavedFoodInput) {
 // Keys left undefined are dropped rather than stored as null
 const withoutUndefined = <T extends object>(fields: T) =>
   Object.fromEntries(Object.entries(fields).filter(([, value]) => value !== undefined)) as T;
-
-const isDuplicateKey = (err: unknown) => (err as { code?: number }).code === DUPLICATE_KEY;
 
 // Makes a Saved Food from a label. "taken" when another of the user's Saved Foods already has the barcode
 export async function createSavedFood(clerkUserId: string, input: SavedFoodInput): Promise<Food | "taken"> {

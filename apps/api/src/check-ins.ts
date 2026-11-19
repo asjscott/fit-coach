@@ -1,6 +1,6 @@
-import { MongoServerError } from "mongodb";
 import type { CheckInUpload, DatedCheckIn } from "@fit/shared";
 import { db } from "./db";
+import { ignoringDuplicateKey } from "./duplicate-key";
 
 // The shape of a Check-in document in MongoDB: one per user per local date. checkedInAt is a Date so it compares by time
 type CheckInDoc = Omit<DatedCheckIn, "checkedInAt"> & { clerkUserId: string; checkedInAt: Date; uploadedAt: Date };
@@ -12,22 +12,18 @@ export async function ensureCheckInIndexes() {
   await checkIns.createIndex({ clerkUserId: 1, date: 1 }, { unique: true });
 }
 
-const DUPLICATE_KEY = 11000;
-
 // Stores the user's Check-in for the date, replacing one made earlier. One made later is kept, so a late upload of an
 // older Check-in changes nothing. Returns the Check-in the date now has
 export async function keepCheckIn(clerkUserId: string, date: string, checkIn: CheckInUpload): Promise<DatedCheckIn> {
   const checkedInAt = new Date(checkIn.checkedInAt);
-  try {
-    // With a later Check-in stored, the filter matches nothing and the upsert's insert hits the unique index
-    await checkIns.updateOne(
+  // With a later Check-in stored, the filter matches nothing and the upsert's insert hits the unique index
+  await ignoringDuplicateKey(() =>
+    checkIns.updateOne(
       { clerkUserId, date, checkedInAt: { $lte: checkedInAt } },
       { $set: { ...checkIn, checkedInAt, uploadedAt: new Date() } },
       { upsert: true },
-    );
-  } catch (err) {
-    if (!(err instanceof MongoServerError && err.code === DUPLICATE_KEY)) throw err;
-  }
+    ),
+  );
   const stored = await findCheckIn(clerkUserId, date);
   if (!stored) throw new Error("Failed to store check-in");
   return stored;
