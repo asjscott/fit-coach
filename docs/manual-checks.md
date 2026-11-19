@@ -9,7 +9,7 @@ Result codes: **✅ pass** · **❌ fail** · **⚠️ works but feels off** · 
 ## What's left
 
 - **Run on the phone now:** R1, U1, U2, LS2, PR1, TB1–TB3. Each is a part no run has covered yet.
-- **M7, once it's on the phones:** DT1–DT5, WI1–WI6, F1–F4, FL1–FL6.
+- **M7, once it's on the phones:** DT1–DT5, WI1–WI6, F1–F4, FL1–FL6, SC1–SC6.
 - **Run when you next train:** P9 and S1, a full Workout with a timer, resting as the timer says. Both can be one session.
 - **🕒 Due later, while you use the app:** C5 (the day after a check-in), P16 (a Monday), J2 (after a week with jumps on), P17 (after a few weeks), DL1 and DL2 (the 5th week of a Block: the week starting 4 Mondays after the Monday of the week Assessment B was done).
 - **On hold:** E1–E3 need Sentry set up on production.
@@ -90,7 +90,8 @@ Result codes: **✅ pass** · **❌ fail** · **⚠️ works but feels off** · 
 ### Build and install: iPhone
 
 10. **Plug in and unlock the phone.** From `apps/mobile`, build and install. Keep the existing `ios/` folder.
-    - Your 9 Nov build already set it up: bundle identifier `com.asjscott.mobile`, and Sign in with Apple removed. Native dependencies haven't changed since.
+    - Your 9 Nov build already set it up: bundle identifier `com.asjscott.mobile`, and Sign in with Apple removed.
+    - **`expo-camera` is new native code (#164), with a camera permission in `app.json`.** Once, before this build, run `npx expo prebuild --platform ios` so `ios/` gets it, then remove Sign in with Apple again (below). On Android, run `npx expo prebuild --platform android` and redo step 13.
     - The `LANG` settings stop CocoaPods failing (the error is easy to miss).
     - `EXPO_PUBLIC_API_URL` overrides `.env` for this build only.
 
@@ -278,7 +279,7 @@ Body weight is a weekly Weigh-in now, and the latest one is the weight everythin
 
 ## Logging food (#163)
 
-Needs `USDA_API_KEY` as for F1–F4. The Food tab opens on today: the day stepper, three rings (kcal left, protein left, fibre), Search foods (no Scan yet, #164) and Today so far with Breakfast, Lunch, Dinner and Snacks. Water's glasses come with #166.
+Needs `USDA_API_KEY` as for F1–F4. The Food tab opens on today: the day stepper, three rings (kcal left, protein left, fibre), Search foods, Scan (#164) and Today so far with Breakfast, Lunch, Dinner and Snacks. Water's glasses come with #166.
 
 - [ ] **FL1** On Today, tap any ring: the Food tab opens. Open Breakfast ("Nothing yet") and tap "+ Add to breakfast": the search box takes the cursor and reads "Search foods for breakfast". Search "egg", open "Eggs, Grade A, Large, egg whole", choose 2 and Grams or a serving, and Breakfast is already picked: tap "Add to breakfast". The search clears, Breakfast is open with "Eggs, Grade A, Large, egg whole, …" and its kcal, its line says "1 food · … kcal", and the header and rings take it off what's left. Back on Today, its kcal and protein rings say the same.
   - Result: · Notes:
@@ -291,6 +292,23 @@ Needs `USDA_API_KEY` as for F1–F4. The Food tab opens on today: the day steppe
 - [ ] **FL5** With your phone's timezone moved to one where it's already tomorrow (or late in the evening, before midnight), "Today" on the Food tab is today where the phone says, and a food logged then counts for that day.
   - Result: · Notes:
 - [ ] **FL6** In airplane mode, open the Food tab (or step to another day): it says "Logging food needs a connection. Nothing is saved on this phone until you have one." With a day already showing, change a portion and Save, or Add a food: a toast says logging needs a connection and nothing was saved, and what you chose stays open to try again. Back online, Save again: it's saved once, with nothing doubled.
+  - Result: · Notes:
+
+## Scan, Create food and Saved Foods (#164)
+
+Needs a Release build made after `npx expo prebuild` (step 10), since the camera is new native code. Barcodes are looked up in the user's Saved Foods, then Open Food Facts (no key), then USDA's branded foods (`USDA_API_KEY`). On the web build Scan isn't there at all.
+
+- [ ] **SC1** On Food, Scan sits beside Search foods. Tap it: the phone asks to use the camera, saying it's for scanning the barcodes on food you log. Allow it: the camera opens full screen with "Point the camera at the barcode on the package" and Cancel. Cancel closes it. Deny instead (on a fresh install): a toast says scanning needs the camera, and search still works.
+  - Result: · Notes:
+- [ ] **SC2** Scan a Canadian product from the cupboard (for example Kraft Smooth Peanut Butter, 0068100084245): the camera closes after one read, and "Scanned" shows the product with its brand and kcal per 100 g, opened on its label serving ("1 tbsp", 15 g). Pick a meal and add it: it's logged, as FL1.
+  - Result: · Notes:
+- [ ] **SC3** Scan a product Open Food Facts doesn't have (a store's own brand, or something small-batch): Create food opens, saying nothing has the barcode yet. Fill in the name, the serving ("1 bar", 45) and the label's kcal, protein, carbs and fat, leaving fibre empty, and tap Create food: it shows as "From your Saved Foods", opened on its serving with the figures you typed and 0 g fibre. Add it to a meal. An empty name or grams says what to fix, and keeps what you typed.
+  - Result: · Notes:
+- [ ] **SC4** Scan the same product again: it's found straight away as your Saved Food, without Create food. Search its name (any word of it, in any case): it comes first, marked "Saved food", above the USDA results.
+  - Result: · Notes:
+- [ ] **SC5** Open the Saved Food from search, tap "Edit saved food", change its kcal and Save: the food shows the new figures, and logging it again uses them. The entry you logged in SC3 still shows the old kcal on its day. Edit it again and "Delete from Saved Foods": it's gone from search, scanning it offers Create food again, and the logged entry is still there.
+  - Result: · Notes:
+- [ ] **SC6** In airplane mode, scan a barcode: a toast says finding food needs a connection, and nothing else happens. Create food's Save offline says the same and keeps the form open. Back online, both work.
   - Result: · Notes:
 
 ## Tabs and the Exercise library (#159)

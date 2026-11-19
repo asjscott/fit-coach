@@ -85,7 +85,7 @@ Schemas shared by app and API: packages/shared/src/workouts.ts
   back on its own insets and gets no change notifications, so it can keep a zero bottom inset. `workout/_layout.tsx` has
   the provider, on iOS only; web's static build keeps Expo Router's non-measuring provider. The Add exercise sheet is
   presented on top, outside it, and has no inset, which its list doesn't need to clear the home indicator.
-- **New native modules need a new development build** (`expo-sqlite`, `expo-network`, `expo-localization`, `expo-keep-awake` so far). Add dependencies with
+- **New native modules need a new development build** (`expo-sqlite`, `expo-network`, `expo-localization`, `expo-keep-awake`, `expo-camera` so far). Add dependencies with
   `npx expo install` and check the SDK 58 docs first (`apps/mobile/AGENTS.md`).
 
 ## Assessment (spec #29)
@@ -469,3 +469,7 @@ maps would fix that and isn't set up.
   - It can't show a real sign-in, Clerk with no signal, or native storage. Those stay in `docs/manual-checks.md`.
   - Food search finds nothing without `USDA_API_KEY`. USDA's public `DEMO_KEY` gives a few real searches an hour:
     `USDA_API_KEY=DEMO_KEY pnpm --filter @fit/mobile web:signed-in`. Never commit a real key.
+  - Barcodes (#164): `GET /foods/barcode/:code` looks in the user's Saved Foods, then Open Food Facts (no key, so it
+    works in `dev:local`), then USDA's branded foods when there's a key. Scan is native only (`scan-button.web.tsx`
+    renders nothing), so on the web build reach Create food from "Create food from its label" under a search, or
+    try a lookup with curl against the API (`/foods/barcode/0068100084245`, Kraft peanut butter).

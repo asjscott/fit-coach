@@ -9,6 +9,8 @@ import { exerciseRoutes } from "./routes/exercises";
 import { foodEntryRoutes } from "./routes/food-entries";
 import { foodRoutes } from "./routes/foods";
 import { plannedWorkoutRoutes } from "./routes/planned-workouts";
+import { savedFoodRoutes } from "./routes/saved-foods";
+import { ensureSavedFoodIndexes } from "./saved-foods";
 import { userRoutes } from "./routes/users";
 import { weighInRoutes } from "./routes/weigh-ins";
 import { workoutRoutes } from "./routes/workouts";
@@ -62,6 +64,8 @@ export async function buildApp({ logger, foodSources }: { logger: boolean; foodS
 
   await ensureFoodEntryIndexes().catch((err) => app.log.error(err, "Failed to create food entry indexes"));
 
+  await ensureSavedFoodIndexes().catch((err) => app.log.error(err, "Failed to create saved food indexes"));
+
   await migrateUsers().catch((err) => app.log.error(err, "Failed to migrate users"));
 
   await migrateWorkingLevels().catch((err) => app.log.error(err, "Failed to migrate working levels"));
@@ -78,6 +82,7 @@ export async function buildApp({ logger, foodSources }: { logger: boolean; foodS
   await app.register(weighInRoutes);
   await app.register(foodRoutes, { foodSources: sources });
   await app.register(foodEntryRoutes);
+  await app.register(savedFoodRoutes);
   registerTestErrorRoute(app);
 
   app.get("/health", async () => {

@@ -27,6 +27,7 @@ import Moon from "lucide-react-native/icons/moon";
 import Plus from "lucide-react-native/icons/plus";
 import Ruler from "lucide-react-native/icons/ruler";
 import Scale from "lucide-react-native/icons/scale";
+import ScanBarcode from "lucide-react-native/icons/scan-barcode";
 import Search from "lucide-react-native/icons/search";
 import Settings from "lucide-react-native/icons/settings";
 import Sun from "lucide-react-native/icons/sun";
@@ -66,6 +67,7 @@ export const IconMap = {
   minus: Minus,
   pencil: Pencil,
   plus: Plus,
+  scan: ScanBarcode,
   search: Search,
   settings: Settings,
   signOut: LogOut,

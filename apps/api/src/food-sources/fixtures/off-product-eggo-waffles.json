@@ -1,0 +1,31 @@
+{
+  "code": "0064100238220",
+  "product": {
+    "brands": "Eggo",
+    "code": "0064100238220",
+    "countries_tags": ["en:canada", "en:france", "en:saint-pierre-and-miquelon"],
+    "nutriments": {
+      "carbohydrates_100g": 42.857142857143,
+      "energy-kcal_100g": 257.142857142857,
+      "energy-kcal_serving": 180,
+      "energy-kj_100g": 1101.42857142857,
+      "energy_100g": 1101.42857142857,
+      "fat_100g": 7.1428571428571,
+      "fiber_100g": 1.4285714285714,
+      "proteins_100g": 5.7142857142857,
+      "proteins_serving": 4,
+      "saturated-fat_100g": 2.1428571428571,
+      "sodium_100g": 0.42857142857144,
+      "sugars_100g": 5.7142857142857
+    },
+    "nutrition_data": "on",
+    "nutrition_data_prepared_per": "100g",
+    "product_name": "Eggo original",
+    "product_name_en": "Original",
+    "serving_quantity": 70,
+    "serving_quantity_unit": "g",
+    "serving_size": "70 g"
+  },
+  "status": 1,
+  "status_verbose": "product found"
+}

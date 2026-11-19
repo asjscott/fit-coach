@@ -18,6 +18,7 @@ export function FoodResult({
   onToggle,
   meal,
   onLog,
+  onEdit,
 }: {
   food: Food;
   open: boolean;
@@ -26,9 +27,15 @@ export function FoodResult({
   meal: Meal | null;
   // Logs it, answering whether that worked
   onLog: (add: FoodEntryAdd) => Promise<boolean>;
+  // Opens a Saved Food to edit or delete it
+  onEdit?: (food: Food) => void;
 }) {
   const { colors } = useTheme();
-  const detail = [food.brand, `${Math.round(food.per100g.kcal).toLocaleString()} kcal per 100 g`]
+  const detail = [
+    food.source === "saved" ? "Saved food" : null,
+    food.brand,
+    `${Math.round(food.per100g.kcal).toLocaleString()} kcal per 100 g`,
+  ]
     .filter(Boolean)
     .join(" · ");
   return (
@@ -47,7 +54,19 @@ export function FoodResult({
         </View>
         <Icon name={open ? "chevronUp" : "chevronDown"} color="subtle" size={20} />
       </Pressable>
-      {open ? <LogFood food={food} meal={meal} onLog={onLog} /> : null}
+      {/* Starts again from the food as it is now when a Saved Food is edited, so its serving is the new one */}
+      {open ? <LogFood key={JSON.stringify(food)} food={food} meal={meal} onLog={onLog} /> : null}
+      {open && onEdit && food.source === "saved" ? (
+        <LoadingButton
+          label="Edit saved food"
+          size="sm"
+          action="secondary"
+          variant="link"
+          icon="pencil"
+          onPress={() => onEdit(food)}
+          style={styles.edit}
+        />
+      ) : null}
     </View>
   );
 }
@@ -98,4 +117,5 @@ const styles = StyleSheet.create({
   },
   resultText: { flex: 1, gap: 2 },
   log: { gap: spacing[3], paddingBottom: spacing[4] },
+  edit: { alignSelf: "flex-start", marginBottom: spacing[3] },
 });

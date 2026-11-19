@@ -2,7 +2,8 @@ import { describe, expect, it } from "vitest";
 import appleFoundation from "./fixtures/usda-search-apple-foundation.json";
 import eggBranded from "./fixtures/usda-search-egg-branded.json";
 import eggGeneric from "./fixtures/usda-search-egg-generic.json";
-import { usdaSearchFoods } from "./usda";
+import snickersEggByUpc from "./fixtures/usda-upc-snickers-egg.json";
+import { usdaBarcodeFood, usdaSearchFoods } from "./usda";
 
 // Saved real responses from FoodData Central's /foods/search, trimmed to a few foods (fetched with the public DEMO_KEY)
 describe("usdaSearchFoods", () => {
@@ -88,5 +89,30 @@ describe("usdaSearchFoods", () => {
         servings: [{ label: "1 bagel", grams: 81 }],
       },
     ]);
+  });
+});
+
+// A saved real /foods/search response for a GTIN/UPC (query gtinUpc:040000449270, Branded, with the public DEMO_KEY)
+describe("usdaBarcodeFood", () => {
+  const snickersEgg = {
+    source: "usda",
+    id: "2575290",
+    name: "Egg",
+    brand: "Snickers",
+    barcode: "040000449270",
+    per100g: { kcal: 513, proteinG: 6.41, carbsG: 57.7, fatG: 28.8, fibreG: 3.2 },
+    servings: [{ label: "1 egg", grams: 31.2 }],
+  };
+
+  it("maps the branded food with that UPC into the food shape (#164)", () => {
+    expect(usdaBarcodeFood(snickersEggByUpc, "040000449270")).toEqual(snickersEgg);
+  });
+
+  it("matches a UPC-A read as a 13-digit EAN, as iPhones read them", () => {
+    expect(usdaBarcodeFood(snickersEggByUpc, "0040000449270")).toEqual(snickersEgg);
+  });
+
+  it("finds nothing when no food in the answer has that barcode", () => {
+    expect(usdaBarcodeFood(eggBranded, "068100084245")).toBeNull();
   });
 });

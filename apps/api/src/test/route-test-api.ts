@@ -53,10 +53,13 @@ export type RouteTestApi = {
 };
 
 // Never reaches the network: a test file that searches for food passes its own fake
-const NO_FOODS: FoodSources = { search: async () => ({ generic: [], branded: [] }) };
+const NO_FOODS: FoodSources = {
+  search: async () => ({ generic: [], branded: [] }),
+  byBarcode: async () => null,
+};
 
-// Call once at the top of a test file: starts the API before its tests and stops it after. Food search finds nothing
-// unless the file passes its own fake food sources
+// Call once at the top of a test file: starts the API before its tests and stops it after. Food search and barcodes
+// find nothing outside the user's Saved Foods unless the file passes its own fake food sources
 export function useRouteTestApi({ foodSources = NO_FOODS }: { foodSources?: FoodSources } = {}): RouteTestApi {
   let mongo: MongoMemoryReplSet;
   let app: FastifyInstance;

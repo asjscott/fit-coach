@@ -1,5 +1,6 @@
 import type { Food, Serving } from "@fit/shared";
 import { z } from "zod";
+import { barcodeKey, upcOf } from "./barcode";
 
 // USDA FoodData Central (https://fdc.nal.usda.gov/api-guide). Its key stays on the server: the phone only calls this API
 const SEARCH_URL = "https://api.nal.usda.gov/fdc/v1/foods/search";
@@ -84,13 +85,30 @@ const titleCase = (text: string) =>
 // Generic foods (Foundation and SR Legacy) and branded ones for the words, searched side by side. Throws when USDA
 // can't be reached or refuses
 export async function usdaSearch(apiKey: string, query: string): Promise<{ generic: Food[]; branded: Food[] }> {
-  const searchOf = async (dataType: string, pageSize: number) => {
-    const url = `${SEARCH_URL}?${new URLSearchParams({ query, dataType, pageSize: String(pageSize) })}`;
-    // The key goes in a header, so it never appears in a logged URL
-    const response = await fetch(url, { headers: { "X-Api-Key": apiKey }, signal: AbortSignal.timeout(TIMEOUT_MS) });
-    if (!response.ok) throw new Error(`USDA food search answered ${response.status}`);
-    return usdaSearchFoods(await response.json());
-  };
+  const searchOf = async (dataType: string, pageSize: number) =>
+    usdaSearchFoods(await searchUsda(apiKey, { query, dataType, pageSize: String(pageSize) }));
   const [generic, branded] = await Promise.all([searchOf(GENERIC_TYPES, 10), searchOf("Branded", 15)]);
   return { generic, branded };
+}
+
+// A branded /foods/search response for a barcode as the food with that barcode, or null when none has it: USDA's
+// search also answers near matches
+export function usdaBarcodeFood(response: unknown, code: string): Food | null {
+  return (
+    usdaSearchFoods(response).find((food) => food.barcode && barcodeKey(food.barcode) === barcodeKey(code)) ?? null
+  );
+}
+
+// The branded food with this GTIN/UPC, or null when USDA has none. Throws when USDA can't be reached or refuses
+export async function usdaByBarcode(apiKey: string, code: string): Promise<Food | null> {
+  const response = await searchUsda(apiKey, { query: `gtinUpc:${upcOf(code)}`, dataType: "Branded", pageSize: "5" });
+  return usdaBarcodeFood(response, code);
+}
+
+async function searchUsda(apiKey: string, params: Record<string, string>): Promise<unknown> {
+  const url = `${SEARCH_URL}?${new URLSearchParams(params)}`;
+  // The key goes in a header, so it never appears in a logged URL
+  const response = await fetch(url, { headers: { "X-Api-Key": apiKey }, signal: AbortSignal.timeout(TIMEOUT_MS) });
+  if (!response.ok) throw new Error(`USDA food search answered ${response.status}`);
+  return response.json();
 }

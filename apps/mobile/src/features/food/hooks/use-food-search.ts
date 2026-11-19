@@ -13,8 +13,8 @@ export type FoodSearch = {
 };
 
 // Foods matching the words, from GET /foods/search, which asks the food sources for the phone. Searches once typing
-// pauses, and keeps only the answer to the latest words
-export function useFoodSearch(query: string): FoodSearch {
+// pauses, and keeps only the answer to the latest words. A new `version` searches again, as after a Saved Food changes
+export function useFoodSearch(query: string, version = 0): FoodSearch {
   const api = useApi();
   const [search, setSearch] = useState<FoodSearch>({ isSearching: false, error: null });
   const words = query.trim();
@@ -49,7 +49,7 @@ export function useFoodSearch(query: string): FoodSearch {
       clearTimeout(timer);
       controller.abort();
     };
-  }, [api, words]);
+  }, [api, words, version]);
 
   return search;
 }

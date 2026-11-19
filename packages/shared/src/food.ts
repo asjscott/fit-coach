@@ -30,6 +30,28 @@ export const Food = z.object({
 });
 export type Food = z.infer<typeof Food>;
 
+// A product barcode as a phone reads it: EAN-8, UPC-A, EAN-13 or a GTIN-14, digits only
+export const Barcode = z.string().regex(/^\d{8,14}$/, "A barcode is 8 to 14 digits");
+
+// GET /foods/barcode/:code
+export const BarcodeParams = z.object({ code: Barcode });
+
+// Create food, or editing a Saved Food: what a label says (spec #158 story 67). One serving, its grams and what it
+// holds; the API keeps the nutrients per 100 g and the serving as the food's first. Fibre is optional, being 0 when
+// the label has none
+export const SavedFoodInput = z.object({
+  name: z.string().trim().min(1).max(100),
+  brand: z.string().trim().min(1).max(100).optional(),
+  barcode: Barcode.optional(),
+  serving: z.object({ label: z.string().trim().min(1).max(40).optional(), grams: z.number().positive().max(5000) }),
+  perServing: Nutrients.extend({ fibreG: z.number().nonnegative().default(0) }),
+});
+export type SavedFoodInput = z.input<typeof SavedFoodInput>;
+
+// GET /saved-foods: the user's Saved Foods, by name
+export const SavedFoods = z.object({ foods: z.array(Food) });
+export type SavedFoods = z.infer<typeof SavedFoods>;
+
 // GET /foods/search?q=: what to search for
 export const FoodSearchQuery = z.object({ q: z.string().trim().min(1).max(100) });
 
