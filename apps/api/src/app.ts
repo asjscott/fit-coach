@@ -31,9 +31,26 @@ import { ensureWaterIndexes } from "./water";
 
 // The API with every route registered and its indexes made, not yet listening. Reads MONGODB_URI (db.ts) and
 // DEV_AUTH_USER_ID (auth.ts) when first imported. server.ts listens on it; the route tests inject into it, passing fake
-// food sources. The real ones read USDA_API_KEY and GEMINI_API_KEY, which only the API's environment holds
-export async function buildApp({ logger, foodSources }: { logger: boolean; foodSources?: FoodSources }) {
+// food sources. The real ones read USDA_API_KEY and GEMINI_API_KEY, which only the API's environment holds. A failed
+// index or migration is logged so the server still starts; `failOnSetupError` throws it instead, as tests want
+export async function buildApp({
+  logger,
+  foodSources,
+  failOnSetupError = false,
+}: {
+  logger: boolean;
+  foodSources?: FoodSources;
+  failOnSetupError?: boolean;
+}) {
   const app = Fastify({ logger });
+  const setUp = async (what: string, step: () => Promise<unknown>) => {
+    try {
+      await step();
+    } catch (err) {
+      if (failOnSetupError) throw err;
+      app.log.error(err, `Failed to ${what}`);
+    }
+  };
   if (!foodSources && !process.env.USDA_API_KEY) app.log.warn("USDA_API_KEY isn't set: food search finds nothing");
   if (!foodSources && !process.env.GEMINI_API_KEY) app.log.warn("GEMINI_API_KEY isn't set: Tell the coach is hidden");
   const sources =
@@ -60,29 +77,18 @@ export async function buildApp({ logger, foodSources }: { logger: boolean; foodS
 
   reportRouteErrorsWithUser(app);
 
-  await ensureUserIndexes().catch((err) => app.log.error(err, "Failed to create user indexes"));
-
-  await ensureWorkoutIndexes().catch((err) => app.log.error(err, "Failed to create workout indexes"));
-
-  await ensureAssessmentIndexes().catch((err) => app.log.error(err, "Failed to create assessment indexes"));
-
-  await ensurePlannedWorkoutIndexes().catch((err) => app.log.error(err, "Failed to create planned workout indexes"));
-
-  await ensureCheckInIndexes().catch((err) => app.log.error(err, "Failed to create check-in indexes"));
-
-  await ensureWeighInIndexes().catch((err) => app.log.error(err, "Failed to create weigh-in indexes"));
-
-  await ensureFoodEntryIndexes().catch((err) => app.log.error(err, "Failed to create food entry indexes"));
-
-  await ensureSavedFoodIndexes().catch((err) => app.log.error(err, "Failed to create saved food indexes"));
-  await ensureWaterIndexes().catch((err) => app.log.error(err, "Failed to create water indexes"));
-
-  await migrateUsers().catch((err) => app.log.error(err, "Failed to migrate users"));
-
-  await migrateWorkingLevels().catch((err) => app.log.error(err, "Failed to migrate working levels"));
-
-  await migrateWeighIns().catch((err) => app.log.error(err, "Failed to migrate weigh-ins"));
-
+  await setUp("create user indexes", ensureUserIndexes);
+  await setUp("create workout indexes", ensureWorkoutIndexes);
+  await setUp("create assessment indexes", ensureAssessmentIndexes);
+  await setUp("create planned workout indexes", ensurePlannedWorkoutIndexes);
+  await setUp("create check-in indexes", ensureCheckInIndexes);
+  await setUp("create weigh-in indexes", ensureWeighInIndexes);
+  await setUp("create food entry indexes", ensureFoodEntryIndexes);
+  await setUp("create saved food indexes", ensureSavedFoodIndexes);
+  await setUp("create water indexes", ensureWaterIndexes);
+  await setUp("migrate users", migrateUsers);
+  await setUp("migrate working levels", migrateWorkingLevels);
+  await setUp("migrate weigh-ins", migrateWeighIns);
   await app.register(userRoutes);
   await app.register(exerciseRoutes);
   await app.register(workoutRoutes);

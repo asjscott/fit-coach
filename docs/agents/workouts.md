@@ -372,12 +372,14 @@ Phone
 ## Route tests (#123)
 
 `pnpm --filter @fit/api test` runs the API's route tests (`apps/api/src/routes/*.test.ts`, Vitest). Each test file
-starts the whole API (`buildApp` in `apps/api/src/app.ts`, which `server.ts` listens on) against its own in-memory
-MongoDB replica set, with Clerk switched off as in `dev:local`, and sends requests with Fastify's `inject`, so nothing
-listens on a port and nothing reaches Clerk. The first run downloads the MongoDB binary, as `dev:local` does: once,
-in Vitest's `globalSetup` (`apps/api/src/test/download-mongodb.ts`) before any test file starts, since files starting
-their databases together would otherwise race to download it. To try a first run, point `HOME` and
-`MONGOMS_DOWNLOAD_DIR` at empty directories (the binary is found in `~/.cache/mongodb-binaries` too).
+starts the whole API (`buildApp` in `apps/api/src/app.ts`, which `server.ts` listens on) against its own database,
+with Clerk switched off as in `dev:local`, and sends requests with Fastify's `inject`, so nothing listens on a port and
+nothing reaches Clerk. The databases share one in-memory MongoDB replica set, started once in Vitest's `globalSetup`
+(`apps/api/src/test/mongodb.ts`) and handed to the files with `inject("mongoUri")`; one replica set per file, all
+starting together, made startup slow and flaky. The harness builds the app with `failOnSetupError`, so a failed index
+or migration fails the file instead of being logged. The first run downloads the MongoDB binary, as `dev:local` does.
+To try a first run, point `HOME` and `MONGOMS_DOWNLOAD_DIR` at empty directories (the binary is found in
+`~/.cache/mongodb-binaries` too).
 
 To write one:
 
