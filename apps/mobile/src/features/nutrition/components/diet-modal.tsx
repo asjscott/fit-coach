@@ -1,4 +1,4 @@
-import { AvoidedFood, DEFAULT_DIET, DietKind } from "@fit/shared";
+import { AvoidedFood, DietKind, dietOf } from "@fit/shared";
 import { useState } from "react";
 import { Chip } from "@/components/chip";
 import { Heading } from "@/components/heading";
@@ -15,7 +15,7 @@ import { AVOIDED_FOOD_LABELS, DIET_KIND_LABELS } from "../diet";
 export function DietModal({ onClose }: { onClose: () => void }) {
   const { user, updateUser } = useCurrentUser();
   const { showToast } = useToast();
-  const saved = user?.profile.diet ?? DEFAULT_DIET;
+  const saved = dietOf(user?.profile);
   const [kind, setKind] = useState<DietKind>(saved.kind);
   const [avoid, setAvoid] = useState<AvoidedFood[]>(saved.avoid);
   const [saving, setSaving] = useState(false);

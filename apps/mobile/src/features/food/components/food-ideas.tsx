@@ -1,5 +1,5 @@
 import { ideaFood } from "@fit/engines";
-import type { Day, FoodEntryAdd, FoodIdea } from "@fit/shared";
+import { type Day, dietOf, type FoodEntryAdd, type FoodIdea } from "@fit/shared";
 import { useState } from "react";
 import { StyleSheet, View } from "react-native";
 import { LoadingButton } from "@/components/loading-button";
@@ -56,11 +56,11 @@ export function FoodIdeas({ day, onLog }: { day: Day; onLog: (add: FoodEntryAdd)
       <Pressable
         onPress={() => setEditingDiet(true)}
         accessibilityRole="button"
-        accessibilityLabel={`Diet: ${dietLabel(user?.profile.diet)}. Change`}
+        accessibilityLabel={`Diet: ${dietLabel(dietOf(user?.profile))}. Change`}
         style={[styles.diet, { borderColor: colors.line }]}
       >
         <Text size="xs" color="muted">
-          {`Diet: ${dietLabel(user?.profile.diet)} ✎`}
+          {`Diet: ${dietLabel(dietOf(user?.profile))} ✎`}
         </Text>
       </Pressable>
       {editingDiet ? <DietModal onClose={() => setEditingDiet(false)} /> : null}

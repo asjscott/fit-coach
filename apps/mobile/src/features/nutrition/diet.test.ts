@@ -1,3 +1,4 @@
+import { dietOf } from "@fit/shared";
 import { describe, expect, it } from "vitest";
 import { dietLabel } from "./diet";
 
@@ -14,6 +15,7 @@ describe("dietLabel", () => {
   });
 
   it("is Any for a user who never chose a Diet", () => {
-    expect(dietLabel(undefined)).toBe("Any");
+    expect(dietLabel(dietOf({}))).toBe("Any");
+    expect(dietLabel(dietOf(undefined))).toBe("Any");
   });
 });

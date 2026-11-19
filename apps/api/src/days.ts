@@ -1,5 +1,5 @@
 import { dailyTargets, foodIdeas, localDateOf, mealForTimeOfDay } from "@fit/engines";
-import { DEFAULT_DIET, type Day, UserProfile } from "@fit/shared";
+import { type Day, dietOf, UserProfile } from "@fit/shared";
 import { findMeals } from "./food-entries";
 import { findUser } from "./users";
 import { findWater } from "./water";
@@ -24,7 +24,7 @@ export async function findDay(clerkUserId: string, date: string): Promise<Day | 
   const now = new Date();
   const timeZone = user.timeZone ?? "UTC";
   const localDate = date === "today" ? localDateOf(now, timeZone) : date;
-  const { weightKg, diet = DEFAULT_DIET, ...profile } = DayProfile.parse(user.profile);
+  const { weightKg, diet, ...profile } = DayProfile.parse(user.profile);
   const targets = dailyTargets(profile, weightKg, localDate);
   // The totals are worked out from the Food Entries whenever the day is read, never stored
   const { meals, totals } = await findMeals(clerkUserId, localDate);
@@ -35,7 +35,7 @@ export async function findDay(clerkUserId: string, date: string): Promise<Day | 
     meals,
     totals,
     waterMl: await findWater(clerkUserId, localDate),
-    ideas: foodIdeas(diet, targets.kcal - totals.kcal, targets.proteinG - totals.proteinG),
+    ideas: foodIdeas(dietOf({ diet }), targets.kcal - totals.kcal, targets.proteinG - totals.proteinG),
     ideaMeal: mealForTimeOfDay(now, timeZone),
   };
 }

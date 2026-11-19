@@ -44,7 +44,10 @@ export const Diet = z.object({ kind: DietKind, avoid: z.array(AvoidedFood) });
 export type Diet = z.infer<typeof Diet>;
 
 // The Diet of a user who never chose one: anything, avoiding nothing
-export const DEFAULT_DIET: Diet = { kind: "any", avoid: [] };
+const DEFAULT_DIET: Diet = { kind: "any", avoid: [] };
+
+// The user's Diet, or DEFAULT_DIET when they never chose one (or there's no profile yet)
+export const dietOf = (profile: { diet?: Diet } | undefined): Diet => profile?.diet ?? DEFAULT_DIET;
 
 // The user's own daily fibre target in grams, in place of the rule that follows their calories
 export const FibreTarget = z
@@ -74,7 +77,7 @@ export const UserProfile = z.object({
   fibreTargetG: FibreTarget.optional(),
   // Absent until the user chooses one, which means DEFAULT_WEIGH_IN_DAY
   weighInDay: Weekday.optional(),
-  // Absent until the user chooses one, which means DEFAULT_DIET
+  // Absent until the user chooses one, which means DEFAULT_DIET (dietOf)
   diet: Diet.optional(),
 });
 

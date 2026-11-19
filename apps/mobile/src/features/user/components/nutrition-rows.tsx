@@ -1,4 +1,4 @@
-import { type ActivityLevel, DEFAULT_WEIGH_IN_DAY, FibreTarget, Weekday } from "@fit/shared";
+import { type ActivityLevel, DEFAULT_WEIGH_IN_DAY, dietOf, FibreTarget, Weekday } from "@fit/shared";
 import { useState } from "react";
 import {
   Actionsheet,
@@ -117,7 +117,7 @@ export function DietRow() {
 
   return (
     <>
-      <EditRow label="Diet" value={dietLabel(user?.profile.diet)} onPress={() => setIsOpen(true)} />
+      <EditRow label="Diet" value={dietLabel(dietOf(user?.profile))} onPress={() => setIsOpen(true)} />
       {isOpen ? <DietModal onClose={() => setIsOpen(false)} /> : null}
     </>
   );

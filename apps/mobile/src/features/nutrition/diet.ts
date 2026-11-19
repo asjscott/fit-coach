@@ -1,4 +1,4 @@
-import { type AvoidedFood, DEFAULT_DIET, type Diet, type DietKind } from "@fit/shared";
+import type { AvoidedFood, Diet, DietKind } from "@fit/shared";
 
 export const DIET_KIND_LABELS: Record<DietKind, string> = {
   any: "Any",
@@ -14,8 +14,8 @@ export const AVOIDED_FOOD_LABELS: Record<AvoidedFood, string> = {
   pork: "Pork",
 };
 
-// The Diet in a few words: "Vegetarian, no dairy or gluten". A user who never chose one eats anything
-export function dietLabel(diet: Diet = DEFAULT_DIET) {
+// The Diet in a few words: "Vegetarian, no dairy or gluten"
+export function dietLabel(diet: Diet) {
   const kind = DIET_KIND_LABELS[diet.kind];
   if (!diet.avoid.length) return kind;
   const avoided = diet.avoid.map((food) => AVOIDED_FOOD_LABELS[food].toLowerCase());
