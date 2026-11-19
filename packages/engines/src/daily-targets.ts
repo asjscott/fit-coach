@@ -4,6 +4,7 @@ import {
   DEFAULT_ACTIVITY_LEVEL,
   type Goal,
   type UserProfile,
+  WATER_GLASS_ML,
 } from "@fit/shared";
 
 // What the Daily Targets are worked out from, besides the body weight
@@ -26,7 +27,6 @@ const FAT_G_PER_KG = 0.8;
 const KCAL_PER_G = { protein: 4, fat: 9, carbs: 4 };
 const FIBRE_G_PER_1000_KCAL = 40;
 const WATER_ML_PER_KG = 35;
-const WATER_STEP_ML = 250;
 
 const toNearest = (value: number, step: number) => Math.round(value / step) * step;
 
@@ -48,6 +48,6 @@ export function dailyTargets(profile: TargetsProfile, weightKg: number, today: s
     fatG,
     carbsG: Math.max(0, Math.round(carbsKcal / KCAL_PER_G.carbs)),
     fibreG: profile.fibreTargetG ?? Math.round((kcal * FIBRE_G_PER_1000_KCAL) / 1000),
-    waterMl: toNearest(WATER_ML_PER_KG * weightKg, WATER_STEP_ML),
+    waterMl: toNearest(WATER_ML_PER_KG * weightKg, WATER_GLASS_ML),
   };
 }
