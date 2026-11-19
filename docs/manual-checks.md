@@ -9,7 +9,7 @@ Result codes: **✅ pass** · **❌ fail** · **⚠️ works but feels off** · 
 ## What's left
 
 - **Run on the phone now:** R1, U1, U2, LS2, PR1, TB1–TB3. Each is a part no run has covered yet.
-- **M7, once it's on the phones:** DT1–DT5, WI1–WI6, F1–F4, FL1–FL6.
+- **M7, once it's on the phones:** DT1–DT5, WI1–WI6, F1–F4, FL1–FL6, TC1–TC5.
 - **Run when you next train:** P9 and S1, a full Workout with a timer, resting as the timer says. Both can be one session.
 - **🕒 Due later, while you use the app:** C5 (the day after a check-in), P16 (a Monday), J2 (after a week with jumps on), P17 (after a few weeks), DL1 and DL2 (the 5th week of a Block: the week starting 4 Mondays after the Monday of the week Assessment B was done).
 - **On hold:** E1–E3 need Sentry set up on production.
@@ -291,6 +291,21 @@ Needs `USDA_API_KEY` as for F1–F4. The Food tab opens on today: the day steppe
 - [ ] **FL5** With your phone's timezone moved to one where it's already tomorrow (or late in the evening, before midnight), "Today" on the Food tab is today where the phone says, and a food logged then counts for that day.
   - Result: · Notes:
 - [ ] **FL6** In airplane mode, open the Food tab (or step to another day): it says "Logging food needs a connection. Nothing is saved on this phone until you have one." With a day already showing, change a portion and Save, or Add a food: a toast says logging needs a connection and nothing was saved, and what you chose stays open to try again. Back online, Save again: it's saved once, with nothing doubled.
+  - Result: · Notes:
+
+## Tell the coach (#168)
+
+Needs `GEMINI_API_KEY` in `apps/api/.env` (a free key from https://aistudio.google.com/apikey). The real sentences go to Gemini Flash, so these are the only checks of its answers: the route tests use a fake, and the mapping test a response built from Gemini's documented format, as no key was to hand when it was written.
+
+- [ ] **TC1** On Today, under the rings, "Tell the coach" has a box reading "Yesterday I had two eggs and toast". Type "yesterday I had two eggs and toast" and tap Tell (or Send on the keyboard): after a moment a sheet asks "Is this right?" with an egg and a toast, each "Yesterday · Breakfast", with a slider and a line such as "2 × 1 large egg · 100 g · 155 kcal · …". The numbers look about right for eggs and toast. Nothing is logged yet: Cancel, and the Food tab's Yesterday has no new foods.
+  - Result: · Notes:
+- [ ] **TC2** Tell it the same again. Slide the eggs to 3: the line follows (150 g and its kcal). Slide the toast down. Tap ✕ on one food: it leaves the list and the button says "Log 1 food". Tap it: a toast says "Logged 1 food", the box clears, and on Food, Yesterday's Breakfast has that food at the portion you slid to, and Today has nothing new.
+  - Result: · Notes:
+- [ ] **TC3** Type a real sentence about today, such as "a chicken salad for lunch and a latte": each food is "Today · Lunch" (the latte may be Snacks) with a sensible portion. Log them: Today's kcal and protein rings drop by their kcal and protein, and they're in Lunch on Food.
+  - Result: · Notes:
+- [ ] **TC4** Type something with no food in it ("went for a walk"): the sheet says "No food found" and OK closes it, logging nothing. In airplane mode, Tell says telling the Coach needs a connection, and the words stay in the box.
+  - Result: · Notes:
+- [ ] **TC5** With the API running without `GEMINI_API_KEY`, Today has no "Tell the coach" box and nothing else on Today or Food changes. The API logs "GEMINI_API_KEY isn't set: Tell the coach is hidden" at start.
   - Result: · Notes:
 
 ## Tabs and the Exercise library (#159)

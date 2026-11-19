@@ -469,3 +469,5 @@ maps would fix that and isn't set up.
   - It can't show a real sign-in, Clerk with no signal, or native storage. Those stay in `docs/manual-checks.md`.
   - Food search finds nothing without `USDA_API_KEY`. USDA's public `DEMO_KEY` gives a few real searches an hour:
     `USDA_API_KEY=DEMO_KEY pnpm --filter @fit/mobile web:signed-in`. Never commit a real key.
+  - Tell the coach (#168) is hidden without `GEMINI_API_KEY`; there's no demo key. With one exported in the shell,
+    `GEMINI_API_KEY=… pnpm --filter @fit/mobile web:signed-in` shows the box on Today. Route tests pass a fake `parse`.

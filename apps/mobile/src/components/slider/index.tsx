@@ -26,6 +26,8 @@ export type SliderProps = {
   isDisabled?: boolean;
   size?: SliderSize;
   style?: StyleProp<ViewStyle>;
+  // What a screen reader calls it; it steps by `step` with a swipe up or down
+  accessibilityLabel?: string;
   children?: ReactNode;
 };
 
@@ -40,6 +42,7 @@ export function Slider({
   isDisabled,
   size = "md",
   style,
+  accessibilityLabel,
   children,
 }: SliderProps) {
   const formControl = useFormControlContext();
@@ -86,7 +89,18 @@ export function Slider({
       <View
         ref={rootRef}
         accessibilityRole="adjustable"
+        accessibilityLabel={accessibilityLabel}
         accessibilityValue={{ min: minValue, max: maxValue, now: current }}
+        accessibilityActions={[{ name: "increment" }, { name: "decrement" }]}
+        onAccessibilityAction={(e) => {
+          if (disabled) return;
+          const by = e.nativeEvent.actionName === "increment" ? step : -step;
+          const next = Math.min(maxValue, Math.max(minValue, current + by));
+          if (next === current) return;
+          setInternal(next);
+          onChange?.(next);
+          onChangeEnd?.(next);
+        }}
         onLayout={(e) => {
           setWidth(e.nativeEvent.layout.width);
           rootRef.current?.measureInWindow((x, _y, w) => {

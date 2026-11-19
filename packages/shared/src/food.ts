@@ -1,7 +1,8 @@
 import { z } from "zod";
 
-// Where a food came from: USDA FoodData Central, Open Food Facts, the user's Saved Foods, or the Coach's Food Ideas
-export const FoodSource = z.enum(["usda", "off", "saved", "idea"]);
+// Where a food came from: USDA FoodData Central, Open Food Facts, the user's Saved Foods, the Coach's Food Ideas, or
+// Tell the coach, whose foods and their nutrients come from the words the user typed
+export const FoodSource = z.enum(["usda", "off", "saved", "idea", "coach"]);
 export type FoodSource = z.infer<typeof FoodSource>;
 
 // What a weight of food holds. A food's are per 100 g; fibre is 0 when its source has no figure

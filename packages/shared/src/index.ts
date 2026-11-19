@@ -11,6 +11,7 @@ export * from "./health";
 export * from "./nutrition";
 export * from "./planned-workouts";
 export * from "./progression";
+export * from "./tell-the-coach";
 export * from "./units";
 export * from "./user";
 export * from "./workouts";
