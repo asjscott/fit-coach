@@ -2,7 +2,8 @@ import type { AvoidedFood, FoodIdea, FoodIdeaKind } from "@fit/shared";
 
 // The Coach's Food Ideas (spec #158 "Diet and Food Ideas"): everyday high-protein foods, each with a set portion and
 // what that portion holds, from USDA FoodData Central's figures for the plain food. Names never start with a proper
-// noun, since the Coach's summary lower-cases the second one it names
+// noun, since the Coach's summary lower-cases the second one it names. Jerky and deli turkey count as containing
+// gluten, as many are made with soy sauce or wheat fillers
 
 type Row = [
   id: string,
@@ -30,12 +31,12 @@ const ideas = (kind: FoodIdeaKind, rows: Row[]): FoodIdea[] =>
 export const FOOD_IDEAS: FoodIdea[] = [
   ...ideas("meat", [
     ["chicken-breast", "Chicken breast", "1 breast, cooked", 150, 248, 46.5, 0, 5.4, 0],
-    ["chicken-thigh", "Chicken thigh, skinless", "1 thigh, cooked", 100, 179, 24.8, 0, 8.2, 0],
+    ["chicken-thigh", "Chicken thigh, skinless", "1 thigh, roasted", 100, 209, 25.9, 0, 10.9, 0],
     ["turkey-breast", "Roast turkey breast", "3 slices", 90, 132, 27, 0, 2.2, 0],
-    ["deli-turkey", "Sliced turkey", "4 slices", 56, 58, 10, 2, 1, 0],
+    ["deli-turkey", "Sliced turkey", "4 slices", 56, 58, 10, 2, 1, 0, ["gluten"]],
     ["lean-beef-mince", "Lean beef mince", "1 portion, cooked", 100, 164, 25.7, 0, 6.4, 0],
     ["sirloin-steak", "Sirloin steak", "1 steak, cooked", 150, 280, 45.6, 0, 9.8, 0],
-    ["beef-jerky", "Beef jerky", "1 bag", 40, 164, 13.2, 4.4, 10.2, 0.7],
+    ["beef-jerky", "Beef jerky", "1 bag", 40, 164, 13.2, 4.4, 10.2, 0.7, ["gluten"]],
     ["pork-tenderloin", "Pork tenderloin", "1 portion, cooked", 120, 172, 31.4, 0, 4.2, 0, ["pork"]],
     ["ham", "Lean ham", "3 slices", 60, 64, 10, 1.5, 2.2, 0, ["pork"]],
   ]),
@@ -71,7 +72,7 @@ export const FOOD_IDEAS: FoodIdea[] = [
     ["seitan", "Seitan", "1 portion", 100, 120, 25, 4, 2, 1, ["gluten"]],
     ["pea-protein-shake", "Pea protein shake", "1 scoop, in water", 30, 110, 22, 2, 2, 0.5],
     ["soy-milk", "Soy milk", "1 glass", 250, 100, 8, 4, 4.5, 1],
-    ["tvp", "Textured soy protein", "¼ cup, dry", 30, 100, 15, 9, 0.3, 5],
+    ["tvp", "Textured soy protein", "¼ cup, dry", 24, 80, 12, 7.2, 0.2, 4],
     ["chickpea-pasta", "Chickpea pasta", "1 portion, dry", 85, 320, 20, 50, 5, 8],
     ["peanut-butter", "Peanut butter", "2 tbsp", 32, 188, 8, 6, 16, 2, ["nuts"]],
     ["almonds", "Almonds", "1 handful", 30, 174, 6.4, 6.5, 15, 3.7, ["nuts"]],
