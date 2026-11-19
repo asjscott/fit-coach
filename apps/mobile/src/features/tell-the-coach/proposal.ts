@@ -1,4 +1,4 @@
-import { portionNutrients } from "@fit/engines";
+import { portionNutrients, portionOf } from "@fit/engines";
 import type { Food, FoodProposal, PortionChoice } from "@fit/shared";
 import { portionLine } from "../food/food-portion";
 import { dayStepLabel, entryPortion, mealName } from "../food/today-so-far";
@@ -36,19 +36,12 @@ export function proposalSlider(portion: PortionChoice) {
 export const portionAt = (portion: PortionChoice, value: number): PortionChoice =>
   "serving" in portion ? { serving: portion.serving, count: value } : { grams: value };
 
-// The grams of a portion of the food, as the server will work them out. Null for a serving it doesn't have
-function gramsOf(food: Food, portion: PortionChoice): number | null {
-  if ("grams" in portion) return portion.grams;
-  const serving = food.servings.find((s) => s.label === portion.serving);
-  return serving ? serving.grams * portion.count : null;
-}
-
 const amount = (value: number) => value.toLocaleString(undefined, { maximumFractionDigits: 1 });
 
 // "2 × 1 large egg · 100 g · 155 kcal · 12.6 g protein · 0 g fibre": a proposal's portion and what it holds, which
 // follows the slider
 export function proposalPortionLine(food: Food, portion: PortionChoice) {
-  const grams = gramsOf(food, portion) ?? 0;
+  const grams = portionOf(food, portion)?.grams ?? 0;
   const nutrients = portionLine(portionNutrients(food.per100g, grams));
   if ("grams" in portion) return `${entryPortion({ grams })} · ${nutrients}`;
   return `${entryPortion({ grams, serving: { label: portion.serving, count: portion.count } })} · ${amount(grams)} g · ${nutrients}`;

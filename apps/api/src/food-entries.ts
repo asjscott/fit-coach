@@ -1,4 +1,4 @@
-import { dayBefore, portionNutrients } from "@fit/engines";
+import { dayBefore, portionNutrients, portionOf } from "@fit/engines";
 import {
   type DayMeal,
   type DayTotals,
@@ -8,8 +8,6 @@ import {
   type FoodEntryChange,
   MEALS,
   type Meal,
-  type Portion,
-  type PortionChoice,
 } from "@fit/shared";
 import { ObjectId } from "mongodb";
 import { db } from "./db";
@@ -42,14 +40,6 @@ export async function ensureFoodEntryIndexes() {
 // What a request already added, oldest first: none for a new request
 const addedBy = (clerkUserId: string, requestId: string) =>
   foodEntries.find({ clerkUserId, requestId }).sort({ loggedAt: 1, _id: 1 }).toArray();
-
-// The grams a portion choice comes to, with the serving it was chosen as. Null for a serving the food doesn't have
-function portionOf(food: Food, choice: PortionChoice): Portion | null {
-  if ("grams" in choice) return { grams: choice.grams };
-  const serving = food.servings.find((s) => s.label === choice.serving);
-  if (!serving) return null;
-  return { grams: serving.grams * choice.count, serving: { label: serving.label, count: choice.count } };
-}
 
 const toEntry = ({ _id, date, meal, loggedAt, food, portion, nutrients }: FoodEntryDoc): FoodEntry => ({
   id: _id.toHexString(),
