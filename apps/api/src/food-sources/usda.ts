@@ -4,6 +4,7 @@ import { barcodeKey, upcOf } from "./barcode";
 
 // USDA FoodData Central (https://fdc.nal.usda.gov/api-guide). Its key stays on the server: the phone only calls this API
 const SEARCH_URL = "https://api.nal.usda.gov/fdc/v1/foods/search";
+const FOODS_URL = "https://api.nal.usda.gov/fdc/v1/foods";
 const GENERIC_TYPES = "Foundation,SR Legacy";
 const TIMEOUT_MS = 8000;
 
@@ -75,6 +76,56 @@ function labelServing({ servingSize, servingSizeUnit, householdServingFullText }
   return [{ label: label ? lowerCase(label) : "1 serving", grams: Math.round(servingSize * 10) / 10 }];
 }
 
+const FoodDetails = z.object({
+  fdcId: z.number(),
+  foodPortions: z
+    .array(
+      z.object({
+        amount: z.number().nullish(),
+        modifier: z.string().nullish(),
+        portionDescription: z.string().nullish(),
+        gramWeight: z.number().nullish(),
+        measureUnit: z.object({ name: z.string() }).nullish(),
+        sequenceNumber: z.number().nullish(),
+      }),
+    )
+    .nullish(),
+});
+type FoodDetails = z.infer<typeof FoodDetails>;
+
+// Units that name no household measure: the portion's own words say what it is, or it's the label's reference amount
+const UNNAMED_UNITS = new Set(["undetermined", "RACC"]);
+
+// Generic foods with the household portions from a /foods?fdcIds=…&format=full response as their servings, in USDA's
+// order ("1 large", "1 cup chopped"). A food missing from the response keeps its servings
+export function withUsdaServings(foods: Food[], response: unknown): Food[] {
+  const servingsById = new Map<string, Serving[]>();
+  for (const raw of Array.isArray(response) ? response : []) {
+    const parsed = FoodDetails.safeParse(raw);
+    if (parsed.success) servingsById.set(String(parsed.data.fdcId), portionServings(parsed.data));
+  }
+  return foods.map((food) => {
+    const servings = servingsById.get(food.id);
+    return servings?.length ? { ...food, servings } : food;
+  });
+}
+
+function portionServings({ foodPortions }: FoodDetails): Serving[] {
+  const servings: Serving[] = [];
+  const ordered = [...(foodPortions ?? [])].sort((a, b) => (a.sequenceNumber ?? 0) - (b.sequenceNumber ?? 0));
+  for (const portion of ordered) {
+    const unit = portion.measureUnit?.name;
+    if (unit === "RACC" || !portion.gramWeight || portion.gramWeight <= 0) continue;
+    const words = portion.modifier?.trim() || portion.portionDescription?.trim();
+    const named = unit && !UNNAMED_UNITS.has(unit) ? unit : undefined;
+    if (!words && !named) continue;
+    const label = [portion.amount ?? 1, named, words].filter(Boolean).join(" ");
+    if (servings.some((s) => s.label === label)) continue;
+    servings.push({ label, grams: Math.round(portion.gramWeight * 100) / 100 });
+  }
+  return servings;
+}
+
 // Branded names and servings come in capitals: "EGG BAGELS, EGG" reads as "Egg bagels, egg", "1 EGG" as "1 egg"
 const isShouting = (text: string) => text === text.toUpperCase() && /[A-Z]/.test(text);
 const lowerCase = (text: string) => (isShouting(text) ? text.toLowerCase() : text);
@@ -87,8 +138,23 @@ const titleCase = (text: string) =>
 export async function usdaSearch(apiKey: string, query: string): Promise<{ generic: Food[]; branded: Food[] }> {
   const searchOf = async (dataType: string, pageSize: number) =>
     usdaSearchFoods(await searchUsda(apiKey, { query, dataType, pageSize: String(pageSize) }));
-  const [generic, branded] = await Promise.all([searchOf(GENERIC_TYPES, 10), searchOf("Branded", 15)]);
+  const [generic, branded] = await Promise.all([
+    searchOf(GENERIC_TYPES, 10).then((foods) => withPortions(apiKey, foods)),
+    searchOf("Branded", 15),
+  ]);
   return { generic, branded };
+}
+
+// Search results carry no portions for generic foods, so their details are fetched in one call. Should that fail, the
+// foods are still found, counted in grams
+async function withPortions(apiKey: string, foods: Food[]): Promise<Food[]> {
+  if (foods.length === 0) return foods;
+  try {
+    const params = new URLSearchParams({ fdcIds: foods.map((food) => food.id).join(","), format: "full" });
+    return withUsdaServings(foods, await getUsda(`${FOODS_URL}?${params}`, apiKey));
+  } catch {
+    return foods;
+  }
 }
 
 // A branded /foods/search response for a barcode as the food with that barcode, or null when none has it: USDA's
@@ -105,10 +171,13 @@ export async function usdaByBarcode(apiKey: string, code: string): Promise<Food 
   return usdaBarcodeFood(response, code);
 }
 
-async function searchUsda(apiKey: string, params: Record<string, string>): Promise<unknown> {
-  const url = `${SEARCH_URL}?${new URLSearchParams(params)}`;
+function searchUsda(apiKey: string, params: Record<string, string>): Promise<unknown> {
+  return getUsda(`${SEARCH_URL}?${new URLSearchParams(params)}`, apiKey);
+}
+
+async function getUsda(url: string, apiKey: string): Promise<unknown> {
   // The key goes in a header, so it never appears in a logged URL
   const response = await fetch(url, { headers: { "X-Api-Key": apiKey }, signal: AbortSignal.timeout(TIMEOUT_MS) });
-  if (!response.ok) throw new Error(`USDA food search answered ${response.status}`);
+  if (!response.ok) throw new Error(`USDA answered ${response.status}`);
   return response.json();
 }

@@ -2,12 +2,13 @@ import { describe, expect, it } from "vitest";
 import appleFoundation from "./fixtures/usda-search-apple-foundation.json";
 import eggBranded from "./fixtures/usda-search-egg-branded.json";
 import eggGeneric from "./fixtures/usda-search-egg-generic.json";
+import eggGenericPortions from "./fixtures/usda-foods-egg-generic-portions.json";
 import snickersEggByUpc from "./fixtures/usda-upc-snickers-egg.json";
-import { usdaBarcodeFood, usdaSearchFoods } from "./usda";
+import { usdaBarcodeFood, usdaSearchFoods, withUsdaServings } from "./usda";
 
 // Saved real responses from FoodData Central's /foods/search, trimmed to a few foods (fetched with the public DEMO_KEY)
 describe("usdaSearchFoods", () => {
-  it("maps a generic search into the food shape, per 100 g, with no servings (#162)", () => {
+  it("maps a generic search into the food shape, per 100 g, with no servings until their portions are added (#162)", () => {
     expect(usdaSearchFoods(eggGeneric)).toEqual([
       {
         source: "usda",
@@ -114,5 +115,41 @@ describe("usdaBarcodeFood", () => {
 
   it("finds nothing when no food in the answer has that barcode", () => {
     expect(usdaBarcodeFood(eggBranded, "068100084245")).toBeNull();
+  });
+});
+
+// A saved real /foods?fdcIds=…&format=full response for the generic eggs and SR Legacy's whole egg (public DEMO_KEY),
+// trimmed to their portions
+describe("withUsdaServings", () => {
+  it("gives a generic food USDA's household portions as servings, in USDA's order (spec #158 story 71)", () => {
+    const egg = { ...usdaSearchFoods(eggGeneric)[0]!, id: "171287", name: "Egg, whole, raw, fresh" };
+    const [withServings] = withUsdaServings([egg], eggGenericPortions);
+    expect(withServings!.servings).toEqual([
+      { label: "1 large", grams: 50 },
+      { label: "1 extra large", grams: 56 },
+      { label: "1 jumbo", grams: 63 },
+      { label: "1 cup (4.86 large eggs)", grams: 243 },
+      { label: "1 medium", grams: 44 },
+      { label: "1 small", grams: 38 },
+    ]);
+  });
+
+  it("names a portion by its unit and modifier, and leaves out the label's reference amount", () => {
+    expect(withUsdaServings(usdaSearchFoods(eggGeneric), eggGenericPortions).map((food) => food.servings)).toEqual([
+      [{ label: "1 egg white", grams: 34 }],
+      [{ label: "1 egg whole without shell", grams: 50.3 }],
+      [
+        { label: "1 oz", grams: 28.35 },
+        { label: '1 mini bagel (2-1/2" dia)', grams: 26 },
+        { label: '1 small bagel (3" dia)', grams: 69 },
+        { label: '1 medium bagel (3-1/2" to 4" dia)', grams: 105 },
+        { label: '1 large bagel (4-1/2" dia)', grams: 131 },
+      ],
+    ]);
+  });
+
+  it("leaves a food USDA gave no details for as it was", () => {
+    const foods = usdaSearchFoods(eggGeneric);
+    expect(withUsdaServings(foods, [])).toEqual(foods);
   });
 });
