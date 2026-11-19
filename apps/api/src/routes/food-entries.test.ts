@@ -97,6 +97,21 @@ describe("POST /days/:date/food-entries", () => {
     expect(mealOf(await dayOf(user, "today"), "snacks")).toHaveLength(1);
   });
 
+  // A log sent again after its answer was lost, with the same request id, logs nothing more
+  it("logs a food once however often the same request is sent", async () => {
+    const user = await api.signIn();
+    const add = { meal: "snacks", food: egg, portion: { grams: 50 }, requestId: crypto.randomUUID() };
+
+    const first = await user.post("/days/today/food-entries", add);
+    const again = await user.post("/days/today/food-entries", add);
+    await user.post("/days/today/food-entries", { ...add, requestId: crypto.randomUUID() });
+
+    expect(first.statusCode).toBe(201);
+    expect(again.statusCode).toBe(200);
+    expect(again.body).toEqual(first.body);
+    expect(mealOf(await dayOf(user, "today"), "snacks")).toHaveLength(2);
+  });
+
   it("refuses a serving the food doesn't have", async () => {
     const user = await api.signIn();
 
@@ -267,6 +282,21 @@ describe("POST /days/:date/meals/:meal/copy-from-yesterday", () => {
 
     expect(mealOf(await dayOf(user, yesterday), "breakfast")).toEqual([eggs]);
     expect(mealOf(await dayOf(user, today()), "breakfast")).toMatchObject([{ portion: { grams: 150 } }]);
+  });
+
+  // A copy sent again after its answer was lost, with the same request id, copies nothing more
+  it("copies once however often the same request is sent", async () => {
+    const user = await api.signIn();
+    await logEggs(user, localDate("UTC", 1));
+    const copy = { requestId: crypto.randomUUID() };
+
+    const first = await user.post("/days/today/meals/breakfast/copy-from-yesterday", copy);
+    const again = await user.post("/days/today/meals/breakfast/copy-from-yesterday", copy);
+
+    expect(first.statusCode).toBe(201);
+    expect(again.statusCode).toBe(200);
+    expect(again.body).toEqual(first.body);
+    expect(mealOf(await dayOf(user, "today"), "breakfast")).toHaveLength(1);
   });
 
   it("copies nothing from an empty meal, and refuses a date that can't be logged or a meal there isn't", async () => {

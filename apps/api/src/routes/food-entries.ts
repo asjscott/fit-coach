@@ -2,6 +2,7 @@ import type { FastifyPluginAsyncZod } from "fastify-type-provider-zod";
 import { LOGGABLE_DAYS, loggableDates } from "@fit/engines";
 import {
   CopiedFoodEntries,
+  CopyMeal,
   CopyMealParams,
   ErrorResponse,
   FoodEntry,
@@ -48,28 +49,37 @@ export const foodEntryRoutes: FastifyPluginAsyncZod = async (app) => {
     foods: await recentFoods(userIdOf(req)!),
   }));
 
-  // 201 with the new Food Entry. Every source logs through this: search, Saved Foods, Food Ideas and Tell the coach
+  // 201 with the new Food Entry, or 200 with the one a request with the same id already logged. Every source logs
+  // through this: search, Saved Foods, Food Ideas and Tell the coach
   app.post(
     "/days/:date/food-entries",
-    { schema: { params: DayParams, body: FoodEntryAdd, response: { 201: FoodEntry } } },
+    { schema: { params: DayParams, body: FoodEntryAdd, response: { 200: FoodEntry, 201: FoodEntry } } },
     async (req, reply) => {
       const clerkUserId = userIdOf(req)!;
       const date = await loggableDate(clerkUserId, req.params.date);
-      const entry = await addFoodEntry(clerkUserId, date, req.body);
-      if (!entry) throw badRequest(NO_SUCH_SERVING);
-      return reply.code(201).send(entry);
+      const added = await addFoodEntry(clerkUserId, date, req.body);
+      if (!added) throw badRequest(NO_SUCH_SERVING);
+      return reply.code(added.created ? 201 : 200).send(added.entry);
     },
   );
 
-  // Copy from yesterday: 201 with the new Food Entries, after any already in the meal. None when the day before had
-  // nothing in it
+  // Copy from yesterday: 201 with the new Food Entries, after any already in the meal, or 200 with the ones a request
+  // with the same id already copied. None when the day before had nothing in it
   app.post(
     "/days/:date/meals/:meal/copy-from-yesterday",
-    { schema: { params: CopyMealParams, response: { 201: CopiedFoodEntries } } },
+    {
+      schema: {
+        params: CopyMealParams,
+        // No body at all copies with no request id
+        body: CopyMeal.nullish(),
+        response: { 200: CopiedFoodEntries, 201: CopiedFoodEntries },
+      },
+    },
     async (req, reply) => {
       const clerkUserId = userIdOf(req)!;
       const date = await loggableDate(clerkUserId, req.params.date);
-      return reply.code(201).send({ entries: await copyMealFromDayBefore(clerkUserId, date, req.params.meal) });
+      const { entries, created } = await copyMealFromDayBefore(clerkUserId, date, req.params.meal, req.body?.requestId);
+      return reply.code(created ? 201 : 200).send({ entries });
     },
   );
 

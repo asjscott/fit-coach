@@ -34,9 +34,18 @@ export const FoodEntry = z.object({
 });
 export type FoodEntry = z.infer<typeof FoodEntry>;
 
+// Made by the phone for each thing the user does, and sent again with a retry, so a retry after a lost answer adds
+// nothing more
+const RequestId = z.uuid();
+
 // POST /days/:date/food-entries: a food, from any source, into a meal. Saved Foods, Food Ideas and Tell the coach all
 // log through this
-export const FoodEntryAdd = z.object({ meal: Meal, food: Food, portion: PortionChoice });
+export const FoodEntryAdd = z.object({
+  meal: Meal,
+  food: Food,
+  portion: PortionChoice,
+  requestId: RequestId.optional(),
+});
 export type FoodEntryAdd = z.infer<typeof FoodEntryAdd>;
 
 // PATCH /food-entries/:id: a new portion or meal, or both
@@ -47,6 +56,8 @@ export type FoodEntryChange = z.infer<typeof FoodEntryChange>;
 
 // POST /days/:date/meals/:meal/copy-from-yesterday: the meal copied from the day before
 export const CopyMealParams = z.object({ date: z.union([z.literal("today"), LocalDate]), meal: Meal });
+export const CopyMeal = z.object({ requestId: RequestId.optional() });
+export type CopyMeal = z.infer<typeof CopyMeal>;
 
 // What a copy added: new Food Entries, in the order they were logged the day before
 export const CopiedFoodEntries = z.object({ entries: z.array(FoodEntry) });

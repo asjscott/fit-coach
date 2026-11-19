@@ -13,9 +13,17 @@ import {
 } from "@fit/shared";
 import { ObjectId } from "mongodb";
 import { db } from "./db";
+import { isDuplicateKey } from "./duplicate-key";
 
-// The shape of a Food Entry document in MongoDB. The ObjectId orders entries logged in the same millisecond
-type FoodEntryDoc = Omit<FoodEntry, "id" | "loggedAt"> & { _id: ObjectId; clerkUserId: string; loggedAt: Date };
+// The shape of a Food Entry document in MongoDB. The ObjectId orders entries logged in the same millisecond. A copy
+// keeps the entry it was copied from, so one request's copies are told apart
+type FoodEntryDoc = Omit<FoodEntry, "id" | "loggedAt"> & {
+  _id: ObjectId;
+  clerkUserId: string;
+  loggedAt: Date;
+  requestId?: string;
+  copiedFrom?: ObjectId;
+};
 
 const foodEntries = db.collection<FoodEntryDoc>("foodEntries");
 
@@ -24,7 +32,16 @@ export async function ensureFoodEntryIndexes() {
   await foodEntries.createIndex({ clerkUserId: 1, date: 1, loggedAt: 1, _id: 1 });
   // Recent: the user's entries, last logged first
   await foodEntries.createIndex({ clerkUserId: 1, loggedAt: -1, _id: -1 });
+  // A request sent again adds nothing more: one entry per log, one per entry copied
+  await foodEntries.createIndex(
+    { clerkUserId: 1, requestId: 1, copiedFrom: 1 },
+    { unique: true, partialFilterExpression: { requestId: { $exists: true } } },
+  );
 }
+
+// What a request already added, oldest first: none for a new request
+const addedBy = (clerkUserId: string, requestId: string) =>
+  foodEntries.find({ clerkUserId, requestId }).sort({ loggedAt: 1, _id: 1 }).toArray();
 
 // The grams a portion choice comes to, with the serving it was chosen as. Null for a serving the food doesn't have
 function portionOf(food: Food, choice: PortionChoice): Portion | null {
@@ -45,14 +62,18 @@ const toEntry = ({ _id, date, meal, loggedAt, food, portion, nutrients }: FoodEn
 });
 
 // Logs a food into a meal of the date, its portion's nutrients worked out now and kept (ADR 0002). Null when the
-// portion names a serving the food doesn't have
+// portion names a serving the food doesn't have. A request id already logged answers its Food Entry, not created
 export async function addFoodEntry(
   clerkUserId: string,
   date: string,
-  { meal, food, portion: choice }: FoodEntryAdd,
-): Promise<FoodEntry | null> {
+  { meal, food, portion: choice, requestId }: FoodEntryAdd,
+): Promise<{ entry: FoodEntry; created: boolean } | null> {
   const portion = portionOf(food, choice);
   if (!portion) return null;
+  if (requestId) {
+    const [added] = await addedBy(clerkUserId, requestId);
+    if (added) return { entry: toEntry(added), created: false };
+  }
   const doc: FoodEntryDoc = {
     _id: new ObjectId(),
     clerkUserId,
@@ -62,22 +83,40 @@ export async function addFoodEntry(
     food,
     portion,
     nutrients: portionNutrients(food.per100g, portion.grams),
+    ...(requestId && { requestId }),
   };
-  await foodEntries.insertOne(doc);
-  return toEntry(doc);
+  try {
+    await foodEntries.insertOne(doc);
+  } catch (err) {
+    // The same request, racing this one, logged it first
+    const [added] = requestId && isDuplicateKey(err) ? await addedBy(clerkUserId, requestId) : [];
+    if (!added) throw err;
+    return { entry: toEntry(added), created: false };
+  }
+  return { entry: toEntry(doc), created: true };
 }
 
 // Copy from yesterday: the meal's Food Entries on the day before go into the same meal of the date, after any already
-// there (spec #158 stories 52 to 54). Each copy is a new Food Entry, the food, portion and snapshot as they were
-export async function copyMealFromDayBefore(clerkUserId: string, date: string, meal: Meal): Promise<FoodEntry[]> {
+// there (spec #158 stories 52 to 54). Each copy is a new Food Entry, the food, portion and snapshot as they were. A
+// request id already copied answers its copies, not created
+export async function copyMealFromDayBefore(
+  clerkUserId: string,
+  date: string,
+  meal: Meal,
+  requestId?: string,
+): Promise<{ entries: FoodEntry[]; created: boolean }> {
+  if (requestId) {
+    const added = await addedBy(clerkUserId, requestId);
+    if (added.length) return { entries: added.map(toEntry), created: false };
+  }
   const before = await foodEntries
     .find({ clerkUserId, date: dayBefore(date), meal })
     .sort({ loggedAt: 1, _id: 1 })
     .toArray();
-  if (!before.length) return [];
+  if (!before.length) return { entries: [], created: true };
   // One time for them all, after everything already logged; the ObjectIds keep their order
   const loggedAt = new Date();
-  const copies: FoodEntryDoc[] = before.map(({ food, portion, nutrients }) => ({
+  const copies: FoodEntryDoc[] = before.map(({ _id, food, portion, nutrients }) => ({
     _id: new ObjectId(),
     clerkUserId,
     date,
@@ -86,9 +125,16 @@ export async function copyMealFromDayBefore(clerkUserId: string, date: string, m
     food,
     portion,
     nutrients,
+    ...(requestId && { requestId, copiedFrom: _id }),
   }));
-  await foodEntries.insertMany(copies);
-  return copies.map(toEntry);
+  try {
+    await foodEntries.insertMany(copies);
+  } catch (err) {
+    // The same request, racing this one, copied them first
+    if (!(requestId && isDuplicateKey(err))) throw err;
+    return { entries: (await addedBy(clerkUserId, requestId)).map(toEntry), created: false };
+  }
+  return { entries: copies.map(toEntry), created: true };
 }
 
 // How many foods Recent lists ("about 20", spec #158)
