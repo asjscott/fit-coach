@@ -13,6 +13,7 @@ import { tellTheCoachRoutes } from "./routes/tell-the-coach";
 import { userRoutes } from "./routes/users";
 import { weighInRoutes } from "./routes/weigh-ins";
 import { workoutRoutes } from "./routes/workouts";
+import { waterRoutes } from "./routes/water";
 import { HealthResponse } from "@fit/shared";
 import { registerAuth } from "./auth";
 import { ensureCheckInIndexes } from "./check-ins";
@@ -24,6 +25,7 @@ import { ensurePlannedWorkoutIndexes } from "./planned-workouts";
 import { ensureUserIndexes, migrateUsers } from "./users";
 import { ensureWeighInIndexes, migrateWeighIns } from "./weigh-ins";
 import { ensureWorkoutIndexes } from "./workouts";
+import { ensureWaterIndexes } from "./water";
 
 // The API with every route registered and its indexes made, not yet listening. Reads MONGODB_URI (db.ts) and
 // DEV_AUTH_USER_ID (auth.ts) when first imported. server.ts listens on it; the route tests inject into it, passing fake
@@ -70,6 +72,8 @@ export async function buildApp({ logger, foodSources }: { logger: boolean; foodS
 
   await ensureFoodEntryIndexes().catch((err) => app.log.error(err, "Failed to create food entry indexes"));
 
+  await ensureWaterIndexes().catch((err) => app.log.error(err, "Failed to create water indexes"));
+
   await migrateUsers().catch((err) => app.log.error(err, "Failed to migrate users"));
 
   await migrateWorkingLevels().catch((err) => app.log.error(err, "Failed to migrate working levels"));
@@ -86,6 +90,7 @@ export async function buildApp({ logger, foodSources }: { logger: boolean; foodS
   await app.register(weighInRoutes);
   await app.register(foodRoutes, { foodSources: sources });
   await app.register(foodEntryRoutes);
+  await app.register(waterRoutes);
   await app.register(tellTheCoachRoutes, { foodSources: sources });
   registerTestErrorRoute(app);
 

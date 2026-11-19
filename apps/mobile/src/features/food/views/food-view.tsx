@@ -14,13 +14,15 @@ import { spacing } from "@/theme";
 import { DayStepper } from "../components/day-stepper";
 import { FoodResult } from "../components/food-result";
 import { MealsCard } from "../components/meals-card";
+import { WaterGlasses } from "../components/water-glasses";
 import { useFoodEntries } from "../hooks/use-food-entries";
 import { useFoodSearch } from "../hooks/use-food-search";
 import { dayStepLabel } from "../today-so-far";
 
 const keyOf = (food: Food) => `${food.source}:${food.id}`;
 
-// The Food tab's Today so far (prototype variant J): the day stepper, three equal rings, search, then the day's meals.
+// The Food tab's Today so far (prototype variant J): the day stepper, three equal rings, the water glasses, search,
+// then the day's meals.
 // Logging needs a connection; offline it says so, and nothing the user chose is cleared by a failed write
 export default function FoodView() {
   const timeZone = useTimeZone();
@@ -67,6 +69,7 @@ export default function FoodView() {
           </Alert>
         ) : null}
         {day ? <DayRings day={day} only={["kcal", "protein", "fibre"]} size={72} /> : isOffline ? null : <Spinner />}
+        {day ? <WaterGlasses key={day.date} day={day} onSaved={refresh} /> : null}
         <Input>
           <InputSlot>
             <InputIcon name="search" />

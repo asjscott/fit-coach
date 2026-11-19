@@ -2,6 +2,7 @@ import { dailyTargets, localDateOf } from "@fit/engines";
 import { type Day, UserProfile } from "@fit/shared";
 import { findMeals } from "./food-entries";
 import { findUser } from "./users";
+import { findWater } from "./water";
 
 // What a day is worked out from. Onboarding requires all but the Activity Level and the fibre target
 const DayProfile = UserProfile.pick({
@@ -27,6 +28,6 @@ export async function findDay(clerkUserId: string, date: string): Promise<Day | 
     targets: dailyTargets(profile, weightKg, localDate),
     // The totals are worked out from the Food Entries whenever the day is read, never stored
     ...(await findMeals(clerkUserId, localDate)),
-    waterMl: 0,
+    waterMl: await findWater(clerkUserId, localDate),
   };
 }
