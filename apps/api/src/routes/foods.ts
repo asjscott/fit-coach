@@ -10,21 +10,20 @@ export const foodRoutes: FastifyPluginAsyncZod<{ foodSources: FoodSources }> = a
   app.addHook("preHandler", requireAuth);
 
   // Foods matching the words: the user's Saved Foods by name, then generic before branded (spec #158 stories 64 and
-  // 69). 502 when the source is down
+  // 69). When the outside source is down the Saved Foods are still listed, flagged so the phone can say so
   app.get(
     "/foods/search",
-    { schema: { querystring: FoodSearchQuery, response: { 200: FoodSearchResults, 502: ErrorResponse } } },
-    async (req, reply) => {
-      try {
-        const [saved, { generic, branded }] = await Promise.all([
-          searchSavedFoods(userIdOf(req)!, req.query.q),
-          foodSources.search(req.query.q),
-        ]);
-        return { foods: [...saved, ...generic, ...branded] };
-      } catch (err) {
-        req.log.error(err, "Food search failed");
-        return reply.code(502).send({ error: "food search is unavailable" });
-      }
+    { schema: { querystring: FoodSearchQuery, response: { 200: FoodSearchResults } } },
+    async (req) => {
+      const [saved, outside] = await Promise.all([
+        searchSavedFoods(userIdOf(req)!, req.query.q),
+        foodSources.search(req.query.q).catch((err: unknown) => {
+          req.log.error(err, "Food search failed");
+          return null;
+        }),
+      ]);
+      if (!outside) return { foods: saved, outsideUnavailable: true };
+      return { foods: [...saved, ...outside.generic, ...outside.branded] };
     },
   );
 

@@ -64,11 +64,11 @@ describe("GET /foods/search", () => {
     expect((await user.get("/foods/search?q=%20")).statusCode).toBe(400);
   });
 
-  it("answers 502 when the food source can't be reached, so the phone can say so", async () => {
+  it("says the food source couldn't be reached, so the phone can say so", async () => {
     const user = await api.signIn();
     const { statusCode, body } = await user.get("/foods/search?q=outage");
-    expect(statusCode).toBe(502);
-    expect(body).toEqual({ error: "food search is unavailable" });
+    expect(statusCode).toBe(200);
+    expect(body).toEqual({ foods: [], outsideUnavailable: true });
   });
 });
 

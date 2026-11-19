@@ -4,6 +4,7 @@ import { ApiError, useApi } from "@/api";
 import { errorMessage } from "@/utils/error-message";
 
 const TYPING_PAUSE_MS = 400;
+const SEARCH_DOWN = "Food search isn't answering, so only your Saved Foods are listed. Try again in a minute.";
 
 export type FoodSearch = {
   // Undefined before the first search, and while the words are too short to search
@@ -28,20 +29,18 @@ export function useFoodSearch(query: string, version = 0): FoodSearch {
     setSearch((last) => ({ ...last, isSearching: true }));
     const timer = setTimeout(async () => {
       try {
-        const { foods } = FoodSearchResults.parse(
+        const { foods, outsideUnavailable } = FoodSearchResults.parse(
           await api(`/foods/search?${new URLSearchParams({ q: words })}`, { signal: controller.signal }),
         );
-        if (!controller.signal.aborted) setSearch({ foods, isSearching: false, error: null });
+        // USDA didn't answer: the user's Saved Foods are still listed, under the message
+        const error = outsideUnavailable ? SEARCH_DOWN : null;
+        if (!controller.signal.aborted) setSearch({ foods, isSearching: false, error });
       } catch (err) {
         if (controller.signal.aborted) return;
         setSearch({
           isSearching: false,
-          // The API answered but USDA didn't, or the API couldn't be reached at all
-          error: !(err instanceof ApiError)
-            ? "Searching for food needs a connection."
-            : err.status === 502
-              ? "Food search isn't answering. Try again in a minute."
-              : errorMessage(err),
+          // The API couldn't be reached at all
+          error: !(err instanceof ApiError) ? "Searching for food needs a connection." : errorMessage(err),
         });
       }
     }, TYPING_PAUSE_MS);

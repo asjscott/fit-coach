@@ -60,6 +60,7 @@ export type RecentFoods = z.infer<typeof RecentFoods>;
 // GET /foods/search?q=: what to search for
 export const FoodSearchQuery = z.object({ q: z.string().trim().min(1).max(100) });
 
-// The foods matching a search, best first
-export const FoodSearchResults = z.object({ foods: z.array(Food) });
+// The foods matching a search, best first. `outsideUnavailable` when the outside source couldn't be searched, so only
+// the user's Saved Foods are listed
+export const FoodSearchResults = z.object({ foods: z.array(Food), outsideUnavailable: z.boolean().optional() });
 export type FoodSearchResults = z.infer<typeof FoodSearchResults>;

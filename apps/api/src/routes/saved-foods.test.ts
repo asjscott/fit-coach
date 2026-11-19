@@ -24,7 +24,10 @@ const usdaEgg: Food = {
 
 // Never reaches the network: the outside sources know only the peanut butter's barcode, and "egg" in search
 const foodSources: FoodSources = {
-  search: async (query) => (query === "egg" ? { generic: [usdaEgg], branded: [] } : { generic: [], branded: [] }),
+  search: async (query) => {
+    if (query === "bar") throw new Error("USDA food search answered 503");
+    return query === "egg" ? { generic: [usdaEgg], branded: [] } : { generic: [], branded: [] };
+  },
   byBarcode: async (code) => (code === offPeanutButter.barcode ? offPeanutButter : null),
 };
 
@@ -129,6 +132,16 @@ describe("GET /foods/search with Saved Foods", () => {
     expect((await user.get("/foods/search?q=chocolate%20protein")).body).toMatchObject({
       foods: [{ name: "Protein bar, chocolate" }],
     });
+  });
+
+  it("still lists the Saved Foods when the outside source is down, saying it couldn't be searched", async () => {
+    const user = await api.signIn();
+    const { body: bar } = await user.post("/saved-foods", proteinBar);
+
+    // The fake source fails for "bar"
+    const { statusCode, body } = await user.get("/foods/search?q=bar");
+    expect(statusCode).toBe(200);
+    expect(body).toEqual({ foods: [bar], outsideUnavailable: true });
   });
 });
 
