@@ -11,9 +11,11 @@ import { foodRoutes } from "./routes/foods";
 import { plannedWorkoutRoutes } from "./routes/planned-workouts";
 import { savedFoodRoutes } from "./routes/saved-foods";
 import { ensureSavedFoodIndexes } from "./saved-foods";
+import { tellTheCoachRoutes } from "./routes/tell-the-coach";
 import { userRoutes } from "./routes/users";
 import { weighInRoutes } from "./routes/weigh-ins";
 import { workoutRoutes } from "./routes/workouts";
+import { waterRoutes } from "./routes/water";
 import { HealthResponse } from "@fit/shared";
 import { registerAuth } from "./auth";
 import { ensureCheckInIndexes } from "./check-ins";
@@ -25,14 +27,22 @@ import { ensurePlannedWorkoutIndexes } from "./planned-workouts";
 import { ensureUserIndexes, migrateUsers } from "./users";
 import { ensureWeighInIndexes, migrateWeighIns } from "./weigh-ins";
 import { ensureWorkoutIndexes } from "./workouts";
+import { ensureWaterIndexes } from "./water";
 
 // The API with every route registered and its indexes made, not yet listening. Reads MONGODB_URI (db.ts) and
 // DEV_AUTH_USER_ID (auth.ts) when first imported. server.ts listens on it; the route tests inject into it, passing fake
-// food sources. The real ones read USDA_API_KEY, which only the API's environment holds
+// food sources. The real ones read USDA_API_KEY and GEMINI_API_KEY, which only the API's environment holds
 export async function buildApp({ logger, foodSources }: { logger: boolean; foodSources?: FoodSources }) {
   const app = Fastify({ logger });
   if (!foodSources && !process.env.USDA_API_KEY) app.log.warn("USDA_API_KEY isn't set: food search finds nothing");
-  const sources = foodSources ?? realFoodSources({ usdaApiKey: process.env.USDA_API_KEY });
+  if (!foodSources && !process.env.GEMINI_API_KEY) app.log.warn("GEMINI_API_KEY isn't set: Tell the coach is hidden");
+  const sources =
+    foodSources ??
+    realFoodSources({
+      usdaApiKey: process.env.USDA_API_KEY,
+      geminiApiKey: process.env.GEMINI_API_KEY,
+      geminiModel: process.env.GEMINI_MODEL,
+    });
 
   app.setValidatorCompiler(validatorCompiler); // checks incoming requests
   app.setSerializerCompiler(serializerCompiler); // checks outgoing responses on routes that declare schema.response
@@ -65,6 +75,7 @@ export async function buildApp({ logger, foodSources }: { logger: boolean; foodS
   await ensureFoodEntryIndexes().catch((err) => app.log.error(err, "Failed to create food entry indexes"));
 
   await ensureSavedFoodIndexes().catch((err) => app.log.error(err, "Failed to create saved food indexes"));
+  await ensureWaterIndexes().catch((err) => app.log.error(err, "Failed to create water indexes"));
 
   await migrateUsers().catch((err) => app.log.error(err, "Failed to migrate users"));
 
@@ -83,6 +94,8 @@ export async function buildApp({ logger, foodSources }: { logger: boolean; foodS
   await app.register(foodRoutes, { foodSources: sources });
   await app.register(foodEntryRoutes);
   await app.register(savedFoodRoutes);
+  await app.register(waterRoutes);
+  await app.register(tellTheCoachRoutes, { foodSources: sources });
   registerTestErrorRoute(app);
 
   app.get("/health", async () => {

@@ -28,6 +28,7 @@ import { DayRings } from "@/features/nutrition/components/day-rings";
 import { WeighInReminderRow } from "@/features/nutrition/components/weigh-in-reminder-row";
 import { useDay } from "@/features/nutrition/hooks/use-day";
 import { showsWeighInReminder } from "@/features/nutrition/weigh-in";
+import { TellTheCoachBox } from "@/features/tell-the-coach/components/tell-the-coach-box";
 import { spacing } from "@/theme";
 import { ActivityLevelCard } from "../components/activity-level-card";
 import { AssessmentCard, AssessmentSection } from "../components/assessment-section";
@@ -86,7 +87,7 @@ export default function TodayView() {
   const tests = useChosenTests();
   const [sheetIsOpen, setSheetIsOpen] = useState(false);
   const prNote = usePrNote();
-  const { day } = useDay();
+  const { day, refresh: refreshDay } = useDay();
   const activityPrompt = useActivityLevelPrompt();
   useRefreshHistory();
 
@@ -174,6 +175,8 @@ export default function TodayView() {
           <DayRings day={day} onPress={() => router.navigate("/food")} pressHint="Opens Food" />
         </View>
       ) : null}
+      {/* Only with the day, since it logs into it; it hides itself without a Gemini key on the API */}
+      {day ? <TellTheCoachBox onLogged={refreshDay} style={{ marginBottom: spacing[4] }} /> : null}
       {user &&
       showsWeighInReminder({
         weighInDay: user.profile.weighInDay,

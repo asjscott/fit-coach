@@ -473,3 +473,5 @@ maps would fix that and isn't set up.
     works in `dev:local`), then USDA's branded foods when there's a key. Scan is native only (`scan-button.web.tsx`
     renders nothing), so on the web build reach Create food from "Create food from its label" under a search, or
     try a lookup with curl against the API (`/foods/barcode/0068100084245`, Kraft peanut butter).
+  - Tell the coach (#168) is hidden without `GEMINI_API_KEY`; there's no demo key. With one exported in the shell,
+    `GEMINI_API_KEY=… pnpm --filter @fit/mobile web:signed-in` shows the box on Today. Route tests pass a fake `parse`.

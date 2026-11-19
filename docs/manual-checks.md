@@ -9,7 +9,7 @@ Result codes: **✅ pass** · **❌ fail** · **⚠️ works but feels off** · 
 ## What's left
 
 - **Run on the phone now:** R1, U1, U2, LS2, PR1, TB1–TB3. Each is a part no run has covered yet.
-- **M7, once it's on the phones:** DT1–DT5, WI1–WI6, F1–F4, FL1–FL6, SC1–SC6.
+- **M7, once it's on the phones:** DT1–DT5, WI1–WI6, F1–F4, FL1–FL6, SC1–SC6, WA1–WA5, TC1–TC5.
 - **Run when you next train:** P9 and S1, a full Workout with a timer, resting as the timer says. Both can be one session.
 - **🕒 Due later, while you use the app:** C5 (the day after a check-in), P16 (a Monday), J2 (after a week with jumps on), P17 (after a few weeks), DL1 and DL2 (the 5th week of a Block: the week starting 4 Mondays after the Monday of the week Assessment B was done).
 - **On hold:** E1–E3 need Sentry set up on production.
@@ -279,7 +279,7 @@ Body weight is a weekly Weigh-in now, and the latest one is the weight everythin
 
 ## Logging food (#163)
 
-Needs `USDA_API_KEY` as for F1–F4. The Food tab opens on today: the day stepper, three rings (kcal left, protein left, fibre), Search foods, Scan (#164) and Today so far with Breakfast, Lunch, Dinner and Snacks. Water's glasses come with #166.
+Needs `USDA_API_KEY` as for F1–F4. The Food tab opens on today: the day stepper, three rings (kcal left, protein left, fibre), Search foods, Scan (SC1–SC6) and Today so far with Breakfast, Lunch, Dinner and Snacks. Water's glasses are WA1–WA5.
 
 - [ ] **FL1** On Today, tap any ring: the Food tab opens. Open Breakfast ("Nothing yet") and tap "+ Add to breakfast": the search box takes the cursor and reads "Search foods for breakfast". Search "egg", open "Eggs, Grade A, Large, egg whole", choose 2 and Grams or a serving, and Breakfast is already picked: tap "Add to breakfast". The search clears, Breakfast is open with "Eggs, Grade A, Large, egg whole, …" and its kcal, its line says "1 food · … kcal", and the header and rings take it off what's left. Back on Today, its kcal and protein rings say the same.
   - Result: · Notes:
@@ -309,6 +309,36 @@ Needs a Release build made after `npx expo prebuild` (step 10), since the camera
 - [ ] **SC5** Open the Saved Food from search, tap "Edit saved food", change its kcal and Save: the food shows the new figures, and logging it again uses them. The entry you logged in SC3 still shows the old kcal on its day. Edit it again and "Delete from Saved Foods": it's gone from search, scanning it offers Create food again, and the logged entry is still there.
   - Result: · Notes:
 - [ ] **SC6** In airplane mode, scan a barcode: a toast says finding food needs a connection, and nothing else happens. Create food's Save offline says the same and keeps the form open. Back online, both work.
+  - Result: · Notes:
+
+## Water (#166)
+
+Water is logged on the Food tab, in 250 ml glasses, and only shown on Today.
+
+- [ ] **WA1** On the Food tab, under the three rings, "Water · 0 of 2.75 L · tap a glass" (your target in L) sits over a row of empty glasses, one per 250 ml of the target (11 for 2.75 L). Tap any empty glass: one more glass fills from the left and the line reads "0.25 of 2.75 L". Tap empty glasses three times quickly: three more fill, and after leaving the tab and coming back it still shows 1 L.
+  - Result: · Notes:
+- [ ] **WA2** Tap any filled glass: one glass empties and the line drops by 0.25 L. Tap filled glasses until none is left: it reads "0 of …" and stays there after leaving the tab and coming back.
+  - Result: · Notes:
+- [ ] **WA3** Step back to "Yesterday" and fill two glasses: yesterday shows 0.5 L, and stepping back to Today shows today's water as you left it.
+  - Result: · Notes:
+- [ ] **WA4** With some water logged, Today's water ring shows it ("1" of "2.75 L", a third full). Tap the water ring: the Food tab opens and the water hasn't changed, on Today or the Food tab.
+  - Result: · Notes:
+- [ ] **WA5** In airplane mode, with the Food tab already showing, tap a glass: it fills, then a toast says logging water needs a connection and the glasses go back to what was saved. Back online, tapping works.
+  - Result: · Notes:
+
+## Tell the coach (#168)
+
+Needs `GEMINI_API_KEY` in `apps/api/.env` (a free key from https://aistudio.google.com/apikey). The real sentences go to Gemini Flash, so these are the only checks of its answers: the route tests use a fake, and the mapping test a response built from Gemini's documented format, as no key was to hand when it was written.
+
+- [ ] **TC1** On Today, under the rings, "Tell the coach" has a box reading "Yesterday I had two eggs and toast". Type "yesterday I had two eggs and toast" and tap Tell (or Send on the keyboard): after a moment a sheet asks "Is this right?" with an egg and a toast, each "Yesterday · Breakfast", with a slider and a line such as "2 × 1 large egg · 100 g · 155 kcal · …". The numbers look about right for eggs and toast. Nothing is logged yet: Cancel, and the Food tab's Yesterday has no new foods.
+  - Result: · Notes:
+- [ ] **TC2** Tell it the same again. Slide the eggs to 3: the line follows (150 g and its kcal). Slide the toast down. Tap ✕ on one food: it leaves the list and the button says "Log 1 food". Tap it: a toast says "Logged 1 food", the box clears, and on Food, Yesterday's Breakfast has that food at the portion you slid to, and Today has nothing new.
+  - Result: · Notes:
+- [ ] **TC3** Type a real sentence about today, such as "a chicken salad for lunch and a latte": each food is "Today · Lunch" (the latte may be Snacks) with a sensible portion. Log them: Today's kcal and protein rings drop by their kcal and protein, and they're in Lunch on Food.
+  - Result: · Notes:
+- [ ] **TC4** Type something with no food in it ("went for a walk"): the sheet says "No food found" and OK closes it, logging nothing. In airplane mode, Tell says telling the Coach needs a connection, and the words stay in the box.
+  - Result: · Notes:
+- [ ] **TC5** With the API running without `GEMINI_API_KEY`, Today has no "Tell the coach" box and nothing else on Today or Food changes. The API logs "GEMINI_API_KEY isn't set: Tell the coach is hidden" at start.
   - Result: · Notes:
 
 ## Tabs and the Exercise library (#159)

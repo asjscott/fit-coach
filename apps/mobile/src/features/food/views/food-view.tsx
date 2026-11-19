@@ -17,6 +17,7 @@ import { FoodResult } from "../components/food-result";
 import { MealsCard } from "../components/meals-card";
 import { SavedFoodEditor } from "../components/saved-food-editor";
 import { ScanButton } from "../components/scan-button";
+import { WaterGlasses } from "../components/water-glasses";
 import { useFoodEntries } from "../hooks/use-food-entries";
 import { useFoodSearch } from "../hooks/use-food-search";
 import { useSavedFoods } from "../hooks/use-saved-foods";
@@ -27,8 +28,9 @@ const keyOf = (food: Food) => `${food.source}:${food.id}`;
 // Create food (with the barcode scanned, when it came from a scan), or a Saved Food being edited
 type Editing = { barcode?: string } | { food: Food };
 
-// The Food tab's Today so far (prototype variant J): the day stepper, three equal rings, search and Scan, then the
-// day's meals. Logging needs a connection; offline it says so, and nothing the user chose is cleared by a failed write
+// The Food tab's Today so far (prototype variant J): the day stepper, three equal rings, the water glasses, search
+// and Scan, then the day's meals. Logging needs a connection; offline it says so, and nothing the user chose is
+// cleared by a failed write
 export default function FoodView() {
   const timeZone = useTimeZone();
   const [daysBefore, setDaysBefore] = useState(0);
@@ -92,6 +94,7 @@ export default function FoodView() {
           </Alert>
         ) : null}
         {day ? <DayRings day={day} only={["kcal", "protein", "fibre"]} size={72} /> : isOffline ? null : <Spinner />}
+        {day ? <WaterGlasses key={day.date} day={day} onSaved={refresh} /> : null}
         <View style={styles.searchRow}>
           <Input style={styles.search}>
             <InputSlot>

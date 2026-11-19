@@ -1,0 +1,25 @@
+{
+  "candidates": [
+    {
+      "content": {
+        "parts": [
+          {
+            "text": "{\"foods\": [{\"name\": \"Egg, boiled\", \"day\": \"yesterday\", \"meal\": \"breakfast\", \"grams\": 100, \"serving\": {\"label\": \"1 large egg\", \"grams\": 50, \"count\": 2}, \"per100g\": {\"kcal\": 155, \"proteinG\": 12.6, \"carbsG\": 1.1, \"fatG\": 10.6, \"fibreG\": 0}}, {\"name\": \"Toast, white bread\", \"day\": \"yesterday\", \"meal\": \"breakfast\", \"grams\": 60, \"serving\": null, \"per100g\": {\"kcal\": 293, \"proteinG\": 9, \"carbsG\": 54.4, \"fatG\": 4}}]}"
+          }
+        ],
+        "role": "model"
+      },
+      "finishReason": "STOP",
+      "index": 0
+    }
+  ],
+  "usageMetadata": {
+    "promptTokenCount": 402,
+    "candidatesTokenCount": 156,
+    "totalTokenCount": 1024,
+    "promptTokensDetails": [{ "modality": "TEXT", "tokenCount": 402 }],
+    "thoughtsTokenCount": 466
+  },
+  "modelVersion": "gemini-2.5-flash",
+  "responseId": "q8w7aYGfL9WV1MkPkeCYmAs"
+}
