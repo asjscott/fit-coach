@@ -1,4 +1,5 @@
 import type { Day, FoodIdea, Meal } from "@fit/shared";
+import { wholeNumber } from "./format";
 
 export type CoachSummary = {
   // What's left of the day's kcal and protein, or that they're met
@@ -7,11 +8,9 @@ export type CoachSummary = {
   line: string | null;
 };
 
-const whole = (value: number) => Math.round(value).toLocaleString();
-
 // A Food Idea's set portion and what it holds: "½ block · 216 kcal · 26 g protein"
 export const ideaLine = ({ portion, nutrients }: FoodIdea) =>
-  `${portion.label} · ${whole(nutrients.kcal)} kcal · ${whole(nutrients.proteinG)} g protein`;
+  `${portion.label} · ${wholeNumber(nutrients.kcal)} kcal · ${wholeNumber(nutrients.proteinG)} g protein`;
 
 const AT_MEAL: Record<Meal, string> = {
   breakfast: "at breakfast",
@@ -28,14 +27,15 @@ export function coachSummary({ targets, totals, ideas, ideaMeal }: Day): CoachSu
   const proteinLeft = Math.max(0, Math.round(targets.proteinG - totals.proteinG));
 
   if (!kcalLeft && !proteinLeft) return { headline: "Calorie and protein targets met.", line: null };
-  if (!kcalLeft) return { headline: `Calorie target met, with ${whole(proteinLeft)} g of protein left.`, line: null };
-  if (!proteinLeft) return { headline: `Protein target met, with ${whole(kcalLeft)} kcal left.`, line: null };
+  if (!kcalLeft)
+    return { headline: `Calorie target met, with ${wholeNumber(proteinLeft)} g of protein left.`, line: null };
+  if (!proteinLeft) return { headline: `Protein target met, with ${wholeNumber(kcalLeft)} kcal left.`, line: null };
 
-  const headline = `${whole(kcalLeft)} kcal and ${whole(proteinLeft)} g of protein left.`;
+  const headline = `${wholeNumber(kcalLeft)} kcal and ${wholeNumber(proteinLeft)} g of protein left.`;
   if (!ideas.length) return { headline, line: "None of the Food Ideas fits in the kcal left." };
 
   const names = ideas.map((idea, i) => (i ? idea.name.charAt(0).toLowerCase() + idea.name.slice(1) : idea.name));
   const covered = ideas.reduce((sum, idea) => sum + idea.nutrients.proteinG, 0);
-  const share = covered >= proteinLeft ? "all" : `${whole(covered)} g`;
+  const share = covered >= proteinLeft ? "all" : `${wholeNumber(covered)} g`;
   return { headline, line: `${names.join(" and ")} ${AT_MEAL[ideaMeal]} would cover ${share} of the protein.` };
 }

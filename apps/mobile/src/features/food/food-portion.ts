@@ -1,4 +1,5 @@
 import type { Nutrients, PortionChoice, Serving } from "@fit/shared";
+import { oneDecimal, wholeNumber } from "../nutrition/format";
 
 // What a portion is counted in: grams, or one of the food's own servings
 export type PortionUnit = { unit: "g" } | { unit: "serving"; serving: Serving };
@@ -26,8 +27,6 @@ export function portionChoice(choice: PortionUnit, amount: string): PortionChoic
   return choice.unit === "g" ? { grams: value } : { serving: choice.serving.label, count: value };
 }
 
-const grams = (value: number) => value.toLocaleString(undefined, { maximumFractionDigits: 1 });
-
 // "441 kcal · 16 g protein · 1.9 g fibre": what a portion holds, as the Food tab shows it before it's logged
 export const portionLine = ({ kcal, proteinG, fibreG }: Nutrients) =>
-  `${Math.round(kcal).toLocaleString()} kcal · ${grams(proteinG)} g protein · ${grams(fibreG)} g fibre`;
+  `${wholeNumber(kcal)} kcal · ${oneDecimal(proteinG)} g protein · ${oneDecimal(fibreG)} g fibre`;

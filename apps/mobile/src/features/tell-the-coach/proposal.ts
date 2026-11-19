@@ -2,6 +2,7 @@ import { portionNutrients, portionOf } from "@fit/engines";
 import type { Food, FoodProposal, PortionChoice } from "@fit/shared";
 import { portionLine } from "../food/food-portion";
 import { dayStepLabel, entryPortion, mealName } from "../food/today-so-far";
+import { oneDecimal } from "../nutrition/format";
 
 // The most a Food Entry takes (PortionChoice in @fit/shared)
 const MAX_GRAMS = 5000;
@@ -36,13 +37,11 @@ export function proposalSlider(portion: PortionChoice) {
 export const portionAt = (portion: PortionChoice, value: number): PortionChoice =>
   "serving" in portion ? { serving: portion.serving, count: value } : { grams: value };
 
-const amount = (value: number) => value.toLocaleString(undefined, { maximumFractionDigits: 1 });
-
 // "2 × 1 large egg · 100 g · 155 kcal · 12.6 g protein · 0 g fibre": a proposal's portion and what it holds, which
 // follows the slider
 export function proposalPortionLine(food: Food, portion: PortionChoice) {
   const grams = portionOf(food, portion)?.grams ?? 0;
   const nutrients = portionLine(portionNutrients(food.per100g, grams));
   if ("grams" in portion) return `${entryPortion({ grams })} · ${nutrients}`;
-  return `${entryPortion({ grams, serving: { label: portion.serving, count: portion.count } })} · ${amount(grams)} g · ${nutrients}`;
+  return `${entryPortion({ grams, serving: { label: portion.serving, count: portion.count } })} · ${oneDecimal(grams)} g · ${nutrients}`;
 }

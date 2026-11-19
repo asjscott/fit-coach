@@ -10,6 +10,7 @@ import { usePortion } from "../hooks/use-portion";
 import { mealName } from "../today-so-far";
 import { FoodPortionPanel } from "./food-portion-panel";
 import { MealChips } from "./meal-chips";
+import { wholeNumber } from "../../nutrition/format";
 
 // One food found: its name, brand and kcal per 100 g, opening to choose a portion and the meal to log it into
 export function FoodResult({
@@ -34,7 +35,7 @@ export function FoodResult({
   const detail = [
     food.source === "saved" ? "Saved food" : null,
     food.brand,
-    `${Math.round(food.per100g.kcal).toLocaleString()} kcal per 100 g`,
+    `${wholeNumber(food.per100g.kcal)} kcal per 100 g`,
   ]
     .filter(Boolean)
     .join(" · ");

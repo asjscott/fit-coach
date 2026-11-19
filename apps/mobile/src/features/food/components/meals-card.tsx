@@ -9,6 +9,7 @@ import { radii, spacing, useTheme } from "@/theme";
 import { portionLine } from "../food-portion";
 import { entryPortion, mealLine, mealName } from "../today-so-far";
 import { EntryEditor } from "./entry-editor";
+import { wholeNumber } from "../../nutrition/format";
 
 // The day's four meals under its totals (prototype variant J's Today so far): each shows its number of foods and kcal,
 // and opens, one at a time, to its Food Entries, "Add to (meal)" and "Copy from yesterday" (spec #158 stories 49 to 53)
@@ -93,7 +94,7 @@ export function MealsCard({
                         {`${entry.food.name}, ${entryPortion(entry.portion)}`}
                       </Text>
                       <Text size="sm" color="muted">
-                        {`${Math.round(entry.nutrients.kcal).toLocaleString()} kcal`}
+                        {`${wholeNumber(entry.nutrients.kcal)} kcal`}
                       </Text>
                     </Pressable>
                     {editingId === entry.id ? (
