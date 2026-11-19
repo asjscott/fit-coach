@@ -18,7 +18,13 @@ import { useToast } from "@/contexts/toast-context";
 import { equipmentSummary } from "@/features/equipment/equipment-summary";
 import { useChosenTests } from "@/features/assessment/hooks/use-chosen-tests";
 import { useStartAssessment } from "@/features/assessment/hooks/use-start-assessment";
-import { ActivityLevelRow, FibreTargetRow, WeighInDayRow, WeighInRow } from "@/features/user/components/nutrition-rows";
+import {
+  ActivityLevelRow,
+  DietRow,
+  FibreTargetRow,
+  WeighInDayRow,
+  WeighInRow,
+} from "@/features/user/components/nutrition-rows";
 import { useCurrentUser, usePrimaryEquipmentProfile, useWeightUnit } from "@/features/user/current-user-provider";
 import { genderLabel } from "@/features/user/components/form/fields/user-gender-field";
 import { goalLabel } from "@/features/user/components/form/fields/user-goal-field";
@@ -90,6 +96,7 @@ export default function ProfileView() {
         <Section label="Nutrition">
           <ActivityLevelRow />
           <FibreTargetRow />
+          <DietRow />
           <WeighInRow />
           <WeighInDayRow />
         </Section>

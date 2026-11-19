@@ -1,5 +1,5 @@
 import { Day } from "@fit/shared";
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { ApiError, useApi } from "@/api";
 import { useCurrentUser } from "@/features/user/current-user-provider";
 import { useReloadOnVisit } from "@/features/workouts/hooks/use-reload-on-visit";
@@ -30,6 +30,14 @@ export function useDay(date = "today") {
   }, [api, date, profile]);
 
   useReloadOnVisit(refresh);
+
+  // A visit doesn't follow a profile saved on the screen itself, such as the Diet changed on the Ideas half
+  const shownProfile = useRef(profile);
+  useEffect(() => {
+    if (shownProfile.current === profile) return;
+    shownProfile.current = profile;
+    void refresh();
+  }, [profile, refresh]);
 
   return { day, error, isOffline, refresh };
 }

@@ -1,6 +1,7 @@
 import { loggableDates } from "@fit/engines";
 import type { Food, FoodEntry, FoodEntryAdd, FoodEntryChange, Meal } from "@fit/shared";
-import { useCallback, useRef, useState } from "react";
+import { router, useLocalSearchParams } from "expo-router";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { StyleSheet, type TextInputInstance, View } from "react-native";
 import { Alert, AlertText } from "@/components/alert";
 import { Input, InputField, InputIcon, InputSlot } from "@/components/input";
@@ -14,6 +15,7 @@ import { useTimeZone } from "@/features/user/current-user-provider";
 import { spacing } from "@/theme";
 import { DayStepper } from "../components/day-stepper";
 import { type FoodHalf, FoodHalves } from "../components/food-halves";
+import { FoodIdeas } from "../components/food-ideas";
 import { FoodResult } from "../components/food-result";
 import { MealsCard } from "../components/meals-card";
 import { RecentAndSavedList } from "../components/recent-and-saved-list";
@@ -33,13 +35,21 @@ const keyOf = (food: Food) => `${food.source}:${food.id}`;
 type Editing = { barcode?: string } | { food: Food };
 
 // The Food tab (prototype variant J), in two halves under a two-part control. Today so far: the day stepper, three
-// equal rings, the water glasses, search and Scan, then the day's meals. Ideas and recent: Recent and Saved Foods as
-// one-tap choices. Logging needs a connection; offline it says so, and nothing the user chose is cleared by a failed
+// equal rings, the water glasses, search and Scan, then the day's meals. Ideas and recent: the Coach's summary with
+// its Food Ideas and the Diet, then Recent and Saved Foods as one-tap choices. Logging needs a connection; offline it says so, and nothing the user chose is cleared by a failed
 // write
 export default function FoodView() {
   const timeZone = useTimeZone();
   // Opens on Today so far (spec #158 story 43)
   const [half, setHalf] = useState<FoodHalf>("today");
+  // Today's summary opens the Ideas half; the ask is cleared once it's followed, so the next one is followed too
+  const { half: askedHalf } = useLocalSearchParams<{ half?: string }>();
+  useEffect(() => {
+    if (askedHalf !== "ideas") return;
+    setHalf("ideas");
+    setDaysBefore(0);
+    router.setParams({ half: undefined });
+  }, [askedHalf]);
   const [daysBefore, setDaysBefore] = useState(0);
   // Today and the 6 days before it, in the user's timezone, as the API counts them
   const date = loggableDates(new Date(), timeZone)[daysBefore];
@@ -119,18 +129,19 @@ export default function FoodView() {
         ) : null}
         {half === "ideas" ? (
           <>
-            {/* The Coach's summary and its Food Ideas go first here, above Recent and Saved (stories 56 to 61) */}
             {daysBefore > 0 ? (
               <Text size="sm" color="muted">
                 {`Adding to ${dayStepLabel(daysBefore).toLowerCase()}.`}
               </Text>
             ) : null}
+            {day ? <FoodIdeas day={day} onLog={log} /> : isOffline ? null : <Spinner />}
             <RecentAndSavedList
               choices={recent.choices}
               error={recent.error}
               chosen={chosen}
               onChoose={setChosen}
-              meal={addingTo}
+              // The meal tapped, or the one for the time of day, as Food Ideas go into
+              meal={addingTo ?? day?.ideaMeal ?? null}
               onLog={log}
               onEdit={(food) => setEditing({ food })}
             />

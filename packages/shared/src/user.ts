@@ -32,6 +32,20 @@ export type Weekday = z.infer<typeof Weekday>;
 // The day Today asks for the week's Weigh-in, for a user who never chose one (GLOSSARY.md)
 export const DEFAULT_WEIGH_IN_DAY: Weekday = "monday";
 
+// What the user eats, which only decides the Food Ideas the Coach offers (GLOSSARY.md "Diet")
+export const DietKind = z.enum(["any", "pescatarian", "vegetarian", "vegan"]);
+export type DietKind = z.infer<typeof DietKind>;
+
+// The foods a user can avoid, and that a Food Idea can contain
+export const AvoidedFood = z.enum(["dairy", "gluten", "nuts", "pork"]);
+export type AvoidedFood = z.infer<typeof AvoidedFood>;
+
+export const Diet = z.object({ kind: DietKind, avoid: z.array(AvoidedFood) });
+export type Diet = z.infer<typeof Diet>;
+
+// The Diet of a user who never chose one: anything, avoiding nothing
+export const DEFAULT_DIET: Diet = { kind: "any", avoid: [] };
+
 // The user's own daily fibre target in grams, in place of the rule that follows their calories
 export const FibreTarget = z
   .number({ error: "Enter grams of fibre" })
@@ -60,6 +74,8 @@ export const UserProfile = z.object({
   fibreTargetG: FibreTarget.optional(),
   // Absent until the user chooses one, which means DEFAULT_WEIGH_IN_DAY
   weighInDay: Weekday.optional(),
+  // Absent until the user chooses one, which means DEFAULT_DIET
+  diet: Diet.optional(),
 });
 
 export type UserProfile = z.infer<typeof UserProfile>;

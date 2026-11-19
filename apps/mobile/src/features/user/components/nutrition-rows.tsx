@@ -33,7 +33,9 @@ import {
   activityLevelLabel,
   activityLevelOptions,
 } from "@/features/user/components/form/fields/user-activity-level-field";
+import { DietModal } from "@/features/nutrition/components/diet-modal";
 import { LogWeighInModal } from "@/features/nutrition/components/log-weigh-in-modal";
+import { dietLabel } from "@/features/nutrition/diet";
 import { weighInDateLabel } from "@/features/nutrition/weigh-in";
 import { useCurrentUser, useWeightUnit } from "@/features/user/current-user-provider";
 import { weightLabel } from "@/features/workouts/format";
@@ -104,6 +106,19 @@ export function WeighInDayRow() {
           ))}
         </ActionsheetContent>
       </Actionsheet>
+    </>
+  );
+}
+
+// The Diet and the foods to avoid, which decide the Food Ideas the Coach offers (spec #158 stories 6 and 7)
+export function DietRow() {
+  const { user } = useCurrentUser();
+  const [isOpen, setIsOpen] = useState(false);
+
+  return (
+    <>
+      <EditRow label="Diet" value={dietLabel(user?.profile.diet)} onPress={() => setIsOpen(true)} />
+      {isOpen ? <DietModal onClose={() => setIsOpen(false)} /> : null}
     </>
   );
 }

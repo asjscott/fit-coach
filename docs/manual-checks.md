@@ -9,7 +9,7 @@ Result codes: **✅ pass** · **❌ fail** · **⚠️ works but feels off** · 
 ## What's left
 
 - **Run on the phone now:** R1, U1, U2, LS2, PR1, TB1–TB3. Each is a part no run has covered yet.
-- **M7, once it's on the phones:** DT1–DT5, WI1–WI6, F1–F4, FL1–FL6, SC1–SC6, CR1–CR6, WA1–WA5, TC1–TC5.
+- **M7, once it's on the phones:** DT1–DT5, WI1–WI6, F1–F4, FL1–FL6, SC1–SC6, CR1–CR6, WA1–WA5, FI1–FI6, TC1–TC5.
 - **Run when you next train:** P9 and S1, a full Workout with a timer, resting as the timer says. Both can be one session.
 - **🕒 Due later, while you use the app:** C5 (the day after a check-in), P16 (a Monday), J2 (after a week with jumps on), P17 (after a few weeks), DL1 and DL2 (the 5th week of a Block: the week starting 4 Mondays after the Monday of the week Assessment B was done).
 - **On hold:** E1–E3 need Sentry set up on production.
@@ -343,11 +343,28 @@ Water is logged on the Food tab, in 250 ml glasses, and only shown on Today.
 - [ ] **WA5** In airplane mode, with the Food tab already showing, tap a glass: it fills, then a toast says logging water needs a connection and the glasses go back to what was saved. Back online, tapping works.
   - Result: · Notes:
 
+## Diet, Food Ideas and the Coach's summary (#167)
+
+The Coach's summary sits under Today's rings and at the top of the Food tab's Ideas half. Its Food Ideas come from a list of about 40 high-protein foods, filtered by your Diet; search and Scan never are.
+
+- [ ] **FI1** On Today, with some food logged but the targets not met, a card under the rings reads like "1,036 kcal and 54 g of protein left." with a line under it such as "Cottage cheese and tofu at dinner would cover all of the protein." The numbers match the kcal and protein rings, the meal is the one for the time of day (breakfast before 11:00, lunch before 16:00, dinner before 21:00, then "as a snack"), and nothing mentions fibre or water. On a Weigh-in Day without this week's Weigh-in, the "Log this week's weight" row sits under the card.
+  - Result: · Notes:
+- [ ] **FI2** Tap the card: the Food tab opens on Ideas and recent, with the same summary and two Food Ideas under it, each with its portion, kcal and protein ("1 cup · 163 kcal · 28 g protein") and a button named for the meal ("+ Dinner"). Neither idea has more kcal than are left.
+  - Result: · Notes:
+- [ ] **FI3** Tap an idea's button: the Food tab switches to Today so far with that meal open, holding the idea at its portion ("Cottage cheese, 1 cup"). Today's kcal and protein rings drop by the idea's kcal and protein, and the summary follows.
+  - Result: · Notes:
+- [ ] **FI4** On the Ideas half, tap "Diet: Any ✎", choose Vegan, tick Nuts and Save: the chip reads "Diet: Vegan, no nuts ✎" and the ideas change straight away to vegan ones with no nuts (tofu, seitan, a pea protein shake, lentils and so on). In Profile, under Nutrition, the Diet row reads "Vegan, no nuts". Change it there to Vegetarian with Dairy ticked: the Ideas half offers no dairy (no cottage cheese, yogurt or whey). Search for "cheese": cheeses still come up, as search ignores the Diet.
+  - Result: · Notes:
+- [ ] **FI5** Log enough protein to meet the protein target: the summary reads "Protein target met, with … kcal left." and the Ideas half offers no ideas. Log enough to pass the kcal target too: it reads "Calorie and protein targets met." and both rings show 0 left.
+  - Result: · Notes:
+- [ ] **FI6** Before 11:00, the idea buttons read "+ Breakfast", and a Recent or Saved Food chosen on the Ideas half has Breakfast picked for it. After 21:00 they read "+ Snacks".
+  - Result: · Notes:
+
 ## Tell the coach (#168)
 
 Needs `GEMINI_API_KEY` in `apps/api/.env` (a free key from https://aistudio.google.com/apikey). The real sentences go to Gemini Flash, so these are the only checks of its answers: the route tests use a fake, and the mapping test a response built from Gemini's documented format, as no key was to hand when it was written.
 
-- [ ] **TC1** On Today, under the rings, "Tell the coach" has a box reading "Yesterday I had two eggs and toast". Type "yesterday I had two eggs and toast" and tap Tell (or Send on the keyboard): after a moment a sheet asks "Is this right?" with an egg and a toast, each "Yesterday · Breakfast", with a slider and a line such as "2 × 1 large egg · 100 g · 155 kcal · …". The numbers look about right for eggs and toast. Nothing is logged yet: Cancel, and the Food tab's Yesterday has no new foods.
+- [ ] **TC1** On Today, under the Coach's summary (and the Weigh-in row on a Weigh-in Day), "Tell the coach" has a box reading "Yesterday I had two eggs and toast". Type "yesterday I had two eggs and toast" and tap Tell (or Send on the keyboard): after a moment a sheet asks "Is this right?" with an egg and a toast, each "Yesterday · Breakfast", with a slider and a line such as "2 × 1 large egg · 100 g · 155 kcal · …". The numbers look about right for eggs and toast. Nothing is logged yet: Cancel, and the Food tab's Yesterday has no new foods.
   - Result: · Notes:
 - [ ] **TC2** Tell it the same again. Slide the eggs to 3: the line follows (150 g and its kcal). Slide the toast down. Tap ✕ on one food: it leaves the list and the button says "Log 1 food". Tap it: a toast says "Logged 1 food", the box clears, and on Food, Yesterday's Breakfast has that food at the portion you slid to, and Today has nothing new.
   - Result: · Notes:

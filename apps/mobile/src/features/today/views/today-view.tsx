@@ -24,6 +24,7 @@ import {
 } from "@/features/workouts/hooks/use-open-workout";
 import { useRefreshHistory } from "@/features/workouts/hooks/use-refresh-history";
 import { useLogbook } from "@/features/workouts/logbook-provider";
+import { CoachSummaryCard } from "@/features/nutrition/components/coach-summary-card";
 import { DayRings } from "@/features/nutrition/components/day-rings";
 import { WeighInReminderRow } from "@/features/nutrition/components/weigh-in-reminder-row";
 import { useDay } from "@/features/nutrition/hooks/use-day";
@@ -175,8 +176,14 @@ export default function TodayView() {
           <DayRings day={day} onPress={() => router.navigate("/food")} pressHint="Opens Food" />
         </View>
       ) : null}
-      {/* Only with the day, since it logs into it; it hides itself without a Gemini key on the API */}
-      {day ? <TellTheCoachBox onLogged={refreshDay} style={{ marginBottom: spacing[4] }} /> : null}
+      {day ? (
+        <View style={{ marginBottom: spacing[4] }}>
+          <CoachSummaryCard
+            day={day}
+            onPress={() => router.navigate({ pathname: "/food", params: { half: "ideas" } })}
+          />
+        </View>
+      ) : null}
       {user &&
       showsWeighInReminder({
         weighInDay: user.profile.weighInDay,
@@ -188,6 +195,8 @@ export default function TodayView() {
           <WeighInReminderRow />
         </View>
       ) : null}
+      {/* Only with the day, since it logs into it; it hides itself without a Gemini key on the API */}
+      {day ? <TellTheCoachBox onLogged={refreshDay} style={{ marginBottom: spacing[4] }} /> : null}
       {activityPrompt.asks ? (
         <View style={{ marginBottom: spacing[4] }}>
           <ActivityLevelCard onSkip={activityPrompt.skip} />

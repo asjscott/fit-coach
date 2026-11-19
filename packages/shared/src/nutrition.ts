@@ -1,6 +1,8 @@
 import { z } from "zod";
 import { LocalDate } from "./check-in";
-import { DayMeal } from "./food-entry";
+import { Nutrients, Serving } from "./food";
+import { DayMeal, Meal } from "./food-entry";
+import { AvoidedFood } from "./user";
 
 // What the Coach sets the user for each day, the same every day (GLOSSARY.md). Worked out by the server whenever a
 // day is read, never stored
@@ -24,8 +26,24 @@ export const DayTotals = z.object({
 });
 export type DayTotals = z.infer<typeof DayTotals>;
 
-// GET /days/:date: everything Today's rings and the Food tab need for one local date in the user's timezone. Later
-// M7 tickets add the Food Ideas and the meal an idea goes into
+// What a Food Idea is, which the Diet allows or rules out: meat and fish are neither, vegetarian has no meat or fish,
+// vegan nothing from an animal
+export const FoodIdeaKind = z.enum(["meat", "fish", "vegetarian", "vegan"]);
+export type FoodIdeaKind = z.infer<typeof FoodIdeaKind>;
+
+// A food from the Coach's own list, with a set portion and what that portion holds (GLOSSARY.md)
+export const FoodIdea = z.object({
+  id: z.string().regex(/^[a-z0-9-]+$/),
+  name: z.string().min(1),
+  portion: Serving,
+  nutrients: Nutrients,
+  kind: FoodIdeaKind,
+  // What it holds from the foods a Diet can avoid
+  contains: z.array(AvoidedFood),
+});
+export type FoodIdea = z.infer<typeof FoodIdea>;
+
+// GET /days/:date: everything Today's rings and the Food tab need for one local date in the user's timezone
 export const Day = z.object({
   date: LocalDate,
   targets: DailyTargets,
@@ -35,6 +53,10 @@ export const Day = z.object({
   meals: z.array(DayMeal),
   // The water the user has logged that day, in ml
   waterMl: z.number(),
+  // Up to two Food Ideas the user's Diet allows to fill what's left of the day; none once protein is met
+  ideas: z.array(FoodIdea),
+  // The meal Add puts an idea into: the one for the time of day now, in the user's timezone
+  ideaMeal: Meal,
 });
 export type Day = z.infer<typeof Day>;
 

@@ -8,6 +8,8 @@ const day = (eaten: Partial<Day["totals"]> = {}, waterMl = 0): Day => ({
   totals: { kcal: 0, proteinG: 0, fatG: 0, carbsG: 0, fibreG: 0, ...eaten },
   meals: [],
   waterMl,
+  ideas: [],
+  ideaMeal: "lunch",
 });
 
 describe("dayRings", () => {
