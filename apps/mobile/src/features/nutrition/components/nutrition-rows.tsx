@@ -1,5 +1,5 @@
 import { type ActivityLevel, DEFAULT_WEIGH_IN_DAY, dietOf, FibreTarget, Weekday } from "@fit/shared";
-import { useState } from "react";
+import { type ReactNode, useState } from "react";
 import {
   Actionsheet,
   ActionsheetBackdrop,
@@ -33,10 +33,10 @@ import {
   activityLevelLabel,
   activityLevelOptions,
 } from "@/features/user/components/form/fields/user-activity-level-field";
-import { DietModal } from "@/features/nutrition/components/diet-modal";
-import { LogWeighInModal } from "@/features/nutrition/components/log-weigh-in-modal";
-import { dietLabel } from "@/features/nutrition/diet";
-import { weighInDateLabel } from "@/features/nutrition/weigh-in";
+import { DietModal } from "./diet-modal";
+import { LogWeighInModal } from "./log-weigh-in-modal";
+import { dietLabel } from "../diet";
+import { weighInDateLabel } from "../weigh-in";
 import { useCurrentUser, useWeightUnit } from "@/features/user/current-user-provider";
 import { weightLabel } from "@/features/workouts/format";
 
@@ -74,14 +74,23 @@ const WEEKDAY_LABELS: Record<Weekday, string> = {
 
 // The day Today asks for the week's Weigh-in, Monday unless the user picks another (spec #158 story 8)
 export function WeighInDayRow() {
-  const { user, updateUser } = useCurrentUser();
-  const { showToast } = useToast();
-  const [isOpen, setIsOpen] = useState(false);
+  const { user } = useCurrentUser();
   const weighInDay = user?.profile.weighInDay ?? DEFAULT_WEIGH_IN_DAY;
 
+  return (
+    <EditRow label="Weigh-in Day" value={WEEKDAY_LABELS[weighInDay]}>
+      {(close) => <WeighInDaySheet current={weighInDay} onClose={close} />}
+    </EditRow>
+  );
+}
+
+function WeighInDaySheet({ current, onClose }: { current: Weekday; onClose: () => void }) {
+  const { updateUser } = useCurrentUser();
+  const { showToast } = useToast();
+
   const choose = async (choice: Weekday) => {
-    setIsOpen(false);
-    if (choice === weighInDay) return;
+    onClose();
+    if (choice === current) return;
     try {
       await updateUser({ profile: { weighInDay: choice } });
     } catch (err) {
@@ -90,64 +99,84 @@ export function WeighInDayRow() {
   };
 
   return (
-    <>
-      <EditRow label="Weigh-in Day" value={WEEKDAY_LABELS[weighInDay]} onPress={() => setIsOpen(true)} />
-      <Actionsheet isOpen={isOpen} onClose={() => setIsOpen(false)}>
-        <ActionsheetBackdrop />
-        <ActionsheetContent>
-          <ActionsheetDragIndicatorWrapper>
-            <ActionsheetDragIndicator />
-          </ActionsheetDragIndicatorWrapper>
-          <ActionsheetSectionHeaderText>Which day do you weigh in?</ActionsheetSectionHeaderText>
-          {Weekday.options.map((day) => (
-            <ActionsheetItem key={day} onPress={() => choose(day)}>
-              <ActionsheetItemText>{WEEKDAY_LABELS[day]}</ActionsheetItemText>
-            </ActionsheetItem>
-          ))}
-        </ActionsheetContent>
-      </Actionsheet>
-    </>
+    <Actionsheet isOpen onClose={onClose}>
+      <ActionsheetBackdrop />
+      <ActionsheetContent>
+        <ActionsheetDragIndicatorWrapper>
+          <ActionsheetDragIndicator />
+        </ActionsheetDragIndicatorWrapper>
+        <ActionsheetSectionHeaderText>Which day do you weigh in?</ActionsheetSectionHeaderText>
+        {Weekday.options.map((day) => (
+          <ActionsheetItem key={day} onPress={() => choose(day)}>
+            <ActionsheetItemText>{WEEKDAY_LABELS[day]}</ActionsheetItemText>
+          </ActionsheetItem>
+        ))}
+      </ActionsheetContent>
+    </Actionsheet>
   );
 }
 
 // The Diet and the foods to avoid, which decide the Food Ideas the Coach offers (spec #158 stories 6 and 7)
 export function DietRow() {
   const { user } = useCurrentUser();
-  const [isOpen, setIsOpen] = useState(false);
 
   return (
-    <>
-      <EditRow label="Diet" value={dietLabel(dietOf(user?.profile))} onPress={() => setIsOpen(true)} />
-      {isOpen ? <DietModal onClose={() => setIsOpen(false)} /> : null}
-    </>
+    <EditRow label="Diet" value={dietLabel(dietOf(user?.profile))}>
+      {(close) => <DietModal onClose={close} />}
+    </EditRow>
   );
 }
 
-// A Profile row that opens its editor
-function EditRow({ label, value, onPress }: { label: string; value: string; onPress: () => void }) {
+// A Profile row that opens its editor. The editor is rendered only while open, so each opening starts from what's saved
+function EditRow({
+  label,
+  value,
+  children: editor,
+}: {
+  label: string;
+  value: string;
+  children: (close: () => void) => ReactNode;
+}) {
+  const [isOpen, setIsOpen] = useState(false);
   return (
-    <Pressable onPress={onPress} accessibilityRole="button" accessibilityLabel={`${label}: ${value}. Change`}>
-      <HStack justify="between" spacing={4} style={{ minHeight: 44 }} align="center">
-        <Text color="muted">{label}</Text>
-        <Text weight="semiBold" color="accent" style={{ flexShrink: 1, textAlign: "right" }}>
-          {value}
-        </Text>
-      </HStack>
-    </Pressable>
+    <>
+      <Pressable
+        onPress={() => setIsOpen(true)}
+        accessibilityRole="button"
+        accessibilityLabel={`${label}: ${value}. Change`}
+      >
+        <HStack justify="between" spacing={4} style={{ minHeight: 44 }} align="center">
+          <Text color="muted">{label}</Text>
+          <Text weight="semiBold" color="accent" style={{ flexShrink: 1, textAlign: "right" }}>
+            {value}
+          </Text>
+        </HStack>
+      </Pressable>
+      {isOpen ? editor(() => setIsOpen(false)) : null}
+    </>
   );
 }
 
 // The Activity Level, picked from its four described levels and saved straight away. A user who never chose one is
 // counted as lightly active
 export function ActivityLevelRow() {
-  const { user, updateUser } = useCurrentUser();
-  const { showToast } = useToast();
-  const [isOpen, setIsOpen] = useState(false);
+  const { user } = useCurrentUser();
   const activityLevel = user?.profile.activityLevel;
 
+  return (
+    <EditRow label="Activity Level" value={activityLevel ? activityLevelLabel(activityLevel) : "Not set"}>
+      {(close) => <ActivityLevelModal current={activityLevel} onClose={close} />}
+    </EditRow>
+  );
+}
+
+function ActivityLevelModal({ current, onClose }: { current: ActivityLevel | undefined; onClose: () => void }) {
+  const { updateUser } = useCurrentUser();
+  const { showToast } = useToast();
+
   const choose = async (choice: ActivityLevel) => {
-    setIsOpen(false);
-    if (choice === activityLevel) return;
+    onClose();
+    if (choice === current) return;
     try {
       await updateUser({ profile: { activityLevel: choice } });
     } catch (err) {
@@ -156,50 +185,37 @@ export function ActivityLevelRow() {
   };
 
   return (
-    <>
-      <EditRow
-        label="Activity Level"
-        value={activityLevel ? activityLevelLabel(activityLevel) : "Not set"}
-        onPress={() => setIsOpen(true)}
-      />
-      <Modal isOpen={isOpen} onClose={() => setIsOpen(false)}>
-        <ModalBackdrop />
-        <ModalContent>
-          <ModalHeader>
-            <Heading size="md">How active are you?</Heading>
-            <ModalCloseButton />
-          </ModalHeader>
-          <ModalBody>
-            <Stack spacing={3}>
-              <Text size="sm" color="muted">
-                {ACTIVITY_LEVEL_NOTE}
-              </Text>
-              <CompactChoiceCards value>
-                <ChoiceCards options={activityLevelOptions} value={activityLevel} onChange={choose} />
-              </CompactChoiceCards>
-            </Stack>
-          </ModalBody>
-        </ModalContent>
-      </Modal>
-    </>
+    <Modal isOpen onClose={onClose}>
+      <ModalBackdrop />
+      <ModalContent>
+        <ModalHeader>
+          <Heading size="md">How active are you?</Heading>
+          <ModalCloseButton />
+        </ModalHeader>
+        <ModalBody>
+          <Stack spacing={3}>
+            <Text size="sm" color="muted">
+              {ACTIVITY_LEVEL_NOTE}
+            </Text>
+            <CompactChoiceCards value>
+              <ChoiceCards options={activityLevelOptions} value={current} onChange={choose} />
+            </CompactChoiceCards>
+          </Stack>
+        </ModalBody>
+      </ModalContent>
+    </Modal>
   );
 }
 
 // The user's own fibre target, or the rule's 40 g per 1,000 kcal when they clear it (spec #158 stories 9 and 10)
 export function FibreTargetRow() {
   const { user } = useCurrentUser();
-  const [isOpen, setIsOpen] = useState(false);
   const fibreTargetG = user?.profile.fibreTargetG;
 
   return (
-    <>
-      <EditRow
-        label="Fibre target"
-        value={fibreTargetG ? `${fibreTargetG} g` : "Follows calories"}
-        onPress={() => setIsOpen(true)}
-      />
-      {isOpen ? <FibreTargetModal current={fibreTargetG} onClose={() => setIsOpen(false)} /> : null}
-    </>
+    <EditRow label="Fibre target" value={fibreTargetG ? `${fibreTargetG} g` : "Follows calories"}>
+      {(close) => <FibreTargetModal current={fibreTargetG} onClose={close} />}
+    </EditRow>
   );
 }
 

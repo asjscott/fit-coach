@@ -24,7 +24,7 @@ import {
   FibreTargetRow,
   WeighInDayRow,
   WeighInRow,
-} from "@/features/user/components/nutrition-rows";
+} from "@/features/nutrition/components/nutrition-rows";
 import { useCurrentUser, usePrimaryEquipmentProfile, useWeightUnit } from "@/features/user/current-user-provider";
 import { genderLabel } from "@/features/user/components/form/fields/user-gender-field";
 import { goalLabel } from "@/features/user/components/form/fields/user-goal-field";
