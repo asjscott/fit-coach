@@ -1,5 +1,4 @@
 import type { FastifyPluginAsyncZod } from "fastify-type-provider-zod";
-import { LOGGABLE_DAYS, loggableDates } from "@fit/engines";
 import {
   CopiedFoodEntries,
   CopyMeal,
@@ -14,6 +13,7 @@ import {
 import { z } from "zod";
 import { requireAuth, userIdOf } from "../auth";
 import { badRequest } from "../bad-request";
+import { requireLoggableDate } from "../loggable-date";
 import {
   addFoodEntry,
   changeFoodEntry,
@@ -30,14 +30,9 @@ const EntryParams = z.object({ id: z.string() });
 
 const NO_SUCH_SERVING = "The food has no serving by that name";
 
-// The local date a write is for, "today" being today in the user's timezone. Throws a 400 unless it's today or one of
-// the 6 days before it there (spec #158, "Every write")
-async function loggableDate(clerkUserId: string, date: string): Promise<string> {
-  const dates = loggableDates(new Date(), (await findUser(clerkUserId))?.timeZone ?? "UTC");
-  if (date === "today") return dates[0];
-  if (!dates.includes(date)) throw badRequest(`A Food Entry must be from the last ${LOGGABLE_DAYS} days`);
-  return date;
-}
+// The date a Food Entry write is for, as requireLoggableDate takes it
+const loggableDate = async (clerkUserId: string, date: string) =>
+  requireLoggableDate(date, (await findUser(clerkUserId))?.timeZone, "A Food Entry");
 
 // The signed-in user's Food Entries. Logging needs a connection: the phone keeps no queue of these
 export const foodEntryRoutes: FastifyPluginAsyncZod = async (app) => {

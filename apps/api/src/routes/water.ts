@@ -1,9 +1,8 @@
 import type { FastifyPluginAsyncZod } from "fastify-type-provider-zod";
-import { isLoggableDate, LOGGABLE_DAYS } from "@fit/engines";
 import { LocalDate, WaterDay, WaterUpdate } from "@fit/shared";
 import { z } from "zod";
 import { requireAuth, userIdOf } from "../auth";
-import { badRequest } from "../bad-request";
+import { requireLoggableDate } from "../loggable-date";
 import { findUser } from "../users";
 import { setWater } from "../water";
 
@@ -22,10 +21,7 @@ export const waterRoutes: FastifyPluginAsyncZod = async (app) => {
     async (req) => {
       const clerkUserId = userIdOf(req)!;
       const { date } = req.params;
-      const user = await findUser(clerkUserId);
-      if (!isLoggableDate(date, new Date(), user?.timeZone ?? "UTC")) {
-        throw badRequest(`Water must be from the last ${LOGGABLE_DAYS} days`);
-      }
+      requireLoggableDate(date, (await findUser(clerkUserId))?.timeZone, "Water");
       await setWater(clerkUserId, date, req.body.waterMl);
       return { date, waterMl: req.body.waterMl };
     },

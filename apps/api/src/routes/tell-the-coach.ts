@@ -1,9 +1,8 @@
 import type { FastifyPluginAsyncZod } from "fastify-type-provider-zod";
-import { isLoggableDate } from "@fit/engines";
 import { ErrorResponse, FoodProposals, TellTheCoach, TellTheCoachStatus } from "@fit/shared";
 import { requireAuth, userIdOf } from "../auth";
-import { badRequest } from "../bad-request";
 import type { FoodSources } from "../food-sources";
+import { requireLoggableDate } from "../loggable-date";
 import { findUser } from "../users";
 
 // Tell the coach (spec #158): words in, proposed Food Entries out. Nothing is saved here: the phone confirms each
@@ -23,9 +22,8 @@ export const tellTheCoachRoutes: FastifyPluginAsyncZod<{ foodSources: FoodSource
     { schema: { body: TellTheCoach, response: { 200: FoodProposals, 502: ErrorResponse, 503: ErrorResponse } } },
     async (req, reply) => {
       const { text, today } = req.body;
-      const timeZone = (await findUser(userIdOf(req)!))?.timeZone ?? "UTC";
       // The phone's today, which may be a day off the server's near midnight, but never outside the days that log
-      if (!isLoggableDate(today, new Date(), timeZone)) throw badRequest("today must be a day Food Entries can go in");
+      requireLoggableDate(today, (await findUser(userIdOf(req)!))?.timeZone, "today");
       if (!foodSources.parse) return reply.code(503).send({ error: "Tell the coach isn't set up" });
       try {
         return { proposals: await foodSources.parse(text, today) };

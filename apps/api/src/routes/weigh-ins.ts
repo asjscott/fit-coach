@@ -1,9 +1,8 @@
 import type { FastifyPluginAsyncZod } from "fastify-type-provider-zod";
-import { isLoggableDate, LOGGABLE_DAYS } from "@fit/engines";
 import { bodyWeightKg, ErrorResponse, LocalDate, User, WeighInUpload } from "@fit/shared";
 import { z } from "zod";
 import { requireAuth, userIdOf } from "../auth";
-import { badRequest } from "../bad-request";
+import { requireLoggableDate } from "../loggable-date";
 import { findUser } from "../users";
 import { keepWeighIn } from "../weigh-ins";
 import { userResponse } from "./users";
@@ -31,9 +30,7 @@ export const weighInRoutes: FastifyPluginAsyncZod = async (app) => {
       const { date } = req.params;
       const user = await findUser(clerkUserId);
       if (!user?.onboardedAt) return reply.code(403).send({ error: "finish onboarding first" });
-      if (!isLoggableDate(date, new Date(), user.timeZone ?? "UTC")) {
-        throw badRequest(`A Weigh-in must be from the last ${LOGGABLE_DAYS} days`);
-      }
+      requireLoggableDate(date, user.timeZone, "A Weigh-in");
       // The exact kg of what was entered, as onboarding stores it, so 180 lb reads back as 180 lb
       await keepWeighIn(clerkUserId, date, bodyWeightKg(req.body.weight, req.body.unit));
       return userResponse((await findUser(clerkUserId))!);
