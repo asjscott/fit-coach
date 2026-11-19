@@ -49,14 +49,19 @@ export const userRoutes: FastifyPluginAsyncZod = async (app) => {
 
   // Sets onboardedAt as a side effect once the required profile fields are complete
   // and the user has an equipment profile. A change that shapes the plan rebuilds it. Once onboarded, the weight is the
-  // latest Weigh-in's (400)
+  // latest Weigh-in's: a different one is a 400
   app.patch(
     "/user",
     { schema: { body: UserUpdate, response: { 200: User, 404: ErrorResponse } } },
     async (req, reply) => {
       const clerkUserId = userIdOf(req)!;
-      if (req.body.profile?.weightKg !== undefined && (await findUser(clerkUserId))?.onboardedAt) {
-        throw badRequest("Log a Weigh-in to change your weight");
+      const weightKg = req.body.profile?.weightKg;
+      if (weightKg !== undefined) {
+        const stored = await findUser(clerkUserId);
+        // The stored weight sent back, as by an onboarding save retried after its answer was lost, changes nothing
+        if (stored?.onboardedAt && stored.profile.weightKg !== weightKg) {
+          throw badRequest("Log a Weigh-in to change your weight");
+        }
       }
       const user = await updateUser(clerkUserId, req.body);
       if (!user) return reply.code(404).send({ error: "user not found" });

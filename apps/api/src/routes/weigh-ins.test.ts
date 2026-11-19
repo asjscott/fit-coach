@@ -150,6 +150,17 @@ describe("the latest Weigh-in is the body weight", () => {
     expect((await userOf(user)).profile.weightKg).toBe(80);
   });
 
+  // Onboarding's save retried after its answer was lost sends the weight again, now that the user is onboarded
+  it("takes a retried onboarding save that sends the same weight", async () => {
+    const user = await api.signIn();
+
+    const { statusCode } = await user.patch("/user", { profile: { weightKg: 80, daysPerWeek: 4 } });
+
+    expect(statusCode).toBe(200);
+    expect((await userOf(user)).profile).toMatchObject({ weightKg: 80, daysPerWeek: 4 });
+    expect((await userOf(user)).latestWeighIn).toEqual({ date: today(), kg: 80 });
+  });
+
   it("keeps each user's Weigh-ins to themselves", async () => {
     const user = await api.signIn();
     const other = await api.signIn();

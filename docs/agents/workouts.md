@@ -127,7 +127,7 @@ Schemas: packages/shared/src/assessments.ts; Set.rpe and Workout.assessment in w
   load reads it from there, not from the current profile.
 - **`profile.weightKg` is the latest Weigh-in's** (#161, `apps/api/src/weigh-ins.ts`): `PUT /weigh-ins/:date` keeps
   it in step, so `BodyProfile` readers (the Assessment, the Daily Targets) never read Weigh-ins themselves. PATCH
-  /user takes a weight only before onboarding, where it becomes the first Weigh-in; after that it's a 400. A Weigh-in
+  /user takes a weight only before onboarding, where it becomes the first Weigh-in; after that a different weight is a 400 (the stored one, as a retried onboarding save sends, is taken). A Weigh-in
   never touches Working Levels. The date window (today and the 6 days before, in the user's timezone) is
   `loggableDates` / `isLoggableDate` in `@fit/engines`, for Food Entries and water too.
 - **Only weighted tests are rated.** A bodyweight or timed test is one unrated Set to the most reps or seconds the user
