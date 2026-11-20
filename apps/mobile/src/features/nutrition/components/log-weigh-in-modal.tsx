@@ -1,5 +1,5 @@
 import { bodyWeightAnswer, bodyWeightInUnit } from "@fit/shared";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { Chip } from "@/components/chip";
 import { FormControl, FormControlError, FormControlErrorText } from "@/components/form-control";
 import { Heading } from "@/components/heading";
@@ -13,7 +13,8 @@ import { useCurrentUser, useTimeZone, useWeightUnit } from "@/features/user/curr
 import { weighInDays } from "../weigh-in";
 
 // Logs a Weigh-in in the user's unit, for today unless they pick one of the 6 days before (spec #158 stories 14 to
-// 17). Rendered only while open, so each opening starts from today and the latest weight
+// 17). Rendered only while open, so each opening starts from today and the latest weight. It can always be closed:
+// closing while Save waits stops waiting, and Profile keeps the weight it had (#172)
 export function LogWeighInModal({ onClose }: { onClose: () => void }) {
   const { user, logWeighIn } = useCurrentUser();
   const unit = useWeightUnit();
@@ -26,6 +27,12 @@ export function LogWeighInModal({ onClose }: { onClose: () => void }) {
   const [text, setText] = useState(latestKg ? String(bodyWeightInUnit(latestKg, unit)) : "");
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const saveController = useRef<AbortController | null>(null);
+
+  const close = () => {
+    saveController.current?.abort();
+    onClose();
+  };
 
   const handleSave = async () => {
     const parsed = bodyWeightAnswer(unit).safeParse(text.trim() === "" ? undefined : Number(text.replace(",", ".")));
@@ -33,19 +40,23 @@ export function LogWeighInModal({ onClose }: { onClose: () => void }) {
       setError(parsed.error.issues[0]?.message ?? "Check the number");
       return;
     }
+    const controller = new AbortController();
+    saveController.current = controller;
     setSaving(true);
     try {
-      await logWeighIn(date, { weight: parsed.data, unit });
+      await logWeighIn(date, { weight: parsed.data, unit }, controller.signal);
       onClose();
     } catch (err) {
+      // Closed while saving: the user has moved on, so there's nothing to say
+      if (controller.signal.aborted) return;
       showToast("Couldn't log your weight", { error: err });
     } finally {
-      setSaving(false);
+      if (!controller.signal.aborted) setSaving(false);
     }
   };
 
   return (
-    <Modal isOpen onClose={() => !saving && onClose()}>
+    <Modal isOpen onClose={close}>
       <ModalBackdrop />
       <ModalContent>
         <ModalHeader>
@@ -93,7 +104,7 @@ export function LogWeighInModal({ onClose }: { onClose: () => void }) {
           </Stack>
         </ModalBody>
         <ModalFooter>
-          <LoadingButton label="Cancel" size="sm" action="secondary" disabled={saving} onPress={onClose} />
+          <LoadingButton label="Cancel" size="sm" action="secondary" onPress={close} />
           <LoadingButton label="Save" size="sm" action="primary" loading={saving} onPress={handleSave} />
         </ModalFooter>
       </ModalContent>

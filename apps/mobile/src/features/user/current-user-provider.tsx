@@ -23,7 +23,9 @@ type CurrentUserContextValue = {
   // Creates a profile without an id, or updates the one with this id
   saveEquipmentProfile: (input: EquipmentProfileInput, id?: string) => Promise<User>;
   // Replaces the date's week's Weigh-in; the user that comes back has the profile's weight following it
-  logWeighIn: (date: string, upload: WeighInUpload) => Promise<User>;
+  // signal aborting stops waiting and leaves the user as the phone had it (closing Log weight while it saves). If the
+  // server got the Weigh-in all the same, it shows the next time the user loads
+  logWeighIn: (date: string, upload: WeighInUpload, signal?: AbortSignal) => Promise<User>;
 };
 
 const CurrentUserContext = createContext<CurrentUserContextValue | null>(null);
@@ -98,9 +100,11 @@ export function CurrentUserProvider({ children }: { children: ReactNode }) {
   );
 
   const logWeighIn = useCallback(
-    async (date: string, upload: WeighInUpload) => {
-      const updated = User.parse(await api(`/weigh-ins/${date}`, { method: "PUT", body: JSON.stringify(upload) }));
-      setUser(updated);
+    async (date: string, upload: WeighInUpload, signal?: AbortSignal) => {
+      const updated = User.parse(
+        await api(`/weigh-ins/${date}`, { method: "PUT", body: JSON.stringify(upload), signal }),
+      );
+      if (!signal?.aborted) setUser(updated);
       return updated;
     },
     [api, setUser],
