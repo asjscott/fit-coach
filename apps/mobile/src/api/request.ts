@@ -15,14 +15,29 @@ export class ApiError extends Error {
   }
 }
 
+// Thrown, with no request made, when the phone says it has no network (#171). Like a timeout it isn't an ApiError,
+// so screens show their "needs a connection" message, only at once
+export class NoNetworkError extends Error {
+  constructor() {
+    super("The phone has no network");
+  }
+}
+
+// What a request needs from the app: the user's token, and whether the phone knows it has no network. noNetwork
+// failing counts as not knowing, and the server is asked
+export type RequestDeps = {
+  getToken: () => Promise<string | null>;
+  noNetwork: () => Promise<boolean>;
+};
+
 // A request's init, plus how long it may take when that isn't REQUEST_TIMEOUT_MS
 export type ApiInit = RequestInit & { timeoutMs?: number };
 
-// Calls the API with the user's token. The server refusing throws an ApiError; anything else that goes wrong,
-// including no answer in time, throws a plain error, which screens read as needing a connection. A caller's own
-// signal still ends it sooner
+// Calls the API with the user's token, unless the phone has no network. The server refusing throws an ApiError;
+// anything else that goes wrong, including no network or no answer in time, throws a plain error, which screens read
+// as needing a connection. A caller's own signal still ends it sooner
 export async function request(
-  getToken: () => Promise<string | null>,
+  { getToken, noNetwork }: RequestDeps,
   path: string,
   { timeoutMs = REQUEST_TIMEOUT_MS, signal, ...init }: ApiInit = {},
 ): Promise<unknown> {
@@ -33,6 +48,7 @@ export async function request(
   else signal?.addEventListener("abort", onCallerAbort, { once: true });
 
   const send = async () => {
+    if (await noNetwork().catch(() => false)) throw new NoNetworkError();
     const token = await getToken();
     const headers = new Headers(init.headers);
     if (token) headers.set("Authorization", `Bearer ${token}`);
