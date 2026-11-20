@@ -247,6 +247,8 @@ A Workout pairs Exercises only when it wouldn't otherwise fit its Length. Pairs 
 
 M7 checks run on the phones' Release builds against the API on the Mac.
 
+Run each offline check (DT5, WI6, F4, FL6, SC6, CR6, WA5, TC4) twice: once with airplane mode on before the app opens, and once turning it on with the app already open. The second way, every request gives up within 15 s (#170), Tell the coach within 40 s, so a button loading for longer than that is a fail.
+
 - [x] **DT1** Today opens with four equal rings above the Today card: kcal left, g protein left, fibre and water. With nothing eaten, kcal and protein show the whole targets, fibre and water show 0 of theirs (water in L), and every ring is empty. Tapping a ring does nothing.
   - iOS: Result: ✅ · Android: Result: ✅ · Notes: Session 5 (simulators, M7): Four rings over the Today card: 2,410 kcal left, 128 g protein left, 0 of 96 g fibre, 0 of 2.75 L, all empty.
 - [x] **DT2** On Profile, change the Goal (Edit profile), the Activity Level and the fibre target in turn. Back on Today, the rings show the new targets each time. Clearing the fibre target ("Follow calories") puts the fibre ring back to 40 g per 1,000 kcal.
@@ -256,24 +258,24 @@ M7 checks run on the phones' Release builds against the API on the Mac.
 - [x] **DT4** An account onboarded before M7 (no Activity Level) sees "How active are you?" under the rings on Today. Picking a level saves it and the card goes, and the kcal ring changes unless lightly active was picked. On a second such account, "Not now" hides it for good, also after a force-quit, with the rings counting it as lightly active.
   - iOS: Result: ✅ · Android: Result: ⏭ · Notes: Session 5 (simulators, M7): iOS: an account onboarded through the API with no Activity Level saw the card under the Coach's summary. Picking Active hid it, and kcal went 2,410 → 2,710 (fibre 96 → 108 g). "Not now" not tried.
 - [x] **DT5** Offline, Today shows no rings and nothing breaks; back online, they come back on the next visit to Today.
-  - iOS: Result: ⏭ · Android: Result: ✅ · Notes: Session 5 (simulators, M7): Android, API cut: a cold start shows Today with no rings and "No connection. Workouts save on this phone until there is."; nothing broke. Coming back to Today while the app is open keeps the last rings it had.
+  - iOS: Result: ✅ · Android: Result: ✅ · Notes: Session 5 (simulators, M7): Android, API cut: a cold start shows Today with no rings and "No connection. Workouts save on this phone until there is."; nothing broke. Coming back to Today while the app is open keeps the last rings it had.
 
 ## Weigh-ins (#161)
 
 Body weight is a weekly Weigh-in now, and the latest one is the weight everything reads. When the `dev` API first starts with this change, it gives every existing account a first Weigh-in from its stored weight.
 
-- [ ] **WI1** On an account onboarded before this change, Profile's Nutrition section shows Weight as the weight it had, dated the day it onboarded, with Log weight under it, and Weigh-in Day as Monday. The Profile section has no Weight row any more, and Edit profile doesn't ask for a weight.
-  - iOS: Result: ⏭ · Android: Result: ⏭ · Notes: Session 5 (simulators, M7): Not run: the simulators use fresh in-memory APIs, so there's no account from before M7 to migrate.
-- [ ] **WI2** On the Weigh-in Day (set it to today's weekday on Profile if today isn't Monday), Today shows "Log this week's weight" under the rings. Set the Weigh-in Day to another day: the row goes. Set it back and log a Weigh-in from the row: the row goes and stays gone after a force-quit, and the rings show the targets for the new weight.
-  - iOS: Result: ⏭ · Android: Result: ⏭ · Notes: Session 5 (simulators, M7): Not run: both accounts have this week's Weigh-in from onboarding. Android with the Weigh-in Day set to Thursday (today) shows no row, as WI5 expects.
+- [x] **WI1** On an account onboarded before this change, Profile's Nutrition section shows Weight as the weight it had, dated the day it onboarded, with Log weight under it, and Weigh-in Day as Monday. The Profile section has no Weight row any more, and Edit profile doesn't ask for a weight.
+  - iOS: Result: ✅ · Android: Result: ⏭ · Notes:
+- [x] **WI2** On the Weigh-in Day (set it to today's weekday on Profile if today isn't Monday), Today shows "Log this week's weight" under the rings. Set the Weigh-in Day to another day: the row goes. Set it back and log a Weigh-in from the row: the row goes and stays gone after a force-quit, and the rings show the targets for the new weight.
+  - iOS: Result: ✅ · Android: Result: ⏭ · Notes:
 - [x] **WI3** With Weights in set to lb, Log weight shows the latest in lb. Log 180: Profile shows 180 lb, not 179.9 or 180.1. Switch to kg: it shows 81.6 kg. Log 82 in kg, then switch back to lb: 180.8 lb.
   - iOS: Result: ✅ · Android: Result: ⏭ · Notes: Session 5 (simulators, M7): iOS: Log weight opened on 176.4 (lb); 180 saved reads "180 lb · Thu 19 Nov" (81.6466 kg stored), and the targets rose to 2,740 kcal. The kg steps not tried.
 - [x] **WI4** Log weight offers Today, Yesterday and the 5 weekdays before, Today picked. Log a weight for an earlier day this week, then another for today: Profile shows only the second, dated today, and the rings follow it. Log one for a day last week (when the days offered reach into it): Profile still shows this week's.
   - iOS: Result: ⚠️ · Android: Result: ⏭ · Notes: Session 5 (simulators, M7): iOS: offers Today, Yesterday, Tuesday … Friday, Today picked. Logging on an earlier day not tried.
 - [x] **WI5** A new account's onboarding asks the weight as before. Once it's done, Profile shows that weight dated today, and Today doesn't ask for this week's weight even on the Weigh-in Day.
   - iOS: Result: ⏭ · Android: Result: ✅ · Notes: Session 5 (simulators, M7): Android onboarding asked "Weight (lb)"; Profile then read "180 lb · Thu, Nov 19", and Today asks nothing with the Weigh-in Day set to today.
-- [ ] **WI6** Offline, Log weight's Save shows "Couldn't log your weight" and Profile keeps the weight it had. Back online, logging works.
-  - iOS: Result: ⏭ · Android: Result: ⏭ · Notes: Session 5 (simulators, M7): Not run.
+- [x] **WI6** Offline, Log weight's Save shows "Couldn't log your weight" and Profile keeps the weight it had. Back online, logging works.
+  - iOS: Result: ⚠️ · Android: Result: ⏭ · Notes: Turning on airplane mode after the app starts, the save button continues to load and there is no way to dismiss the box, no "Cpuldn't log your weight err"
 
 ## Finding food (#162)
 
@@ -283,10 +285,10 @@ Body weight is a weekly Weigh-in now, and the latest one is the weight everythin
   - iOS: Result: ✅ · Android: Result: ⏭ · Notes: Session 5 (simulators, M7): iOS: "egg" listed Eggs, Grade A, Large (egg white, egg whole, egg yolk), Bagels, egg and Bread, egg, then branded ones with brands (Snickers, Galerie, Just, Albertsons). USDA's `DEMO_KEY` was over its limit all session, so the answers were ones saved from earlier runs (a 5-result page).
 - [x] **F2** Generic foods have USDA's household servings now. Tap "Eggs, Grade A, Large, egg whole": it opens on its serving, "× 1 egg whole without shell · 50 g" (50.3 g, rounded on screen), with "74 kcal · 6.2 g protein · 0 g fibre". Type 2: the grams and figures double. Tap Grams: it switches to 100 g, "148 kcal · 12.4 g protein · 0 g fibre". Clear the box: "Enter how much". A generic food with several servings ("Bagels, egg") offers each, smallest to largest, as USDA lists them. Tap the food again to close it; opening another closes the first.
   - iOS: Result: ✅ · Android: Result: ⏭ · Notes: Session 5 (simulators, M7): iOS: egg whole opened on "1 egg whole without shell", "× 1 egg whole without shell · 50 g", 74 kcal · 6.2 g protein · 0 g fibre; 2 read 101 g, 149 kcal · 12.5 g. The label rounds the grams (50.3 g).
-- [ ] **F3** Tap a branded food with a label serving, such as Lender's "Egg bagels, egg": it opens on its serving ("1 bagel"), showing "× 1 bagel · 81 g" and what one holds. Type 2: the grams and figures double. Tap Grams: it switches to 100 g. A branded food whose serving is in ml (JUST Egg) offers grams only.
-  - iOS: Result: ⏭ · Android: Result: ⏭ · Notes: Session 5 (simulators, M7): Not run.
+- [x] **F3** Tap a branded food with a label serving, such as Lender's "Egg bagels, egg": it opens on its serving ("1 bagel"), showing "× 1 bagel · 81 g" and what one holds. Type 2: the grams and figures double. Tap Grams: it switches to 100 g. A branded food whose serving is in ml (JUST Egg) offers grams only.
+  - iOS: Result: ✅ · Android: Result: ⏭ · Notes:
 - [x] **F4** In airplane mode, a search says "Searching for food needs a connection." and nothing breaks; back online, searching again works. When USDA doesn't answer (`DEMO_KEY` past its hourly limit does it), a search still lists your matching Saved Foods, under "Food search isn't answering, so only your Saved Foods are listed. Try again in a minute." With the API running without `USDA_API_KEY`, a search shows "No foods match", never an error.
-  - iOS: Result: ⏭ · Android: Result: ✅ · Notes: Session 5 (simulators, M7): Android: with the API cut, a search said "Searching for food needs a connection." With USDA refusing (`DEMO_KEY` at 0), "Maple bar" and "maple" listed the Saved Food under "Food search isn't answering, so only your Saved Foods are listed. Try again in a minute." The no-key case not run.
+  - iOS: Result: ⚠️ · Android: Result: ✅ · Notes: Session 5 (simulators, M7): Android: with the API cut, a search said "Searching for food needs a connection." With USDA refusing (`DEMO_KEY` at 0), "Maple bar" and "maple" listed the Saved Food under "Food search isn't answering, so only your Saved Foods are listed. Try again in a minute." The no-key case not run. Turning on airplane mode after the app opens
 
 ## Logging food (#163)
 
@@ -300,10 +302,10 @@ Needs `USDA_API_KEY` as for F1–F4. The Food tab opens on today: the day steppe
   - iOS: Result: ✅ · Android: Result: ✅ · Notes: Session 5 (simulators, M7): iOS: the tuna opened on its 100 g, 200 g read 232 kcal as typed, Dinner + Save moved it and the rings followed. Android: Delete asked "Delete this food?"; Cancel kept it, Delete removed it and the totals dropped.
 - [x] **FL4** Step back with ‹: "Yesterday", then "2 days ago" down to "6 days ago", where ‹ greys out; › greys out on Today. Each day shows its own meals and rings. Log a food on "3 days ago": it shows there and not on Today. Step back to Today: Today's meals are as you left them.
   - iOS: Result: ⏭ · Android: Result: ✅ · Notes: Session 5 (simulators, M7): Android: ‹ seven times stops at "6 days ago" with ‹ disabled.
-- [ ] **FL5** With your phone's timezone moved to one where it's already tomorrow (or late in the evening, before midnight), "Today" on the Food tab is today where the phone says, and a food logged then counts for that day.
-  - iOS: Result: ⏭ · Android: Result: ⏭ · Notes: Session 5 (simulators, M7): Not run.
+- [x] **FL5** With your phone's timezone moved to one where it's already tomorrow (or late in the evening, before midnight), "Today" on the Food tab is today where the phone says, and a food logged then counts for that day.
+  - iOS: Result: ✅ · Android: Result: ⏭ · Notes:
 - [x] **FL6** In airplane mode, open the Food tab (or step to another day): it says "Logging food needs a connection. Nothing is saved on this phone until you have one." With a day already showing, change a portion and Save, or Add a food: a toast says logging needs a connection and nothing was saved, and what you chose stays open to try again. Back online, Save or Add again: it's logged once, with nothing doubled.
-  - iOS: Result: ⏭ · Android: Result: ✅ · Notes: Session 5 (simulators, M7): Android, API cut: Save on a changed portion toasted "Logging food needs a connection. Nothing was saved: try again when you have one." and the editor stayed open. Back online the day had the one entry, nothing doubled. Cut the emulator with a proxy that can be killed: removing `adb reverse` leaves the app's open socket hanging (no request timeout), so writes then wait for ever.
+  - iOS: Result: ⚠️ · Android: Result: ✅ · Notes: Session 5 (simulators, M7): Android, API cut: Save on a changed portion toasted "Logging food needs a connection. Nothing was saved: try again when you have one." and the editor stayed open. Back online the day had the one entry, nothing doubled. Cut the emulator with a proxy that can be killed: removing `adb reverse` leaves the app's open socket hanging (no request timeout), so writes then wait for ever. When searching the loading spinner continues to run for 15 sconds and then the text appears. Should the app know there is no connection and not even try to call the api?
 
 ## Scan, Create food and Saved Foods (#164)
 
@@ -311,16 +313,16 @@ Needs a build made after `npx expo prebuild` (step 10), since the camera is new 
 
 - [x] **SC1** On Food, Scan sits beside Search foods. Tap it: the phone asks to use the camera, saying it's for scanning the barcodes on food you log. Allow it: the camera opens full screen with "Point the camera at the barcode on the package" and Cancel. Cancel closes it. Deny instead (on a fresh install): a toast says scanning needs the camera, and search still works.
   - iOS: Result: ⏭ · Android: Result: ✅ · Notes: Session 5 (simulators, M7): Android: Scan asked for the camera (Android's own wording; the purpose text is iOS only). Don't allow toasted "Scanning needs the camera. Allow it in Settings, or search instead."; allowing opened the camera full screen with "Point the camera at the barcode on the package" and Cancel, which closed it. iOS Simulator has no camera.
-- [ ] **SC2** Scan a Canadian product from the cupboard (for example Kraft Smooth Peanut Butter, 0068100084245): the camera closes after one read, and "Scanned" shows the product with its brand and kcal per 100 g, opened on its label serving ("1 tbsp", 15 g). Pick a meal and add it: it's logged, as FL1.
-  - iOS: Result: ⏭ · Android: Result: ⏭ · Notes: Session 5 (simulators, M7): Not run: no barcode in front of a simulator camera.
+- [x] **SC2** Scan a Canadian product from the cupboard (for example Kraft Smooth Peanut Butter, 0068100084245): the camera closes after one read, and "Scanned" shows the product with its brand and kcal per 100 g, opened on its label serving ("1 tbsp", 15 g). Pick a meal and add it: it's logged, as FL1.
+  - iOS: Result: ✅· Android: Result: ⏭ · Notes:
 - [x] **SC3** Scan a product Open Food Facts doesn't have (a store's own brand, or something small-batch): Create food opens, saying nothing has the barcode yet. Fill in the name, the serving ("1 bar", 45) and the label's kcal, protein, carbs and fat, leaving fibre empty, and tap Create food: it shows as "From your Saved Foods", opened on its serving with the figures you typed and 0 g fibre. Add it to a meal. An empty name or grams says what to fix, and keeps what you typed. From search instead: search for something nothing matches and tap "Create food from its label" under the results: Create food opens with the words searched as its name.
   - iOS: Result: ⏭ · Android: Result: ✅ · Notes: Session 5 (simulators, M7): Android, from search: "Create food from its label" under "Maple bar" opened Create food named "Maple bar" (review S5). 1 bar, 45 g, 200 kcal, 4/30/8 g saved, showed as "Saved food · 444 kcal per 100 g" on 1 bar and logged to Snacks. The scan path not run.
 - [x] **SC4** Scan the same product again: it's found straight away as your Saved Food, without Create food. Search its name (any word of it, in any case): it comes first, marked "Saved food", above the USDA results.
   - iOS: Result: ⏭ · Android: Result: ✅ · Notes: Session 5 (simulators, M7): Android: "maple" found it first, marked "Saved food". USDA was refusing, so it wasn't shown above USDA results. Scanning not run.
 - [x] **SC5** Open the Saved Food from search, tap "Edit saved food", change its kcal and Save: the food shows the new figures, and logging it again uses them. The entry you logged in SC3 still shows the old kcal on its day. Edit it again and "Delete from Saved Foods": it's gone from search, scanning it offers Create food again, and the logged entry is still there.
   - iOS: Result: ⏭ · Android: Result: ✅ · Notes: Session 5 (simulators, M7): Android: Edit saved food, 250 kcal, Save: search reads 556 kcal per 100 g, and the logged entry kept 444 per 100 g. Delete from Saved Foods not tried.
-- [ ] **SC6** In airplane mode, scan a barcode: a toast says finding food needs a connection, and nothing else happens. Create food's Save offline says the same and keeps the form open. Back online, both work.
-  - iOS: Result: ⏭ · Android: Result: ⏭ · Notes: Session 5 (simulators, M7): Not run: needs a barcode.
+- [x] **SC6** In airplane mode, scan a barcode: a toast says finding food needs a connection, and nothing else happens. Create food's Save offline says the same and keeps the form open. Back online, both work.
+  - iOS: Result: ✅ · Android: Result: ⏭ · Notes: S
 
 ## Copy from yesterday and Recent (#165)
 
@@ -337,7 +339,7 @@ The Food tab has a two-part control at the top: _Today so far_ (the day, as FL1�
 - [x] **CR5** Edit a Saved Food's kcal (from search, SC5), then open it from "Ideas and recent": it shows the new figures, and it's listed once. On a fresh account with nothing logged or saved, "Ideas and recent" says the foods you log and save show there.
   - iOS: Result: ⏭ · Android: Result: ✅ · Notes: Session 5 (simulators, M7): Android: after SC5's edit the Saved Food is listed once on Ideas and recent. The fresh-account wording not checked.
 - [x] **CR6** In airplane mode, tap "Copy from yesterday": a toast says logging food needs a connection and nothing is copied. Open "Ideas and recent" with nothing loaded yet: it says recent and saved foods need a connection. Back online, both work, and Copy from yesterday adds yesterday's foods once.
-  - iOS: Result: ⏭ · Android: Result: ✅ · Notes: Session 5 (simulators, M7): Android, API cut: Copy from yesterday toasted that logging food needs a connection and nothing was copied. Ideas and recent with nothing loaded not tried.
+  - iOS: Result: ✅ · Android: Result: ✅ · Notes: Session 5 (simulators, M7): Android, API cut: Copy from yesterday toasted that logging food needs a connection and nothing was copied. Ideas and recent with nothing loaded not tried.
 
 ## Water (#166)
 
@@ -375,14 +377,14 @@ The Coach's summary sits under Today's rings and at the top of the Food tab's Id
 
 Needs `GEMINI_API_KEY` in `apps/api/.env` (a free key from https://aistudio.google.com/apikey). The real sentences go to Gemini Flash, so these are the only checks of its answers: the route tests use a fake, and the mapping test a response built from Gemini's documented format, as no key was to hand when it was written. It asks `gemini-flash-lite-latest` unless `GEMINI_MODEL` names another; if Tell the coach fails, the API's log gives Gemini's reason ("Gemini answered 404: …").
 
-- [ ] **TC1** On Today, under the Coach's summary (and the Weigh-in row on a Weigh-in Day), "Tell the coach" has a box reading "Yesterday I had two eggs and toast". Type "yesterday I had two eggs and toast" and tap Tell (or Send on the keyboard): after a moment a sheet asks "Is this right?" with an egg and a toast, each "Yesterday · Breakfast", with a slider and a line such as "2 × 1 large egg · 100 g · 155 kcal · …". The numbers look about right for eggs and toast. Nothing is logged yet: Cancel, and the Food tab's Yesterday has no new foods.
-  - iOS: Result: ⏭ · Android: Result: ⏭ · Notes: Session 5 (simulators, M7): Not run: no `GEMINI_API_KEY`.
-- [ ] **TC2** Tell it the same again. Slide the eggs to 3: the line follows (150 g and its kcal). Slide the toast down. Tap ✕ on one food: it leaves the list and the button says "Log 1 food". Tap it: a toast says "Logged 1 food", the box clears, and on Food, Yesterday's Breakfast has that food at the portion you slid to, and Today has nothing new.
-  - iOS: Result: ⏭ · Android: Result: ⏭ · Notes: Session 5 (simulators, M7): Not run: no `GEMINI_API_KEY`.
-- [ ] **TC3** Type a real sentence about today, such as "a chicken salad for lunch and a latte": each food is "Today · Lunch" (the latte may be Snacks) with a sensible portion. Log them: Today's kcal and protein rings drop by their kcal and protein, and they're in Lunch on Food.
-  - iOS: Result: ⏭ · Android: Result: ⏭ · Notes: Session 5 (simulators, M7): Not run: no `GEMINI_API_KEY`.
-- [ ] **TC4** Type something with no food in it ("went for a walk"): the sheet says "No food found" and OK closes it, logging nothing. In airplane mode, Tell says telling the Coach needs a connection, and the words stay in the box.
-  - iOS: Result: ⏭ · Android: Result: ⏭ · Notes: Session 5 (simulators, M7): Not run: no `GEMINI_API_KEY`.
+- [x] **TC1** On Today, under the Coach's summary (and the Weigh-in row on a Weigh-in Day), "Tell the coach" has a box reading "Yesterday I had two eggs and toast". Type "yesterday I had two eggs and toast" and tap Tell (or Send on the keyboard): after a moment a sheet asks "Is this right?" with an egg and a toast, each "Yesterday · Breakfast", with a slider and a line such as "2 × 1 large egg · 100 g · 155 kcal · …". The numbers look about right for eggs and toast. Nothing is logged yet: Cancel, and the Food tab's Yesterday has no new foods.
+  - iOS: Result: ✅ · Android: Result: ⏭ · Notes:
+- [x] **TC2** Tell it the same again. Slide the eggs to 3: the line follows (150 g and its kcal). Slide the toast down. Tap ✕ on one food: it leaves the list and the button says "Log 1 food". Tap it: a toast says "Logged 1 food", the box clears, and on Food, Yesterday's Breakfast has that food at the portion you slid to, and Today has nothing new.
+  - iOS: Result: ✅ · Android: Result: ⏭ · Notes:
+- [x] **TC3** Type a real sentence about today, such as "a chicken salad for lunch and a latte": each food is "Today · Lunch" (the latte may be Snacks) with a sensible portion. Log them: Today's kcal and protein rings drop by their kcal and protein, and they're in Lunch on Food.
+  - iOS: Result: ✅ · Android: Result: ⏭ · Notes:
+- [x] **TC4** Type something with no food in it ("went for a walk"): the sheet says "No food found" and OK closes it, logging nothing. In airplane mode, Tell says telling the Coach needs a connection, and the words stay in the box.
+  - iOS: Result: error · Android: Result: ⏭ · Notes: Food not found works, but running in airplane mode doesn't give the connection requierd and the tell the coach button doesn't stop loading
 - [x] **TC5** With the API running without `GEMINI_API_KEY`, Today has no "Tell the coach" box and nothing else on Today or Food changes. The API logs "GEMINI_API_KEY isn't set: Tell the coach is hidden" at start.
   - iOS: Result: ✅ · Android: Result: ✅ · Notes: Session 5 (simulators, M7): No key: no Tell the coach box on Today, and the API logged "GEMINI_API_KEY isn't set: Tell the coach is hidden".
 
@@ -396,8 +398,8 @@ The Exercises tab is gone: the Exercise library is Profile's first row, so Food 
 - [x] **TB2** On Profile, the first row is "Exercise library" with a chevron. Tapping it opens the library titled "Exercise library", with Profile still the current tab. Tap an Exercise: its detail opens. Back (the header's arrow, and on the iPhone a swipe from the left edge; on Android the system back) returns to the library, and again to Profile.
   - iOS: Result: ⏭ · Android: Result: ⚠️ · Notes: Session 5 (simulators, M7): Android: Profile's first row "Exercise library" opens the library so titled, with Profile current, and system back returns. The in-memory API had no Exercises seeded ("0 of 0 Exercises"), so the detail steps weren't run.
 
-- [ ] **TB3** On an Exercise's detail with Easier or Harder, tap it: that Exercise's detail opens over it, and back returns to the first. With a Workout in progress, the Resume pill shows on the library and on the detail, and pressing it reopens the Workout.
-  - iOS: Result: ⏭ · Android: Result: ⏭ · Notes: Session 5 (simulators, M7): Not run: no Exercises seeded.
+- [x] **TB3** On an Exercise's detail with Easier or Harder, tap it: that Exercise's detail opens over it, and back returns to the first. With a Workout in progress, the Resume pill shows on the library and on the detail, and pressing it reopens the Workout.
+  - iOS: Result: ✅ · Android: Result: ⏭ · Notes:
 
 ## Sentry (#122)
 
