@@ -1,5 +1,12 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { ApiError, NoNetworkError, REQUEST_TIMEOUT_MS, request } from "./request";
+import {
+  ApiError,
+  NoNetworkError,
+  REQUEST_TIMEOUT_MS,
+  SERVER_NOT_ANSWERING,
+  noAnswerMessage,
+  request,
+} from "./request";
 
 const never = <T>() => new Promise<T>(() => {});
 const online = { getToken: async () => "token", noNetwork: async () => false };
@@ -107,5 +114,19 @@ describe("request", () => {
     vi.stubGlobal("fetch", async () => new Response('{"ok":true}'));
     const unsure = { ...online, noNetwork: async () => Promise.reject(new Error("no native module")) };
     await expect(request(unsure, "/days/2026-11-20")).resolves.toEqual({ ok: true });
+  });
+});
+
+// The server may be down while the phone is online, so only no network is called needing a connection (#174)
+describe("noAnswerMessage", () => {
+  const offline = "Searching for food needs a connection.";
+
+  it("says the screen's own words when the phone has no network", () => {
+    expect(noAnswerMessage(new NoNetworkError(), offline)).toBe(offline);
+  });
+
+  it("says the server isn't answering when the phone has a network but no answer came", () => {
+    expect(noAnswerMessage(new Error("No answer after 15000 ms"), offline)).toBe(SERVER_NOT_ANSWERING);
+    expect(noAnswerMessage(new TypeError("Network request failed"), offline)).toBe(SERVER_NOT_ANSWERING);
   });
 });

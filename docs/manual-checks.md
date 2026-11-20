@@ -9,7 +9,7 @@ Result codes: **✅ pass** · **❌ fail** · **⚠️ works but feels off** · 
 ## What's left
 
 - **Run on the phone now:** R1, U1, U2, LS2, PR1, TB1–TB3. Each is a part no run has covered yet.
-- **M7, once it's on the phones:** DT1–DT5, WI1–WI6, F1–F4, FL1–FL6, SC1–SC6, CR1–CR6, WA1–WA5, FI1–FI6, TC1–TC5. Session 5 ran most of them on the simulators (see each check's notes). Still to see on a phone first: scanning (SC2–SC4, SC6), Tell the coach with a Gemini key (TC1–TC4), the pre-M7 account and Weigh-in Day row (WI1, WI2), WI6, F3, FL5, and every offline check on the iPhone.
+- **M7, once it's on the phones:** DT1–DT5, WI1–WI6, F1–F4, FL1–FL6, SC1–SC6, CR1–CR6, WA1–WA5, FI1–FI6, TC1–TC5. Session 5 ran most of them on the simulators (see each check's notes). Still to see on a phone first: scanning (SC2–SC4, SC6), Tell the coach with a Gemini key (TC1–TC4), the pre-M7 account and Weigh-in Day row (WI1, WI2), WI6, F3, FL5, every offline check on the iPhone, again after #170–#174 (WI6, F4, FL6, TC4), and NA1.
 - **Run when you next train:** P9 and S1, a full Workout with a timer, resting as the timer says. Both can be one session.
 - **🕒 Due later, while you use the app:** C5 (the day after a check-in), P16 (a Monday), J2 (after a week with jumps on), P17 (after a few weeks), DL1 and DL2 (the 5th week of a Block: the week starting 4 Mondays after the Monday of the week Assessment B was done).
 - **On hold:** E1–E3 need Sentry set up on production.
@@ -247,7 +247,7 @@ A Workout pairs Exercises only when it wouldn't otherwise fit its Length. Pairs 
 
 M7 checks run on the phones' Release builds against the API on the Mac.
 
-Run each offline check (DT5, WI6, F4, FL6, SC6, CR6, WA5, TC4) twice: once with airplane mode on before the app opens, and once turning it on with the app already open. The second way, every request gives up within 15 s (#170), Tell the coach within 40 s, so a button loading for longer than that is a fail.
+Run each offline check (DT5, WI6, F4, FL6, SC6, CR6, WA5, TC4) twice: once with airplane mode on before the app opens, and once turning it on with the app already open. Either way, the connection message shows at once, with no spinner first (#171). The app doesn't call the server while the phone says it has no network.
 
 - [x] **DT1** Today opens with four equal rings above the Today card: kcal left, g protein left, fibre and water. With nothing eaten, kcal and protein show the whole targets, fibre and water show 0 of theirs (water in L), and every ring is empty. Tapping a ring does nothing.
   - iOS: Result: ✅ · Android: Result: ✅ · Notes: Session 5 (simulators, M7): Four rings over the Today card: 2,410 kcal left, 128 g protein left, 0 of 96 g fibre, 0 of 2.75 L, all empty.
@@ -274,7 +274,7 @@ Body weight is a weekly Weigh-in now, and the latest one is the weight everythin
   - iOS: Result: ⚠️ · Android: Result: ⏭ · Notes: Session 5 (simulators, M7): iOS: offers Today, Yesterday, Tuesday … Friday, Today picked. Logging on an earlier day not tried.
 - [x] **WI5** A new account's onboarding asks the weight as before. Once it's done, Profile shows that weight dated today, and Today doesn't ask for this week's weight even on the Weigh-in Day.
   - iOS: Result: ⏭ · Android: Result: ✅ · Notes: Session 5 (simulators, M7): Android onboarding asked "Weight (lb)"; Profile then read "180 lb · Thu, Nov 19", and Today asks nothing with the Weigh-in Day set to today.
-- [x] **WI6** Offline, Log weight's Save shows "Couldn't log your weight" and Profile keeps the weight it had. Back online, logging works.
+- [ ] **WI6** Offline, Log weight's Save shows "Couldn't log your weight" and Profile keeps the weight it had. Back online, logging works. Cancel, and on the iPhone a swipe down, close the sheet at any time, even while Save is loading (#172).
   - iOS: Result: ⚠️ · Android: Result: ⏭ · Notes: Turning on airplane mode after the app starts, the save button continues to load and there is no way to dismiss the box, no "Cpuldn't log your weight err"
 
 ## Finding food (#162)
@@ -387,6 +387,13 @@ Needs `GEMINI_API_KEY` in `apps/api/.env` (a free key from https://aistudio.goog
   - iOS: Result: error · Android: Result: ⏭ · Notes: Food not found works, but running in airplane mode doesn't give the connection requierd and the tell the coach button doesn't stop loading
 - [x] **TC5** With the API running without `GEMINI_API_KEY`, Today has no "Tell the coach" box and nothing else on Today or Food changes. The API logs "GEMINI_API_KEY isn't set: Tell the coach is hidden" at start.
   - iOS: Result: ✅ · Android: Result: ✅ · Notes: Session 5 (simulators, M7): No key: no Tell the coach box on Today, and the API logged "GEMINI_API_KEY isn't set: Tell the coach is hidden".
+
+## When the server isn't answering (#170, #174)
+
+Needs the phone online with the API on the Mac stopped (Ctrl-C in its terminal), or the Mac's Wi-Fi off while the phone stays on mobile data. Start the API again afterwards.
+
+- [ ] **NA1** With the app already open, stop the API, then search for a food, Save a food's portion and Log weight. Each stops loading within 15 s and says "Fit Coach isn't answering. Check your connection, or try again in a minute.", not that it needs a connection. Today, the Food tab and History say Fit Coach can't be reached, not "No connection". Start the API again: everything works without restarting the app.
+  - iOS: Result: · Android: Result: · Notes:
 
 ## Tabs and the Exercise library (#159)
 

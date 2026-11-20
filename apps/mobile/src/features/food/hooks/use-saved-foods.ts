@@ -1,6 +1,6 @@
 import { Food, type SavedFoodInput } from "@fit/shared";
 import { useCallback, useMemo } from "react";
-import { ApiError, useApi } from "@/api";
+import { ApiError, noAnswerMessage, useApi } from "@/api";
 import { useToast } from "@/contexts/toast-context";
 
 // What a scanned barcode found: a food (one of the user's Saved Foods, or from Open Food Facts or USDA), nothing, which
@@ -20,7 +20,7 @@ export function useSavedFoods() {
       try {
         return await request();
       } catch (err) {
-        if (!(err instanceof ApiError)) showToast(NEEDS_CONNECTION);
+        if (!(err instanceof ApiError)) showToast(noAnswerMessage(err, NEEDS_CONNECTION));
         else if (err.status === 409) showToast("One of your Saved Foods already has that barcode.");
         else showToast(failure, { error: err });
         return null;
@@ -36,7 +36,7 @@ export function useSavedFoods() {
           return { food: Food.parse(await api(`/foods/barcode/${encodeURIComponent(code)}`)) };
         } catch (err) {
           if (err instanceof ApiError && err.status === 404) return { notFound: code };
-          if (!(err instanceof ApiError)) showToast(NEEDS_CONNECTION);
+          if (!(err instanceof ApiError)) showToast(noAnswerMessage(err, NEEDS_CONNECTION));
           else if (err.status === 502) showToast("Barcode lookup isn't answering. Try again in a minute.");
           else showToast("Couldn't look up that barcode", { error: err });
           return { failed: true };

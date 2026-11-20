@@ -1,6 +1,6 @@
 import { FoodSearchResults, type Food } from "@fit/shared";
 import { useEffect, useState } from "react";
-import { ApiError, useApi } from "@/api";
+import { ApiError, noAnswerMessage, useApi } from "@/api";
 import { errorMessage } from "@/utils/error-message";
 
 const TYPING_PAUSE_MS = 400;
@@ -40,7 +40,9 @@ export function useFoodSearch(query: string, version = 0): FoodSearch {
         setSearch({
           isSearching: false,
           // The API couldn't be reached at all
-          error: !(err instanceof ApiError) ? "Searching for food needs a connection." : errorMessage(err),
+          error: !(err instanceof ApiError)
+            ? noAnswerMessage(err, "Searching for food needs a connection.")
+            : errorMessage(err),
         });
       }
     }, TYPING_PAUSE_MS);

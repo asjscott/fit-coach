@@ -1,6 +1,6 @@
 import { FoodProposals, TellTheCoachStatus, type FoodProposal } from "@fit/shared";
 import { useCallback, useEffect, useState } from "react";
-import { ApiError, useApi } from "@/api";
+import { ApiError, noAnswerMessage, useApi } from "@/api";
 import { useToast } from "@/contexts/toast-context";
 
 // The API waits up to 15 s for Gemini, and asks once more when it's busy, so Tell waits longer than other requests
@@ -36,7 +36,7 @@ export function useTellTheCoach() {
         return FoodProposals.parse(answer).proposals;
       } catch (err) {
         if (err instanceof ApiError) showToast("The Coach couldn't read that just now", { error: err });
-        else showToast("Telling the Coach needs a connection. Try again when you have one.");
+        else showToast(noAnswerMessage(err, "Telling the Coach needs a connection. Try again when you have one."));
         return null;
       }
     },

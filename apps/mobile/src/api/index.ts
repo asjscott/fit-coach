@@ -6,7 +6,11 @@ import { request, type ApiInit } from "./request";
 // Only a definite "not connected" skips the server: airplane mode, or Wi-Fi and data both off
 const noNetwork = async () => (await Network.getNetworkStateAsync()).isConnected === false;
 
-export { ApiError, type ApiInit } from "./request";
+export { ApiError, noAnswerMessage, type ApiInit } from "./request";
+
+// Whether a screen that couldn't load should blame the server: the phone says it has a network. Until the phone has
+// said, it's the connection, as that's the usual reason (#174)
+export const useServerNotAnswering = () => Network.useNetworkState().isConnected === true;
 
 export function useApi() {
   const { getToken } = useAuth();

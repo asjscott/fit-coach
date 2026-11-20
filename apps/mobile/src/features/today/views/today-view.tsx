@@ -3,6 +3,7 @@ import type { RestDayReason } from "@fit/engines";
 import { router } from "expo-router";
 import { useEffect, useState } from "react";
 import { View } from "react-native";
+import { useServerNotAnswering } from "@/api";
 import { Divider } from "@/components/divider";
 import { LoadingButton } from "@/components/loading-button";
 import { Screen } from "@/components/screen";
@@ -78,6 +79,7 @@ export default function TodayView() {
   const { resumeWorkout, forgotten, setForgotten } = useResumeWorkout();
   const { isLoaded, isStale, pending, syncing } = logbook;
   const { workouts, error } = useHistory();
+  const serverNotAnswering = useServerNotAnswering();
   const { user } = useCurrentUser();
   const daysPerWeek = user?.profile.daysPerWeek;
   const unit = useWeightUnit();
@@ -283,7 +285,9 @@ export default function TodayView() {
       ) : null}
       {state === "offline" ? (
         <Text size="sm" color="muted" style={{ marginTop: spacing[2] }}>
-          No connection. Workouts save on this phone until there is.
+          {serverNotAnswering
+            ? "Can't reach Fit Coach. Workouts save on this phone until it's back."
+            : "No connection. Workouts save on this phone until there is."}
         </Text>
       ) : null}
       {state === "loading" ? null : (

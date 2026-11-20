@@ -23,6 +23,15 @@ export class NoNetworkError extends Error {
   }
 }
 
+// What screens say when a request got no answer while the phone has a network: the server may be down (#174)
+export const SERVER_NOT_ANSWERING = "Fit Coach isn't answering. Check your connection, or try again in a minute.";
+
+// What to say about a request that got no answer: the screen's own words when the phone has no network, and
+// otherwise that the server isn't answering
+export function noAnswerMessage(err: unknown, offline: string): string {
+  return err instanceof NoNetworkError ? offline : SERVER_NOT_ANSWERING;
+}
+
 // What a request needs from the app: the user's token, and whether the phone knows it has no network. noNetwork
 // failing counts as not knowing, and the server is asked
 export type RequestDeps = {

@@ -3,6 +3,7 @@ import type { Food, FoodEntry, FoodEntryAdd, FoodEntryChange, Meal } from "@fit/
 import { router, useLocalSearchParams } from "expo-router";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { StyleSheet, type TextInputInstance, View } from "react-native";
+import { useServerNotAnswering } from "@/api";
 import { Alert, AlertText } from "@/components/alert";
 import { Input, InputField, InputIcon, InputSlot } from "@/components/input";
 import { LoadingButton } from "@/components/loading-button";
@@ -55,6 +56,7 @@ export default function FoodView() {
   // Today and the 6 days before it, in the user's timezone, as the API counts them
   const date = loggableDates(new Date(), timeZone)[daysBefore];
   const { day: loaded, isOffline, refresh } = useDay(date);
+  const serverNotAnswering = useServerNotAnswering();
   // The last day loaded can be another one while the chosen day is on its way
   const day = loaded?.date === date ? loaded : undefined;
   const recent = useRecentAndSaved();
@@ -125,7 +127,11 @@ export default function FoodView() {
         <FoodHalves half={half} onChange={setHalf} />
         {isOffline ? (
           <Alert action="muted">
-            <AlertText>Logging food needs a connection. Nothing is saved on this phone until you have one.</AlertText>
+            <AlertText>
+              {serverNotAnswering
+                ? "Fit Coach isn't answering, so food can't be logged just now. Try again in a minute."
+                : "Logging food needs a connection. Nothing is saved on this phone until you have one."}
+            </AlertText>
           </Alert>
         ) : null}
         {half === "ideas" ? (

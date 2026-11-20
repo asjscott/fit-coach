@@ -1,7 +1,7 @@
 import { CopiedFoodEntries, FoodEntry, type FoodEntryAdd, type FoodEntryChange, type Meal } from "@fit/shared";
 import * as Crypto from "expo-crypto";
 import { useCallback, useMemo, useRef } from "react";
-import { ApiError, useApi } from "@/api";
+import { ApiError, noAnswerMessage, useApi } from "@/api";
 import { useToast } from "@/contexts/toast-context";
 
 // Logging, changing and deleting Food Entries, straight to the API: there's no queue, so each needs a connection
@@ -29,7 +29,10 @@ export function useFoodEntries(onSaved: () => void) {
         return true;
       } catch (err) {
         if (err instanceof ApiError) showToast(failure, { error: err });
-        else showToast("Logging food needs a connection. Nothing was saved: try again when you have one.");
+        else
+          showToast(
+            noAnswerMessage(err, "Logging food needs a connection. Nothing was saved: try again when you have one."),
+          );
         return false;
       }
     },
