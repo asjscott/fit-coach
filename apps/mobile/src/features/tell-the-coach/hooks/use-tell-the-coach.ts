@@ -3,6 +3,9 @@ import { useCallback, useEffect, useState } from "react";
 import { ApiError, useApi } from "@/api";
 import { useToast } from "@/contexts/toast-context";
 
+// The API waits up to 15 s for Gemini, and asks once more when it's busy, so Tell waits longer than other requests
+const PARSE_TIMEOUT_MS = 40_000;
+
 // Tell the coach on Today (#168). `available` is false until the API says it has a parser, so without a Gemini key, or
 // offline, the box never shows and nothing else on Today waits on it. `parse` answers the proposals, or null when it
 // failed, after a toast saying why
@@ -25,7 +28,11 @@ export function useTellTheCoach() {
   const parse = useCallback(
     async (text: string, today: string): Promise<FoodProposal[] | null> => {
       try {
-        const answer = await api("/tell-the-coach", { method: "POST", body: JSON.stringify({ text, today }) });
+        const answer = await api("/tell-the-coach", {
+          method: "POST",
+          body: JSON.stringify({ text, today }),
+          timeoutMs: PARSE_TIMEOUT_MS,
+        });
         return FoodProposals.parse(answer).proposals;
       } catch (err) {
         if (err instanceof ApiError) showToast("The Coach couldn't read that just now", { error: err });
