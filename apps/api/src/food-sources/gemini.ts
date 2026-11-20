@@ -3,8 +3,10 @@ import { z } from "zod";
 
 // Tell the coach on Gemini Flash's free tier, through its REST API (https://ai.google.dev/api/generate-content). The key
 // stays on the server: the phone only calls this API. The model returns each food with its own per-100 g nutrients, so
-// a proposal is a whole food in the one food shape with no second lookup, and the user checks it on the confirm screen
-const MODEL = "gemini-2.5-flash";
+// a proposal is a whole food in the one food shape with no second lookup, and the user checks it on the confirm screen.
+// The latest Flash, as Google retires named models for new keys (gemini-2.5-flash went that way); GEMINI_MODEL pins one.
+// Its thinking stays low: listing foods needs little, and it keeps the answer well inside the timeout
+const MODEL = "gemini-flash-latest";
 const TIMEOUT_MS = 15000;
 const generateUrl = (model: string) =>
   `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`;
@@ -148,10 +150,22 @@ export async function geminiParse(apiKey: string, text: string, today: string, m
     body: JSON.stringify({
       systemInstruction: { parts: [{ text: INSTRUCTIONS }] },
       contents: [{ role: "user", parts: [{ text }] }],
-      generationConfig: { responseMimeType: "application/json", responseSchema: RESPONSE_SCHEMA, temperature: 0 },
+      generationConfig: {
+        responseMimeType: "application/json",
+        responseSchema: RESPONSE_SCHEMA,
+        temperature: 0,
+        thinkingConfig: { thinkingLevel: "low" },
+      },
     }),
     signal: AbortSignal.timeout(TIMEOUT_MS),
   });
-  if (!response.ok) throw new Error(`Gemini answered ${response.status}`);
+  if (!response.ok) {
+    // Gemini says why in its error body (a retired model, a bad key, a quota), which the API's log then shows
+    const reason = await response
+      .json()
+      .then((body: { error?: { message?: string } }) => body.error?.message)
+      .catch(() => undefined);
+    throw new Error(`Gemini answered ${response.status}${reason ? `: ${reason}` : ""}`);
+  }
   return geminiProposals(await response.json(), today);
 }
