@@ -373,7 +373,7 @@ The Coach's summary sits under Today's rings and at the top of the Food tab's Id
 
 ## Tell the coach (#168)
 
-Needs `GEMINI_API_KEY` in `apps/api/.env` (a free key from https://aistudio.google.com/apikey). The real sentences go to Gemini Flash, so these are the only checks of its answers: the route tests use a fake, and the mapping test a response built from Gemini's documented format, as no key was to hand when it was written. It asks `gemini-flash-latest` unless `GEMINI_MODEL` names another; if Tell the coach fails, the API's log gives Gemini's reason ("Gemini answered 404: …").
+Needs `GEMINI_API_KEY` in `apps/api/.env` (a free key from https://aistudio.google.com/apikey). The real sentences go to Gemini Flash, so these are the only checks of its answers: the route tests use a fake, and the mapping test a response built from Gemini's documented format, as no key was to hand when it was written. It asks `gemini-flash-lite-latest` unless `GEMINI_MODEL` names another; if Tell the coach fails, the API's log gives Gemini's reason ("Gemini answered 404: …").
 
 - [ ] **TC1** On Today, under the Coach's summary (and the Weigh-in row on a Weigh-in Day), "Tell the coach" has a box reading "Yesterday I had two eggs and toast". Type "yesterday I had two eggs and toast" and tap Tell (or Send on the keyboard): after a moment a sheet asks "Is this right?" with an egg and a toast, each "Yesterday · Breakfast", with a slider and a line such as "2 × 1 large egg · 100 g · 155 kcal · …". The numbers look about right for eggs and toast. Nothing is logged yet: Cancel, and the Food tab's Yesterday has no new foods.
   - iOS: Result: ⏭ · Android: Result: ⏭ · Notes: Session 5 (simulators, M7): Not run: no `GEMINI_API_KEY`.

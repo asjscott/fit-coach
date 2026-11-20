@@ -82,13 +82,16 @@ describe("geminiParse", () => {
     return { url, body: JSON.parse(init.body as string) };
   };
 
-  // gemini-2.5-flash is closed to new keys (404 "no longer available to new users"), so the default follows the
-  // latest Flash, with thinking kept low so an answer comes back well inside the timeout
-  it("asks the latest Flash model, thinking low, for the JSON food list", async () => {
+  // gemini-2.5-flash is closed to new keys (404 "no longer available to new users"), and on the free tier the latest
+  // Flash took over two minutes to answer while Flash-Lite answered in under 2 s, so the default follows the latest
+  // Flash-Lite, with thinking kept low (its lowest level)
+  it("asks the latest Flash-Lite model, thinking low, for the JSON food list", async () => {
     const fetchStub = stubFetch(eggsAndToast);
     expect(await geminiParse("key", "two eggs", "2026-11-18")).toHaveLength(2);
     const { url, body } = requestOf(fetchStub);
-    expect(url).toBe("https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent");
+    expect(url).toBe(
+      "https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-lite-latest:generateContent",
+    );
     expect(body.generationConfig).toMatchObject({
       responseMimeType: "application/json",
       temperature: 0,
@@ -100,6 +103,18 @@ describe("geminiParse", () => {
     const fetchStub = stubFetch(eggsAndToast);
     await geminiParse("key", "two eggs", "2026-11-18", "gemini-3.8-flash");
     expect(requestOf(fetchStub).url).toContain("/models/gemini-3.8-flash:generateContent");
+  });
+
+  // The free tier answers 503 "experiencing high demand" in short spikes, so one busy answer is asked again
+  it("asks once more when Gemini is busy", async () => {
+    const busy = new Response(JSON.stringify({ error: { code: 503, message: "high demand" } }), { status: 503 });
+    const fetchStub = vi
+      .fn()
+      .mockResolvedValueOnce(busy)
+      .mockResolvedValueOnce(new Response(JSON.stringify(eggsAndToast)));
+    vi.stubGlobal("fetch", fetchStub);
+    expect(await geminiParse("key", "two eggs", "2026-11-18")).toHaveLength(2);
+    expect(fetchStub).toHaveBeenCalledTimes(2);
   });
 
   // So the API's log says why, not just the status
