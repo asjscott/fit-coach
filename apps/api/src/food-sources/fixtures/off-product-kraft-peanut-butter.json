@@ -1,0 +1,31 @@
+{
+  "code": "0068100084245",
+  "product": {
+    "brands": "Kraft",
+    "code": "0068100084245",
+    "countries_tags": ["en:canada", "en:france", "en:germany"],
+    "nutriments": {
+      "carbohydrates_100g": 20,
+      "energy-kcal_100g": 600,
+      "energy-kcal_serving": 90,
+      "energy-kj_100g": 2706.66666666667,
+      "energy_100g": 2706.66666666667,
+      "fat_100g": 53.3333333333333,
+      "fiber_100g": 6.66666666666667,
+      "proteins_100g": 20,
+      "proteins_serving": 3,
+      "saturated-fat_100g": 10,
+      "sodium_100g": 0.433333333333333,
+      "sugars_100g": 6.66666666666667
+    },
+    "nutrition_data": "on",
+    "nutrition_data_prepared_per": "100g",
+    "product_name": "Smooth Peanut Butter",
+    "product_name_en": "Smooth Peanut Butter",
+    "serving_quantity": 15,
+    "serving_quantity_unit": "g",
+    "serving_size": "1 tbsp (15 g)"
+  },
+  "status": 1,
+  "status_verbose": "product found"
+}

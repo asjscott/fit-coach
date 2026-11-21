@@ -10,7 +10,7 @@ const workout: InProgressWorkout = {
 
 describe("showsResumePill", () => {
   it("shows on the other tabs while a Workout is in progress", () => {
-    for (const tab of ["/history", "/exercises/goblet-squat", "/profile"]) {
+    for (const tab of ["/history", "/profile/exercises/goblet-squat", "/profile"]) {
       expect(showsResumePill(workout, tab)).toBe(true);
     }
   });

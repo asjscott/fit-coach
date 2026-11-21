@@ -129,4 +129,13 @@ export function InputIcon({ name, as, size }: { name?: IconName; as?: IconCompon
   const context = useInputContext();
   return <Icon name={name} as={as} size={size ?? inputSizes[context.size].icon} color="subtle" />;
 }
+// An ✕ at the end of a box that empties it, for a box worth clearing in one tap (search, Tell the coach). Render it
+// only while the box has something in it
+export function InputClear({ onPress, accessibilityLabel }: { onPress: () => void; accessibilityLabel: string }) {
+  return (
+    <InputSlot onPress={onPress} accessibilityRole="button" accessibilityLabel={accessibilityLabel} hitSlop={8}>
+      <InputIcon name="x" />
+    </InputSlot>
+  );
+}
 export type { InputSize, InputVariant } from "./styles";

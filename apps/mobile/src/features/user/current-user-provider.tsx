@@ -1,5 +1,12 @@
 import { useAuth } from "@clerk/expo";
-import { DEFAULT_WEIGHT_UNIT, User, type EquipmentProfileInput, type UserUpdate } from "@fit/shared";
+import {
+  DEFAULT_WEIGHT_UNIT,
+  User,
+  type EquipmentProfileInput,
+  type UserUpdate,
+  type WeighInUpload,
+} from "@fit/shared";
+import { getCalendars } from "expo-localization";
 import { createContext, use, useCallback, useEffect, useState, type ReactNode } from "react";
 import { ApiError, useApi } from "@/api";
 import { deviceStorage } from "@/features/workouts/device-storage";
@@ -15,6 +22,10 @@ type CurrentUserContextValue = {
   updateUser: (update: UserUpdate) => Promise<User>;
   // Creates a profile without an id, or updates the one with this id
   saveEquipmentProfile: (input: EquipmentProfileInput, id?: string) => Promise<User>;
+  // Replaces the date's week's Weigh-in; the user that comes back has the profile's weight following it
+  // signal aborting stops waiting and leaves the user as the phone had it (closing Log weight while it saves). If the
+  // server got the Weigh-in all the same, it shows the next time the user loads
+  logWeighIn: (date: string, upload: WeighInUpload, signal?: AbortSignal) => Promise<User>;
 };
 
 const CurrentUserContext = createContext<CurrentUserContextValue | null>(null);
@@ -88,10 +99,21 @@ export function CurrentUserProvider({ children }: { children: ReactNode }) {
     [api, setUser],
   );
 
+  const logWeighIn = useCallback(
+    async (date: string, upload: WeighInUpload, signal?: AbortSignal) => {
+      const updated = User.parse(
+        await api(`/weigh-ins/${date}`, { method: "PUT", body: JSON.stringify(upload), signal }),
+      );
+      if (!signal?.aborted) setUser(updated);
+      return updated;
+    },
+    [api, setUser],
+  );
+
   useSendTimeZone(user, updateUser);
 
   return (
-    <CurrentUserContext value={{ user, error, refresh, updateUser, saveEquipmentProfile }}>
+    <CurrentUserContext value={{ user, error, refresh, updateUser, saveEquipmentProfile, logWeighIn }}>
       {children}
     </CurrentUserContext>
   );
@@ -106,6 +128,12 @@ export function useCurrentUser() {
 // The Equipment Profile the user trains with by default; undefined until the user loads
 export function usePrimaryEquipmentProfile() {
   return useCurrentUser().user?.equipmentProfiles.find((profile) => profile.isPrimary);
+}
+
+// The timezone the server works the user's days and weeks out in, which useSendTimeZone keeps at the phone's: the
+// phone's own until the server has it
+export function useTimeZone() {
+  return useCurrentUser().user?.timeZone ?? getCalendars()[0].timeZone ?? "UTC";
 }
 
 // The unit every load shows in (#126): the user's choice, lb until they choose or until the user loads

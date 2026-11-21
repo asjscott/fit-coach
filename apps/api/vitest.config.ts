@@ -1,7 +1,7 @@
 import { defineConfig } from "vitest/config";
 
-// Route tests start an in-memory MongoDB per file, all at once. Its binary is downloaded first, once, before any file
-// starts (src/test/download-mongodb.ts); the generous hook timeout covers a slow runner starting them together
+// Route tests share one in-memory MongoDB, started once before any file (src/test/mongodb.ts), each file in its own
+// database. The hook timeout covers a slow runner downloading the MongoDB binary on its first run
 export default defineConfig({
-  test: { globalSetup: ["./src/test/download-mongodb.ts"], hookTimeout: 120_000, testTimeout: 30_000 },
+  test: { globalSetup: ["./src/test/mongodb.ts"], hookTimeout: 120_000, testTimeout: 30_000 },
 });

@@ -122,24 +122,24 @@ M9 Rewards is cut down to PR detection (M6) and a Weekly Streak (M8). M11 Meal p
 
 ## M7 Nutrition
 
-**Goal:** log food quickly against daily targets, with no LLM needed for the core.
+**Goal:** log food quickly against daily targets, with no LLM needed for the core. Grilled on 2026-11-16 to 18; the screens come from the prototype on the `prototype/m7-today-food` branch, variant J.
 
-- **Profile:** a new activity level (4 options).
-- **Weight log.** A quick "Log weight" on Today and a `weights` collection; the profile's weight follows the latest entry.
-- **Targets.** Mifflin-St Jeor × activity level; −20% for lose_fat, +10% for build_muscle, maintenance otherwise. Protein 2.0 g/kg for lose_fat and build_muscle, 1.6 g/kg otherwise. Fat at least 0.8 g/kg; carbs fill the rest.
-- **Home bars** on Today for kcal and protein against target, with a nudge on what's left ("60 g of protein to go"). Food never changes the Planned Workout; the Check-in covers a bad day.
-- **Food log.** One list per day, in Breakfast, Lunch, Dinner and Snacks, for today or an earlier day. Each Food Entry keeps a snapshot of the food's macros and the portion, as [ADR 0002](adr/0002-previous-sets-are-a-snapshot.md) does for Sets.
-- **Finding food:** search on USDA FoodData Central (free key), barcodes on Open Food Facts (free, no key), saved foods, and "copy yesterday's meal". The Canadian Nutrient File only if gaps show up.
+- **Built for the native app.** The phones' Release builds are the daily app, so barcodes use the Expo camera's own scanner; web gets search, Saved Foods and copy, and barcodes wait for the PWA (#120).
+- **Profile:** an Activity Level (sedentary ×1.2, lightly active ×1.375, active ×1.55, very active ×1.725), described by job and daily steps. It covers daily life and strength Workouts, never Activities, so M10 can credit those without counting them twice. Also a Diet, a Weigh-in Day and a fibre target.
+- **Weigh-ins, weekly.** One Weigh-in per week (Monday to Sunday), on a Weigh-in Day (Monday by default), asked for on Today that day; a later one that week replaces it, and a missed one can be logged later. The profile shows the latest instead of an editable weight, and onboarding's weight is the first. A Weigh-in never moves Working Levels: body weight is only read at an Assessment.
+- **Daily Targets**, the same every day. Mifflin-St Jeor × Activity Level; −20% for lose_fat, +10% for build_muscle, maintenance for recomp and athletic. Protein 2.0 g/kg for lose_fat, build_muscle and recomp, 1.6 g/kg for athletic. Fat at least 0.8 g/kg; carbs fill the rest. Fibre 40 g per 1,000 kcal of the kcal target, which the user can change in Profile. Water 35 ml/kg, rounded to 250 ml.
+- **Today:** four equal rings at the very top, for kcal left, protein left, fibre and water. Under them, the Coach's summary of what's left ("1,036 kcal and 54 g of protein left") with a line on how to fill it from Food Ideas. Fibre and water are goals, never nagged. Water is shown, not logged, on Today. Food never changes the Planned Workout; the Check-in covers a bad day.
+- **Tabs:** Today · Food · History · Profile. The Exercise library becomes the first row in Profile.
+- **Food tab**, in two halves. _Today so far_: the day (today or the 6 before it), three equal rings for kcal, protein and fibre, the water glasses, search and Scan, then the day's meals, Breakfast, Lunch, Dinner and Snacks, each opening to its Food Entries with Add and "Copy from yesterday". _Ideas and recent_: the summary with two Food Ideas to add, the Diet, then Recent and Saved Foods.
+- **Water:** a row of 250 ml glasses up to the target, on the Food tab only. Tapping an empty glass adds 250 ml; tapping a filled one takes 250 ml off.
+- **Food log.** Each Food Entry keeps a snapshot of the food's kcal, protein, carbs, fat and fibre and the portion, as [ADR 0002](adr/0002-previous-sets-are-a-snapshot.md) does for Sets. Portions in grams, or the food's own servings where the source has them. Logging food needs a connection; there is no offline queue.
+- **Finding food:** search on USDA FoodData Central (free key), generic foods (Foundation and SR Legacy) first and branded after; barcodes on Open Food Facts, then USDA's branded data by UPC. When neither has it, Create food from the label makes a Saved Food, linked to the barcode so the next scan finds it. Recent is the user's own log, most recent first. "Copy from yesterday" copies one meal into the same meal, after what's there. The Canadian Nutrient File only if gaps show up.
+- **Food Ideas:** a list of about 40 high-protein foods shipped with the app, each with a set portion and tagged meat, fish, vegetarian or vegan. The Coach offers the two with the most protein per kcal that fit in the kcal left and that the Diet allows (any, pescatarian, vegetarian or vegan, plus foods to avoid: dairy, gluten, nuts, pork). Add puts one in the meal for the time of day: Breakfast before 11, Lunch before 4 pm, Dinner before 9 pm, Snacks after. Once protein is met, ideas stop. Search and barcodes are never filtered by the Diet.
 - **Daily totals** are worked out when needed, not stored, until M8's weekly review needs them stored.
-- **Tell the coach (last):** a text box on Today. "Yesterday I had two eggs and toast" becomes dated Food Entries through a provider-agnostic interface, on Gemini Flash's free tier, with a confirm screen and a portion slider. Food descriptions only, never photos. M10 extends the same box to Activities.
+- **Tell the coach (last ticket; may move to M8 without holding up M7):** a text box on Today. "Yesterday I had two eggs and toast" becomes dated Food Entries through a provider-agnostic interface, on Gemini Flash's free tier, with a confirm screen and a portion slider. Food descriptions only, never photos. M10 extends the same box to Activities.
+- **API keys stay on the server;** the API proxies USDA and Gemini.
 
-### Open for the spec
-
-- Barcode scanning in iOS Safari, which has no `BarcodeDetector`: likely a JavaScript decoder such as ZXing. Check it works in the installed PWA's camera.
-- API keys stay on the server; the API proxies USDA and Gemini.
-- Logging food offline: queue it like Pending Workouts, or require a connection.
-
-**Done when:** two weeks of real eating logged on the PWA, mostly by barcode, saved foods and copy; targets look right against the user's own numbers.
+**Done when:** two weeks of real eating logged on the phones' Release builds, mostly by barcode, Saved Foods and copy; targets look right against the user's own numbers.
 
 ## M8 Daily loop
 
@@ -148,7 +148,7 @@ M9 Rewards is cut down to PR detection (M6) and a Weekly Streak (M8). M11 Meal p
 - **Web push.** VAPID keys on the server, a subscription saved per device. iOS only delivers it to the installed PWA (iOS 16.4+).
 - **Scheduled jobs.** A GitHub Actions workflow runs hourly and POSTs to `/jobs/run` with a secret. That wakes the Render instance, which, for each user, runs whatever is due in that user's timezone and records that it ran, so a late or repeated call never sends twice. Agenda is dropped.
 - **Evening summary, due at 6 pm so it arrives by 7, templated:** "Push day done ✅ · 1,840 / 2,300 kcal · 120 g protein · Tomorrow: Legs, Standard", or "Tomorrow: Rest Day · next up Legs" when the Rest Day rule says so, with tomorrow's kcal and protein targets. It says "tomorrow" again ([ADR 0008](adr/0008-a-few-invited-users-and-tomorrow.md) reverses that part of [0004](adr/0004-spec-77-replaces-the-plans-m5.md)).
-- **Sunday weekly review**, in the app and announced by push: Workouts done against planned and the Weekly Streak; the Weekly Budget met per Muscle; PRs and Exercises that progressed or dropped; average kcal and protein against target; the 7-day average weight change; the Readiness trend from Check-ins.
+- **Sunday weekly review**, in the app and announced by push: Workouts done against planned and the Weekly Streak; the Weekly Budget met per Muscle; PRs and Exercises that progressed or dropped; average kcal and protein against target; the change since last week's Weigh-in; the Readiness trend from Check-ins.
 - **Weekly Streak.** A week counts when the user finishes at least `daysPerWeek − 1` Workouts, Recovery Workouts included. No freezes. Weeks run Monday to Sunday, as the Week Ledger does.
 - The PDF's event bus is dropped unless the spec finds a need. An LLM sentence in the summary is optional, through M7's interface.
 
@@ -158,8 +158,8 @@ M9 Rewards is cut down to PR detection (M6) and a Weekly Streak (M8). M11 Meal p
 
 **Goal:** see whether it's working, over months.
 
-- **Weight trend:** the 7-day average against daily entries.
-- **Adaptive TDEE:** once 3 weeks of weight and intake data exist, it replaces the activity level in the targets.
+- **Weight trend:** the weekly Weigh-ins over time.
+- **Adaptive TDEE:** once 4 Weigh-ins and the intake between them exist, it replaces the activity level in the targets.
 - **Strength graph:** estimated 1RM per Exercise over time, with the Working Level line; the user picks from Exercises they've done.
 - **Assessment against retest:** the same chart with Block boundaries marked.
 

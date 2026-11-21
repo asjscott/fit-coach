@@ -139,8 +139,8 @@ if (cmd === "tour") {
       await go("/");
       for (const [title, name] of [
         ["Today", "today"],
+        ["Food", "food"],
         ["History", "history"],
-        ["Exercises", "exercises"],
         ["Profile", "profile"],
       ]) {
         await tab(title).click();
@@ -176,12 +176,19 @@ if (cmd === "tour") {
       }
 
       // Rows are Pressables calling router.push, not <a href>, so click through rather than following links
-      await go("/exercises");
+      // The Exercise library is Profile's first row, not a tab (#159)
+      await go("/profile");
+      await page.getByText("Exercise library", { exact: true }).click();
+      await page.waitForURL(/\/profile\/exercises$/);
+      await snap("exercises");
       // Show all adds the Exercises the equipment doesn't support, each with what it needs
       await page.getByRole("switch", { name: "Show all exercises" }).click();
       await snap("exercises-all");
       await page.getByText("Goblet squat", { exact: true }).first().click();
       await snap("exercise-detail");
+      // Its back button returns to the library
+      await page.getByRole("link", { name: "Exercise library, back" }).click();
+      await page.waitForURL(/\/profile\/exercises$/);
       await go("/history");
       // Each History row ends "3 sets · 45 min"; clicking it presses the row. The detail's ⋯ menu holds
       // Delete workout: the tour opens it and closes it again, never deleting
@@ -317,9 +324,9 @@ if (cmd === "tour") {
       await wide.button(/^Start (manual )?workout$/).click();
       await wide.page.waitForURL(/\/workout$/);
       await wide.button("Leave workout").click();
-      await wide.tab("Exercises").click();
+      await wide.tab("History").click();
       await resumePill(wide.page).waitFor();
-      await wide.snap("exercises-resume-wide");
+      await wide.snap("history-resume-wide");
     } catch (e) {
       console.log(`[${scheme}] FAILED at ${wide.page.url()}: ${e.message.split("\n")[0]}`);
       await wide.page.screenshot({ path: `${shots}/_failure-wide-${scheme}.png` });

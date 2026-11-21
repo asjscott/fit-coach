@@ -1,18 +1,16 @@
 import { useAuth } from "@clerk/expo";
+import * as Network from "expo-network";
 import { useCallback, useEffect, useRef } from "react";
-import { untilAborted, withinMs } from "./until-aborted";
+import { request, type ApiInit } from "./request";
 
-const API_URL = process.env.EXPO_PUBLIC_API_URL;
-const TOKEN_TIMEOUT_MS = 10_000;
+// Only a definite "not connected" skips the server: airplane mode, or Wi-Fi and data both off
+const noNetwork = async () => (await Network.getNetworkStateAsync()).isConnected === false;
 
-export class ApiError extends Error {
-  constructor(
-    readonly status: number,
-    message: string,
-  ) {
-    super(message);
-  }
-}
+export { ApiError, noAnswerMessage, type ApiInit } from "./request";
+
+// Whether a screen that couldn't load should blame the server: the phone says it has a network. Until the phone has
+// said, it's the connection, as that's the usual reason (#174)
+export const useServerNotAnswering = () => Network.useNetworkState().isConnected === true;
 
 export function useApi() {
   const { getToken } = useAuth();
@@ -24,20 +22,8 @@ export function useApi() {
     getTokenRef.current = getToken;
   }, [getToken]);
 
-  return useCallback(async (path: string, init: RequestInit = {}): Promise<unknown> => {
-    // With no signal, Clerk's getToken keeps retrying instead of failing. A request's own signal (Previous Sets' 4 s)
-    // covers this wait too, and every request gives up on it in the end, like a fetch with no network would
-    const token = await untilAborted(withinMs(getTokenRef.current(), TOKEN_TIMEOUT_MS), init.signal);
-    const headers = new Headers(init.headers);
-    if (token) headers.set("Authorization", `Bearer ${token}`);
-    if (init.body && !headers.has("Content-Type")) {
-      headers.set("Content-Type", "application/json");
-    }
-
-    const res = await fetch(`${API_URL}${path}`, { ...init, headers });
-    if (!res.ok) throw new ApiError(res.status, (await res.text()) || String(res.status));
-    // 204 No Content, e.g. after a DELETE
-    if (res.status === 204) return null;
-    return res.json();
-  }, []);
+  return useCallback(
+    (path: string, init?: ApiInit) => request({ getToken: () => getTokenRef.current(), noNetwork }, path, init),
+    [],
+  );
 }

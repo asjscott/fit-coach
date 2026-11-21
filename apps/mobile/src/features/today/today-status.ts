@@ -1,6 +1,16 @@
 import { restDay, summarizeWorkout, type FinishedWorkoutSets, type RestDayReason } from "@fit/engines";
-import type { WeightUnit } from "@fit/shared";
+import type { ActivityLevel, WeightUnit } from "@fit/shared";
 import { estimatedTimeLabel, timeStat, volumeLabel } from "../workouts/format";
+
+// Whether Today asks for the Activity Level (spec #158 story 4): only a user onboarded before it was asked has none,
+// and they're asked once. Skipped is undefined until the phone has read it
+export const asksActivityLevel = ({
+  activityLevel,
+  skipped,
+}: {
+  activityLevel: ActivityLevel | undefined;
+  skipped: boolean | undefined;
+}) => activityLevel === undefined && skipped === false;
 
 // What Today knows about the user's Workouts: History loading, loaded (with or without any Workouts yet), or
 // unavailable offline, when only the Pending Workouts on the phone are known (ADR 0001)
