@@ -2,7 +2,7 @@ import { loggableDates } from "@fit/engines";
 import type { FoodProposal } from "@fit/shared";
 import { useRef, useState } from "react";
 import { StyleSheet, View, type StyleProp, type ViewStyle } from "react-native";
-import { Input, InputField } from "@/components/input";
+import { Input, InputClear, InputField } from "@/components/input";
 import { LoadingButton } from "@/components/loading-button";
 import { Text } from "@/components/text";
 import { useToast } from "@/contexts/toast-context";
@@ -73,6 +73,7 @@ export function TellTheCoachBox({ onLogged, style }: { onLogged: () => void; sty
             onSubmitEditing={ask}
             maxLength={500}
           />
+          {text ? <InputClear onPress={() => setText("")} accessibilityLabel="Clear what you told the coach" /> : null}
         </Input>
         <LoadingButton label="Tell" size="md" loading={asking} disabled={!text.trim()} onPress={ask} />
       </View>

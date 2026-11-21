@@ -5,7 +5,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { StyleSheet, type TextInputInstance, View } from "react-native";
 import { useServerNotAnswering } from "@/api";
 import { Alert, AlertText } from "@/components/alert";
-import { Input, InputField, InputIcon, InputSlot } from "@/components/input";
+import { Input, InputClear, InputField, InputIcon, InputSlot } from "@/components/input";
 import { LoadingButton } from "@/components/loading-button";
 import { Screen } from "@/components/screen";
 import { Spinner } from "@/components/spinner";
@@ -176,6 +176,7 @@ export default function FoodView() {
                   returnKeyType="search"
                   accessibilityLabel="Search foods"
                 />
+                {query ? <InputClear onPress={() => setQuery("")} accessibilityLabel="Clear search" /> : null}
               </Input>
               <ScanButton onScanned={scanned} />
             </View>
