@@ -24,4 +24,4 @@ Logging, device storage, sync, History and the workouts API: see `docs/agents/wo
 
 ### Dev server output
 
-`pnpm start` / `web` / `ios` / `android` in `apps/mobile` also write the dev server's output to `apps/mobile/.expo/dev.log`: read it for the current bundling or runtime error.
+`pnpm start` / `web` / `ios` / `android` in `apps/mobile` also write the dev server's output to `apps/mobile/.expo/dev.log`: read it for the current bundling or runtime error. `web:signed-in` writes `.expo/dev-signed-in.log` instead.

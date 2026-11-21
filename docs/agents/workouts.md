@@ -465,7 +465,9 @@ maps would fix that and isn't set up.
 - Web storage in real browsers: `pnpm --filter @fit/mobile test:web`.
 - The signed-in app, with no Clerk account or `.env`: `pnpm --filter @fit/mobile web:signed-in`, then
   `http://localhost:8187`. It starts the in-memory API on 3187 and swaps `@clerk/expo` for a signed-in stub in Metro, so
-  every run is a new account at onboarding. Use it for any ticket that changes a signed-in screen.
+  every run is a new account, already onboarded (80 kg, build_muscle, 3 days, dumbbells at home); add `-- --fresh` to
+  start at onboarding instead. Metro watches files, so edits show without a restart, and its output goes to
+  `.expo/dev-signed-in.log`. Use it for any ticket that changes a signed-in screen.
   - To be several users from Playwright, add `x-dev-user` in `context.route` rather than from the page, since CORS
     refuses that header. A new `x-dev-user` is a new account.
   - For offline, abort the API in the same route and override `navigator.onLine`. Don't use `context.setOffline`: in
