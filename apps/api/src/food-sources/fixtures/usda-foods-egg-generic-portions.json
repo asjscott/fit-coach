@@ -1,0 +1,208 @@
+[
+  {
+    "fdcId": 747997,
+    "dataType": "Foundation",
+    "description": "Eggs, Grade A, Large, egg white",
+    "foodPortions": [
+      {
+        "id": 190538,
+        "amount": 1.0,
+        "modifier": "white",
+        "gramWeight": 34.0,
+        "measureUnit": {
+          "id": 1099,
+          "name": "egg",
+          "abbreviation": "egg"
+        },
+        "sequenceNumber": 1
+      },
+      {
+        "id": 312624,
+        "amount": 1.0,
+        "gramWeight": 50.0,
+        "measureUnit": {
+          "id": 1121,
+          "name": "RACC",
+          "abbreviation": "RACC"
+        },
+        "sequenceNumber": 1
+      }
+    ]
+  },
+  {
+    "fdcId": 748967,
+    "dataType": "Foundation",
+    "description": "Eggs, Grade A, Large, egg whole",
+    "foodPortions": [
+      {
+        "id": 193781,
+        "amount": 1.0,
+        "modifier": "whole without shell",
+        "gramWeight": 50.3,
+        "measureUnit": {
+          "id": 1099,
+          "name": "egg",
+          "abbreviation": "egg"
+        },
+        "sequenceNumber": 1
+      },
+      {
+        "id": 312625,
+        "amount": 1.0,
+        "gramWeight": 50.0,
+        "measureUnit": {
+          "id": 1121,
+          "name": "RACC",
+          "abbreviation": "RACC"
+        },
+        "sequenceNumber": 1
+      }
+    ]
+  },
+  {
+    "fdcId": 174901,
+    "dataType": "SR Legacy",
+    "description": "Bagels, egg",
+    "foodPortions": [
+      {
+        "id": 95110,
+        "amount": 1.0,
+        "modifier": "small bagel (3\" dia)",
+        "gramWeight": 69.0,
+        "measureUnit": {
+          "id": 9999,
+          "name": "undetermined",
+          "abbreviation": "undetermined"
+        },
+        "sequenceNumber": 3
+      },
+      {
+        "id": 95111,
+        "amount": 1.0,
+        "modifier": "medium bagel (3-1/2\" to 4\" dia)",
+        "gramWeight": 105.0,
+        "measureUnit": {
+          "id": 9999,
+          "name": "undetermined",
+          "abbreviation": "undetermined"
+        },
+        "sequenceNumber": 4
+      },
+      {
+        "id": 95108,
+        "amount": 1.0,
+        "modifier": "oz",
+        "gramWeight": 28.35,
+        "measureUnit": {
+          "id": 9999,
+          "name": "undetermined",
+          "abbreviation": "undetermined"
+        },
+        "sequenceNumber": 1
+      },
+      {
+        "id": 95112,
+        "amount": 1.0,
+        "modifier": "large bagel (4-1/2\" dia)",
+        "gramWeight": 131.0,
+        "measureUnit": {
+          "id": 9999,
+          "name": "undetermined",
+          "abbreviation": "undetermined"
+        },
+        "sequenceNumber": 5
+      },
+      {
+        "id": 95109,
+        "amount": 1.0,
+        "modifier": "mini bagel (2-1/2\" dia)",
+        "gramWeight": 26.0,
+        "measureUnit": {
+          "id": 9999,
+          "name": "undetermined",
+          "abbreviation": "undetermined"
+        },
+        "sequenceNumber": 2
+      }
+    ]
+  },
+  {
+    "fdcId": 171287,
+    "dataType": "SR Legacy",
+    "description": "Egg, whole, raw, fresh",
+    "foodPortions": [
+      {
+        "id": 88377,
+        "amount": 1.0,
+        "modifier": "cup (4.86 large eggs)",
+        "gramWeight": 243.0,
+        "measureUnit": {
+          "id": 9999,
+          "name": "undetermined",
+          "abbreviation": "undetermined"
+        },
+        "sequenceNumber": 5
+      },
+      {
+        "id": 88378,
+        "amount": 1.0,
+        "modifier": "medium",
+        "gramWeight": 44.0,
+        "measureUnit": {
+          "id": 9999,
+          "name": "undetermined",
+          "abbreviation": "undetermined"
+        },
+        "sequenceNumber": 6
+      },
+      {
+        "id": 88375,
+        "amount": 1.0,
+        "modifier": "extra large",
+        "gramWeight": 56.0,
+        "measureUnit": {
+          "id": 9999,
+          "name": "undetermined",
+          "abbreviation": "undetermined"
+        },
+        "sequenceNumber": 2
+      },
+      {
+        "id": 88379,
+        "amount": 1.0,
+        "modifier": "small",
+        "gramWeight": 38.0,
+        "measureUnit": {
+          "id": 9999,
+          "name": "undetermined",
+          "abbreviation": "undetermined"
+        },
+        "sequenceNumber": 7
+      },
+      {
+        "id": 88376,
+        "amount": 1.0,
+        "modifier": "jumbo",
+        "gramWeight": 63.0,
+        "measureUnit": {
+          "id": 9999,
+          "name": "undetermined",
+          "abbreviation": "undetermined"
+        },
+        "sequenceNumber": 3
+      },
+      {
+        "id": 88374,
+        "amount": 1.0,
+        "modifier": "large",
+        "gramWeight": 50.0,
+        "measureUnit": {
+          "id": 9999,
+          "name": "undetermined",
+          "abbreviation": "undetermined"
+        },
+        "sequenceNumber": 1
+      }
+    ]
+  }
+]

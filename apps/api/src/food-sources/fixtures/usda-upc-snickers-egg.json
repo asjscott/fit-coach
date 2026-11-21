@@ -1,0 +1,131 @@
+{
+  "totalHits": 1,
+  "currentPage": 1,
+  "totalPages": 1,
+  "pageList": [1],
+  "foodSearchCriteria": {
+    "dataType": ["Branded"],
+    "query": "gtinUpc:040000449270",
+    "generalSearchInput": "gtinUpc:040000449270",
+    "pageNumber": 1,
+    "numberOfResultsPerPage": 50,
+    "pageSize": 5,
+    "requireAllWords": false,
+    "foodTypes": ["Branded"]
+  },
+  "foods": [
+    {
+      "fdcId": 2575290,
+      "description": "EGG",
+      "dataType": "Branded",
+      "gtinUpc": "040000449270",
+      "publishedDate": "2023-06-29",
+      "brandOwner": "Mars Chocolate North America LLC",
+      "brandName": "SNICKERS",
+      "marketCountry": "United States",
+      "foodCategory": "Candy",
+      "modifiedDate": "2023-05-04",
+      "dataSource": "LI",
+      "packageWeight": "1.10 oz/31.2 g",
+      "servingSizeUnit": "GRM",
+      "servingSize": 31.200000762939453,
+      "householdServingFullText": "1 EGG",
+      "shortDescription": "",
+      "tradeChannels": ["NO_TRADE_CHANNEL"],
+      "allHighlightFields": "<b>GTIN/UPC</b>: <em>040000449270</em>",
+      "score": 156.30588,
+      "microbes": [],
+      "foodNutrients": [
+        {
+          "nutrientId": 1003,
+          "nutrientName": "Protein",
+          "unitName": "G",
+          "value": 6.41
+        },
+        {
+          "nutrientId": 1004,
+          "nutrientName": "Total lipid (fat)",
+          "unitName": "G",
+          "value": 28.8
+        },
+        {
+          "nutrientId": 1005,
+          "nutrientName": "Carbohydrate, by difference",
+          "unitName": "G",
+          "value": 57.7
+        },
+        {
+          "nutrientId": 1008,
+          "nutrientName": "Energy",
+          "unitName": "KCAL",
+          "value": 513
+        },
+        {
+          "nutrientId": 2000,
+          "nutrientName": "Total Sugars",
+          "unitName": "G",
+          "value": 54.5
+        },
+        {
+          "nutrientId": 1079,
+          "nutrientName": "Fiber, total dietary",
+          "unitName": "G",
+          "value": 3.2
+        },
+        {
+          "nutrientId": 1087,
+          "nutrientName": "Calcium, Ca",
+          "unitName": "MG",
+          "value": 128
+        },
+        {
+          "nutrientId": 1089,
+          "nutrientName": "Iron, Fe",
+          "unitName": "MG",
+          "value": 0.0
+        },
+        {
+          "nutrientId": 1093,
+          "nutrientName": "Sodium, Na",
+          "unitName": "MG",
+          "value": 176
+        },
+        {
+          "nutrientId": 1162,
+          "nutrientName": "Vitamin C, total ascorbic acid",
+          "unitName": "MG",
+          "value": 0.0
+        },
+        {
+          "nutrientId": 1253,
+          "nutrientName": "Cholesterol",
+          "unitName": "MG",
+          "value": 32.0
+        },
+        {
+          "nutrientId": 1257,
+          "nutrientName": "Fatty acids, total trans",
+          "unitName": "G",
+          "value": 0.0
+        },
+        {
+          "nutrientId": 1258,
+          "nutrientName": "Fatty acids, total saturated",
+          "unitName": "G",
+          "value": 16.0
+        },
+        {
+          "nutrientId": 1106,
+          "nutrientName": "Vitamin A, RAE",
+          "unitName": "UG",
+          "value": 0.0
+        }
+      ],
+      "finalFoodInputFoods": [],
+      "foodMeasures": [],
+      "foodAttributes": [],
+      "foodAttributeTypes": [],
+      "foodVersionIds": []
+    }
+  ]
+}

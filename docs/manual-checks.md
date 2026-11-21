@@ -1,104 +1,46 @@
 # Manual checks on the phone
 
-Checks still to run on a phone. The rest have passed.
+Checks still to run on a phone. Everything else has passed and been removed; `git log -p docs/manual-checks.md` has the past results.
 
-For each check, tick the box and fill in the result. Leave **Notes** empty when it passes cleanly; write what you saw when it doesn't, or when something felt off even if it technically passed. Where a check already has a simulator result, replace it with the phone's and keep any note that still applies.
+For each check, tick the box and fill in the result. Leave **Notes** empty when it passes cleanly; write what you saw when it doesn't, or when something felt off even if it technically passed.
 
 Result codes: **✅ pass** · **❌ fail** · **⚠️ works but feels off** · **⏭ skipped / couldn't test** · **🕒 skip for now: needs time to pass**
 
-## What's left, and where
+## What's left
 
-The simulators ran what they could on 13 Nov (Session 1 below). The rest falls into four groups.
+- **Run on the phone now:** R1, U1, U2, LS2, PR1, TB1–TB3. Each is a part no run has covered yet.
+- **M7, once it's on the phones:** DT1–DT5, WI1–WI6, F1–F4, FL1–FL6, SC1–SC6, CR1–CR6, WA1–WA5, FI1–FI6, TC1–TC5. Session 5 ran most of them on the simulators (see each check's notes). Still to see on a phone first: scanning (SC2–SC4, SC6), Tell the coach with a Gemini key (TC1–TC4), the pre-M7 account and Weigh-in Day row (WI1, WI2), WI6, F3, FL5, every offline check on the iPhone, again after #170–#174 (WI6, F4, FL6, TC4), and NA1.
+- **Run when you next train:** P9 and S1, a full Workout with a timer, resting as the timer says. Both can be one session.
+- **🕒 Due later, while you use the app:** C5 (the day after a check-in), P16 (a Monday), J2 (after a week with jumps on), P17 (after a few weeks), DL1 and DL2 (the 5th week of a Block: the week starting 4 Mondays after the Monday of the week Assessment B was done).
+- **On hold:** E1–E3 need Sentry set up on production.
 
-**1. Run on the phones now**, on a Release build against the API on your Mac ([Setting up the phones](#setting-up-the-phones)):
+## Session
 
-| Check | What's left                                                                                                                                                                                                                                                                                 |
-| ----- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| T2    | All of it, on both phones. It's only valid on a Release build.                                                                                                                                                                                                                              |
-| C6    | iOS; Android passed on the emulator. Read "the staging database" as the one in `apps/api/.env`: look at `checkIns` in Atlas → Browse Collections.                                                                                                                                           |
-| C7    | All of it, on both phones.                                                                                                                                                                                                                                                                  |
-| PR1   | iOS, after #146: See workout stays up ~10 s to tap; the detail rounds both numbers alike ("162 lb, up from 154 lb"). Android.                                                                                                                                                               |
-| PR2   | All of it. Run it on the Release build in airplane mode, not the PWA: the PWA can't work offline until #124.                                                                                                                                                                                |
-| J1    | Failed on the wording ("reps", not "contacts"): recheck once that's fixed. Flip the iOS switch with your finger. Android.                                                                                                                                                                   |
-| W1    | iOS. Both phones: no Elapsed timer on a past Workout, no rest timer after its Sets (#153), Time in hours and minutes (#144), and a span over 6 hours refused under End (#152). Skip the installed web app's date inputs: the web app on Cloudflare runs `main`, which has no past Workouts. |
-| R1    | The "Rest today." card on a real Rest Day, and iOS.                                                                                                                                                                                                                                         |
-| R2    | All of it, on both phones.                                                                                                                                                                                                                                                                  |
-| U1    | The Equipment Profile's weights screen, and the 5 lb / 2 kg step on a home profile with dumbbells but no weights entered. Android.                                                                                                                                                          |
-| U2    | All of it, on both phones, clearing the weight by hand (#154).                                                                                                                                                                                                                              |
-| LS1   | iOS, after #149 and #155: Renegade row is planned on a dumbbell and steps 25 → 30 lb. Android.                                                                                                                                                                                              |
-| LS2   | Android, and the home-profile variant (a cable machine selected).                                                                                                                                                                                                                           |
-| RPE1  | The chips after every Set in a Manual Workout. Android.                                                                                                                                                                                                                                     |
-| L1    | Android.                                                                                                                                                                                                                                                                                    |
-| DP2   | Android.                                                                                                                                                                                                                                                                                    |
-| H1    | iOS, after #156. Android read it right on the emulator.                                                                                                                                                                                                                                     |
-
-DP1 and RPE2 passed on both simulators. Look at them on a phone only if you have time.
-
-**2. Run when you next train**: a full Workout with a timer, resting as the timer says. Both can be one session.
-
-- **P9** a full Standard Workout.
-- **S1** a Workout whose sheet shows a superset.
-
-**3. 🕒 Skip for now: they need time to pass.** Leave them unticked. They come due while you use the app:
-
-| Check    | Due when                                                                                                 |
-| -------- | -------------------------------------------------------------------------------------------------------- |
-| C5       | The day after a check-in.                                                                                |
-| P16      | The first Monday after you start.                                                                        |
-| J2       | After a week with "Include jumps" on.                                                                    |
-| P17      | After a few weeks of training.                                                                           |
-| DL1, DL2 | The 5th week of a Block: the week starting 4 Mondays after the Monday of the week Assessment B was done. |
-
-**4. On hold: written for staging.** E1–E3 check Sentry on a staging deploy, and `dev` isn't deployed anywhere. They need rewording for production before they can run.
-
-`dev` runs only on your Mac: nothing deploys it. The checks that say "on the installed PWA against staging" run on the phone builds against the API on your Mac instead. The installed web app comes later, with #120 (offline sign-in) and #124 (offline web app).
-
-## Session 1: simulators
-
-- Date: 2026-11-13
-- Device(s) and OS version: iPhone 17 Pro simulator (iOS 26.4); Android emulator (Android 17). Run by Claude, not on a phone.
-- Build (dev build / Expo Go / web, browser): Expo Go, with the Clerk stub (`CLERK_STUB=1`) against the in-memory API with the exercise library seeded. Profile and Assessment set up through the API: athletic, 3 days, Standard, Full gym.
-- Branch and commit: dev, 0981757
-
-## Session 2: phones
-
-- Date: 2026-11-16
-- iPhone model and iOS version: iPhone 14 27.0.1
-- Android phone model and Android version: Not completed
-- Build: Release, against the API on the Mac (`pnpm --filter @fit/api dev`)
+- Date:
+- Device(s) and OS version:
+- Build:
 - Branch and commit:
 
-## Session 3: simulators, after the fixes
+## Session 5: simulators, M7
 
-- Date: 2026-11-16
-- Devices: iPhone 17 Pro simulator (iOS 26.4, on Mountain time); Android emulator (Android 17, Pacific). Run by Claude.
-- Build: Expo Go with the Clerk stub, each against its own in-memory API with the Exercise library seeded. Profile and Assessment set up through the API: athletic, 3 days, Standard, Full gym, lb.
-- Branch and commit: spec/119-m6-fixes (PR #151), 187766d
-- Run: the checks PR #151 lists (J1, PR1, PR2, W1, R2, C7, U2, LS1), most fully on Android. iOS ran J1, U2, LS1's target and #150; its injected taps often need a second try, so the rest share Android's result.
-- Also found:
-  - **#150 reproduces on iOS.** A Workout on Wed 28 Oct sits under "25 Oct – 31 Oct" in History; the week is 26 Oct – 1 Nov. The next week reads "2 Nov – 8 Nov", correctly. #150's test passes in Node for Edmonton, so suspect iOS's JavaScript engine (Hermes) and its local dates across the clock change.
-  - LS1: see its notes. Renegade row is seeded on a kettlebell.
-
-## Session 4: simulators, after #153–#156
-
-- Date: 2026-11-16
-- Devices, build and setup: as Session 3, on fresh in-memory APIs.
-- Branch and commit: spec/119-m6-fixes, 92ee30b
-- #153 ✅ Android: no rest timer after a Set of a past Workout (see W1).
-- #154 ✅ Android: an emptied number field stays empty, and 180 lb saves exactly (see U2).
-- #155 ✅ Android: Renegade row is seeded on a 15 lb dumbbell and steps through dumbbells only (see LS1).
-- #156 ✅ iOS: a Workout on Wed 28 Oct sits under "26 Oct – 1 Nov", with the simulator still an hour ahead of the emulator. Android reads "Oct 26 – Nov 1".
+- Date: 2026-11-19
+- Devices: iPhone 17 Pro simulator (iOS 26.4); Android emulator (Pixel 9, Android 17). Run by Claude.
+- Build: development builds (`expo prebuild`, then Debug) with the Clerk stub (`CLERK_STUB=1`), one Metro, each simulator against its own in-memory API (`dev:local`) with `USDA_API_KEY=DEMO_KEY` and no Gemini key. iOS onboarded through the API with no Activity Level (as a pre-M7 account would be), Android through the app. Neither API had the Exercise library seeded.
+- Branch and commit: ticket/158-manual-checks, off spec/158-m7-nutrition 6d4964c
+- `DEMO_KEY` was over its limit all session (0 left), so search answers for "egg" came from responses saved by earlier runs, and every other search showed the Saved Foods note (F4).
+- Offline on Android: the API went through a small proxy on the Mac, killed for "offline", since removing `adb reverse` leaves the app's open socket hanging. iOS offline checks weren't run.
+- Found and fixed: **the iOS build crashed at launch** once `expo-camera` was in it ("Symbol not found … ExpoModulesCore", from the precompiled ExpoCamera). `expo` was 58.0.19 against SDK packages expecting 58.0.26; `npx expo install --fix` aligned them (see step 10). Android was fine before and after.
 
 ## Setting up the phones
 
 ### What you're building, and why
 
-- **A Release build.** Its JavaScript is inside the app, so it opens with no Metro and no signal, which the airplane-mode checks need. Expo Go and `pnpm ios` can't do that, and a development build keeps the screen awake, which spoils T2.
+- **A Release build.** Its JavaScript is inside the app, so it opens with no Metro and no signal, which the airplane-mode checks need. Expo Go and `pnpm ios` can't do that, and a development build keeps the screen awake the whole time.
 - **It talks to the API on your Mac, over Wi-Fi.**
   - Production (Render and Cloudflare) runs `main`, and `dev` isn't deployed anywhere, by choice.
   - So the Mac stays awake, with its lid open, on the same Wi-Fi as the phones, with the API running for the whole session.
   - Offline checks still work: the phone keeps the Workout Pending and uploads it when it's back on the Mac's Wi-Fi.
-- **Changed the app's code?** Rebuild and reinstall (step 8 or 12): a Release build doesn't reload. The API restarts by itself when its code changes.
+- **Changed the app's code?** Rebuild and reinstall (step 10 or 14): a Release build doesn't reload. The API restarts by itself when its code changes.
 - **At home.** Away from the Mac's Wi-Fi, the app logs offline but can't upload or get a new plan until it's back.
 
 ### Once, before the first session
@@ -108,15 +50,15 @@ DP1 and RPE2 passed on both simulators. Look at them on a phone only if you have
    - `CLERK_STUB` must not be set anywhere: these builds use the real Clerk development instance.
 2. **Check which database you'll change.**
    - `apps/api/.env`'s `MONGODB_URI` is the database these checks use.
-   - When the API starts from `dev`, it runs M6's migrations on that database: Working Levels become a load and a target.
-   - Production's API on Render runs `main`, which has M5 but not M6. Make sure it doesn't use the same `MONGODB_URI`, or these migrations change what production reads. Check its environment variables in Render.
+   - When the API starts from `dev`, it runs any new migrations on that database.
+   - Production's API on Render runs `main`. Make sure it doesn't use the same `MONGODB_URI`, or the `dev` API's migrations change what production reads. Check its environment variables in Render.
 3. **Seed the Exercise library**, from the repo root:
 
    ```bash
    pnpm --filter @fit/api seed:exercises
    ```
 
-   It adds the jumps, the Recovery Exercises and the library gaps that J1, R1 and L1 need. It's safe to run again.
+   It adds the jumps, the Recovery Exercises and the library gaps that the checks use. It's safe to run again.
 
 4. **A test account** on the Clerk development instance: any email with `+clerk_test` in it, such as `you+clerk_test@example.com`, signs in with the code `424242`.
 
@@ -158,7 +100,9 @@ DP1 and RPE2 passed on both simulators. Look at them on a phone only if you have
 ### Build and install: iPhone
 
 10. **Plug in and unlock the phone.** From `apps/mobile`, build and install. Keep the existing `ios/` folder.
-    - Your 9 Nov build already set it up: bundle identifier `com.asjscott.mobile`, and Sign in with Apple removed. Native dependencies haven't changed since.
+    - Your 9 Nov build already set it up: bundle identifier `com.asjscott.mobile`, and Sign in with Apple removed.
+    - **`expo-camera` is new native code (#164), with a camera permission in `app.json`.** Once, before this build, run `pnpm install`, then `npx expo prebuild --platform ios` so `ios/` gets it, then remove Sign in with Apple again (below). On Android, run `npx expo prebuild --platform android` and redo step 13.
+    - **The Expo packages moved to 58.0.26 with it** (the precompiled camera needs the newer ExpoModulesCore, or the app crashes at launch). An existing `ios/` keeps the old React Native it locked, which crashes the same way ("Symbol not found: _OBJC_CLASS_$_RCTStatusBarAppearance"): from `apps/mobile`, run `rm -rf ios/Pods ios/Podfile.lock` before the build so CocoaPods installs afresh.
     - The `LANG` settings stop CocoaPods failing (the error is easy to miss).
     - `EXPO_PUBLIC_API_URL` overrides `.env` for this build only.
 
@@ -242,147 +186,246 @@ DP1 and RPE2 passed on both simulators. Look at them on a phone only if you have
 ## Timing
 
 - [ ] **P9** The estimated time is honest: run a full Standard Workout with a timer. The 5-minute warm-up is a spec assumption "unless it proves wrong on a phone".
-  - iOS: Result: ⏭ · Android: Result: ⏭ · Notes: Needs a full Workout run with a timer. Simulators, not a phone.
-
-## Rest timer (#95)
-
-`expo-keep-awake` is a new native module, so these need a new development or release build. Leave the phone's auto-lock at its usual setting (30 s to 1 min makes T2 quick).
-
-- [x] **T2** Rerun on both phones, on a Release build (`--configuration Release` / `--variant release`, not `pnpm ios`): a development build keeps the whole app awake. Don't watch the screen while you wait. Put the phone face down, or on iPhone turn off Settings › Face ID & Passcode › Attention Aware Features (on Android, Settings › Display › Screen attention). Either setting keeps the screen on while you look at it. Then:
-  1. Before starting, leave the phone on Today past its auto-lock time: it locks. If it doesn't, the cause isn't the Workout, so note that and stop.
-  2. Start a Workout and leave it on the logging screen, then on Today: the screen stays on.
-  3. Finish, then leave it on Today and again on History: it dims and locks.
-  4. Start another and Discard it, then leave it on Today: it locks.
-  5. In airplane mode, start, log a Set and finish, so the Workout is Pending, then leave it on Today: it locks.
-  - iOS: Result: ✅ · Android: Result: ⏭ · Notes: Passes completely on iPhone
-
-## Daily check-in (#92)
-
-- [ ] **C5** The next day the check-in is gone: the card is back (if there's a plan) and the Workout is full.
-  - iOS: Result: 🕒 · Android: Result: 🕒 · Notes: Skip for now: needs the next day.
-- [x] **C6** (#125) In airplane mode, check in on Today: the Day's Workout follows the Readiness straight away, as online. Change the check-in once, still offline. Turn airplane mode off and bring the app to the foreground. The `checkIns` collection in the staging database has one document for today, with the changed ratings, not the first.
-  - iOS: Result: ✅ · Android: Result: ✅ · Notes: Android emulator, against the in-memory API, not staging. In airplane mode (with the adb port forward to the API cut), changing the check-in made the Workout lighter at once and the API kept the old ratings. Back online and foregrounded, the one check-in for today had the changed ratings. My first try leaked through an open adb keep-alive connection, so it wasn't really offline; the rerun was. ⚠️ Changing a rating adds or removes rows above the ratings ("Paired into supersets to fit the time", "Lighter after your check-in"), so the buttons move under your finger, and it can leave a blank gap where a row was.
-- [x] **C7** (#147) Open the Next Workout sheet on Today with a check-in, on a Length that pairs supersets (see Supersets below). Rate a few times so the Workout gets lighter and full again: the rating buttons don't move under your finger. "Lighter after your check-in", Full workout and "Paired into supersets to fit the time" come and go below the ratings, and no blank gap is left where one was. "Lighter after your check-in" sits below Full workout, and "Paired into supersets to fit the time" below No supersets: tap each chip, and it doesn't move under your finger as its note goes. The line under "Next Workout" stays one line as its counts change.
-  - iOS: Result: ⏭ · Android: Result: ✅ · Notes: Session 3 (simulators, PR #151): Android emulator. After a check-in the ratings sit above everything that changes, and stayed put through every rating on Short, Quick and Bodyweight only. "Lighter after your check-in" sits under Full workout and "Paired into supersets to fit the time" under No supersets (pairs formed on Bodyweight only + Short). Tapping No supersets, then Full workout: each chip stayed where it was as its note went. The line under "Next Workout" stayed one line. iOS not run: same screen code.
+  - Result: · Notes:
 
 ## Supersets (#96)
 
-A Workout pairs Exercises only when it wouldn't otherwise fit its Length, so choose Quick or Short on a plan of four or more Exercises. Pairs only form where the Patterns go together (push with pull or hinge, squat with core), never with a one-sided Exercise or a carry, so a plan without such Exercises may need Bodyweight only to swap some in. The sheet then says "Paired into supersets to fit the time" and shows "Superset with …" under each paired Exercise.
+A Workout pairs Exercises only when it wouldn't otherwise fit its Length. Pairs form where the Patterns go together (push with pull or hinge, squat with core), never with a one-sided Exercise or a carry. On the simulators, Bodyweight only on Short paired them. The sheet then says "Paired into supersets to fit the time" and shows "Superset with …" under each paired Exercise.
 
 - [ ] **S1** P9's timing check on a paired Workout: start one whose sheet shows at least one superset, note its "About N min", and run it in full with a timer, resting as the timer says and skipping nothing. A pair is timed at Sets × (the longer Exercise's Set + 30 s): does the real time come out within a few minutes of the estimate?
-  - iOS: Result: ⏭ · Android: Result: ⏭ · Notes: Timing needs a real run. On Standard after a check-in, the sheet said "Paired into supersets to fit the time" and showed bench press "Superset with Nordic hamstring curl" and the reverse.
+  - Result: · Notes:
 
-## Past Workouts (#129)
+## Daily check-in (#92)
 
-- [x] **W1** On Today, tap "Log a past workout" under Start manual workout: a sheet asks "Which day was it?" with Yesterday and the five weekdays before it. Pick one: the Workout opens with "Done <that day>" under its title, and no Elapsed timer above its Sets and Volume. Log a Set or two: no rest timer starts after them (#153). Tap Finish: the times read that day, an hour long, with Edit times already open. Set an end two days after the start: Time reads in hours and minutes ("49 h"), not as a clock. Save: "A Workout can last at most 6 hours" shows under End. Set a start 8 days back and Save: "The start can't be more than 7 days ago" shows under Start. Set it back within the week and Save: in History the Workout sits on its own day, and This Week counts it only if that day is in this week. On the installed web app, check that the date and time inputs are easy to use on the iPhone.
-  - iOS: Result: ⏭ · Android: Result: ⚠️ · Notes: Session 3 (simulators, PR #151): Android emulator. Yesterday, Saturday … Tuesday offered on a Monday. Thursday opened with "Done Thursday, 5:24 PM" and no Elapsed timer. Finish: Thursday, an hour, Edit times open. End two days on: Time "49 h", Save: "A Workout can last at most 6 hours" under End. Start 8 days back: "The start can't be more than 7 days ago" under Start. Saved within the week: under Last week on Thursday, This week stayed at 1. ⚠️ Logging a Set on the past Workout still starts the rest timer ("Rest 1:29"), which means nothing after the fact. The web app's date inputs not tried. **Rerun after #153: ✅ on Android.** Logging a Set on a past Workout starts no rest timer.
-
-## History week labels (#150, #156)
-
-- [ ] **H1** On the iPhone, open History and find a Workout from the week of Monday 26 Oct 2026 (the Assessment's, if it was then). Its week reads "26 Oct – 1 Nov" (or "Oct 26 – Nov 1", as your region orders dates), not "25 Oct – 31 Oct", and the next week "2 Nov – 8 Nov". The clocks went back on Sun 1 Nov, which moved iOS's label a day early.
-
-## Sentry (#122)
-
-On hold: these were written for a staging deploy, which isn't being built. They need rewording to check production once M6 reaches `main`. Until then, they need Sentry set up and staging deployed with its variables: see "Error reporting" in `docs/agents/workouts.md`. Run these on the installed web app on the iPhone, against staging, signed in with a test account.
-
-- [ ] **E1** The web app: open `/debug-error` on the staging web app (type it after the address in Safari). Within a minute, Sentry has "Test error from the web app (/debug-error)" under the staging environment, with a stack trace and your Clerk user id (`user_…`) as the user, and no email, IP address or headers.
-  - iPhone: Result: ⏭ · Notes: Needs staging and Sentry.
-- [ ] **E2** The API: the same page also asks the staging API to throw, and says "the API answered: … Test error from the API". Sentry has "Test error from the API (GET /debug/error)" under staging, with a stack trace, the transaction `GET /debug/error` and your Clerk user id, and no headers, body or query string.
-  - iPhone: Result: ⏭ · Notes: Needs staging and Sentry.
-- [ ] **E3** Production stays apart: an error on staging never shows under production, and the local app (no DSN) sends nothing.
-  - Result: ⏭ · Notes: Needs staging and Sentry.
-
-## Over time
-
-🕒 Skip for now: these need real weeks of training. Run them once you're training on the app.
-
-- [ ] **P16** A new week: open the app on Monday. The plan is built for the new week, with nothing carried over. The walk couldn't show this, as it can't move the server's clock, so wait for a real Monday.
-  - iOS: Result: 🕒 · Android: Result: 🕒 · Notes: Skip for now: needs a real Monday.
-- [ ] **P17** Week after week, do the same Exercises carry on, and do Previous Sets stay useful?
-  - iOS: Result: 🕒 · Android: Result: 🕒 · Notes: Skip for now: needs weeks of training.
+- [ ] **C5** 🕒 The next day the check-in is gone: the card is back (if there's a plan) and the Workout is full.
+  - Result: · Notes:
 
 ## Recovery Workout (#97)
 
-Needs `pnpm --filter @fit/api seed:exercises` run once from the main checkout (it needs `apps/api/.env`), so the Exercises tab lists the five Recovery Exercises.
+- [ ] **R1** On a real Rest Day, Today shows the "Rest today." card with a "Recovery workout instead" link, which opens the Recovery Workout (a 20-minute walk, then four stretches). The Workout itself has passed from a training day's sheet; only the card hasn't been seen.
+  - Result: · Notes:
 
-- [x] **R1** On a Rest Day, the "Rest today." card has a "Recovery workout instead" link. Tap it: a Workout opens with a 20-minute walk, then hip flexor stretch, open book, cat-cow and world's greatest stretch at 2 × 45 s each, logged on the normal timed-Set screen. The walk's target reads "1 set · 20 min". Log it: no rest timer starts, and in place of a Set 2 there's "Next exercise", which opens the hip flexor stretch. A stretch's Set still starts its usual rest (1:10), and still offers a Set 3 after its 2.
-  - iOS: Result: ⚠️ · Android: Result: ⚠️ · Notes: Started from "Recovery workout instead" in a training day's sheet, not a Rest Day card, so the "Rest today." card wasn't seen. Walk "1 set · 20 min", then hip flexor stretch, open book, cat-cow and world's greatest stretch at 2 × 45 s. Logging the walk: no rest timer, "Next exercise" opened the hip flexor stretch. Stretch Set: rest 1:10, and Set 3 offered after 2. ⚠️ The walk's stepper reads "1200 s", not minutes (the logged Set reads "20 min"). On a physical phone this was the same as android simulator test
-- [x] **R2** The walk's stepper reads in minutes (#145). Start a Recovery Workout: the walk's stepper reads "20 min", as its target and the logged Set do. Tap + : "21 min"; − twice: "19 min". Tap into the field: it shows "1140 s" while you type; type 900 and tap away: "15 min". On a stretch, the stepper reads "45 s" and steps by 5 s; from "55 s", + reads "1 min" and − from there "55 s".
-  - iOS: Result: ⏭ · Android: Result: ✅ · Notes: Session 3 (simulators, PR #151): Android emulator. Walk "20 min"; + "21 min"; − twice "19 min". In the field it showed "1140 s", selected; typed 900: "15 min". The logged Set read "15 min". Hip flexor stretch "45 s", up by 5 s to "55 s", then + "1 min" and − "55 s".
+## Units (#126, #148)
 
-## Jumps (#105)
-
-Needs `pnpm --filter @fit/api seed:exercises` run once from the main checkout (it needs `apps/api/.env`), so the Exercises tab lists the six jumps. Use an athletic profile with no knee or ankle injury, whose Assessment tested the squat rather than estimating it.
-
-- [x] **J1** Profile shows an "Include jumps" switch under Training, off, and only while the Goal is athletic. Turn it on, then open Today: the plan's sheet opens with two jumps, each "3 sets · N contacts" (for example "3 sets · 10 contacts"), one that goes up (pogo hop, squat or countermovement jump, box jump) and one that goes forward or sideways (broad jump or lateral bound). Start the Workout: the jumps come first, and a jump still to come reads "3 sets · N contacts" in the list of Exercises. Log a jump Set: the stepper says "contacts", with no weight field, the logged Set reads "N contacts", and it uploads. The Workout's detail in History and Today's Last workout also say "contacts" for it (#141). Turn the switch off: Today's plan has no jumps. Turning it back on, or a knee injury in the profile, also works as expected.
-  - iOS: Result: ✅ · Android: Result: ✅ · Notes: Session 3 (simulators, PR #151): Pogo hop "3 sets · 10 contacts" and Broad jump "3 sets · 6 contacts" in the sheet and, still to come, in the Workout's list. The logged Set read "10 contacts" on both. Android: the Workout's detail in History and Today's Last workout said "Pogo hop · 10 contacts". Switch off and the knee injury not rerun.
-- [ ] **J2** Over a week with the switch on: the first 2 Workouts have jumps and the rest don't, and the second jump Workout has different jumps from the first. On a Quick Workout the jumps stay, all 3 Sets each, and something else is cut.
-  - iOS: Result: 🕒 · Android: Result: 🕒 · Notes: Skip for now: needs a week. Seen on the simulators: after one jump Workout, a 4th (extra) Workout that week planned one jump, Squat jump, different from the Pogo hop.
-
-## Units (#126)
-
-- [x] **U1** An existing account shows every load in lb with nothing chosen: Profile's "Weights in" has lb picked, and Today's plan, the logging screen (target, Last, Sets, stepper), History, a Workout's detail, Volume everywhere and the Equipment Profile's weights all read in lb. Log a Set of 25 lb: it reads 25 lb in the Set row, History and as Last next time, never 24.9. Pick kg on Profile: the same screens switch to kg, and the 25 lb Set reads 11.5 kg. With the loads unknown (a home profile with dumbbells but no weights entered), the load stepper moves by 5 lb or 2 kg.
-  - iOS: Result: ✅ · Android: Result: ⏭ · Notes: lb picked with nothing chosen. Plan, logging (target, Last, Sets, stepper), History, the detail and Volume all read lb. 25 lb Set read 25 lb in the row, History and as Last; after picking kg, 11.5 kg. Equipment profile reads in lbs. Profile still shows body weight as "80 kg" with lb picked.
-- [x] **U2** Body weight follows "Weights in" (#148). With lb picked, Profile shows an 80 kg body weight as "176.4 lb". Edit profile: "About you" asks "Weight (lb)", filled with 176.4. Save without touching it: Profile still reads 176.4 lb, and 80 kg once kg is picked. Edit again in lb: clear the weight by hand, deleting every digit, and it stays empty (#154); save it empty and it says "Enter your weight". Type 180 and save: Profile reads 180 lb, never 179.9. Pick kg: it reads 81.6 kg, and Edit profile asks "Weight (kg)". A new account's onboarding asks "Weight (lb)".
-  - iOS: Result: ✅ · Android: Result: ⚠️ · Notes: Session 3 (simulators, PR #151): iOS: Profile "176.4 lb"; Edit profile asked "Weight (lb)" with 176.4; 180 saved as exactly 180 lb (81.6466 kg through the API). Not seen on iOS: the kg view and onboarding. Android: "176.4 lb"; saved unchanged, stayed exactly 80 kg; with kg, "80 kg" and "Weight (kg)". ⚠️ Typing 180 on Android failed: emptying the weight field put 176.4 back, with "Enter your weight" under it. Probably the emulator's injected key events (the height field misbehaved the same way), but try clearing the field by hand once. Onboarding not tried. **Rerun after #154: ✅ on Android.** Emptying the weight field leaves it empty. 180 typed in and saved reads "180 lb" (81.6466 kg stored), and height is unchanged.
+- [ ] **U1** On a home Equipment Profile with dumbbells but no weights entered, the load stepper moves by 5 lb, or 2 kg once kg is picked.
+  - Result: · Notes:
+- [ ] **U2** A new account's onboarding asks "Weight (lb)". After saving 180 lb in Edit profile, picking kg reads 81.6 kg on Profile, and Edit profile asks "Weight (kg)".
+  - Result: · Notes:
 
 ## Load Steps (#127)
 
-- [x] **LS1** On a gym profile in lb, Today's dumbbell targets are 5 lb steps (25, 30, 35 lb), barbell ones are 45 lb plus pound plates (135, 140 lb) and cable ones are 10 lb steps. On the logging screen the stepper moves 25 → 30 lb on dumbbells, 135 → 140 lb on a barbell and 100 → 110 lb on a cable. An Exercise that takes dumbbells or kettlebells, such as Renegade row, is planned on a dumbbell (a 5 lb step, never a 17.5 lb kettlebell) and steps 25 → 30 lb on dumbbells, never to a 26.5 lb kettlebell; typed at 26.5 lb, it steps 26.5 → 35.5 lb through the kettlebells. Recheck for #149 and #155 (a fresh Assessment, or a profile added since: a Working Level stored on a kettlebell stays there). Switch to kg on Profile: the targets become 2.5 kg dumbbells, a 20 kg bar and 5 kg cable steps.
-  - iOS: Result: ❌ · Android: Result: ❌ · Notes: Session 3 (simulators, PR #151): Renegade row is planned at "17.5 lb × 8 per side" on both: an 8 kg kettlebell, not a dumbbell. On Android its stepper went 17.5 → 26.5 → 35.5 → 44 lb, all kettlebells, and no lower than 17.5, so it never reaches the dumbbell steps. The API shows its Working Level as 8 kg, set by the Assessment: seeding picks the heaviest load across both kinds, while #149 keeps the stepper on the kind the load is on. Single-arm kettlebell swing stepped 26.5 → 35.5 → 44 lb, kettlebells only, as expected. Barbell and cable steps not rechecked. **Rerun after #155 (92ee30b): ✅ on Android.** Renegade row's Working Level is now seeded at 6.8 kg, a 15 lb dumbbell. It's planned at "15 lb × 8 per side", and its stepper goes 15 → 20 → 25 → 30 lb and back down to 10 lb, all dumbbells. iOS gets the same plan from the server; its stepper wasn't rerun.
-
-- [x] **LS2** Edit the gym profile (Profile → Training): a stage asks only for "Cable and machine step (lb)", filled with 10. Change it to 15 and save: Today's cable targets and the cable stepper now move in 15 lb steps. On a home profile with a cable machine selected, the same field shows on the weights stage next to the other equipment.
-  - iOS: Result: ✅ · Android: Result: ⏭ · Notes: Edit profile's weights stage asked only "Cable and machine step (lb)", filled with 10. 15 saved: Today's cable target became 45 lb and the stepper moved 40 → 45 → 60. Not tried: the home-profile variant.
+- [ ] **LS2** On a home Equipment Profile with a cable machine selected, the weights stage shows "Cable and machine step (lb)" next to the other equipment, and the step saved there moves the cable targets and stepper.
+  - Result: · Notes:
 
 ## PRs (#130)
 
-On the phone builds against the API on your Mac (the installed PWA later), once an Exercise has a Workout behind it (the first Workout on an Exercise is only a baseline). The web build walked both checks with the in-memory API; these are for the phone.
+- [ ] **PR1** Beat an Exercise's best with signal and Save workout. While the "Workout saved. New PR: …" toast is up (about 10 s), tap **See workout**: it opens the Workout in History with "New PR · …" under that Exercise.
+  - Result: · Notes:
 
-- [x] **PR1** With signal, beat an Exercise's best (more kg at the same reps, or more reps) and Save workout. The toast reads "Workout saved. New PR: …" with "See workout", which opens the Workout in History showing "New PR · …" under that Exercise. Today shows no PR note for it.
-  - iOS: Result: ⏭ · Android: Result: ✅ · Notes: Session 3 (simulators, PR #151): Android emulator. Bench 135 lb × 6, 6 after the Assessment's 60 kg × 5: "Workout saved. New PR: Barbell bench press" with See workout, still up at 6 s and gone by 11 s. History row "New PR"; detail "New PR · Estimated max 162 lb, up from 154 lb". No note on Today. See workout not tapped.
-- [x] **PR2** In airplane mode, beat a best again and save. Straight away (within 10 seconds), pull down Control Center, turn airplane mode off and go back to the app: once it uploads, Today shows a green note naming the PRs with "See workout", and no "New PR" toast. Close and reopen the app: the note is gone, and the Workout's History row says "New PR". Recheck for #142.
-  - iOS: Result: ⏭ · Android: Result: ✅ · Notes: Session 3 (simulators, PR #151): Android emulator, offline by cutting its connection to the API (not airplane mode). Bench 145 lb × 6, 6 saved offline: "Saved on your phone; it will upload when you have signal", Last workout "Waiting to sync". Reconnected, sent the app to the background and back: a green note "New PR: Barbell bench press · Today, 5:29 PM", "Estimated max 174 lb, up from 162 lb", See workout, and no toast. Force-quit and reopened: the note was gone, and the History row said "New PR".
+## Jumps (#105)
 
-## Double progression (#132)
+- [ ] **J2** 🕒 Over a week with "Include jumps" on: the first 2 Workouts have jumps and the rest don't, and the second jump Workout has different jumps from the first. On a Quick Workout the jumps stay, all 3 Sets each, and something else is cut.
+  - Result: · Notes:
 
-On the phone builds against the API on your Mac (the installed PWA later), after the Assessment. Route tests cover the rules; these are for the screen.
+## Over time
 
-- [x] **DP1** Do a Workout and log every Set of one weighted Exercise at its target or more, at the prescribed weight. Once it uploads, open the Next Workout sheet on Today: if the Exercise is planned again, its target is 1 rep more and under it reads "One more rep: every Set reached the target." An Exercise whose Set fell short shows its old target and no line.
-  - iOS: Result: ✅ · Notes: Native app on simulators. Renegade row at 25 lb × 8 every Set: next sheet "25 lb × 9" with "One more rep: every Set reached the target." The Workout in between was uploaded through the API to get the Exercises planned again. Same lines on Android.
-- [x] **DP2** Log 2 or more Sets of a weighted Exercise at a different weight from the one prescribed. Next time it's planned, its target is that weight at the fewest reps you did, with "From the weight you lifted last time."
-  - iOS: Result: ✅ · Notes: Bench at 135 lb × 6, 6 (prescribed 125): next sheet "135 lb × 6" with "From the weight you lifted last time." (60 kg once switched to kg).
+- [ ] **P16** 🕒 A new week: open the app on Monday. The plan is built for the new week, with nothing carried over.
+  - Result: · Notes:
+- [ ] **P17** 🕒 Week after week, do the same Exercises carry on, and do Previous Sets stay useful?
+  - Result: · Notes:
 
 ## Deload week and the retest (#137)
 
-🕒 Skip for now. On the phone builds against the API on your Mac (the installed PWA later), in the 5th week of a Block: the week starting 4 Mondays after the Monday of the week the Assessment's B was done. Route tests cover the rules; these are for the screen.
+🕒 In the 5th week of a Block: the week starting 4 Mondays after the Monday of the week the Assessment's B was done.
 
 - [ ] **DL1** In the deload week, open the Next Workout sheet on Today: the Exercises and Sets are as usual, weighted targets about 10% lighter (on a real dumbbell, plate or stack step), and bodyweight, band and timed targets about 70% of last week's (never under 5 reps or 15 s unless they were already). Below the plan, a "Retake the Assessment" section explains that only the Exercises it tests, and any not done this Block, get new levels, with Start assessment A. The wording reads well and doesn't feel pushy.
-  - iOS: Result: 🕒 · Notes: Skip for now: needs the 5th week of a Block.
+  - Result: · Notes:
 - [ ] **DL2** Dismiss the retest with the ×: it stays gone for the rest of the week. On the Monday after, the plan is back to the usual loads and there's no retest. Or, instead, take A and B in the deload week: the Results open as usual, and next week an Exercise you trained this Block but the Assessment didn't test keeps the target it had reached.
-  - iOS: Result: 🕒 · Notes: Skip for now: needs the 5th week of a Block.
+  - Result: · Notes:
 
-## RPE on the last Set (#133)
+## Daily Targets (#160)
 
-On the phone builds against the API on your Mac (the installed PWA later), after the Assessment. Route tests cover the hold; the web build walked the chips with the in-memory API; these are for the phone.
+M7 checks run on the phones' Release builds against the API on the Mac.
 
-- [x] **RPE1** Start the Next Workout and log a weighted Exercise's Sets. Until its last planned Set, nothing asks for RPE. Once the last is logged, "How hard was set N? Optional: 10 is no more reps" and chips 6–10 show under the Sets, with Log set and the rest timer where they were. Go on to the next Exercise without tapping one: nothing stops you. Back on the first, tap 10: it highlights; tap it again and it clears. In a Manual Workout the chips show after every Set, for the latest. Editing a rated Set keeps its RPE.
-  - iOS: Result: ✅ · Notes: Native app on the iOS simulator. No chips until the last planned Set, then "How hard was set 3? Optional: 10 is no more reps" with 6–10. Moving on without rating was fine. 10 highlighted, and tapping again cleared it (tried on a later Exercise, not the first). Editing the rated Set kept its RPE. Shows on a manual workout after every set as expected.
-- [x] **RPE2** Rate the last Set of a weighted Exercise 10 where every Set reached its target, and save. Once it uploads, the Next Workout sheet (if it plans the Exercise again) keeps the same weight and target, with "Held: your last Set was RPE 10, all you had." under it.
-  - iOS: Result: ✅ · Notes: Lateral raise, every Set at target, last rated 10: next sheet kept 10 lb × 8 with "Held: your last Set was RPE 10, all you had." Same on Android.
+Run each offline check (DT5, WI6, F4, FL6, SC6, CR6, WA5, TC4) twice: once with airplane mode on before the app opens, and once turning it on with the app already open. Either way, the connection message shows at once, with no spinner first (#171). The app doesn't call the server while the phone says it has no network.
 
-## Library gaps (#101)
+- [x] **DT1** Today opens with four equal rings above the Today card: kcal left, g protein left, fibre and water. With nothing eaten, kcal and protein show the whole targets, fibre and water show 0 of theirs (water in L), and every ring is empty. Tapping a ring does nothing.
+  - iOS: Result: ✅ · Android: Result: ✅ · Notes: Session 5 (simulators, M7): Four rings over the Today card: 2,410 kcal left, 128 g protein left, 0 of 96 g fibre, 0 of 2.75 L, all empty.
+- [x] **DT2** On Profile, change the Goal (Edit profile), the Activity Level and the fibre target in turn. Back on Today, the rings show the new targets each time. Clearing the fibre target ("Follow calories") puts the fibre ring back to 40 g per 1,000 kcal.
+  - iOS: Result: ⏭ · Android: Result: ✅ · Notes: Session 5 (simulators, M7): Android: a 50 g fibre target made Today's fibre ring "0 of 50 g fibre". Goal, Activity Level and clearing the target not tried.
+- [x] **DT3** A new account's onboarding asks "How active are you?" after the Goal, with the four levels described by job and steps, and won't go on without one. Profile then shows it under Nutrition.
+  - iOS: Result: ⏭ · Android: Result: ✅ · Notes: Session 5 (simulators, M7): Android onboarding asked "How active are you?" after the Goal (step 3 of 6), with the four levels by job and steps; Next without one stayed on the step. Profile shows "Lightly active" under Nutrition.
+- [x] **DT4** An account onboarded before M7 (no Activity Level) sees "How active are you?" under the rings on Today. Picking a level saves it and the card goes, and the kcal ring changes unless lightly active was picked. On a second such account, "Not now" hides it for good, also after a force-quit, with the rings counting it as lightly active.
+  - iOS: Result: ✅ · Android: Result: ⏭ · Notes: Session 5 (simulators, M7): iOS: an account onboarded through the API with no Activity Level saw the card under the Coach's summary. Picking Active hid it, and kcal went 2,410 → 2,710 (fibre 96 → 108 g). "Not now" not tried.
+- [x] **DT5** Offline, Today shows no rings and nothing breaks; back online, they come back on the next visit to Today.
+  - iOS: Result: ✅ · Android: Result: ✅ · Notes: Session 5 (simulators, M7): Android, API cut: a cold start shows Today with no rings and "No connection. Workouts save on this phone until there is."; nothing broke. Coming back to Today while the app is open keeps the last rings it had.
 
-Needs `pnpm --filter @fit/api seed:exercises` run once from the main checkout (it needs `apps/api/.env`), so the Exercises tab lists the six new Exercises.
+## Weigh-ins (#161)
 
-- [x] **L1** The Exercises tab lists Calf raise, Nordic hamstring curl, Dumbbell curl, Dumbbell overhead triceps extension, Cable knee extension and Table row, each with its cues. Switch Today to Bodyweight only: a back Exercise the plan had (a row or pull-up) offers Table row as its Alternative Exercise, where it used to offer nothing for a lats pull. With a build_muscle or athletic profile, the plan's reasons and Workouts don't break on calves, which are now in the Weekly Budget.
-  - iOS: Result: ✅ · Android: Result: ⏭ · Notes: All six are in the library with 3 cues each; Calf raise and Cable knee extension seen in the Exercises tab. Bodyweight only: Table row "Instead of Renegade row". Athletic plans and reasons didn't break.
+Body weight is a weekly Weigh-in now, and the latest one is the weight everything reads. When the `dev` API first starts with this change, it gives every existing account a first Weigh-in from its stored weight.
+
+- [x] **WI1** On an account onboarded before this change, Profile's Nutrition section shows Weight as the weight it had, dated the day it onboarded, with Log weight under it, and Weigh-in Day as Monday. The Profile section has no Weight row any more, and Edit profile doesn't ask for a weight.
+  - iOS: Result: ✅ · Android: Result: ⏭ · Notes:
+- [x] **WI2** On the Weigh-in Day (set it to today's weekday on Profile if today isn't Monday), Today shows "Log this week's weight" under the rings. Set the Weigh-in Day to another day: the row goes. Set it back and log a Weigh-in from the row: the row goes and stays gone after a force-quit, and the rings show the targets for the new weight.
+  - iOS: Result: ✅ · Android: Result: ⏭ · Notes:
+- [x] **WI3** With Weights in set to lb, Log weight shows the latest in lb. Log 180: Profile shows 180 lb, not 179.9 or 180.1. Switch to kg: it shows 81.6 kg. Log 82 in kg, then switch back to lb: 180.8 lb.
+  - iOS: Result: ✅ · Android: Result: ⏭ · Notes: Session 5 (simulators, M7): iOS: Log weight opened on 176.4 (lb); 180 saved reads "180 lb · Thu 19 Nov" (81.6466 kg stored), and the targets rose to 2,740 kcal. The kg steps not tried.
+- [x] **WI4** Log weight offers Today, Yesterday and the 5 weekdays before, Today picked. Log a weight for an earlier day this week, then another for today: Profile shows only the second, dated today, and the rings follow it. Log one for a day last week (when the days offered reach into it): Profile still shows this week's.
+  - iOS: Result: ⚠️ · Android: Result: ⏭ · Notes: Session 5 (simulators, M7): iOS: offers Today, Yesterday, Tuesday … Friday, Today picked. Logging on an earlier day not tried.
+- [x] **WI5** A new account's onboarding asks the weight as before. Once it's done, Profile shows that weight dated today, and Today doesn't ask for this week's weight even on the Weigh-in Day.
+  - iOS: Result: ⏭ · Android: Result: ✅ · Notes: Session 5 (simulators, M7): Android onboarding asked "Weight (lb)"; Profile then read "180 lb · Thu, Nov 19", and Today asks nothing with the Weigh-in Day set to today.
+- [ ] **WI6** Offline, Log weight's Save shows "Couldn't log your weight" and Profile keeps the weight it had. Back online, logging works. Cancel, and on the iPhone a swipe down, close the sheet at any time, even while Save is loading (#172).
+  - iOS: Result: ⚠️ · Android: Result: ⏭ · Notes: Turning on airplane mode after the app starts, the save button continues to load and there is no way to dismiss the box, no "Cpuldn't log your weight err"
+
+## Finding food (#162)
+
+`apps/api/.env` needs `USDA_API_KEY` (a free key from https://fdc.nal.usda.gov/api-key-signup). Without it the API logs "USDA_API_KEY isn't set" at start and every search finds nothing.
+
+- [x] **F1** On Food, type "egg" in Search foods: after a moment, generic foods ("Eggs, Grade A, Large, egg whole") come first, each with its kcal per 100 g, then branded ones with their brand ("Egg bagels, egg", Lender's). Names read in normal case, not capitals.
+  - iOS: Result: ✅ · Android: Result: ⏭ · Notes: Session 5 (simulators, M7): iOS: "egg" listed Eggs, Grade A, Large (egg white, egg whole, egg yolk), Bagels, egg and Bread, egg, then branded ones with brands (Snickers, Galerie, Just, Albertsons). USDA's `DEMO_KEY` was over its limit all session, so the answers were ones saved from earlier runs (a 5-result page).
+- [x] **F2** Generic foods have USDA's household servings now. Tap "Eggs, Grade A, Large, egg whole": it opens on its serving, "× 1 egg whole without shell · 50 g" (50.3 g, rounded on screen), with "74 kcal · 6.2 g protein · 0 g fibre". Type 2: the grams and figures double. Tap Grams: it switches to 100 g, "148 kcal · 12.4 g protein · 0 g fibre". Clear the box: "Enter how much". A generic food with several servings ("Bagels, egg") offers each, smallest to largest, as USDA lists them. Tap the food again to close it; opening another closes the first.
+  - iOS: Result: ✅ · Android: Result: ⏭ · Notes: Session 5 (simulators, M7): iOS: egg whole opened on "1 egg whole without shell", "× 1 egg whole without shell · 50 g", 74 kcal · 6.2 g protein · 0 g fibre; 2 read 101 g, 149 kcal · 12.5 g. The label rounds the grams (50.3 g).
+- [x] **F3** Tap a branded food with a label serving, such as Lender's "Egg bagels, egg": it opens on its serving ("1 bagel"), showing "× 1 bagel · 81 g" and what one holds. Type 2: the grams and figures double. Tap Grams: it switches to 100 g. A branded food whose serving is in ml (JUST Egg) offers grams only.
+  - iOS: Result: ✅ · Android: Result: ⏭ · Notes:
+- [x] **F4** In airplane mode, a search says "Searching for food needs a connection." and nothing breaks; back online, searching again works. When USDA doesn't answer (`DEMO_KEY` past its hourly limit does it), a search still lists your matching Saved Foods, under "Food search isn't answering, so only your Saved Foods are listed. Try again in a minute." With the API running without `USDA_API_KEY`, a search shows "No foods match", never an error.
+  - iOS: Result: ⚠️ · Android: Result: ✅ · Notes: Session 5 (simulators, M7): Android: with the API cut, a search said "Searching for food needs a connection." With USDA refusing (`DEMO_KEY` at 0), "Maple bar" and "maple" listed the Saved Food under "Food search isn't answering, so only your Saved Foods are listed. Try again in a minute." The no-key case not run. Turning on airplane mode after the app opens
+
+## Logging food (#163)
+
+Needs `USDA_API_KEY` as for F1–F4. The Food tab opens on today: the day stepper, three rings (kcal left, protein left, fibre), Search foods, Scan (SC1–SC6) and Today so far with Breakfast, Lunch, Dinner and Snacks. Water's glasses are WA1–WA5.
+
+- [x] **FL1** On Today, tap any ring: the Food tab opens. Open Breakfast ("Nothing yet") and tap "+ Add to breakfast": the search box takes the cursor and reads "Search foods for breakfast". Search "egg", open "Eggs, Grade A, Large, egg whole", type 2 (of its serving), and Breakfast is already picked: tap "Add to breakfast". The search clears, Breakfast is open with "Eggs, Grade A, Large, egg whole, …" and its kcal, its line says "1 food · … kcal", and the header and rings take it off what's left. Back on Today, its kcal and protein rings say the same.
+  - iOS: Result: ✅ · Android: Result: ⏭ · Notes: Session 5 (simulators, M7): iOS: "+ Add to breakfast" focused the search; 2 of the egg's serving with Breakfast picked added it. Breakfast read "1 food · 149 kcal" and the rings went 2,710 → 2,561 kcal, 128 → 116 g on Food and Today.
+- [x] **FL2** Search a food without tapping an Add first: it opens with no meal picked and the button reads "Choose a meal" until one is. Log two foods into Lunch: Lunch says "2 foods" and the sum of their kcal.
+  - iOS: Result: ✅ · Android: Result: ✅ · Notes: Session 5 (simulators, M7): Android: a food from search had no meal and "Choose a meal". iOS: Breakfast read "2 foods · 288 kcal".
+- [x] **FL3** Tap a logged food: it opens on the portion it was logged with. Change the amount (the figures follow as you type), pick Dinner and Save: it leaves Breakfast, Dinner opens with it, and the totals and rings change to the new portion. Tap it again, Delete, confirm: it's gone and the totals drop. Cancel on the confirmation leaves it.
+  - iOS: Result: ✅ · Android: Result: ✅ · Notes: Session 5 (simulators, M7): iOS: the tuna opened on its 100 g, 200 g read 232 kcal as typed, Dinner + Save moved it and the rings followed. Android: Delete asked "Delete this food?"; Cancel kept it, Delete removed it and the totals dropped.
+- [x] **FL4** Step back with ‹: "Yesterday", then "2 days ago" down to "6 days ago", where ‹ greys out; › greys out on Today. Each day shows its own meals and rings. Log a food on "3 days ago": it shows there and not on Today. Step back to Today: Today's meals are as you left them.
+  - iOS: Result: ⏭ · Android: Result: ✅ · Notes: Session 5 (simulators, M7): Android: ‹ seven times stops at "6 days ago" with ‹ disabled.
+- [x] **FL5** With your phone's timezone moved to one where it's already tomorrow (or late in the evening, before midnight), "Today" on the Food tab is today where the phone says, and a food logged then counts for that day.
+  - iOS: Result: ✅ · Android: Result: ⏭ · Notes:
+- [x] **FL6** In airplane mode, open the Food tab (or step to another day): it says "Logging food needs a connection. Nothing is saved on this phone until you have one." With a day already showing, change a portion and Save, or Add a food: a toast says logging needs a connection and nothing was saved, and what you chose stays open to try again. Back online, Save or Add again: it's logged once, with nothing doubled.
+  - iOS: Result: ⚠️ · Android: Result: ✅ · Notes: Session 5 (simulators, M7): Android, API cut: Save on a changed portion toasted "Logging food needs a connection. Nothing was saved: try again when you have one." and the editor stayed open. Back online the day had the one entry, nothing doubled. Cut the emulator with a proxy that can be killed: removing `adb reverse` leaves the app's open socket hanging (no request timeout), so writes then wait for ever. When searching the loading spinner continues to run for 15 sconds and then the text appears. Should the app know there is no connection and not even try to call the api?
+
+## Scan, Create food and Saved Foods (#164)
+
+Needs a build made after `npx expo prebuild` (step 10), since the camera is new native code. The iOS Simulator has no camera. Barcodes are looked up in the user's Saved Foods, then Open Food Facts (no key), then USDA's branded foods (`USDA_API_KEY`). On the web build Scan isn't there at all.
+
+- [x] **SC1** On Food, Scan sits beside Search foods. Tap it: the phone asks to use the camera, saying it's for scanning the barcodes on food you log. Allow it: the camera opens full screen with "Point the camera at the barcode on the package" and Cancel. Cancel closes it. Deny instead (on a fresh install): a toast says scanning needs the camera, and search still works.
+  - iOS: Result: ⏭ · Android: Result: ✅ · Notes: Session 5 (simulators, M7): Android: Scan asked for the camera (Android's own wording; the purpose text is iOS only). Don't allow toasted "Scanning needs the camera. Allow it in Settings, or search instead."; allowing opened the camera full screen with "Point the camera at the barcode on the package" and Cancel, which closed it. iOS Simulator has no camera.
+- [x] **SC2** Scan a Canadian product from the cupboard (for example Kraft Smooth Peanut Butter, 0068100084245): the camera closes after one read, and "Scanned" shows the product with its brand and kcal per 100 g, opened on its label serving ("1 tbsp", 15 g). Pick a meal and add it: it's logged, as FL1.
+  - iOS: Result: ✅· Android: Result: ⏭ · Notes:
+- [x] **SC3** Scan a product Open Food Facts doesn't have (a store's own brand, or something small-batch): Create food opens, saying nothing has the barcode yet. Fill in the name, the serving ("1 bar", 45) and the label's kcal, protein, carbs and fat, leaving fibre empty, and tap Create food: it shows as "From your Saved Foods", opened on its serving with the figures you typed and 0 g fibre. Add it to a meal. An empty name or grams says what to fix, and keeps what you typed. From search instead: search for something nothing matches and tap "Create food from its label" under the results: Create food opens with the words searched as its name.
+  - iOS: Result: ⏭ · Android: Result: ✅ · Notes: Session 5 (simulators, M7): Android, from search: "Create food from its label" under "Maple bar" opened Create food named "Maple bar" (review S5). 1 bar, 45 g, 200 kcal, 4/30/8 g saved, showed as "Saved food · 444 kcal per 100 g" on 1 bar and logged to Snacks. The scan path not run.
+- [x] **SC4** Scan the same product again: it's found straight away as your Saved Food, without Create food. Search its name (any word of it, in any case): it comes first, marked "Saved food", above the USDA results.
+  - iOS: Result: ⏭ · Android: Result: ✅ · Notes: Session 5 (simulators, M7): Android: "maple" found it first, marked "Saved food". USDA was refusing, so it wasn't shown above USDA results. Scanning not run.
+- [x] **SC5** Open the Saved Food from search, tap "Edit saved food", change its kcal and Save: the food shows the new figures, and logging it again uses them. The entry you logged in SC3 still shows the old kcal on its day. Edit it again and "Delete from Saved Foods": it's gone from search, scanning it offers Create food again, and the logged entry is still there.
+  - iOS: Result: ⏭ · Android: Result: ✅ · Notes: Session 5 (simulators, M7): Android: Edit saved food, 250 kcal, Save: search reads 556 kcal per 100 g, and the logged entry kept 444 per 100 g. Delete from Saved Foods not tried.
+- [x] **SC6** In airplane mode, scan a barcode: a toast says finding food needs a connection, and nothing else happens. Create food's Save offline says the same and keeps the form open. Back online, both work.
+  - iOS: Result: ✅ · Android: Result: ⏭ · Notes: S
+
+## Copy from yesterday and Recent (#165)
+
+The Food tab has a two-part control at the top: _Today so far_ (the day, as FL1–FL6) and _Ideas and recent_: the Coach's summary and Food Ideas (FI1–FI6), then Recent and Saved Foods.
+
+- [x] **CR1** The Food tab opens on "Today so far", highlighted in the two-part control. Tap "Ideas and recent": the day stepper, rings, glasses and meals give way to the Coach's summary, Food Ideas and "RECENT AND SAVED". Tap "Today so far": they're back as you left them.
+  - iOS: Result: ✅ · Android: Result: ✅ · Notes: Session 5 (simulators, M7): Ideas and recent shows the Coach's summary, two Food Ideas, the Diet chip, then RECENT AND SAVED; Today so far comes back as left.
+- [x] **CR2** With yesterday's Breakfast logged (two foods, say) and one food already in today's: open today's Breakfast and tap "Copy from yesterday". Yesterday's foods appear after the one already there, nothing is replaced, and the line, header and rings add them. Change the portion of one copy and Save, then step back to "Yesterday": its Breakfast is as it was.
+  - iOS: Result: ✅ · Android: Result: ⏭ · Notes: Session 5 (simulators, M7): iOS: yesterday's 2 foods (seeded through the API) were added after today's 2 (4 foods · 552 kcal). Moving a copy left Yesterday at 2 foods · 264 kcal. A retried add with the same request id answered 200 and added nothing (through the API).
+- [x] **CR3** Open a meal that had nothing yesterday and tap "Copy from yesterday": a toast says nothing was logged in it the day before, and nothing is added. Step back to "Yesterday": the button reads "Copy from the day before" and copies from 2 days ago into yesterday.
+  - iOS: Result: ✅ · Android: Result: ✅ · Notes: Session 5 (simulators, M7): "Nothing was logged in dinner the day before." on iOS, "… in snacks …" on Android. Yesterday's button reads "Copy from the day before".
+- [x] **CR4** On "Ideas and recent", your Saved Foods come first, starred, then the foods you've logged, most recent first, each once (a food logged twice, or copied, shows once). Tap one: it opens to choose a portion and a meal, as a search result does; tap it again to close it. Pick Snacks and "Add to snacks": the tab goes back to Today so far with Snacks open and the food in it, and that food is now first in Recent.
+  - iOS: Result: ✅ · Android: Result: ✅ · Notes: Session 5 (simulators, M7): iOS: the egg showed in Recent after logging it. Android: the Saved Food first and once, though also logged, then Tuna in water.
+- [x] **CR5** Edit a Saved Food's kcal (from search, SC5), then open it from "Ideas and recent": it shows the new figures, and it's listed once. On a fresh account with nothing logged or saved, "Ideas and recent" says the foods you log and save show there.
+  - iOS: Result: ⏭ · Android: Result: ✅ · Notes: Session 5 (simulators, M7): Android: after SC5's edit the Saved Food is listed once on Ideas and recent. The fresh-account wording not checked.
+- [x] **CR6** In airplane mode, tap "Copy from yesterday": a toast says logging food needs a connection and nothing is copied. Open "Ideas and recent" with nothing loaded yet: it says recent and saved foods need a connection. Back online, both work, and Copy from yesterday adds yesterday's foods once.
+  - iOS: Result: ✅ · Android: Result: ✅ · Notes: Session 5 (simulators, M7): Android, API cut: Copy from yesterday toasted that logging food needs a connection and nothing was copied. Ideas and recent with nothing loaded not tried.
+
+## Water (#166)
+
+Water is logged on the Food tab, in 250 ml glasses, and only shown on Today.
+
+- [x] **WA1** On the Food tab, under the three rings, "Water · 0 of 2.75 L · tap a glass" (your target in L) sits over a row of empty glasses, one per 250 ml of the target (11 for 2.75 L). Tap any empty glass: one more glass fills from the left and the line reads "0.25 of 2.75 L". Tap empty glasses three times quickly: three more fill, and after leaving the tab and coming back it still shows 1 L.
+  - iOS: Result: ✅ · Android: Result: ✅ · Notes: Session 5 (simulators, M7): 11 empty glasses under "Water · 0 of 2.75 L · tap a glass". iOS: four quick taps filled four from the left, 1 L, still 1000 ml in the API after leaving the tab.
+- [x] **WA2** Tap any filled glass: one glass empties and the line drops by 0.25 L. Tap filled glasses until none is left: it reads "0 of …" and stays there after leaving the tab and coming back.
+  - iOS: Result: ⏭ · Android: Result: ✅ · Notes: Session 5 (simulators, M7): Android: 0.5 → 0.25 → 0 L tapping filled glasses.
+- [x] **WA3** Step back to "Yesterday" and fill two glasses: yesterday shows 0.5 L, and stepping back to Today shows today's water as you left it.
+  - iOS: Result: ✅ · Android: Result: ⏭ · Notes: Session 5 (simulators, M7): iOS: two glasses on Yesterday saved 500 ml there; today kept 1 L.
+- [x] **WA4** With some water logged, Today's water ring shows it ("1" of "2.75 L", a third full). Tap the water ring: the Food tab opens and the water hasn't changed, on Today or the Food tab.
+  - iOS: Result: ✅ · Android: Result: ⏭ · Notes: Session 5 (simulators, M7): iOS: Today's water ring "1 of 2.75 L", a third full.
+- [x] **WA5** In airplane mode, with the Food tab already showing, tap a glass: it fills, then a toast says logging water needs a connection and the glasses go back to what was saved. Back online, tapping works.
+  - iOS: Result: ⏭ · Android: Result: ✅ · Notes: Session 5 (simulators, M7): Android, API cut: the glass filled, then "Logging water needs a connection. Nothing was saved: try again when you have one." and it went back to 0.
+
+## Diet, Food Ideas and the Coach's summary (#167)
+
+The Coach's summary sits under Today's rings and at the top of the Food tab's Ideas half. Its Food Ideas come from a list of about 40 high-protein foods, filtered by your Diet; search and Scan never are.
+
+- [x] **FI1** On Today, with some food logged but the targets not met, a card under the rings reads like "1,036 kcal and 54 g of protein left." with a line under it such as "Cottage cheese and tofu at dinner would cover all of the protein." The numbers match the kcal and protein rings, the meal is the one for the time of day (breakfast before 11:00, lunch before 16:00, dinner before 21:00, then "as a snack"), and nothing mentions fibre or water. On a Weigh-in Day without this week's Weigh-in, the "Log this week's weight" row sits under the card.
+  - iOS: Result: ✅ · Android: Result: ✅ · Notes: Session 5 (simulators, M7): "2,561 kcal and 116 g of protein left." / "Shrimp and tuna in water at breakfast would cover 55 g of the protein." before 11:00, matching the rings; no fibre or water.
+- [x] **FI2** Tap the card: the Food tab opens on Ideas and recent, with the same summary and two Food Ideas under it, each with its portion, kcal and protein ("1 cup · 163 kcal · 28 g protein") and a button named for the meal ("+ Dinner"). Neither idea has more kcal than are left.
+  - iOS: Result: ✅ · Android: Result: ⏭ · Notes: Session 5 (simulators, M7): iOS: Shrimp "1 portion, cooked · 99 kcal · 24 g protein" and Tuna in water "1 can, drained · 139 kcal · 31 g protein", each "+ Breakfast".
+- [x] **FI3** Tap an idea's button: the Food tab switches to Today so far with that meal open, holding the idea at its portion ("Cottage cheese, 1 cup"). Today's kcal and protein rings drop by the idea's kcal and protein, and the summary follows.
+  - iOS: Result: ✅ · Android: Result: ⏭ · Notes: Session 5 (simulators, M7): iOS: + Breakfast on the tuna opened Breakfast with "Tuna in water, 1 can, drained", rings 2,561 → 2,422 kcal, 116 → 85 g.
+- [x] **FI4** On the Ideas half, tap "Diet: Any ✎", choose Vegan, tick Nuts and Save: the chip reads "Diet: Vegan, no nuts ✎" and the ideas change straight away to vegan ones with no nuts (tofu, seitan, a pea protein shake, lentils and so on). In Profile, under Nutrition, the Diet row reads "Vegan, no nuts". Change it there to Vegetarian with Dairy ticked: the Ideas half offers no dairy (no cottage cheese, yogurt or whey). Search for "cheese": cheeses still come up, as search ignores the Diet.
+  - iOS: Result: ⏭ · Android: Result: ✅ · Notes: Session 5 (simulators, M7): Android: Vegan with Nuts ticked: chip "Diet: Vegan, no nuts ✎", ideas Seitan and Pea protein shake. Profile's Diet row and the Vegetarian/Dairy step not tried.
+- [x] **FI5** Log enough protein to meet the protein target: the summary reads "Protein target met, with … kcal left." and the Ideas half offers no ideas. Log enough to pass the kcal target too: it reads "Calorie and protein targets met." and both rings show 0 left.
+  - iOS: Result: ⏭ · Android: Result: ✅ · Notes: Session 5 (simulators, M7): Android: "Protein target met, with 1,651 kcal left." and no ideas; past the kcal target too, "Calorie and protein targets met." with both rings at 0.
+- [x] **FI6** Before 11:00, the idea buttons read "+ Breakfast", and a Recent or Saved Food chosen on the Ideas half has Breakfast picked for it. After 21:00 they read "+ Snacks".
+  - iOS: Result: ⚠️ · Android: Result: ⏭ · Notes: Session 5 (simulators, M7): iOS: before 11:00 the buttons read "+ Breakfast". After 21:00 not tried.
+
+## Tell the coach (#168)
+
+Needs `GEMINI_API_KEY` in `apps/api/.env` (a free key from https://aistudio.google.com/apikey). The real sentences go to Gemini Flash, so these are the only checks of its answers: the route tests use a fake, and the mapping test a response built from Gemini's documented format, as no key was to hand when it was written. It asks `gemini-flash-lite-latest` unless `GEMINI_MODEL` names another; if Tell the coach fails, the API's log gives Gemini's reason ("Gemini answered 404: …").
+
+- [x] **TC1** On Today, under the Coach's summary (and the Weigh-in row on a Weigh-in Day), "Tell the coach" has a box reading "Yesterday I had two eggs and toast". Type "yesterday I had two eggs and toast" and tap Tell (or Send on the keyboard): after a moment a sheet asks "Is this right?" with an egg and a toast, each "Yesterday · Breakfast", with a slider and a line such as "2 × 1 large egg · 100 g · 155 kcal · …". The numbers look about right for eggs and toast. Nothing is logged yet: Cancel, and the Food tab's Yesterday has no new foods.
+  - iOS: Result: ✅ · Android: Result: ⏭ · Notes:
+- [x] **TC2** Tell it the same again. Slide the eggs to 3: the line follows (150 g and its kcal). Slide the toast down. Tap ✕ on one food: it leaves the list and the button says "Log 1 food". Tap it: a toast says "Logged 1 food", the box clears, and on Food, Yesterday's Breakfast has that food at the portion you slid to, and Today has nothing new.
+  - iOS: Result: ✅ · Android: Result: ⏭ · Notes:
+- [x] **TC3** Type a real sentence about today, such as "a chicken salad for lunch and a latte": each food is "Today · Lunch" (the latte may be Snacks) with a sensible portion. Log them: Today's kcal and protein rings drop by their kcal and protein, and they're in Lunch on Food.
+  - iOS: Result: ✅ · Android: Result: ⏭ · Notes:
+- [x] **TC4** Type something with no food in it ("went for a walk"): the sheet says "No food found" and OK closes it, logging nothing. In airplane mode, Tell says telling the Coach needs a connection, and the words stay in the box.
+  - iOS: Result: error · Android: Result: ⏭ · Notes: Food not found works, but running in airplane mode doesn't give the connection requierd and the tell the coach button doesn't stop loading
+- [x] **TC5** With the API running without `GEMINI_API_KEY`, Today has no "Tell the coach" box and nothing else on Today or Food changes. The API logs "GEMINI_API_KEY isn't set: Tell the coach is hidden" at start.
+  - iOS: Result: ✅ · Android: Result: ✅ · Notes: Session 5 (simulators, M7): No key: no Tell the coach box on Today, and the API logged "GEMINI_API_KEY isn't set: Tell the coach is hidden".
+
+## When the server isn't answering (#170, #174)
+
+Needs the phone online with the API on the Mac stopped (Ctrl-C in its terminal), or the Mac's Wi-Fi off while the phone stays on mobile data. Start the API again afterwards.
+
+- [ ] **NA1** With the app already open, stop the API, then search for a food, Save a food's portion and Log weight. Each stops loading within 15 s and says "Fit Coach isn't answering. Check your connection, or try again in a minute.", not that it needs a connection. Today, the Food tab and History say Fit Coach can't be reached, not "No connection". Start the API again: everything works without restarting the app.
+  - iOS: Result: · Android: Result: · Notes:
+
+## Tabs and the Exercise library (#159)
+
+The Exercises tab is gone: the Exercise library is Profile's first row, so Food fits without five tabs.
+
+- [x] **TB1** On the iPhone and on Android, the tab bar shows Today, Food, History and Profile, in that order (Food since #162), each label whole (no clipped descenders), and nothing else. The current tab is in the accent colour.
+  - iOS: Result: ✅ · Android: Result: ✅ · Notes: Session 5 (simulators, M7): Today, Food, History, Profile, labels whole, the current tab in the accent colour.
+
+- [x] **TB2** On Profile, the first row is "Exercise library" with a chevron. Tapping it opens the library titled "Exercise library", with Profile still the current tab. Tap an Exercise: its detail opens. Back (the header's arrow, and on the iPhone a swipe from the left edge; on Android the system back) returns to the library, and again to Profile.
+  - iOS: Result: ⏭ · Android: Result: ⚠️ · Notes: Session 5 (simulators, M7): Android: Profile's first row "Exercise library" opens the library so titled, with Profile current, and system back returns. The in-memory API had no Exercises seeded ("0 of 0 Exercises"), so the detail steps weren't run.
+
+- [x] **TB3** On an Exercise's detail with Easier or Harder, tap it: that Exercise's detail opens over it, and back returns to the first. With a Workout in progress, the Resume pill shows on the library and on the detail, and pressing it reopens the Workout.
+  - iOS: Result: ✅ · Android: Result: ⏭ · Notes:
+
+## Sentry (#122)
+
+On hold until Sentry is set up on production: see "Error reporting" in `docs/agents/workouts.md`. Run these on the installed web app on the iPhone, signed in.
+
+- [ ] **E1** The web app: open `/debug-error` on the production web app (type it after the address in Safari). Within a minute, Sentry has "Test error from the web app (/debug-error)" under the production environment, with a stack trace and your Clerk user id (`user_…`) as the user, and no email, IP address or headers.
+  - Result: · Notes:
+- [ ] **E2** The API: the same page also asks the API to throw, and says "the API answered: … Test error from the API". Sentry has "Test error from the API (GET /debug/error)" under production, with a stack trace, the transaction `GET /debug/error` and your Clerk user id, and no headers, body or query string.
+  - Result: · Notes:
+- [ ] **E3** The local app and API (no DSN) send nothing to Sentry.
+  - Result: · Notes:
 
 ## Your call
 
 Not a bug, but it needs your judgement once you've done some Workouts. Details in `docs/research/planner-simulation.md`.
 
-- With jumps on, 2 Short days a week lose most of their upper-body work to the jumps' 15 minutes (chest 1 of 12, side delts 0 of 8 in the simulation). Should the switch warn, or jumps give way, at 2 Short days? (2026-11-10, see Jumps.)
+- With jumps on, 2 Short days a week lose most of their upper-body work to the jumps' 15 minutes (chest 1 of 12, side delts 0 of 8 in the simulation). Should the switch warn, or jumps give way, at 2 Short days? (2026-11-10)
 - Do Workouts that fill their Length, at up to 214% of a Muscle's budget, feel like too much? Should a Workout stop at the budget? Left until after real use (2026-11-09).
+- Pistol squat at "3 sets · 15 reps per side" looked heavy on the simulators. Does it feel right? (2026-11-13)
 
 ---
 
@@ -391,23 +434,15 @@ Not a bug, but it needs your judgement once you've done some Workouts. Details i
 Answer these after the run, while it's fresh. Short answers are fine.
 
 1. Would you merge as it is? If not, what's the one thing that blocks it?
-   - Claude's simulator run: nothing seen blocks it, but it doesn't replace the phone checks (offline, Release build, real time). Yours to decide.
 2. Which checks failed (IDs)? For each: what you did, what you expected, what happened, and whether it happens every time.
-   - J1: in a Workout with jumps, the upcoming row reads "Broad jump · 3 sets · 6 reps" and a logged jump Set reads "10 reps", where the sheet and stepper say "contacts". Expected "contacts" throughout. Every time.
 3. Which checks did you skip, and why?
-   - P9, S1 timing, T2, C5, P16, P17, J2, DL1, DL2: need real time, a Release build or a phone. PR2, E1–E3: need the PWA on staging, and Sentry. Not run on one platform: see each check's line.
 4. Anything that broke or looked wrong that no check covers?
-   - Deleting a Workout doesn't rebuild the plan: `DELETE /workouts/:id` leaves it as it was. With today's Workouts deleted, Today still said "This week's work is done. This one's extra." and "Legs and Core are recovering from today." at 0 of 3 Workouts. (Deleted through the API, which History's delete also uses.)
-   - Check-in in the sheet: rows above the ratings appear and disappear as you rate, so the buttons move under your finger, and a blank gap can be left behind.
 5. Any wording on screen that was confusing, too long, or didn't match what the app did? Quote it.
-   - "Done Saturday, 10:43 AM" while an Elapsed timer counts up on a past Workout. "49:00 h" for a 49-hour span. The walk's stepper says "1200 s" (logged as "20 min"). "Estimated max 162 lb, up from 154.3 lb" rounds the two differently. Profile shows body weight "80 kg" with lb picked.
 6. Did the Exercises, Set counts and targets feel believable for you? Too light, too heavy, or about right?
-   - Not judged by a person. Pistol squat at "3 sets · 15 reps per side" looks heavy for most people.
 7. Any difference between iOS and Android worth noting?
-   - The History label for the Assessment week: iOS "25 Oct – 31 Oct", Android "Oct 26 – Nov 1". The grouping picks the right Monday, so suspect iOS date formatting across the 1 Nov clock change (the iOS simulator was on the Mac's MST, the Android emulator on Pacific). Unconfirmed.
 
 ### Handing it back to Claude
 
 Paste this file, filled in, with the prompt below:
 
-> Here are my manual test results for spec #77. For each failed or ⚠️ check, and each problem in the write-up: say whether it's a bug, a spec gap, or working as intended, and draft a GitHub issue (title, steps to reproduce, expected, actual) for the ones that need fixing. Show me the drafts before posting anything.
+> Here are my manual test results. For each failed or ⚠️ check, and each problem in the write-up: say whether it's a bug, a spec gap, or working as intended, and draft a GitHub issue (title, steps to reproduce, expected, actual) for the ones that need fixing. Show me the drafts before posting anything.

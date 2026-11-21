@@ -2,6 +2,7 @@ import { historyByWeek, summarizeWorkout, weeklyVolume, withPending, type Histor
 import type { Workout } from "@fit/shared";
 import { router } from "expo-router";
 import { Pressable, SectionList, StyleSheet, View } from "react-native";
+import { useServerNotAnswering } from "@/api";
 import { Alert, AlertText } from "@/components/alert";
 import { Loading } from "@/components/loading";
 import { Ring } from "@/components/ring";
@@ -26,6 +27,7 @@ export default function HistoryView() {
   const { pending } = useLogbook();
   const daysPerWeek = useCurrentUser().user?.profile.daysPerWeek;
   useRefreshHistory();
+  const serverNotAnswering = useServerNotAnswering();
 
   if (isLoading && !pending.length) return <Loading message="Loading History..." />;
 
@@ -46,7 +48,11 @@ export default function HistoryView() {
         ListHeaderComponent={
           isOffline ? (
             <Alert action="muted">
-              <AlertText>Showing only Workouts on this phone. The rest of your History needs a connection.</AlertText>
+              <AlertText>
+                {serverNotAnswering
+                  ? "Showing only Workouts on this phone. Fit Coach isn't answering, so the rest of your History can't load just now."
+                  : "Showing only Workouts on this phone. The rest of your History needs a connection."}
+              </AlertText>
             </Alert>
           ) : workouts && rows.length ? (
             // Only once History has loaded, so the weeks' totals are whole

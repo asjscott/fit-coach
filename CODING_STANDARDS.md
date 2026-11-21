@@ -18,6 +18,7 @@ Reach for the shared piece first; a second copy of any of these is a finding:
 - `apps/mobile/src/utils/error-message.ts`: turning a caught error into display text.
 - `apps/mobile/src/components/choice-modal`: confirmation and choice dialogs (`ConfirmModal`, `ChoiceModal`).
 - `apps/mobile/src/features/workouts/format.ts`: Workout dates, times, durations and Set descriptions.
+- `apps/mobile/src/features/nutrition/format.ts`: kcal and gram amounts on the Food tab (`wholeNumber`, `oneDecimal`).
 - `apps/mobile/src/features/workouts/library.ts`: an Exercise by slug, and `exerciseName` with its slug fallback.
 - `apps/mobile/src/features/workouts/components/set-row.tsx`: a logged Set in a list.
 

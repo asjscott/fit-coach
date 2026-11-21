@@ -85,7 +85,7 @@ Schemas shared by app and API: packages/shared/src/workouts.ts
   back on its own insets and gets no change notifications, so it can keep a zero bottom inset. `workout/_layout.tsx` has
   the provider, on iOS only; web's static build keeps Expo Router's non-measuring provider. The Add exercise sheet is
   presented on top, outside it, and has no inset, which its list doesn't need to clear the home indicator.
-- **New native modules need a new development build** (`expo-sqlite`, `expo-network`, `expo-localization`, `expo-keep-awake` so far). Add dependencies with
+- **New native modules need a new development build** (`expo-sqlite`, `expo-network`, `expo-localization`, `expo-keep-awake`, `expo-camera` so far). Add dependencies with
   `npx expo install` and check the SDK 58 docs first (`apps/mobile/AGENTS.md`).
 
 ## Assessment (spec #29)
@@ -125,6 +125,12 @@ Schemas: packages/shared/src/assessments.ts; Set.rpe and Workout.assessment in w
 
 - **The In-progress Workout keeps the `bodyProfile` (weight, gender) it started with**, and `protocolState`'s first
   load reads it from there, not from the current profile.
+- **`profile.weightKg` is the latest Weigh-in's** (#161, `apps/api/src/weigh-ins.ts`): `PUT /weigh-ins/:date` keeps it
+  in step, so `BodyProfile` readers (the Assessment, the Daily Targets) never read Weigh-ins themselves. PATCH /user
+  takes a weight only before onboarding, where it becomes the first Weigh-in; after that a different weight is a 400
+  (the stored one, as a retried onboarding save sends, is taken). A Weigh-in never touches Working Levels. The date
+  window (today and the 6 days before, in the user's timezone) is `loggableDates` / `isLoggableDate` in `@fit/engines`,
+  for Food Entries and water too; routes check it with `requireLoggableDate` (`apps/api/src/loggable-date.ts`).
 - **Only weighted tests are rated.** A bodyweight or timed test is one unrated Set to the most reps or seconds the user
   can do, and that Set is its maximum; the Logbook refuses an unrated weighted test Set.
 - **A done test takes no more Sets** (#52): the Logbook refuses one once `hasTestResult` (a bodyweight or timed test's
@@ -366,12 +372,14 @@ Phone
 ## Route tests (#123)
 
 `pnpm --filter @fit/api test` runs the API's route tests (`apps/api/src/routes/*.test.ts`, Vitest). Each test file
-starts the whole API (`buildApp` in `apps/api/src/app.ts`, which `server.ts` listens on) against its own in-memory
-MongoDB replica set, with Clerk switched off as in `dev:local`, and sends requests with Fastify's `inject`, so nothing
-listens on a port and nothing reaches Clerk. The first run downloads the MongoDB binary, as `dev:local` does: once,
-in Vitest's `globalSetup` (`apps/api/src/test/download-mongodb.ts`) before any test file starts, since files starting
-their databases together would otherwise race to download it. To try a first run, point `HOME` and
-`MONGOMS_DOWNLOAD_DIR` at empty directories (the binary is found in `~/.cache/mongodb-binaries` too).
+starts the whole API (`buildApp` in `apps/api/src/app.ts`, which `server.ts` listens on) against its own database,
+with Clerk switched off as in `dev:local`, and sends requests with Fastify's `inject`, so nothing listens on a port and
+nothing reaches Clerk. The databases share one in-memory MongoDB replica set, started once in Vitest's `globalSetup`
+(`apps/api/src/test/mongodb.ts`) and handed to the files with `inject("mongoUri")`; one replica set per file, all
+starting together, made startup slow and flaky. The harness builds the app with `failOnSetupError`, so a failed index
+or migration fails the file instead of being logged. The first run downloads the MongoDB binary, as `dev:local` does.
+To try a first run, point `HOME` and `MONGOMS_DOWNLOAD_DIR` at empty directories (the binary is found in
+`~/.cache/mongodb-binaries` too).
 
 To write one:
 
@@ -403,7 +411,8 @@ it("stores an upload once however often it's retried", async () => {
   `at(startedHoursAgo, exercises, extra)`, `upload`, `workingLevels`, `currentPlan` and `plannedExercise`. Use these
   rather than copying them into a test file.
 - **The server reads the clock**, and plans are due on a new day in the user's timezone (UTC for test users), so build
-  times from now rather than fixed dates.
+  times from now rather than fixed dates. `localDate(timeZone, daysBefore)` in `apps/api/src/test/dates.ts` gives a
+  day's date there.
 - **Name tests in GLOSSARY.md terms and say which user story or issue they pin**, as `routes/workouts.test.ts` does.
 - **Never import `db.ts` or a module that does at the top of a test file.** The database client reads `MONGODB_URI` when
   it loads, so the harness sets it before importing the app. Reach the server only through `api.signIn()`.
@@ -456,9 +465,19 @@ maps would fix that and isn't set up.
 - Web storage in real browsers: `pnpm --filter @fit/mobile test:web`.
 - The signed-in app, with no Clerk account or `.env`: `pnpm --filter @fit/mobile web:signed-in`, then
   `http://localhost:8187`. It starts the in-memory API on 3187 and swaps `@clerk/expo` for a signed-in stub in Metro, so
-  every run is a new account at onboarding. Use it for any ticket that changes a signed-in screen.
+  every run is a new account, already onboarded (80 kg, build_muscle, 3 days, dumbbells at home); add `-- --fresh` to
+  start at onboarding instead. Metro watches files, so edits show without a restart, and its output goes to
+  `.expo/dev-signed-in.log`. Use it for any ticket that changes a signed-in screen.
   - To be several users from Playwright, add `x-dev-user` in `context.route` rather than from the page, since CORS
     refuses that header. A new `x-dev-user` is a new account.
   - For offline, abort the API in the same route and override `navigator.onLine`. Don't use `context.setOffline`: in
     dev, routes load from Metro on demand, so it fails with a red "Failed to fetch" that a phone never shows.
   - It can't show a real sign-in, Clerk with no signal, or native storage. Those stay in `docs/manual-checks.md`.
+  - Food search finds nothing without `USDA_API_KEY`. USDA's public `DEMO_KEY` gives a few real searches an hour:
+    `USDA_API_KEY=DEMO_KEY pnpm --filter @fit/mobile web:signed-in`. Never commit a real key.
+  - Barcodes (#164): `GET /foods/barcode/:code` looks in the user's Saved Foods, then Open Food Facts (no key, so it
+    works in `dev:local`), then USDA's branded foods when there's a key. Scan is native only (`scan-button.web.tsx`
+    renders nothing), so on the web build reach Create food from "Create food from its label" under a search, or
+    try a lookup with curl against the API (`/foods/barcode/0068100084245`, Kraft peanut butter).
+  - Tell the coach (#168) is hidden without `GEMINI_API_KEY`; there's no demo key. With one exported in the shell,
+    `GEMINI_API_KEY=… pnpm --filter @fit/mobile web:signed-in` shows the box on Today. Route tests pass a fake `parse`.

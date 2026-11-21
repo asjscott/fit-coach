@@ -4,10 +4,11 @@
 import { randomUUID } from "node:crypto";
 import type { EquipmentProfileInput, UserProfile } from "@fit/shared";
 import type { FastifyInstance } from "fastify";
-import { MongoMemoryReplSet } from "mongodb-memory-server";
-import { afterAll, beforeAll } from "vitest";
+import type { FoodSources } from "../food-sources";
+import { afterAll, beforeAll, inject } from "vitest";
 
-// A user who has finished onboarding, which POST /workouts needs: 80 kg, male, building muscle 3 days a week
+// A user who has finished onboarding, which POST /workouts needs: 80 kg, male, lightly active, building muscle 3 days
+// a week
 export const ONBOARDED_PROFILE: UserProfile = {
   gender: "male",
   birthYear: 1990,
@@ -17,6 +18,7 @@ export const ONBOARDED_PROFILE: UserProfile = {
   daysPerWeek: 3,
   workoutLength: "standard",
   injuries: [],
+  activityLevel: "lightly_active",
 };
 
 // A home Equipment Profile of fixed dumbbells, primary, so the Coach plans from it
@@ -49,29 +51,39 @@ export type RouteTestApi = {
   }): Promise<TestUser>;
 };
 
-// Call once at the top of a test file: starts the API before its tests and stops it after
-export function useRouteTestApi(): RouteTestApi {
-  let mongo: MongoMemoryReplSet;
+// Never reaches the network: a test file that searches for food passes its own fake
+const NO_FOODS: FoodSources = {
+  search: async () => ({ generic: [], branded: [] }),
+  byBarcode: async () => null,
+};
+
+// Call once at the top of a test file: starts the API before its tests and stops it after. Food search and barcodes
+// find nothing outside the user's Saved Foods unless the file passes its own fake food sources
+export function useRouteTestApi({ foodSources = NO_FOODS }: { foodSources?: FoodSources } = {}): RouteTestApi {
   let app: FastifyInstance;
   let closeDb: () => Promise<void>;
 
   beforeAll(async () => {
-    // A one-member replica set, since pairing Assessment Workouts runs in a transaction
-    mongo = await MongoMemoryReplSet.create({ replSet: { count: 1 } });
-    process.env.MONGODB_URI = mongo.getUri("fit-coach");
+    // The run's one replica set (test/mongodb.ts), with a database of this file's own
+    const uri = new URL(inject("mongoUri"));
+    uri.pathname = `/fit-coach-${randomUUID()}`;
+    process.env.MONGODB_URI = uri.toString();
     // Clerk off: every request is the user its X-Dev-User header names (src/auth.ts)
     process.env.DEV_AUTH_USER_ID = "user_route_test";
     // Imported only now, since the database client and auth read the environment when they load
     const { buildApp } = await import("../app");
     const { client } = await import("../db");
-    app = await buildApp({ logger: false });
-    closeDb = () => client.close();
+    // An index or migration that fails fails the file, rather than its tests later
+    app = await buildApp({ logger: false, foodSources, failOnSetupError: true });
+    closeDb = async () => {
+      await client.db().dropDatabase();
+      await client.close();
+    };
   });
 
   afterAll(async () => {
     await app?.close();
     await closeDb?.();
-    await mongo?.stop();
   });
 
   const userFor = (id: string): TestUser => {

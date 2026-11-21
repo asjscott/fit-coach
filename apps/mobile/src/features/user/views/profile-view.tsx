@@ -1,10 +1,14 @@
 import { useAuth } from "@clerk/expo";
 import { canAssess, usualWorkoutLength } from "@fit/engines";
 import { HealthResponse, WeightUnit } from "@fit/shared";
+import { router, type Href } from "expo-router";
 import { useEffect, useState, type ReactNode } from "react";
+import { StyleSheet } from "react-native";
 import { Chip } from "@/components/chip";
 import { Divider } from "@/components/divider";
+import { Icon, type IconName } from "@/components/icons";
 import { LoadingButton } from "@/components/loading-button";
+import { Pressable } from "@/components/pressable";
 import { Screen } from "@/components/screen";
 import { SectionLabel } from "@/components/section-label";
 import { HStack, Stack } from "@/components/stack";
@@ -14,21 +18,27 @@ import { useToast } from "@/contexts/toast-context";
 import { equipmentSummary } from "@/features/equipment/equipment-summary";
 import { useChosenTests } from "@/features/assessment/hooks/use-chosen-tests";
 import { useStartAssessment } from "@/features/assessment/hooks/use-start-assessment";
+import {
+  ActivityLevelRow,
+  DietRow,
+  FibreTargetRow,
+  WeighInDayRow,
+  WeighInRow,
+} from "@/features/nutrition/components/nutrition-rows";
 import { useCurrentUser, usePrimaryEquipmentProfile, useWeightUnit } from "@/features/user/current-user-provider";
 import { genderLabel } from "@/features/user/components/form/fields/user-gender-field";
 import { goalLabel } from "@/features/user/components/form/fields/user-goal-field";
 import { injuryLabel } from "@/features/user/components/form/fields/user-injuries-field";
 import { workoutLengthLabel } from "@/features/user/components/form/fields/user-workout-length-field";
 import { SignOutModal, signOutWarning } from "@/features/workouts/components/sign-out-modal";
-import { weightLabel } from "@/features/workouts/format";
 import { useLogbook } from "@/features/workouts/logbook-provider";
 import { useApi } from "@/api";
+import { radii, spacing, useTheme } from "@/theme";
 
 export default function ProfileView() {
   const { signOut } = useAuth();
   const { user } = useCurrentUser();
   const equipment = usePrimaryEquipmentProfile();
-  const unit = useWeightUnit();
   const logbook = useLogbook();
   const assessment = useStartAssessment();
   const tests = useChosenTests();
@@ -69,6 +79,7 @@ export default function ProfileView() {
   return (
     <Screen scroll="screen" edges={["bottom"]}>
       <Stack spacing={5}>
+        <LinkRow icon="dumbbell" label="Exercise library" href="/profile/exercises" />
         <Section label="Training">
           <Row label="Goal" value={profile.goal && goalLabel(profile.goal)} />
           <Row label="Days per week" value={profile.daysPerWeek} />
@@ -80,6 +91,14 @@ export default function ProfileView() {
           />
           <UnitRow />
           {profile.goal === "athletic" ? <IncludeJumps on={profile.includeJumps ?? false} /> : null}
+        </Section>
+        <Divider />
+        <Section label="Nutrition">
+          <ActivityLevelRow />
+          <FibreTargetRow />
+          <DietRow />
+          <WeighInRow />
+          <WeighInDayRow />
         </Section>
         <Divider />
         {/* Retaking lives here for now: Today only offers the first Assessment, then its Results */}
@@ -110,7 +129,6 @@ export default function ProfileView() {
           <Row label="Gender" value={profile.gender && genderLabel(profile.gender)} />
           <Row label="Age" value={profile.birthYear && `${new Date().getFullYear() - profile.birthYear}`} />
           <Row label="Height" value={profile.heightCm && `${profile.heightCm} cm`} />
-          <Row label="Weight" value={profile.weightKg && weightLabel(profile.weightKg, unit)} />
           <Text size="sm" color="muted">
             Member since {new Date(user.onboardedAt).toLocaleDateString()}
           </Text>
@@ -233,6 +251,36 @@ function UnitRow() {
     </HStack>
   );
 }
+
+// A row that opens another screen, in a rounded box: the Exercise library, which was a tab until #159
+function LinkRow({ icon, label, href }: { icon: IconName; label: string; href: Href }) {
+  const { colors } = useTheme();
+  return (
+    <Pressable
+      accessibilityRole="link"
+      onPress={() => router.push(href)}
+      style={[styles.linkRow, { backgroundColor: colors.surface, borderColor: colors.line }]}
+    >
+      <Icon name={icon} size={18} />
+      <Text weight="semiBold" style={{ flex: 1 }}>
+        {label}
+      </Text>
+      <Icon name="chevronRight" color="subtle" size={20} />
+    </Pressable>
+  );
+}
+
+const styles = StyleSheet.create({
+  linkRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing[3],
+    minHeight: 56,
+    paddingHorizontal: spacing[4],
+    borderRadius: radii.lg,
+    borderWidth: StyleSheet.hairlineWidth,
+  },
+});
 
 function Row({ label, value }: { label: string; value?: string | number }) {
   return (

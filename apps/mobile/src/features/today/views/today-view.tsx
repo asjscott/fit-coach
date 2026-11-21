@@ -3,6 +3,7 @@ import type { RestDayReason } from "@fit/engines";
 import { router } from "expo-router";
 import { useEffect, useState } from "react";
 import { View } from "react-native";
+import { useServerNotAnswering } from "@/api";
 import { Divider } from "@/components/divider";
 import { LoadingButton } from "@/components/loading-button";
 import { Screen } from "@/components/screen";
@@ -10,7 +11,7 @@ import { Spinner } from "@/components/spinner";
 import { Text } from "@/components/text";
 import { useChosenTests } from "@/features/assessment/hooks/use-chosen-tests";
 import { useLatestAssessment } from "@/features/assessment/hooks/use-latest-assessment";
-import { useCurrentUser, useWeightUnit } from "@/features/user/current-user-provider";
+import { useCurrentUser, useTimeZone, useWeightUnit } from "@/features/user/current-user-provider";
 import { ForgottenWorkoutModal } from "@/features/workouts/components/forgotten-workout-modal";
 import { PastWorkoutSheet } from "@/features/workouts/components/past-workout-sheet";
 import { elapsedLabel, estimatedTimeLabel } from "@/features/workouts/format";
@@ -24,7 +25,14 @@ import {
 } from "@/features/workouts/hooks/use-open-workout";
 import { useRefreshHistory } from "@/features/workouts/hooks/use-refresh-history";
 import { useLogbook } from "@/features/workouts/logbook-provider";
+import { CoachSummaryCard } from "@/features/nutrition/components/coach-summary-card";
+import { DayRings } from "@/features/nutrition/components/day-rings";
+import { WeighInReminderRow } from "@/features/nutrition/components/weigh-in-reminder-row";
+import { useDay } from "@/features/nutrition/hooks/use-day";
+import { showsWeighInReminder } from "@/features/nutrition/weigh-in";
+import { TellTheCoachBox } from "@/features/tell-the-coach/components/tell-the-coach-box";
 import { spacing } from "@/theme";
+import { ActivityLevelCard } from "../components/activity-level-card";
 import { AssessmentCard, AssessmentSection } from "../components/assessment-section";
 import { LastWorkoutSection } from "../components/last-workout-section";
 import { PlannedWorkoutSheet } from "../components/planned-workout-sheet";
@@ -32,6 +40,7 @@ import { PrNote } from "../components/pr-note";
 import { ThisWeekSection } from "../components/this-week-section";
 import { TodayCard, TodayCardLink } from "../components/today-card";
 import { CheckInCard } from "../components/check-in-card";
+import { useActivityLevelPrompt } from "../hooks/use-activity-level-prompt";
 import { useCheckIn } from "../hooks/use-check-in";
 import { useDaysWorkout } from "../hooks/use-days-workout";
 import { useDismissedOffer } from "../hooks/use-dismissed-offer";
@@ -70,15 +79,19 @@ export default function TodayView() {
   const { resumeWorkout, forgotten, setForgotten } = useResumeWorkout();
   const { isLoaded, isStale, pending, syncing } = logbook;
   const { workouts, error } = useHistory();
+  const serverNotAnswering = useServerNotAnswering();
   const { user } = useCurrentUser();
   const daysPerWeek = user?.profile.daysPerWeek;
   const unit = useWeightUnit();
+  const timeZone = useTimeZone();
   const { latest: latestAssessment } = useLatestAssessment();
   const { plannedWorkout: latestPlan, stale: planIsStale } = usePlannedWorkout();
   const { dismissed, dismiss } = useDismissedOffer();
   const tests = useChosenTests();
   const [sheetIsOpen, setSheetIsOpen] = useState(false);
   const prNote = usePrNote();
+  const { day, refresh: refreshDay } = useDay();
+  const activityPrompt = useActivityLevelPrompt();
   useRefreshHistory();
 
   const plan = todayPlan({
@@ -160,6 +173,37 @@ export default function TodayView() {
       <Text size="sm" weight="semiBold" color="muted" style={{ marginBottom: spacing[3] }}>
         {now.toLocaleDateString([], { weekday: "long", day: "numeric", month: "long" })}
       </Text>
+      {day ? (
+        <View style={{ marginBottom: spacing[4] }}>
+          <DayRings day={day} onPress={() => router.navigate("/food")} pressHint="Opens Food" />
+        </View>
+      ) : null}
+      {day ? (
+        <View style={{ marginBottom: spacing[4] }}>
+          <CoachSummaryCard
+            day={day}
+            onPress={() => router.navigate({ pathname: "/food", params: { half: "ideas" } })}
+          />
+        </View>
+      ) : null}
+      {user &&
+      showsWeighInReminder({
+        weighInDay: user.profile.weighInDay,
+        latestWeighIn: user.latestWeighIn,
+        now,
+        timeZone,
+      }) ? (
+        <View style={{ marginBottom: spacing[4] }}>
+          <WeighInReminderRow />
+        </View>
+      ) : null}
+      {/* Only with the day, since it logs into it; it hides itself without a Gemini key on the API */}
+      {day ? <TellTheCoachBox onLogged={refreshDay} style={{ marginBottom: spacing[4] }} /> : null}
+      {activityPrompt.asks ? (
+        <View style={{ marginBottom: spacing[4] }}>
+          <ActivityLevelCard onSkip={activityPrompt.skip} />
+        </View>
+      ) : null}
       {prNote.shown.length ? (
         <View style={{ marginBottom: spacing[3] }}>
           <PrNote shown={prNote.shown} now={now} onDismiss={prNote.dismiss} />
@@ -241,7 +285,9 @@ export default function TodayView() {
       ) : null}
       {state === "offline" ? (
         <Text size="sm" color="muted" style={{ marginTop: spacing[2] }}>
-          No connection. Workouts save on this phone until there is.
+          {serverNotAnswering
+            ? "Can't reach Fit Coach. Workouts save on this phone until it's back."
+            : "No connection. Workouts save on this phone until there is."}
         </Text>
       ) : null}
       {state === "loading" ? null : (

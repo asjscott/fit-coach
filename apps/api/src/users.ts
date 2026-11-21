@@ -15,6 +15,7 @@ import {
 } from "@fit/shared";
 import type { z } from "zod";
 import { db } from "./db";
+import type { WeighInSummary } from "./weigh-ins";
 
 // The shape of a user document in MongoDB
 type UserDoc = {
@@ -94,7 +95,7 @@ export async function createUser(clerkUserId: string) {
 }
 
 // Merges profile fields into the stored profile and sets the timezone and unit when given; null if the user doesn't
-// exist
+// exist. A fibre target of null is removed, so the stored profile never holds one
 export async function updateUser(clerkUserId: string, { profile = {}, timeZone, unit }: UserUpdate) {
   // $literal stops string values beginning with "$" being read as field paths
   const user = await users.findOneAndUpdate(
@@ -107,6 +108,7 @@ export async function updateUser(clerkUserId: string, { profile = {}, timeZone, 
           ...(unit && { unit: { $literal: unit } }),
         },
       },
+      ...(profile.fibreTargetG === null ? [{ $unset: "profile.fibreTargetG" }] : []),
     ],
     { returnDocument: "after" },
   );
@@ -196,9 +198,10 @@ async function markOnboardedIfComplete(user: WithId<UserDoc>) {
   return updated ?? (await users.findOne({ _id: user._id })) ?? user;
 }
 
-// Convert a database document into the shape the app expects
-export function toUser(user: WithId<UserDoc>): User {
+// Convert a database document into the shape the app expects, with what its Weigh-ins say
+export function toUser(user: WithId<UserDoc>, weighIns: WeighInSummary): User {
   return User.parse({
+    ...weighIns,
     id: user._id.toHexString(),
     profile: user.profile,
     onboardedAt: user.onboardedAt?.toISOString() ?? null,

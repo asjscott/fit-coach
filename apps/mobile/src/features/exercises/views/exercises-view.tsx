@@ -59,7 +59,7 @@ export default function ExercisesView() {
             unavailable={!available}
             detail={available ? undefined : `Needs: ${neededEquipment(exercise, tags)}`}
             chevron
-            onPress={() => router.push(`/exercises/${exercise.slug}`)}
+            onPress={() => router.push(`/profile/exercises/${exercise.slug}`)}
           />
         )}
         ListEmptyComponent={

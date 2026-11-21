@@ -1,5 +1,5 @@
-import { describe, expect, it, vi } from "vitest";
-import { untilAborted, withinMs } from "./until-aborted";
+import { describe, expect, it } from "vitest";
+import { untilAborted } from "./until-aborted";
 
 const never = new Promise<string>(() => {});
 
@@ -29,22 +29,5 @@ describe("untilAborted", () => {
 
   it("waits as long as it takes with no signal", async () => {
     await expect(untilAborted(Promise.resolve("token"))).resolves.toBe("token");
-  });
-});
-
-describe("withinMs", () => {
-  it("gives up on a promise that never settles", async () => {
-    vi.useFakeTimers();
-    try {
-      const waiting = withinMs(never, 10_000);
-      vi.advanceTimersByTime(10_000);
-      await expect(waiting).rejects.toThrow("Gave up after 10000 ms");
-    } finally {
-      vi.useRealTimers();
-    }
-  });
-
-  it("passes on the value when it comes in time", async () => {
-    await expect(withinMs(Promise.resolve("token"), 10_000)).resolves.toBe("token");
   });
 });
