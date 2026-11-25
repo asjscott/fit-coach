@@ -3,9 +3,11 @@ import { useCallback, useRef, useState } from "react";
 import { ApiError, useApi } from "@/api";
 import { useReloadOnVisit } from "@/features/workouts/hooks/use-reload-on-visit";
 import { errorMessage } from "@/utils/error-message";
+import { useReloadOnNewDay } from "./use-reload-on-new-day";
 
 // A week from GET /nutrition-history/:date, any of its dates or "today": undefined until it arrives (or when it can't).
-// The phone keeps no copy, so offline there's none. Reloads on every visit
+// The phone keeps no copy, so offline there's none. Reloads on every visit,
+// on returning to the foreground and at midnight, when "today" can become a new week
 export function useNutritionWeek(date: string) {
   const api = useApi();
   const [loaded, setLoaded] = useState<{ date: string; week: NutritionWeek } | null>(null);
@@ -30,6 +32,7 @@ export function useNutritionWeek(date: string) {
   }, [api, date]);
 
   useReloadOnVisit(refresh);
+  useReloadOnNewDay(refresh);
 
   return { week: loaded?.date === date ? loaded.week : undefined, error, isOffline, refresh };
 }

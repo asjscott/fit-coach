@@ -1,4 +1,10 @@
-import { type HistoryDay, historyDays, type NutritionMeasure, rangeBand, weekAverage } from "@fit/engines";
+import {
+  type NutritionHistoryDay,
+  nutritionHistoryDays,
+  type NutritionMeasure,
+  rangeBand,
+  weekAverage,
+} from "@fit/engines";
 import type { NutritionWeek } from "@fit/shared";
 import { weekdayLabel, weekLabel } from "../workouts/format";
 import { wholeNumber } from "./format";
@@ -13,7 +19,7 @@ const MAX_STEPS = 4;
 // How near the average's number, as a share of the chart, an axis number would be drawn over
 const TOO_NEAR = 0.16;
 
-export type HistoryBar = {
+export type NutritionHistoryBar = {
   date: string;
   // Null for an empty slot
   color: "accent" | "success" | "danger" | null;
@@ -30,7 +36,7 @@ export type HistoryBar = {
   label: string;
 };
 
-function barOf(day: HistoryDay, measure: NutritionMeasure, top: number): HistoryBar {
+function barOf(day: NutritionHistoryDay, measure: NutritionMeasure, top: number): NutritionHistoryBar {
   const { date, when, range } = day;
   const isToday = when === "today";
   const title = isToday ? "Today" : weekdayLabel(onPhone(date));
@@ -63,8 +69,8 @@ function axisStep(largest: number): number {
 
 // Where Nutrition History's chart draws everything for a week, as shares of its width and height, with its words
 // (spec #188 stories 20 to 29)
-export function historyChart(week: NutritionWeek, measure: NutritionMeasure) {
-  const days = historyDays(week, measure);
+export function nutritionHistoryChart(week: NutritionWeek, measure: NutritionMeasure) {
+  const days = nutritionHistoryDays(week, measure);
   const largest = Math.max(...days.map((day) => Math.max(day.range.max, day.logged ? day.amount : 0)));
   const step = axisStep(largest);
   const steps = Math.max(1, Math.ceil(largest / step));
@@ -90,4 +96,5 @@ export function historyChart(week: NutritionWeek, measure: NutritionMeasure) {
 }
 
 // "This week", "Last week", then the week's dates, as in History
-export const historyWeekLabel = ({ days, today }: NutritionWeek) => weekLabel(onPhone(days[0].date), onPhone(today));
+export const nutritionHistoryWeekLabel = ({ days, today }: NutritionWeek) =>
+  weekLabel(onPhone(days[0].date), onPhone(today));

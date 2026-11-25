@@ -4,8 +4,6 @@ import { ApiError, noAnswerMessage, useApi } from "@/api";
 import { errorMessage } from "@/utils/error-message";
 
 const TYPING_PAUSE_MS = 400;
-const SEARCH_DOWN =
-  "Food search isn't answering, so only your Saved Foods and Saved Meals are listed. Try again in a minute.";
 
 export type FoodSearch = {
   // Undefined before the first search, and while the words are too short to search
@@ -14,9 +12,12 @@ export type FoodSearch = {
   error: string | null;
 };
 
-// Foods matching the words, from GET /foods/search, which asks the food sources for the phone. Searches once typing
-// pauses, and keeps only the answer to the latest words. A new `version` searches again, as after a Saved Food changes
-export function useFoodSearch(query: string, version = 0): FoodSearch {
+// Foods matching the words, from GET /foods/search, once typing pauses; only the latest words' answer is kept. A new
+// `version` searches again, as after a Saved Food changes. `own` is what of the user's own the screen lists
+export function useFoodSearch(
+  query: string,
+  { version = 0, own = "Saved Foods and Saved Meals" }: { version?: number; own?: string } = {},
+): FoodSearch {
   const api = useApi();
   const [search, setSearch] = useState<FoodSearch>({ isSearching: false, error: null });
   const words = query.trim();
@@ -33,8 +34,10 @@ export function useFoodSearch(query: string, version = 0): FoodSearch {
         const { foods, outsideUnavailable } = FoodSearchResults.parse(
           await api(`/foods/search?${new URLSearchParams({ q: words })}`, { signal: controller.signal }),
         );
-        // USDA didn't answer: the user's Saved Foods are still listed, under the message
-        const error = outsideUnavailable ? SEARCH_DOWN : null;
+        // USDA didn't answer: the user's own foods are still listed, under the message
+        const error = outsideUnavailable
+          ? `Food search isn't answering, so only your ${own} are listed. Try again in a minute.`
+          : null;
         if (!controller.signal.aborted) setSearch({ foods, isSearching: false, error });
       } catch (err) {
         if (controller.signal.aborted) return;
@@ -51,7 +54,7 @@ export function useFoodSearch(query: string, version = 0): FoodSearch {
       clearTimeout(timer);
       controller.abort();
     };
-  }, [api, words, version]);
+  }, [api, words, version, own]);
 
   return search;
 }

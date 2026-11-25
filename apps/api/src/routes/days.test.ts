@@ -1,6 +1,6 @@
 import { ideaFood } from "@fit/engines";
 import type { Day, Food, FoodEntry, User } from "@fit/shared";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { localDate } from "../test/dates";
 import { ONBOARDED_PROFILE, useRouteTestApi } from "../test/route-test-api";
 
@@ -9,7 +9,16 @@ const api = useRouteTestApi();
 // ONBOARDED_PROFILE is 80 kg, 180 cm, born 1990, male, building muscle and lightly active. On a 2026 date its BMR is
 // 10 × 80 + 6.25 × 180 − 5 × 36 + 5 = 1,750 kcal, and maintenance 1,750 × 1.375 = 2,406.25
 
+// Only Date, so nothing waiting on a timer stops
+const setNow = (time: string | number) => {
+  vi.useFakeTimers({ toFake: ["Date"] });
+  vi.setSystemTime(time);
+};
+afterEach(() => void vi.useRealTimers());
+
 describe("GET /days/:date", () => {
+  beforeEach(() => setNow("2026-11-18T12:00:00Z"));
+
   // Spec #158 stories 20 to 30: Daily Targets from the profile, with nothing eaten yet
   it("answers the signed-in user's Daily Targets for the day, with nothing eaten", async () => {
     const user = await api.signIn();
@@ -34,11 +43,14 @@ describe("GET /days/:date", () => {
     });
   });
 
-  it("works the age out from the day's year", async () => {
+  // Spec #188 story 18: a past day with no targets kept is judged against the current ones, not those of its own year
+  it("works the age out from today's year, for a day before it with none kept too", async () => {
+    setNow("2027-01-01T12:00:00Z");
     const user = await api.signIn();
 
     // 37 in 2027: 1,745 × 1.375 × 1.1 = 2,639.3
-    expect(((await user.get("/days/2027-01-01")).body as Day).targets.kcal).toBe(2640);
+    expect(((await user.get("/days/today")).body as Day).targets.kcal).toBe(2640);
+    expect(((await user.get("/days/2026-12-31")).body as Day).targets.kcal).toBe(2640);
   });
 
   // Story 4: a user with no Activity Level counts as lightly active until they answer
@@ -162,10 +174,8 @@ describe("GET /days/:date kept Daily Targets", () => {
     expect((await targetsOn(user, date)).proteinG).toBe(180);
   });
 
-  // The server's clock moved on (only Date, so nothing waiting on a timer stops), since moving the user's timezone is
-  // itself a change that keeps the new day's targets
+  // The server's clock moved on, since moving the user's timezone is itself a change that keeps the new day's targets
   describe("on a new day", () => {
-    afterEach(() => void vi.useRealTimers());
     const moveOnADay = () => vi.setSystemTime(Date.now() + 24 * 60 * 60 * 1000);
 
     it.each(["logged", "copied from yesterday"])("keeps the day's targets when food is %s", async (how) => {

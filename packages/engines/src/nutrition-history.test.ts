@@ -1,6 +1,6 @@
 import type { NutritionWeek } from "@fit/shared";
 import { describe, expect, it } from "vitest";
-import { historyDays, rangeBand, weekAverage, weeksAround } from "./nutrition-history";
+import { nutritionHistoryDays, rangeBand, weekAverage, weeksAround } from "./nutrition-history";
 
 // Ranges of 2,520 to 2,780 kcal and 144 to 192 g of protein
 const targets = { kcal: 2650, proteinG: 160 };
@@ -25,10 +25,10 @@ const week = (
   })),
 });
 
-describe("historyDays", () => {
+describe("nutritionHistoryDays", () => {
   // Spec #188 story 24: as the day's ring would be
   it("reads each logged day against its own range", () => {
-    const days = historyDays(
+    const days = nutritionHistoryDays(
       week([[2000, 150], [2650, 100], [3030, 200], null], { newTargets: { 2: { kcal: 3000, proteinG: 100 } } }),
       "kcal",
     );
@@ -66,7 +66,7 @@ describe("historyDays", () => {
   });
 
   it("reads protein against protein's range", () => {
-    const [below, over] = historyDays(
+    const [below, over] = nutritionHistoryDays(
       week([
         [2000, 143],
         [2650, 200.4],
@@ -79,11 +79,11 @@ describe("historyDays", () => {
   });
 
   it("counts a day logged with nothing in it as logged", () => {
-    expect(historyDays(week([[0, 0]]), "kcal")[0]).toMatchObject({ logged: true, amount: 0, state: "below" });
+    expect(nutritionHistoryDays(week([[0, 0]]), "kcal")[0]).toMatchObject({ logged: true, amount: 0, state: "below" });
   });
 
   it("tells today and the days to come apart from the past", () => {
-    expect(historyDays(week([], { today: "2026-11-18" }), "kcal").map((day) => day.when)).toEqual([
+    expect(nutritionHistoryDays(week([], { today: "2026-11-18" }), "kcal").map((day) => day.when)).toEqual([
       "past",
       "past",
       "today",
@@ -100,14 +100,14 @@ describe("weekAverage", () => {
   it("is over the logged days, leaving out those with nothing logged, and today", () => {
     const logged = week([[2000, 100], null, [3000, 150], [400, 20]], { today: "2026-11-19" });
 
-    expect(weekAverage(historyDays(logged, "kcal"))).toBe(2500);
-    expect(weekAverage(historyDays(logged, "protein"))).toBe(125);
+    expect(weekAverage(nutritionHistoryDays(logged, "kcal"))).toBe(2500);
+    expect(weekAverage(nutritionHistoryDays(logged, "protein"))).toBe(125);
   });
 
   it("counts every logged day of a week that's over, and one logged with no kcal", () => {
     expect(
       weekAverage(
-        historyDays(
+        nutritionHistoryDays(
           week([
             [2000, 100],
             [0, 0],
@@ -122,14 +122,16 @@ describe("weekAverage", () => {
 
   // Story 29
   it("is null with nothing logged but today", () => {
-    expect(weekAverage(historyDays(week([]), "kcal"))).toBeNull();
-    expect(weekAverage(historyDays(week([[400, 20]], { today: "2026-11-16" }), "kcal"))).toBeNull();
+    expect(weekAverage(nutritionHistoryDays(week([]), "kcal"))).toBeNull();
+    expect(weekAverage(nutritionHistoryDays(week([[400, 20]], { today: "2026-11-16" }), "kcal"))).toBeNull();
   });
 });
 
 describe("rangeBand", () => {
   it("is one step across a week whose target didn't change", () => {
-    expect(rangeBand(historyDays(week([]), "kcal"))).toEqual([{ from: 0, days: 7, range: { min: 2520, max: 2780 } }]);
+    expect(rangeBand(nutritionHistoryDays(week([]), "kcal"))).toEqual([
+      { from: 0, days: 7, range: { min: 2520, max: 2780 } },
+    ]);
   });
 
   // Story 23
@@ -137,12 +139,12 @@ describe("rangeBand", () => {
     const changed = { kcal: 3000, proteinG: 160 };
     const days = week([], { newTargets: { 3: changed, 4: changed } });
 
-    expect(rangeBand(historyDays(days, "kcal"))).toEqual([
+    expect(rangeBand(nutritionHistoryDays(days, "kcal"))).toEqual([
       { from: 0, days: 3, range: { min: 2520, max: 2780 } },
       { from: 3, days: 2, range: { min: 2850, max: 3150 } },
       { from: 5, days: 2, range: { min: 2520, max: 2780 } },
     ]);
-    expect(rangeBand(historyDays(days, "protein"))).toHaveLength(1);
+    expect(rangeBand(nutritionHistoryDays(days, "protein"))).toHaveLength(1);
   });
 });
 

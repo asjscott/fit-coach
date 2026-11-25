@@ -4,8 +4,8 @@ import { Nutrients, Serving } from "./food";
 import { DayMeal, Meal } from "./food-entry";
 import { AvoidedFood } from "./user";
 
-// What the Coach sets the user for each day, the same every day (GLOSSARY.md). Worked out by the server whenever a
-// day is read, never stored
+// What the Coach sets the user for each day, the same every day (GLOSSARY.md). Worked out by the server, which keeps
+// the last ones each day had (spec #188)
 export const DailyTargets = z.object({
   kcal: z.number(),
   proteinG: z.number(),

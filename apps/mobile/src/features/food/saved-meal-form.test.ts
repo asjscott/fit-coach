@@ -31,7 +31,7 @@ const ingredients: Ingredient[] = [
 ];
 const form = { name: " Chicken and rice ", servings: "4", cookedGrams: "", ingredients };
 const bowl: Food = {
-  source: "meal",
+  source: "saved_meal",
   id: "m1",
   name: "Chicken and rice",
   per100g: { kcal: 140, proteinG: 13.6, carbsG: 17.6, fatG: 1.6, fibreG: 0.4 },
@@ -73,7 +73,7 @@ describe("savedMealInput", () => {
       error: "Enter the cooked weight in grams, or leave it empty",
     });
     expect(savedMealInput({ ...form, cookedGrams: "100001" })).toEqual({
-      error: "A Saved Meal weighs at most 100000 g cooked",
+      error: "A Saved Meal weighs at most 100,000 g cooked",
     });
   });
 
@@ -82,6 +82,25 @@ describe("savedMealInput", () => {
     expect(savedMealInput({ ...form, servings: "" })).toEqual({ error: "Enter how many servings it makes" });
     expect(savedMealInput({ ...form, servings: "101" })).toEqual({ error: "A Saved Meal makes at most 100 servings" });
     expect(savedMealInput({ ...form, ingredients: [] })).toEqual({ error: "Add at least one ingredient" });
+    expect(savedMealInput({ ...form, ingredients: Array(51).fill(ingredients[0]) })).toEqual({
+      error: "A Saved Meal has at most 50 ingredients",
+    });
+  });
+
+  // What the API takes of one ingredient
+  it("names the ingredient there's too much of", () => {
+    const withLast = (last: Ingredient) => savedMealInput({ ...form, ingredients: [ingredients[0], last] });
+
+    expect(withLast({ food: chicken, portion: { grams: 5000 } })).toHaveProperty("input");
+    expect(withLast({ food: chicken, portion: { grams: 5001 } })).toEqual({
+      error: "Chicken: an ingredient can be at most 5,000 g",
+    });
+    const cups = (count: number) => ({
+      food: rice,
+      portion: { grams: 200 * count, serving: { label: "1 cup", count } },
+    });
+    expect(withLast(cups(100))).toHaveProperty("input");
+    expect(withLast(cups(100.5))).toEqual({ error: "Rice: an ingredient can be at most 100 × 1 cup" });
   });
 });
 
@@ -144,6 +163,16 @@ describe("savedMealFormFromEntries", () => {
       { food: rice, portion: { grams: 100, serving: { label: "1 cup", count: 0.5 } } },
       { food: chicken, portion: { grams: 80 } },
     ]);
+  });
+
+  // Made in 4 servings, 40 of them are 10 times the 600 g of chicken
+  it("says which ingredient a logged Saved Meal's portion takes past what one can be", () => {
+    const started = savedMealFormFromEntries([
+      entry(bowl, { grams: 10_000, serving: { label: "1 serving", count: 40 } }),
+    ]);
+    expect(savedMealInput({ ...started, name: "Feast", servings: "4" })).toEqual({
+      error: "Chicken: an ingredient can be at most 5,000 g",
+    });
   });
 
   it("can be saved once it has a name and servings", () => {

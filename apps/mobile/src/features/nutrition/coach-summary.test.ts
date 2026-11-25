@@ -14,8 +14,8 @@ const idea = (name: string, proteinG: number): FoodIdea => ({
 const cottageCheese = idea("Cottage cheese", 28);
 const tofu = idea("Tofu", 26);
 
-// Targets of 2,650 kcal, 160 g protein, 106 g fibre and 2.75 L of water, with what's eaten so far. Ranges of 2,520 to 2,780
-// kcal and 144 to 192 g of protein
+// Targets of 2,650 kcal (2,520 to 2,780), 160 g protein (144 to 192), 106 g fibre and 2.75 L of water, with what's
+// eaten so far
 const day = (eaten: Partial<Day["totals"]>, ideas: FoodIdea[] = [], ideaMeal: Meal = "dinner", waterMl = 0): Day => ({
   date: "2026-11-18",
   targets: { kcal: 2650, proteinG: 160, fatG: 64, carbsG: 359, fibreG: 106, waterMl: 2750 },

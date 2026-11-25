@@ -21,7 +21,7 @@ export function FoodChoiceChips({
     <View style={styles.chips}>
       {choices.map(({ key, food, saved }) => {
         const selected = key === chosen;
-        const kind = food.source === "meal" ? "saved meal" : "saved food";
+        const kind = food.source === "saved_meal" ? "saved meal" : "saved food";
         return (
           <Pressable
             key={key}

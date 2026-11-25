@@ -6,14 +6,14 @@ import { type NutritionRange, nutritionRanges, rangeState, type RangeState } fro
 export type NutritionMeasure = "kcal" | "protein";
 
 // One day of Nutrition History's week, its amount and state only once something is logged
-export type HistoryDay = {
+export type NutritionHistoryDay = {
   date: string;
   when: "past" | "today" | "toCome";
   range: NutritionRange;
 } & ({ logged: false } | ({ logged: true; amount: number } & RangeState));
 
 // A week's days, each against its own range (spec #188)
-export function historyDays({ today, days }: NutritionWeek, measure: NutritionMeasure): HistoryDay[] {
+export function nutritionHistoryDays({ today, days }: NutritionWeek, measure: NutritionMeasure): NutritionHistoryDay[] {
   const key = measure === "kcal" ? "kcal" : "proteinG";
   return days.map(({ date, totals, targets, logged }) => {
     const range = nutritionRanges(targets)[key];
@@ -26,7 +26,7 @@ export function historyDays({ today, days }: NutritionWeek, measure: NutritionMe
 }
 
 // The daily average over the past days with something logged; null with none. Today isn't over, so doesn't count
-export function weekAverage(days: readonly HistoryDay[]): number | null {
+export function weekAverage(days: readonly NutritionHistoryDay[]): number | null {
   const amounts = days.flatMap((day) => (day.logged && day.when === "past" ? [day.amount] : []));
   return amounts.length ? amounts.reduce((sum, amount) => sum + amount, 0) / amounts.length : null;
 }
@@ -35,7 +35,7 @@ export function weekAverage(days: readonly HistoryDay[]): number | null {
 export type BandStep = { from: number; days: number; range: NutritionRange };
 
 // The range across the week, a step for each run of days that share one
-export function rangeBand(days: readonly HistoryDay[]): BandStep[] {
+export function rangeBand(days: readonly NutritionHistoryDay[]): BandStep[] {
   const steps: BandStep[] = [];
   days.forEach(({ range }, i) => {
     const last = steps.at(-1);

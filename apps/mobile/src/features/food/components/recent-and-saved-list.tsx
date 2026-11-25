@@ -9,8 +9,8 @@ import type { RecentChoice } from "../recent-and-saved";
 import { FoodChoiceChips } from "./food-choice-chips";
 import { FoodResult } from "./food-result";
 
-// Recent and Saved Foods as one-tap choices (spec #158 story 62, prototype variant J): Saved Foods first, starred. A tap
-// starts adding it: the food opens below to choose a portion and a meal. Saved Meals are listed with the Saved Foods
+// Recent foods, Saved Foods and Saved Meals as one-tap choices (spec #158 story 62, prototype variant J), the saved
+// ones first and starred. A tap starts adding it: the food opens below to choose a portion and a meal
 export function RecentAndSavedList({
   choices,
   error,
@@ -19,7 +19,7 @@ export function RecentAndSavedList({
   meal,
   onLog,
   onEdit,
-  onNewMeal,
+  onNewSavedMeal,
 }: {
   choices: RecentChoice[] | undefined;
   error: string | null;
@@ -30,7 +30,7 @@ export function RecentAndSavedList({
   onLog: (add: FoodEntryAdd) => Promise<boolean>;
   onEdit: (food: Food) => void;
   // Opens a new Saved Meal (spec #188 story 31)
-  onNewMeal: () => void;
+  onNewSavedMeal: () => void;
 }) {
   const open = choices?.find((c) => c.key === chosen);
 
@@ -63,7 +63,8 @@ export function RecentAndSavedList({
           onToggle={() => onChoose(null)}
           meal={meal}
           onLog={onLog}
-          onEdit={onEdit}
+          // A food deleted since it was logged is still Recent, with nothing left to edit
+          onEdit={open.saved ? onEdit : undefined}
         />
       ) : null}
       <LoadingButton
@@ -72,8 +73,8 @@ export function RecentAndSavedList({
         action="secondary"
         variant="link"
         icon="plus"
-        onPress={onNewMeal}
-        style={styles.newMeal}
+        onPress={onNewSavedMeal}
+        style={styles.newSavedMeal}
       />
     </View>
   );
@@ -81,5 +82,5 @@ export function RecentAndSavedList({
 
 const styles = StyleSheet.create({
   section: { gap: spacing[3] },
-  newMeal: { alignSelf: "flex-start" },
+  newSavedMeal: { alignSelf: "flex-start" },
 });

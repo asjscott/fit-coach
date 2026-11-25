@@ -3,7 +3,7 @@ import Svg, { Line } from "react-native-svg";
 import { Pressable } from "@/components/pressable";
 import { Text } from "@/components/text";
 import { radii, spacing, useTheme } from "@/theme";
-import type { historyChart } from "../nutrition-history";
+import type { nutritionHistoryChart } from "../nutrition-history";
 import { onPhone } from "../weigh-in";
 
 const HEIGHT = 200;
@@ -18,12 +18,12 @@ const narrowDay = (date: string) => onPhone(date).toLocaleDateString([], { weekd
 
 // Seven bars, Monday to Sunday, over the target range's band, with the daily average as a dotted line (spec #188
 // stories 20 to 24). Each bar's whole slot is its button, and says the day in words
-export function HistoryChart({
+export function NutritionHistoryChart({
   chart: { bars, band, ticks, average },
   selected,
   onSelect,
 }: {
-  chart: ReturnType<typeof historyChart>;
+  chart: ReturnType<typeof nutritionHistoryChart>;
   selected: string | null;
   onSelect: (date: string) => void;
 }) {

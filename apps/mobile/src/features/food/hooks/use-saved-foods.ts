@@ -1,7 +1,8 @@
 import { Food, type SavedFoodInput } from "@fit/shared";
-import { useCallback, useMemo } from "react";
+import { useMemo } from "react";
 import { ApiError, noAnswerMessage, useApi } from "@/api";
 import { useToast } from "@/contexts/toast-context";
+import { useWrite } from "./use-write";
 
 // What a scanned barcode found: a food (one of the user's Saved Foods, or from Open Food Facts or USDA), nothing, which
 // is when Create food is offered, or no answer
@@ -9,25 +10,16 @@ export type BarcodeLookup = { food: Food } | { notFound: string } | { failed: tr
 
 const NEEDS_CONNECTION = "Finding food needs a connection. Try again when you have one.";
 
+const barcodeTaken = (err: ApiError) =>
+  err.status === 409 ? "One of your Saved Foods already has that barcode." : undefined;
+
 // Barcode lookups and the user's Saved Foods, straight to the API (spec #158 stories 65 to 70). A write answers the
 // Saved Food, true for a delete, or null when it didn't work, after a toast says why, so the form keeps what was typed
 export function useSavedFoods() {
   const api = useApi();
   const { showToast } = useToast();
 
-  const write = useCallback(
-    async <T>(failure: string, request: () => Promise<T>): Promise<T | null> => {
-      try {
-        return await request();
-      } catch (err) {
-        if (!(err instanceof ApiError)) showToast(noAnswerMessage(err, NEEDS_CONNECTION));
-        else if (err.status === 409) showToast("One of your Saved Foods already has that barcode.");
-        else showToast(failure, { error: err });
-        return null;
-      }
-    },
-    [showToast],
-  );
+  const write = useWrite(NEEDS_CONNECTION, barcodeTaken);
 
   return useMemo(
     () => ({

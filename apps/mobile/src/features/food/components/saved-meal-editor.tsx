@@ -1,6 +1,7 @@
 import { portionOf } from "@fit/engines";
 import type { Food, Ingredient, IngredientFood, Portion } from "@fit/shared";
-import { useEffect, useState } from "react";
+import { useFocusEffect } from "expo-router";
+import { useCallback, useEffect, useState } from "react";
 import { BackHandler, Platform, StyleSheet, View } from "react-native";
 import { Alert, AlertText } from "@/components/alert";
 import { ConfirmModal } from "@/components/choice-modal";
@@ -35,16 +36,18 @@ import { FoodRow } from "./food-result";
 import { SavedFoodEditor } from "./saved-food-editor";
 import { ScanButton } from "./scan-button";
 
-// Making a Saved Meal, or editing one, which can also be deleted there (spec #188 stories 31 to 37). It takes the Food
-// tab's whole screen rather than a modal, so a toast shows over it. Logged Food Entries keep their own copy, so nothing
-// here changes a day. Rendered only while open, so each opening starts from the meal or an empty one
+// Making a Saved Meal, or editing or deleting one (spec #188 stories 31 to 37), over the Food tab's whole screen rather
+// than in a modal, so a toast shows over it. Rendered only while open, so each opening starts afresh
 export function SavedMealEditor({
   food,
   start = EMPTY_SAVED_MEAL,
   choices,
   onSaved,
   onDeleted,
-  onSavedFood,
+  onFoodCreated,
+  leaving,
+  onLeave,
+  onStay,
   onClose,
 }: {
   // The Saved Meal being edited; none for a new one
@@ -56,20 +59,26 @@ export function SavedMealEditor({
   onSaved: (food: Food) => void;
   onDeleted: () => void;
   // A Saved Food was made here, from a scan with no match
-  onSavedFood: () => void;
+  onFoodCreated: () => void;
+  // A link asked for something else on the Food tab: unsaved changes are only lost if the user says so
+  leaving: boolean;
+  onLeave: () => void;
+  onStay: () => void;
   onClose: () => void;
 }) {
   const { colors } = useTheme();
   const savedMeals = useSavedMeals();
   const savedFoods = useSavedFoods();
-  const [form, setForm] = useState<SavedMealForm>(() => (food ? savedMealForm(food) : start));
+  const [opened] = useState<SavedMealForm>(() => (food ? savedMealForm(food) : start));
+  const [form, setForm] = useState(opened);
+  const changed = form !== opened && JSON.stringify(form) !== JSON.stringify(opened);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState<"saving" | "deleting" | null>(null);
   const [confirmsDelete, setConfirmsDelete] = useState(false);
   // The ingredient open to change, by its place in the list
   const [openIndex, setOpenIndex] = useState<number | null>(null);
   const [query, setQuery] = useState("");
-  const { foods, isSearching, error: searchError } = useFoodSearch(query);
+  const { foods, isSearching, error: searchError } = useFoodSearch(query, { own: "Saved Foods" });
   const searching = query.trim().length >= 2;
   // The food open to add: from search, a scan, Recent or Saved Foods
   const [adding, setAdding] = useState<IngredientFood | null>(null);
@@ -79,15 +88,21 @@ export function SavedMealEditor({
   const addChoices = choices?.filter((c) => isIngredientFood(c.food)) ?? [];
   const perServing = perServingLine(form);
 
-  // Android's back leaves the editor rather than the tab
+  // Android's back leaves the editor rather than the tab, but not from another tab
+  useFocusEffect(
+    useCallback(() => {
+      if (Platform.OS !== "android") return;
+      const back = BackHandler.addEventListener("hardwareBackPress", () => {
+        if (!busy) onClose();
+        return true;
+      });
+      return () => back.remove();
+    }, [busy, onClose]),
+  );
+
   useEffect(() => {
-    if (Platform.OS !== "android") return;
-    const back = BackHandler.addEventListener("hardwareBackPress", () => {
-      if (!busy) onClose();
-      return true;
-    });
-    return () => back.remove();
-  }, [busy, onClose]);
+    if (leaving && !changed && !busy) onLeave();
+  }, [leaving, changed, busy, onLeave]);
 
   const change = (changes: Partial<SavedMealForm>) => {
     setForm((last) => ({ ...last, ...changes }));
@@ -118,18 +133,18 @@ export function SavedMealEditor({
       return;
     }
     setBusy("saving");
-    const saved = food ? await savedMeals.update(food.id, parsed.input) : await savedMeals.create(parsed.input);
-    setBusy(null);
-    if (saved) onSaved(saved);
+    const savedMeal = food ? await savedMeals.update(food.id, parsed.input) : await savedMeals.create(parsed.input);
+    // On success the editor closes
+    if (savedMeal) onSaved(savedMeal);
+    else setBusy(null);
   };
 
   const remove = async () => {
     if (!food) return;
     setConfirmsDelete(false);
     setBusy("deleting");
-    const deleted = await savedMeals.remove(food.id);
-    setBusy(null);
-    if (deleted) onDeleted();
+    if (await savedMeals.remove(food.id)) onDeleted();
+    else setBusy(null);
   };
 
   const addPanel = (toAdd: IngredientFood) => (
@@ -351,6 +366,14 @@ export function SavedMealEditor({
         onCancel={() => setConfirmsDelete(false)}
         onConfirm={remove}
       />
+      <ConfirmModal
+        isOpen={leaving && changed && !busy}
+        title="Discard your changes?"
+        message="This Saved Meal has changes you haven't saved."
+        confirmLabel="Discard"
+        onCancel={onStay}
+        onConfirm={async () => onLeave()}
+      />
       {creatingFood ? (
         <SavedFoodEditor
           barcode={creatingFood}
@@ -358,7 +381,7 @@ export function SavedMealEditor({
           onSaved={(made) => {
             setCreatingFood(null);
             open(made);
-            onSavedFood();
+            onFoodCreated();
           }}
         />
       ) : null}

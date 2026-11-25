@@ -2,3 +2,7 @@
 export const wholeNumber = (value: number) => Math.round(value).toLocaleString();
 
 export const oneDecimal = (value: number) => value.toLocaleString(undefined, { maximumFractionDigits: 1 });
+
+// A portion's amount: to a hundredth ("0.25", "1.5"), or smaller still rather than 0
+export const portionAmount = (value: number) =>
+  value.toLocaleString(undefined, value < 0.01 ? { maximumSignificantDigits: 2 } : { maximumFractionDigits: 2 });

@@ -26,9 +26,8 @@ const leftToTop = (amount: number, { min, max }: NutritionRange) => {
   return `${wholeNumber(min - shown)}–${wholeNumber(max - shown)}`;
 };
 
-// The Coach's words under Today's rings and on the Ideas half (spec #158 stories 33 to 35 and 39, #188 story 10). It
-// speaks only of kcal and protein, never fibre or water, which stay goals rather than shortfalls, and reads the same
-// states as the rings
+// The Coach's words under Today's rings and on the Ideas half (spec #158 stories 33 to 35 and 39, #188 story 10): the
+// rings' own states, for kcal and protein only, as fibre and water stay goals rather than shortfalls
 export function coachSummary({ targets, totals, ideas, ideaMeal }: Day): CoachSummary {
   const ranges = nutritionRanges(targets);
   const kcal = rangeState(totals.kcal, ranges.kcal);

@@ -9,16 +9,17 @@ import { Icon } from "@/components/icons";
 import { LoadingButton } from "@/components/loading-button";
 import { Pressable } from "@/components/pressable";
 import { Screen } from "@/components/screen";
+import { Segmented } from "@/components/segmented";
 import { Spinner } from "@/components/spinner";
 import { Text } from "@/components/text";
 import { radii, spacing, useTheme } from "@/theme";
-import { HistoryChart } from "../components/history-chart";
+import { NutritionHistoryChart } from "../components/nutrition-history-chart";
 import { useNutritionWeek } from "../hooks/use-nutrition-week";
-import { historyChart, historyWeekLabel } from "../nutrition-history";
+import { nutritionHistoryChart, nutritionHistoryWeekLabel } from "../nutrition-history";
 
-const MEASURES: { measure: NutritionMeasure; label: string }[] = [
-  { measure: "kcal", label: "kcal" },
-  { measure: "protein", label: "Protein" },
+const MEASURES: { value: NutritionMeasure; label: string }[] = [
+  { value: "kcal", label: "kcal" },
+  { value: "protein", label: "Protein" },
 ];
 
 // Nutrition History (spec #188): a week of kcal or protein against each day's range, opened from the Food tab's rings
@@ -32,7 +33,7 @@ export default function NutritionHistoryView() {
   return (
     <Screen scroll="screen" edges={["bottom"]}>
       <View style={styles.page}>
-        <MeasureSwitch measure={measure} onChange={setMeasure} />
+        <Segmented options={MEASURES} value={measure} onChange={setMeasure} />
         {error ? (
           <>
             <Alert action="muted">
@@ -53,36 +54,6 @@ export default function NutritionHistoryView() {
   );
 }
 
-function MeasureSwitch({
-  measure,
-  onChange,
-}: {
-  measure: NutritionMeasure;
-  onChange: (measure: NutritionMeasure) => void;
-}) {
-  const { colors } = useTheme();
-  return (
-    <View style={[styles.segment, { backgroundColor: colors.raised }]} accessibilityRole="tablist">
-      {MEASURES.map(({ measure: m, label }) => {
-        const selected = measure === m;
-        return (
-          <Pressable
-            key={m}
-            onPress={() => onChange(m)}
-            accessibilityRole="tab"
-            accessibilityState={{ selected }}
-            style={[styles.item, selected ? { backgroundColor: colors.surface } : null]}
-          >
-            <Text size="sm" weight="semiBold" color={selected ? "text" : "muted"}>
-              {label}
-            </Text>
-          </Pressable>
-        );
-      })}
-    </View>
-  );
-}
-
 function Week({
   week,
   measure,
@@ -94,7 +65,7 @@ function Week({
 }) {
   const { colors } = useTheme();
   const [selected, setSelected] = useState<string | null>(null);
-  const chart = historyChart(week, measure);
+  const chart = nutritionHistoryChart(week, measure);
   const bar = chart.bars.find(({ date }) => date === selected);
   const { earlier, later } = weeksAround(week);
 
@@ -103,14 +74,14 @@ function Week({
       <View style={styles.stepper}>
         <Arrow to={earlier} icon="chevronLeft" label="The week before" onWeek={onWeek} />
         <Text weight="semiBold" accessibilityLiveRegion="polite">
-          {historyWeekLabel(week)}
+          {nutritionHistoryWeekLabel(week)}
         </Text>
         <Arrow to={later} icon="chevronRight" label="The week after" onWeek={onWeek} />
       </View>
       <Text size="lg" weight="bold">
         {chart.average?.label ?? chart.nothingToAverage}
       </Text>
-      <HistoryChart chart={chart} selected={selected} onSelect={setSelected} />
+      <NutritionHistoryChart chart={chart} selected={selected} onSelect={setSelected} />
       <View style={styles.key} importantForAccessibility="no-hide-descendants" accessibilityElementsHidden aria-hidden>
         <View style={[styles.swatch, { backgroundColor: colors.line }]} />
         <Text size="xs" color="muted">
@@ -176,8 +147,6 @@ function Arrow({
 
 const styles = StyleSheet.create({
   page: { gap: spacing[4] },
-  segment: { flexDirection: "row", borderRadius: radii.md, padding: 3 },
-  item: { flex: 1, alignItems: "center", paddingVertical: spacing[2], borderRadius: radii.sm },
   stepper: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
   arrow: { padding: spacing[1] },
   key: { flexDirection: "row", alignItems: "center", gap: spacing[2] },
