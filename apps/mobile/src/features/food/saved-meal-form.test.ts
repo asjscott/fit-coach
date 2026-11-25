@@ -1,4 +1,4 @@
-import type { Food, Ingredient, IngredientFood } from "@fit/shared";
+import type { Food, FoodEntry, Ingredient, IngredientFood, Portion } from "@fit/shared";
 import { describe, expect, it } from "vitest";
 import {
   EMPTY_SAVED_MEAL,
@@ -6,6 +6,7 @@ import {
   ingredientLine,
   perServingLine,
   savedMealForm,
+  savedMealFormFromEntries,
   savedMealInput,
 } from "./saved-meal-form";
 
@@ -76,6 +77,62 @@ describe("savedMealInput", () => {
 describe("savedMealForm", () => {
   it("edits a Saved Meal from its name, servings and ingredients", () => {
     expect(savedMealForm(bowl)).toEqual({ name: "Chicken and rice", servings: "4", ingredients });
+  });
+});
+
+// Story 33
+describe("savedMealFormFromEntries", () => {
+  const entry = (food: Food, portion: Portion): FoodEntry => ({
+    id: food.id,
+    date: "2026-11-24",
+    meal: "dinner",
+    loggedAt: "2026-11-24T18:00:00.000Z",
+    food,
+    portion,
+    nutrients: food.per100g,
+  });
+
+  it("starts a Saved Meal, still to be named, from the logged foods and portions", () => {
+    const entries = [
+      entry(chicken, { grams: 150 }),
+      entry(rice, { grams: 100, serving: { label: "1 cup", count: 0.5 } }),
+    ];
+    expect(savedMealFormFromEntries(entries)).toEqual({
+      ...EMPTY_SAVED_MEAL,
+      ingredients: [
+        { food: chicken, portion: { grams: 150 } },
+        { food: rice, portion: { grams: 100, serving: { label: "1 cup", count: 0.5 } } },
+      ],
+    });
+  });
+
+  it("adds a logged Saved Meal's own ingredients at the logged portion, in its place", () => {
+    const entries = [
+      entry(rice, { grams: 200, serving: { label: "1 cup", count: 1 } }),
+      // One of the 4 servings: a quarter of each ingredient
+      entry(bowl, { grams: 250, serving: { label: "1 serving", count: 1 } }),
+      entry(chicken, { grams: 80 }),
+    ];
+    expect(savedMealFormFromEntries(entries).ingredients).toEqual([
+      { food: rice, portion: { grams: 200, serving: { label: "1 cup", count: 1 } } },
+      { food: chicken, portion: { grams: 150 } },
+      { food: rice, portion: { grams: 100, serving: { label: "1 cup", count: 0.5 } } },
+      { food: chicken, portion: { grams: 80 } },
+    ]);
+  });
+
+  it("can be saved once it has a name and servings", () => {
+    const started = savedMealFormFromEntries([entry(bowl, { grams: 500, serving: { label: "1 serving", count: 2 } })]);
+    expect(savedMealInput({ ...started, name: "Bowl for two", servings: "2" })).toEqual({
+      input: {
+        name: "Bowl for two",
+        servings: 2,
+        ingredients: [
+          { food: chicken, portion: { grams: 300 } },
+          { food: rice, portion: { serving: "1 cup", count: 1 } },
+        ],
+      },
+    });
   });
 });
 

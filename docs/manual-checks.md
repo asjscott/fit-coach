@@ -11,7 +11,7 @@ Result codes: **✅ pass** · **❌ fail** · **⚠️ works but feels off** · 
 - **Run on the phone now:** R1, U1, U2, LS2, PR1, RS1–RS7. Each is a part no run has covered yet.
 - **M7, on the phones:** WI4, WI6, F4, FL6, SC3, SC4, TC4, FI6, TB2, NA1. Session 5 passed the rest of M7 on the simulators and phones; these are the parts not yet seen, and the offline checks again after #170–#174.
 - **Ranges (#189), on the phones:** RR1–RR3.
-- **Saved Meals (#192), on the phones:** SM1.
+- **Saved Meals (#192, #193), on the phones:** SM1, SM2.
 - **Run when you next train:** P9 and S1, a full Workout with a timer, resting as the timer says. Both can be one session.
 - **🕒 Due later, while you use the app:** C5 (the day after a check-in), P16 (a Monday), J2 (after a week with jumps on), P17 (after a few weeks), DL1 and DL2 (the 5th week of a Block: the week starting 4 Mondays after the Monday of the week Assessment B was done).
 - **On hold:** E1–E3 need Sentry set up on production.
@@ -279,6 +279,8 @@ Run each offline check (WI6, F4, FL6, TC4) twice: once with airplane mode on bef
 - [ ] **SC4** Scan the same product again: it's found straight away as your Saved Food, without Create food. Search its name: it comes first, marked "Saved food", above the USDA results.
   - iOS: Result: · Android: Result: · Notes:
 - [ ] **SM1** On the Ideas half, tap "New saved meal", name it and set 2 servings. Scan a packaged food, choose a portion and Add ingredient; scan one nothing has, make it with Create food, and add that too. kcal and protein per serving show and follow each change, and a saved meal is never offered as an ingredient. Save: it opens to log, with servings and no Grams. Add 0.5: the day has one food with its name, and tapping it shows the ingredients at that portion. On Android, the system back leaves the editor for the Food tab. In airplane mode, Save says saving needs a connection and everything stays as typed (#192).
+  - iOS: Result: · Android: Result: · Notes:
+- [ ] **SM2** On a past day, open a meal holding a food and a Saved Meal and tap "Save as meal": New saved meal opens with the food and the Saved Meal's own ingredients, at the portions logged. Change one, remove another, name it, set the servings and Save: the same day shows again, its meal unchanged, and the new Saved Meal is found by search. A meal with nothing logged doesn't offer it (#193).
   - iOS: Result: · Android: Result: · Notes:
 - [ ] **TC4** In airplane mode, Tell says telling the Coach needs a connection, stops loading at once, and the words stay in the box (#173). Back online, Tell works.
   - iOS: Result: · Android: Result: · Notes:
