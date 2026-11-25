@@ -29,12 +29,15 @@ export type CurrentExerciseBoxProps = {
   // Its place in the Workout, from 0, and how many there are
   position: number;
   count: number;
-  // Offered once it takes no more Sets: an Assessment Workout's "Next test", none when every test is done, or "Next
-  // exercise" after the walk's one Set
   next?: NextAction;
 };
 
-type NextAction = { label: string; onPress: () => void };
+// What moves on from an Exercise. "main" is the main button, with Log extra set under it to open the steppers, and
+// "secondary" is under Log set. "test" is an Assessment Workout's Next test, only once the test takes no more Sets.
+// After the walk's one Set either is the only button
+export type NextAction = { label: string; onPress: () => void } & (
+  { as: "test" | "secondary" } | { as: "main"; onLogExtra: () => void }
+);
 
 // The Workout Exercise being logged: its name, target, Previous Sets, the Sets so far (each with a ⋯ to edit or delete it) and
 // steppers for the next Set, which starts from the previous one. A test that's done,
@@ -64,12 +67,13 @@ export function ExerciseBox({ children }: { children: ReactNode }) {
 
 // Logging one Workout Exercise, under its name: its target, Previous Sets, the Sets so far and the next Set's
 // steppers, or once it takes no more Sets, the next action. hideTarget leaves the target to the summary under the
-// name, as a superset shows it
+// name, as a superset shows it. onLog is called as a Set is logged
 export function ExerciseLogging({
   workoutExercise,
   next,
   hideTarget = false,
-}: Pick<CurrentExerciseBoxProps, "workoutExercise" | "next"> & { hideTarget?: boolean }) {
+  onLog,
+}: Pick<CurrentExerciseBoxProps, "workoutExercise" | "next"> & { hideTarget?: boolean; onLog?: () => void }) {
   const { workout, logSet, editSet, deleteSet, nextSetDraft, protocolState } = useLogbook();
   const primaryEquipment = usePrimaryEquipmentProfile();
   const unit = useWeightUnit();
@@ -178,6 +182,10 @@ export function ExerciseLogging({
             <LoadingButton label={next.label} size="lg" onPress={next.onPress} fullWidth />
           </View>
         ) : null
+      ) : next?.as === "main" ? (
+        <View style={styles.entry}>
+          <NextButtons next={next} />
+        </View>
       ) : (
         // Remounts after each Set, so the steppers start from the Set just logged
         <SetEntry
@@ -190,8 +198,13 @@ export function ExerciseLogging({
           buildLabel={buildLabel}
           reading={reading}
           submitLabel={`Log set ${nextNumber}`}
-          onSubmit={(values) => logSet(id, values)}
-        />
+          onSubmit={(values) => {
+            onLog?.();
+            return logSet(id, values);
+          }}
+        >
+          {next?.as === "secondary" ? <NextButtons next={next} /> : null}
+        </SetEntry>
       )}
 
       <ConfirmModal
@@ -217,6 +230,24 @@ export function ExerciseLogging({
   );
 }
 
+// The next action, and as the main button, Log extra set under it, on the logging screen and the rest screen
+export function NextButtons({ next }: { next: NextAction }) {
+  return (
+    <Stack spacing={3}>
+      <LoadingButton
+        label={next.label}
+        size="lg"
+        action={next.as === "secondary" ? "secondary" : "primary"}
+        onPress={next.onPress}
+        fullWidth
+      />
+      {next.as === "main" ? (
+        <LoadingButton label="Log extra set" size="lg" action="secondary" onPress={next.onLogExtra} fullWidth />
+      ) : null}
+    </Stack>
+  );
+}
+
 type SetEntryProps = {
   heading: string;
   loadType: LoadType;
@@ -230,7 +261,7 @@ type SetEntryProps = {
   reading: SetReading;
   submitLabel: string;
   onSubmit: (values: SetValues) => Promise<void>;
-  // Shown under the submit button, e.g. Cancel while editing
+  // Shown under the submit button: Cancel while editing, or a secondary Next exercise
   children?: ReactNode;
 };
 

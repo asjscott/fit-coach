@@ -23,6 +23,28 @@ describe("nextPlannedExercise", () => {
     ).toBe("row");
   });
 
+  it("is the next in order after the current one, wrapping to any skipped", () => {
+    const workoutExercises = [
+      { id: "squat", sets: [], planned },
+      { id: "row", sets: [{}, {}, {}], planned },
+      { id: "press", sets: [{}, {}, {}], planned },
+      { id: "curl", sets: [{}], planned },
+    ];
+    expect(nextPlannedExercise(workoutExercises, "row")).toBe("curl");
+    expect(nextPlannedExercise(workoutExercises, "curl")).toBe("squat");
+  });
+
+  it("treats a superset as one step, opening on whoever's turn it is", () => {
+    const pairOf = (press: number, row: number) => [
+      { id: "squat", sets: [], planned },
+      { id: "press", sets: Array(press).fill({}), planned: { ...planned, supersetWith: "row" } },
+      { id: "curl", sets: [], planned },
+      { id: "row", sets: Array(row).fill({}), planned: { ...planned, supersetWith: "press" } },
+    ];
+    expect(nextPlannedExercise(pairOf(3, 3), "row")).toBe("curl");
+    expect(nextPlannedExercise(pairOf(1, 0), "squat")).toBe("row");
+  });
+
   it("is none in a Manual Workout", () => {
     expect(nextPlannedExercise([{ id: "squat", sets: [] }])).toBeUndefined();
   });

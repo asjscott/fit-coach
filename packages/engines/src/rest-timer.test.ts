@@ -73,6 +73,38 @@ describe("restAfterSet", () => {
     expect(secondsOf(restAfterSet(workout(3, 4, 3), "row", now))).toBe(60);
   });
 
+  describe("after the Workout's last planned Set", () => {
+    const done = (pressSets: number, rowSets: number, squatSets: number) => {
+      const [press, row, squat] = workout(pressSets, rowSets).workoutExercises;
+      return { workoutExercises: [press!, row!, { ...squat!, sets: Array<Set>(squatSets).fill(set) }] };
+    };
+
+    it("doesn't rest, whichever Exercise it's of", () => {
+      expect(restAfterSet(done(3, 3, 3), "squat", now)).toBeNull();
+      expect(restAfterSet(done(3, 3, 3), "row", now)).toBeNull();
+      expect(restAfterSet(done(3, 3, 3), "squat", now, 60)).toBeNull();
+    });
+
+    it("rests after an Exercise's last Set while another has Sets left", () => {
+      expect(secondsOf(restAfterSet(done(0, 0, 3), "squat", now))).toBe(90);
+      expect(secondsOf(restAfterSet(done(3, 3, 2), "row", now))).toBe(90);
+    });
+
+    it("rests after a Set past the plan", () => {
+      expect(secondsOf(restAfterSet(done(3, 3, 4), "squat", now))).toBe(90);
+    });
+
+    it("always rests in a Manual Workout", () => {
+      const manual = workout(0, 0).workoutExercises.map(({ id, slug, loadType, sets }) => ({
+        id,
+        slug,
+        loadType,
+        sets,
+      }));
+      expect(secondsOf(restAfterSet({ workoutExercises: manual }, "squat", now))).toBe(90);
+    });
+  });
+
   // Seen in check S2: a 1-Set chin-up (120 s Sets, 90 s rest) paired with 3 Sets of lateral raise (60 s, 45 s rest)
   describe("once one Exercise of a pair has all its Sets", () => {
     const chinUpWithLateralRaise = (chinUpSets: number, lateralRaiseSets: number, chinUpFirst = true) => {
@@ -85,7 +117,8 @@ describe("restAfterSet", () => {
       expect(restAfterSet(chinUpWithLateralRaise(1, 0, chinUpFirst), "chin-up", now)).toBeNull();
       expect(secondsOf(restAfterSet(chinUpWithLateralRaise(1, 1, chinUpFirst), "raise", now))).toBe(90);
       expect(secondsOf(restAfterSet(chinUpWithLateralRaise(1, 2, chinUpFirst), "raise", now))).toBe(45);
-      expect(secondsOf(restAfterSet(chinUpWithLateralRaise(1, 3, chinUpFirst), "raise", now))).toBe(45);
+      // The last planned Set (#180)
+      expect(restAfterSet(chinUpWithLateralRaise(1, 3, chinUpFirst), "raise", now)).toBeNull();
     });
 
     it("rests the pair's 90 s when the lateral raise goes first in round 1", () => {

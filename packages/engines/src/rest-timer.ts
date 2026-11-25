@@ -21,7 +21,7 @@ export const startRest = (slug: string, now: Date, choice?: RestChoice): Rest =>
 // is behind and has Sets left, as the user goes straight to it, and after the pair's second Set it's the longer of
 // the two rests. Once the other has all its Sets, the one left rests as usual. The walk has no rest after it, and
 // nor does a Set of a Workout logged afterwards, which happened on another day (#153). An Assessment always rests as on
-// Auto, so its tests aren't held back by tiredness (#178)
+// Auto, so its tests aren't held back by tiredness (#178). The Workout's last planned Set has none (#180)
 export function restAfterSet(
   { workoutExercises, pastStart, assessment }: Pick<InProgressWorkout, "workoutExercises" | "pastStart" | "assessment">,
   workoutExerciseId: string,
@@ -31,7 +31,7 @@ export function restAfterSet(
   if (pastStart) return null;
   const choice = assessment ? "auto" : chosen;
   const logged = workoutExercises.find(({ id }) => id === workoutExerciseId);
-  if (!logged || takesOneSet(logged.slug)) return null;
+  if (!logged || takesOneSet(logged.slug) || isLastPlannedSet(workoutExercises, logged)) return null;
   const partner = supersetPartner(workoutExercises, logged);
   if (!partner) return startRest(logged.slug, now, choice);
   const { pairSeconds, done } = pairRestPlan([logged, partner], choice);
@@ -47,6 +47,10 @@ export const pairRestSeconds = (a: string, b: string, choice?: RestChoice) =>
 type PairMember = LoggedWorkoutExercise & Pick<InProgressWorkoutExercise, "planned">;
 
 const isDone = ({ sets, planned }: PairMember) => !!planned && sets.length >= planned.sets;
+
+// Whether the Set just logged finished the plan. One past an Exercise's planned Sets didn't
+const isLastPlannedSet = (workoutExercises: readonly PairMember[], { sets, planned }: PairMember) =>
+  !!planned && sets.length <= planned.sets && workoutExercises.every((member) => !member.planned || isDone(member));
 
 export type PairRestPlan = {
   // After each round both are in

@@ -1579,7 +1579,9 @@ describe("Logbook: Planned Workouts", () => {
       expect(await restAfter(chinUp!.id, { kind: "bodyweight", reps: 8 }, at("09:05"))).toBeNull();
       expect(await restAfter(raise!.id, raiseSet, at("09:06"))).toBe(90);
       expect(await restAfter(raise!.id, raiseSet, at("09:08"))).toBe(45);
-      expect(await restAfter(raise!.id, raiseSet, at("09:10"))).toBe(45);
+      // The Workout's last planned Set (#180), then one past it
+      expect(await restAfter(raise!.id, raiseSet, at("09:10"))).toBeNull();
+      expect(await restAfter(raise!.id, raiseSet, at("09:12"))).toBe(45);
     });
 
     it("logs each Set under its own Exercise, and uploads no sign of the pair", async () => {

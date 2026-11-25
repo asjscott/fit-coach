@@ -18,7 +18,7 @@ import { usePrimaryEquipmentProfile, useWeightUnit } from "@/features/user/curre
 import { useNow } from "@/hooks/use-now";
 import { fonts, spacing, useTheme } from "@/theme";
 import { errorMessage } from "@/utils/error-message";
-import { CurrentExerciseBox } from "../components/current-exercise-box";
+import { CurrentExerciseBox, type NextAction } from "../components/current-exercise-box";
 import { RestScreen } from "../components/rest-screen";
 import { RestTimer } from "../components/rest-timer";
 import { SupersetBox } from "../components/superset-box";
@@ -29,6 +29,7 @@ import { useHasEnded } from "../hooks/use-has-ended";
 import { useLeaveWorkout } from "../hooks/use-leave-workout";
 import { useStartWorkout } from "../hooks/use-open-workout";
 import { useLogbook } from "../logbook-provider";
+import { nextStep } from "../next-step";
 
 // The In-progress Workout, laid out for logging between sets: Elapsed, Sets and Volume at the top, the current
 // Workout Exercise open in a box and the others collapsed to rows, Add exercise, and Finish alone at the bottom, under a minimised rest.
@@ -45,22 +46,49 @@ export default function WorkoutView() {
 
 function InProgress({ workout }: { workout: InProgressWorkout }) {
   const { colors } = useTheme();
-  const { discard, testProgress } = useLogbook();
+  const { discard, testProgress, rest, minimizeRest } = useLogbook();
   const primaryEquipment = usePrimaryEquipmentProfile();
   const { showToast } = useToast();
   const leaveWorkout = useLeaveWorkout();
   const [confirmingDiscard, setConfirmingDiscard] = useState(false);
   const { workoutExercises } = workout;
   const tests = workout.assessment && primaryEquipment ? testProgress(workout, primaryEquipment) : undefined;
-  const nextPlanned = nextPlannedExercise(workoutExercises);
   const [currentId, choose] = useCurrentWorkoutExercise(
     workoutExercises.map((we) => we.id),
-    tests?.nextTestId ?? nextPlanned,
+    tests?.nextTestId ?? nextPlannedExercise(workoutExercises),
   );
-  // What the current Exercise offers once it takes no more Sets: an Assessment Workout's next test, else the next
-  // planned Exercise
-  const nextId = tests ? tests.nextTestId : nextPlanned;
-  const next = nextId ? { label: tests ? "Next test" : "Next exercise", onPress: () => choose(nextId) } : undefined;
+  // Where Log extra set opened the steppers, until a Set of it is logged or deleted, or another Exercise is chosen
+  const [extra, setExtra] = useState<{ id: string; loggedSets: number } | null>(null);
+  const loggedSets = (id: string) => workoutExercises.find((we) => we.id === id)?.sets.length ?? 0;
+  if (extra && (extra.id !== currentId || extra.loggedSets !== loggedSets(extra.id))) setExtra(null);
+
+  // What moves on from an Exercise, leaving any rest as a bar: an Assessment Workout's next test, else its next step
+  const nextAfter = (id: string): NextAction | undefined => {
+    const { nextTestId } = tests ?? {};
+    if (nextTestId) return { label: "Next test", as: "test", onPress: () => choose(nextTestId) };
+    const step = nextStep(workout, id);
+    if (!step) return undefined;
+    const action = {
+      label: step.to === "finish" ? "Finish workout" : "Next exercise",
+      onPress: () => {
+        minimizeRest();
+        if (step.to === "finish") router.push("/workout/finish");
+        else choose(step.id);
+      },
+    };
+    if (!step.main) return { ...action, as: "secondary" };
+    const onLogExtra = () => {
+      minimizeRest();
+      choose(id);
+      setExtra({ id, loggedSets: loggedSets(id) });
+    };
+    return { ...action, as: "main", onLogExtra };
+  };
+  const nextAfterCurrent = currentId === null ? undefined : nextAfter(currentId);
+  const next: NextAction | undefined =
+    extra && nextAfterCurrent ? { ...nextAfterCurrent, as: "secondary" } : nextAfterCurrent;
+  // A rest is after an Exercise's Set whichever is current now
+  const nextAfterRest = rest && !workout.assessment ? nextAfter(rest.afterId) : undefined;
   const groups = supersetGroups(workoutExercises);
   const pairs = groups.filter((group) => group.length === 2);
 
@@ -95,7 +123,7 @@ function InProgress({ workout }: { workout: InProgressWorkout }) {
               const pair = [workoutExercise, partner] as const;
               return pair.some(({ id }) => id === currentId) ? (
                 <View key={workoutExercise.id} style={styles.current}>
-                  <SupersetBox pair={pair} letter={letter} currentId={currentId ?? ""} onChoose={choose} />
+                  <SupersetBox pair={pair} letter={letter} currentId={currentId ?? ""} onChoose={choose} next={next} />
                 </View>
               ) : (
                 <View key={workoutExercise.id} style={[styles.pairRows, { borderLeftColor: colors.accent }]}>
@@ -155,7 +183,7 @@ function InProgress({ workout }: { workout: InProgressWorkout }) {
           fullWidth
         />
       </View>
-      <RestScreen workout={workout} />
+      <RestScreen workout={workout} next={nextAfterRest} />
       <ConfirmModal
         isOpen={confirmingDiscard}
         title="Discard Workout?"
