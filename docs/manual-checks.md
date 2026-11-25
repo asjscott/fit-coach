@@ -10,6 +10,7 @@ Result codes: **✅ pass** · **❌ fail** · **⚠️ works but feels off** · 
 
 - **Run on the phone now:** R1, U1, U2, LS2, PR1, RS1–RS7. Each is a part no run has covered yet.
 - **M7, on the phones:** WI4, WI6, F4, FL6, SC3, SC4, TC4, FI6, TB2, NA1. Session 5 passed the rest of M7 on the simulators and phones; these are the parts not yet seen, and the offline checks again after #170–#174.
+- **Ranges (#189), on the phones:** RR1–RR3.
 - **Run when you next train:** P9 and S1, a full Workout with a timer, resting as the timer says. Both can be one session.
 - **🕒 Due later, while you use the app:** C5 (the day after a check-in), P16 (a Monday), J2 (after a week with jumps on), P17 (after a few weeks), DL1 and DL2 (the 5th week of a Block: the week starting 4 Mondays after the Monday of the week Assessment B was done).
 - **On hold:** E1–E3 need Sentry set up on production.
@@ -281,6 +282,15 @@ Run each offline check (WI6, F4, FL6, TC4) twice: once with airplane mode on bef
 - [ ] **FI6** After 21:00, the idea buttons read "+ Snacks", and a Recent or Saved Food chosen on the Ideas half has Snacks picked for it.
   - iOS: Result: · Android: Result: · Notes:
 - [ ] **TB2** From Profile's "Exercise library", tap an Exercise: its detail opens. Back (the header's arrow, and on the iPhone a swipe from the left edge; on Android the system back) returns to the library, and again to Profile.
+  - iOS: Result: · Android: Result: · Notes:
+
+## Ranges and rings (#189)
+
+- [ ] **RR1** On the Food tab, log food until kcal and protein pass through each state, in light and in dark: below, the ring is orange with what's left to the bottom of its range; in range, full and green with the amount and "in range"; over, a red second lap you can tell from the green under it, with how far over. Today's rings show the same, and the Coach's summary agrees with both.
+  - iOS: Result: · Android: Result: · Notes:
+- [ ] **RR2** Log far too much (over twice a target): the red lap is full and goes no further. Fibre, water and the Workout rings stay orange.
+  - iOS: Result: · Android: Result: · Notes:
+- [ ] **RR3** With VoiceOver or TalkBack on, each kcal and protein ring says its state in words: left to be in range, in range, or over the range.
   - iOS: Result: · Android: Result: · Notes:
 
 ## When the server isn't answering (#170, #174)

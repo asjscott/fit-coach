@@ -43,7 +43,7 @@ export const Day = z.object({
   meals: z.array(DayMeal),
   // The water the user has logged that day, in ml
   waterMl: z.number(),
-  // Up to two Food Ideas the user's Diet allows to fill what's left of the day; none once protein is met
+  // Up to two Food Ideas the user's Diet allows that fit under the top of the kcal range; none once protein is in range
   ideas: z.array(FoodIdea),
   // The meal Add puts an idea into: the one for the time of day now, in the user's timezone
   ideaMeal: Meal,

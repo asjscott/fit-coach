@@ -20,6 +20,11 @@ const pairings: [ColorToken, ColorToken, number][] = [
   ["accent", "surface", TEXT],
   ["danger", "bg", TEXT],
   ["danger", "surface", TEXT],
+  // Ring arcs: below, in range and over
+  ...(["accent", "success", "danger"] as const).flatMap((fg) => [
+    [fg, "bg", UI] as [ColorToken, ColorToken, number],
+    [fg, "surface", UI] as [ColorToken, ColorToken, number],
+  ]),
   // Solid primary and negative buttons
   ["onAccent", "accent", TEXT],
   ["onAccent", "danger", TEXT],
