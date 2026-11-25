@@ -157,7 +157,19 @@ export default function FoodView() {
           <>
             <DayStepper daysBefore={daysBefore} onChange={setDaysBefore} />
             {day ? (
-              <DayRings day={day} only={["kcal", "protein", "fibre"]} size={72} />
+              <DayRings
+                day={day}
+                only={["kcal", "protein", "fibre"]}
+                size={72}
+                // Nutrition History has no fibre, so its ring opens on kcal too
+                onPress={(key) =>
+                  router.push({
+                    pathname: "/nutrition-history",
+                    params: { measure: key === "protein" ? "protein" : "kcal" },
+                  })
+                }
+                pressHint="Opens Nutrition History"
+              />
             ) : isOffline ? null : (
               <Spinner />
             )}

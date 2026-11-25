@@ -293,6 +293,17 @@ Run each offline check (WI6, F4, FL6, TC4) twice: once with airplane mode on bef
 - [ ] **RR3** With VoiceOver or TalkBack on, each kcal and protein ring says its state in words: left to be in range, in range, or over the range.
   - iOS: Result: · Android: Result: · Notes:
 
+## Nutrition History (#191)
+
+- [ ] **NH1** Tap the Food tab's kcal ring, then go back and tap protein: Nutrition History opens on each. Today's rings still open the Food tab itself. Back (the header's arrow, the iPhone's swipe, Android's system back) returns to the day.
+  - iOS: Result: · Android: Result: · Notes:
+- [ ] **NH2** In light and in dark, this week and one with days below, in range and over: the bars are orange, green and red as those days' rings are, the band and the dotted average are clear behind and over them, and no number overlaps another. Change your Goal: from today the band steps, and the days before keep theirs. Days with nothing logged (or only water) are empty slots, and the average leaves them and today out.
+  - iOS: Result: · Android: Result: · Notes:
+- [ ] **NH3** The arrows go back to the week of your first Food Entry and stop, and forward no later than this week. Tap each bar and an empty slot: its amount, range and state show below.
+  - iOS: Result: · Android: Result: · Notes:
+- [ ] **NH4** With VoiceOver or TalkBack on, each day says its name, amount, range and state, or that nothing is logged. In airplane mode, opening it says it needs a connection; back online, Try again loads it.
+  - iOS: Result: · Android: Result: · Notes:
+
 ## When the server isn't answering (#170, #174)
 
 Needs the phone online with the API stopped, or the server otherwise unreachable while the phone has a network.

@@ -202,6 +202,10 @@ _Avoid_: Activity (for this), lifestyle, exercise level
 The calories, protein, fat, carbs, fibre and water the Coach sets the user for each day, the same every day, from their latest Weigh-in, Activity Level and Goal. Fibre is the user's to change; the others follow the rules. Calories and protein are each a range around their target, 5% either side for calories and 90–120% for protein, and a day is below, in range or over each.
 _Avoid_: Macros, budget (the Weekly Budget is for Sets), goals
 
+**Nutrition History**:
+A week, Monday to Sunday, of the calories or protein the user ate each day against that day's range, with their daily average. The average leaves out today and days with no Food Entry; water alone doesn't count as one.
+_Avoid_: History (alone, which is Workouts), food log, trends
+
 **Weigh-in**:
 The user's body weight for one week, Monday to Sunday: at most one per week, a later one replacing it. The latest is the body weight everything else reads.
 _Avoid_: Weight entry, weight log, body weight (for one entry)
