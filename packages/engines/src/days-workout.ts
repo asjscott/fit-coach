@@ -9,7 +9,8 @@ import {
 } from "@fit/shared";
 import { LIGHTEST_SHARE, readinessShare } from "./check-in";
 import { exerciseBySlug } from "./data/exercises";
-import { canPair, pairSeconds, secondsPerSetOf } from "./supersets";
+import type { RestChoice } from "./rest-choice";
+import { canPair, pairSeconds, secondsOfSet } from "./supersets";
 import { SETS_PER_PICK } from "./weekly-budget";
 import { secondsForSets, WARM_UP_SECONDS } from "./workout-length";
 
@@ -26,6 +27,8 @@ export type DayChoices = {
   fullWorkout?: boolean;
   // Cuts Sets instead of pairing Exercises into supersets when the Workout doesn't fit its Length
   noSupersets?: boolean;
+  // The rest the user chose, Auto when absent. Unlike the others it stays for the next Workout (#178)
+  rest?: RestChoice;
 };
 
 // The choices the user has made, tied to the plan they made them on
@@ -140,8 +143,8 @@ function setCounts(sets: readonly DayExercise[], kept: number) {
   return counts;
 }
 
-// The Sets' time, a pair's by pairSeconds once both have Sets
-function secondsOfSets(counts: ReadonlyMap<DayExercise, number>, partners: Partners) {
+// The Sets' time at the chosen rest, a pair's by pairSeconds once both have Sets
+function secondsOfSets(counts: ReadonlyMap<DayExercise, number>, partners: Partners, rest?: RestChoice) {
   let seconds = 0;
   const timed = new Set<DayExercise>();
   for (const [exercise, sets] of counts) {
@@ -149,10 +152,10 @@ function secondsOfSets(counts: ReadonlyMap<DayExercise, number>, partners: Partn
     const partner = partners.get(exercise);
     const partnerSets = partner && counts.get(partner);
     if (partner && partnerSets) {
-      seconds += pairSeconds({ slug: exercise.slug, sets }, { slug: partner.slug, sets: partnerSets });
+      seconds += pairSeconds({ slug: exercise.slug, sets }, { slug: partner.slug, sets: partnerSets }, rest);
       timed.add(partner);
     } else {
-      seconds += sets * secondsPerSetOf(exercise.slug);
+      seconds += sets * secondsOfSet(exercise.slug, rest);
     }
   }
   return seconds;
@@ -161,8 +164,8 @@ function secondsOfSets(counts: ReadonlyMap<DayExercise, number>, partners: Partn
 // How many Sets fit in the time: in priority order, stopping at the first that doesn't fit, as nothing lower priority
 // may take the place of higher priority work. A Set never makes the Workout shorter, so the first that doesn't fit
 // is the end
-function setsInSeconds(sets: readonly DayExercise[], partners: Partners, seconds: number) {
-  const fitting = sets.findIndex((_, i) => secondsOfSets(setCounts(sets, i + 1), partners) > seconds);
+function setsInSeconds(sets: readonly DayExercise[], partners: Partners, seconds: number, rest?: RestChoice) {
+  const fitting = sets.findIndex((_, i) => secondsOfSets(setCounts(sets, i + 1), partners, rest) > seconds);
   return fitting === -1 ? sets.length : fitting;
 }
 
@@ -186,15 +189,15 @@ function possiblePairs(placed: readonly Placed[]) {
 // Length would cut a Set, Exercises pair first, one pair at a time in priority order until the Workout fits, and
 // only what still doesn't fit is cut. lighter says whether the check-in took any, and canBeLighter whether the
 // lowest ratings would (#113)
-function cut(placed: readonly Placed[], { workoutLength, checkIn, fullWorkout, noSupersets }: DayChoices) {
+function cut(placed: readonly Placed[], { workoutLength, checkIn, fullWorkout, noSupersets, rest }: DayChoices) {
   const sets = setsInPriorityOrder(placed);
   const seconds = secondsForSets(workoutLength);
   const partners: Partners = new Map();
-  let fitting = setsInSeconds(sets, partners, seconds);
+  let fitting = setsInSeconds(sets, partners, seconds, rest);
   for (const [a, b] of noSupersets ? [] : possiblePairs(placed)) {
     if (fitting === sets.length) break;
     partners.set(a, b).set(b, a);
-    fitting = setsInSeconds(sets, partners, seconds);
+    fitting = setsInSeconds(sets, partners, seconds, rest);
   }
   const kept = Math.round(fitting * (fullWorkout ? 1 : readinessShare(checkIn)));
   const keptSets = setCounts(sets, kept);
@@ -207,7 +210,7 @@ function cut(placed: readonly Placed[], { workoutLength, checkIn, fullWorkout, n
   });
   return {
     dayExercises,
-    seconds: secondsOfSets(keptSets, partners),
+    seconds: secondsOfSets(keptSets, partners, rest),
     lighter: kept < fitting,
     canBeLighter: Math.round(fitting * LIGHTEST_SHARE) < fitting,
   };
