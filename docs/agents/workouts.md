@@ -85,6 +85,15 @@ Schemas shared by app and API: packages/shared/src/workouts.ts
   `@fit/engines`): on Auto `max(45, secondsPerSet − 30)`, else the choice, to a fixed end time, so backgrounding doesn't
   skew it. −15 s and +15 s move that end (`adjustRest`), for the current rest only; −15 s with less than that left ends
   it. The provider also keeps the screen on (`expo-keep-awake`) while a Workout is in progress.
+- **A rest fills the screen** (#179): `RestScreen`, a React Native modal over the logging screen. The provider's rest
+  holds `expanded` and `afterId`, the Workout Exercise whose Set it follows. Logging a Set that starts a rest expands it;
+  minimised, it's the `RestTimer` bar over Finish, and a tap on its countdown expands it again. `upNext`
+  (`up-next.ts`) is the Set coming next, and `LastSetRpe` rates the logged Set on either screen. The provider looks at
+  the rest every 100 ms (`restStep`), as a timeout stops while the phone sleeps: it beeps and vibrates as the countdown
+  turns to 3, 2, 1 and 0, flashes at 0 (`RestFlash`, none with reduced motion), and a rest that ended in the background
+  closes quietly. Sound is the web build's only (`rest-sound.web.ts`, unlocked by the Log set tap), so the phone apps,
+  with no sound module, vibrate and don't show the switch. The switch is kept in device storage
+  (`stored-rest-sound.ts`).
 - **The rest choice is a phone-only preference** (#178): Auto or 30 s to 3 min in 15 s steps, picked on Today, stored in
   device storage (`stored-rest-choice.ts`) and held as `restChoice` on the LogbookProvider. Never on the server, in the
   Logbook or on the Planned Workout (ADR 0003), which is still built at Long on Auto. `restAfterSet`, `pairRestPlan`

@@ -22,6 +22,7 @@ import {
   noAlternativeLabel,
   plannedSetsLabel,
   setTargetLabel,
+  upNextLabel,
   straightToLabel,
   supersetLetter,
   restChoiceLabel,
@@ -687,5 +688,18 @@ describe("prsHeadline", () => {
         { slug: "plank", measure: "seconds", best: 50, previous: 45 },
       ]),
     ).toBe("2 new PRs: Goblet squat, Plank");
+  });
+});
+
+describe("upNextLabel", () => {
+  it("says which Set comes next and its target", () => {
+    const reading = targetReading("goblet-squat", undefined);
+    expect(upNextLabel({ setNumber: 2, plannedSets: 3 }, { unit: "kg", kg: 20, reps: 9 }, "kg", reading)).toBe(
+      "Set 2 of 3 · 20 kg × 8–12 · aim for 9",
+    );
+  });
+
+  it("is only the Set with no plan", () => {
+    expect(upNextLabel({ setNumber: 3 }, undefined, "kg")).toBe("Set 3");
   });
 });

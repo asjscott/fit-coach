@@ -254,6 +254,18 @@ type PlannedSets = NonNullable<InProgressWorkoutExercise["planned"]>;
 export const plannedSetsLabel = ({ sets, target }: PlannedSets, unit: WeightUnit, reading?: TargetReading) =>
   `${setsLabel(sets)} · ${setTargetLabel(target, unit, reading)}`;
 
+// The Set coming next, on the rest screen (#179): "Set 2 of 3 · 20 kg × 8–12 · aim for 9", or "Set 3" with no plan
+export const upNextLabel = (
+  { setNumber, plannedSets }: { setNumber: number; plannedSets?: number },
+  target: SetTarget | undefined,
+  unit: WeightUnit,
+  reading?: TargetReading,
+) =>
+  [
+    plannedSets ? `Set ${setNumber} of ${plannedSets}` : `Set ${setNumber}`,
+    ...(target ? [setTargetLabel(target, unit, reading)] : []),
+  ].join(" · ");
+
 export const builtInEquipmentLabels: Record<BuiltInEquipment, string> = {
   full_gym: "Full gym",
   bodyweight_only: "Bodyweight only",
