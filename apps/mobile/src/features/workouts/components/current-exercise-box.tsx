@@ -6,7 +6,7 @@ import {
   takesNoMoreSets,
   testSwap,
 } from "@fit/engines";
-import { RPE_SCALE, type InProgressWorkoutExercise, type LoadType, type Set, type SetValues } from "@fit/shared";
+import { RPE_SCALE, type InProgressWorkoutExercise, type LoadType, type SetValues } from "@fit/shared";
 import { useMemo, useState, type ReactNode } from "react";
 import { StyleSheet, View } from "react-native";
 import { Alert, AlertIcon, AlertText } from "@/components/alert";
@@ -22,12 +22,11 @@ import { fonts, radii, spacing, useTheme } from "@/theme";
 import { errorMessage } from "@/utils/error-message";
 import { dumbbellBuildLabel, type BuildLabel } from "../dumbbell-build";
 import { plannedSetsLabel, previousSetsLabel } from "../format";
-import { offersLastSetRpe, withRpe } from "../last-set-rpe";
 import { exerciseName, targetReading, type SetReading } from "../library";
 import { useLogbook } from "../logbook-provider";
 import { protocolNote } from "../protocol-note";
 import { draftValues, loadStep, rpeMissing, setDraft, SET_FIELDS, type SetDraft } from "../set-entry";
-import { RestTimer } from "./rest-timer";
+import { LastSetRpe } from "./last-set-rpe";
 import { SetRow } from "./set-row";
 import { SetStepper, type LoadSteps } from "./set-stepper";
 import { WorkoutExerciseMenu } from "./workout-exercise-menu";
@@ -47,7 +46,7 @@ export type CurrentExerciseBoxProps = {
 type NextAction = { label: string; onPress: () => void };
 
 // The Workout Exercise being logged: its name, target, Previous Sets, the Sets so far (each with a ⋯ to edit or delete it) and
-// steppers for the next Set, which starts from the previous one, then the rest after the last Set. A test that's done,
+// steppers for the next Set, which starts from the previous one. A test that's done,
 // or the walk once logged, takes no more Sets
 export function CurrentExerciseBox({ workoutExercise, position, count, next, onSkipTest }: CurrentExerciseBoxProps) {
   return (
@@ -63,7 +62,6 @@ export function CurrentExerciseBox({ workoutExercise, position, count, next, onS
       </HStack>
       <ExerciseLogging workoutExercise={workoutExercise} next={next} />
       {onSkipTest ? <TestWayOut workoutExercise={workoutExercise} onSkip={onSkipTest} /> : null}
-      <RestTimer />
     </ExerciseBox>
   );
 }
@@ -150,7 +148,6 @@ export function ExerciseLogging({
   const { id, slug, loadType, sets, previousSets, planned } = workoutExercise;
   const reading = targetReading(slug, workout?.deloadWeek);
   const editingSet = editingIndex === null ? undefined : sets[editingIndex];
-  const lastSet = sets.at(-1);
   const nextNumber = sets.length + 1;
   // In an Assessment Workout every Exercise is a test, and the Logbook says what it asks for next
   const protocol =
@@ -221,19 +218,7 @@ export function ExerciseLogging({
         </View>
       ) : null}
 
-      {lastSet && editingIndex === null && workout && offersLastSetRpe(workout, workoutExercise) ? (
-        <LastSetRpe
-          set={lastSet}
-          number={sets.length}
-          onRate={async (rpe) => {
-            try {
-              await editSet(id, sets.length - 1, withRpe(lastSet, rpe));
-            } catch (err) {
-              showToast(errorMessage(err), { error: err });
-            }
-          }}
-        />
-      ) : null}
+      {editingIndex === null ? <LastSetRpe workoutExercise={workoutExercise} /> : null}
 
       {editingSet && editingIndex !== null ? (
         <SetEntry
@@ -295,36 +280,6 @@ export function ExerciseLogging({
         }}
       />
     </>
-  );
-}
-
-// The optional RPE for the Exercise's last Set so far (#133): one tap on a chip rates it, a tap on the chosen one takes
-// it off, and logging on without one skips it
-function LastSetRpe({
-  set,
-  number,
-  onRate,
-}: {
-  set: Set;
-  number: number;
-  onRate: (rpe: number | undefined) => Promise<void>;
-}) {
-  return (
-    <Stack spacing={2} style={styles.entry}>
-      <Text size="sm" color="muted">
-        {`How hard was set ${number}? Optional: 10 is no more reps`}
-      </Text>
-      <HStack spacing={2}>
-        {RPE_SCALE.map((choice) => (
-          <Chip
-            key={choice}
-            label={String(choice)}
-            selected={set.rpe === choice}
-            onPress={() => void onRate(set.rpe === choice ? undefined : choice)}
-          />
-        ))}
-      </HStack>
-    </Stack>
   );
 }
 

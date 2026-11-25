@@ -19,6 +19,8 @@ import { useNow } from "@/hooks/use-now";
 import { fonts, spacing, useTheme } from "@/theme";
 import { errorMessage } from "@/utils/error-message";
 import { CurrentExerciseBox } from "../components/current-exercise-box";
+import { RestScreen } from "../components/rest-screen";
+import { RestTimer } from "../components/rest-timer";
 import { SupersetBox } from "../components/superset-box";
 import { WorkoutExerciseRow } from "../components/workout-exercise-row";
 import { nextPlannedExercise, useCurrentWorkoutExercise } from "../current-workout-exercise";
@@ -29,7 +31,7 @@ import { useStartWorkout } from "../hooks/use-open-workout";
 import { useLogbook } from "../logbook-provider";
 
 // The In-progress Workout, laid out for logging between sets: Elapsed, Sets and Volume at the top, the current
-// Workout Exercise open in a box and the others collapsed to rows, Add exercise, and Finish alone at the bottom.
+// Workout Exercise open in a box and the others collapsed to rows, Add exercise, and Finish alone at the bottom, under a minimised rest.
 // Discard workout sits in the header's ⋯ menu
 export default function WorkoutView() {
   const { workout } = useLogbook();
@@ -152,6 +154,7 @@ function InProgress({ workout }: { workout: InProgressWorkout }) {
         )}
       </KeyboardAwareScrollView>
       <View style={[styles.footer, { borderTopColor: colors.line, backgroundColor: colors.bg }]}>
+        <RestTimer />
         {/* Finish is the main button once every test is done; finishing early stays possible (untested Patterns) */}
         <LoadingButton
           label="Finish"
@@ -160,6 +163,7 @@ function InProgress({ workout }: { workout: InProgressWorkout }) {
           fullWidth
         />
       </View>
+      <RestScreen workout={workout} />
       <ConfirmModal
         isOpen={confirmingDiscard}
         title="Discard Workout?"

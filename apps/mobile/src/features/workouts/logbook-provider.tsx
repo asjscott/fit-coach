@@ -3,6 +3,7 @@ import {
   createLogbook,
   REST_ADJUSTMENT_SECONDS,
   restAfterSet,
+  restStep,
   type FinishResult,
   type Logbook,
   type PlannedWorkoutCopy,
@@ -29,9 +30,15 @@ import { useApi } from "@/api";
 import { deviceStorage } from "./device-storage";
 import { finishCelebration } from "./finish-celebration";
 import { useSyncTriggers } from "./hooks/use-sync-triggers";
+import { playRestBeep, unlockRestSound } from "./rest-sound";
 import { createStoredRestChoice } from "./stored-rest-choice";
+import { createStoredRestSound } from "./stored-rest-sound";
 
 const storedRestChoice = createStoredRestChoice(deviceStorage);
+const storedRestSound = createStoredRestSound(deviceStorage);
+
+// A rest as it's shown: after which Workout Exercise's Set, and filling the screen or minimised to its bar (#179)
+export type CurrentRest = Rest & { afterId: string; expanded: boolean };
 
 type LogbookContextValue = {
   // null when no Workout is in progress
@@ -66,11 +73,18 @@ type LogbookContextValue = {
   editSet: (workoutExerciseId: string, setIndex: number, values: SetValues) => Promise<void>;
   deleteSet: (workoutExerciseId: string, setIndex: number) => Promise<void>;
   // The rest after the last Set logged, or null: every Log set starts or restarts it, and Finish or Discard ends it
-  rest: Rest | null;
+  rest: CurrentRest | null;
   extendRest: () => void;
   // Ends the rest when less than the 15 s it takes off is left
   shortenRest: () => void;
   skipRest: () => void;
+  expandRest: () => void;
+  minimizeRest: () => void;
+  // True for a moment as a rest ends, for the screen to flash
+  restFlashing: boolean;
+  // Whether a rest beeps as it ends, remembered on the phone
+  restSoundOn: boolean;
+  setRestSoundOn: (on: boolean) => void;
   // How long the rests are, chosen on Today and remembered on the phone (#178)
   restChoice: RestChoice;
   chooseRest: (choice: RestChoice) => void;
@@ -111,8 +125,19 @@ export type FinishOutcome =
   | { status: "pending"; workoutId: string; uploaded: Promise<boolean>; prs: Promise<Pr[]> }
   | { status: "nothing-to-save" };
 
-// A rest that ended this long ago, while the app was in the background, ends without vibrating on return
-const LATE_REST_END_MS = 2000;
+// How often a rest under way is looked at. A timeout to its end would stop while the phone sleeps
+const REST_STEP_MS = 100;
+
+const REST_FLASH_MS = 1200;
+
+// Not every platform can vibrate, nor for a given time
+function vibrate(end: boolean) {
+  try {
+    Vibration.vibrate(end ? 600 : 200);
+  } catch {
+    // The rest still beeps and flashes
+  }
+}
 
 // Adding an Exercise waits for its Previous Sets, so a weak signal gives up after this long and
 // falls back to Pending Workouts
@@ -165,7 +190,11 @@ export function LogbookProvider({ children }: { children: ReactNode }) {
   // Workouts whose upload Finish is waiting on, to celebrate their PRs itself
   const celebrating = useRef(new Set<string>());
   // Held in memory only, as it belongs to the Workout, not an Exercise: a force-quit loses it
-  const [rest, setRest] = useState<Rest | null>(null);
+  const [rest, setRest] = useState<CurrentRest | null>(null);
+  const [restFlashing, setRestFlashing] = useState(false);
+  // null until it's read from the phone or chosen
+  const [chosenRestSound, setChosenRestSound] = useState<boolean | null>(null);
+  const restSoundOn = chosenRestSound ?? true;
   // null until it's read from the phone or chosen
   const [chosenRest, setChosenRest] = useState<RestChoice | null>(null);
   const restChoice = chosenRest ?? "auto";
@@ -228,11 +257,20 @@ export function LogbookProvider({ children }: { children: ReactNode }) {
       (stored) => setChosenRest((current) => current ?? stored),
       () => {},
     );
+    storedRestSound.read().then(
+      (stored) => setChosenRestSound((current) => current ?? stored),
+      () => {},
+    );
   }, []);
 
   const chooseRest = useCallback((choice: RestChoice) => {
     setChosenRest(choice);
     storedRestChoice.keep(choice).catch(() => {});
+  }, []);
+
+  const setRestSoundOn = useCallback((on: boolean) => {
+    setChosenRestSound(on);
+    storedRestSound.keep(on).catch(() => {});
   }, []);
 
   useSyncTriggers(sync);
@@ -268,34 +306,54 @@ export function LogbookProvider({ children }: { children: ReactNode }) {
   );
 
   // Starts the rest once the Set is stored, restarting one under way. Between the two Exercises of a superset there's
-  // none, so one under way ends
+  // none, so one under way ends. The sound is unlocked before anything waits, as it must come from the tap
   const logSet = useCallback(
     async (workoutExerciseId: string, values: SetValues) => {
+      unlockRestSound();
       const now = new Date();
       await run(() => logbook.logSet(workoutExerciseId, values, now));
       const logged = await logbook.inProgress();
-      setRest(logged && restAfterSet(logged, workoutExerciseId, now, restChoice));
+      const started = logged && restAfterSet(logged, workoutExerciseId, now, restChoice);
+      setRest(started && { ...started, afterId: workoutExerciseId, expanded: true });
     },
     [logbook, run, restChoice],
   );
 
-  // One vibration at the end, unless it ended while the app was in the background (that alert waits for M8)
+  // Beeps and vibrates in the last seconds and at the end, unless it ended while the app was in the background (that
+  // alert waits for M8)
+  const restEndsAt = rest?.endsAt;
   useEffect(() => {
-    if (!rest) return;
-    const timer = setTimeout(
-      () => {
-        if (Date.now() - rest.endsAt < LATE_REST_END_MS) Vibration.vibrate();
+    if (restEndsAt === undefined) return;
+    let before = new Date();
+    const timer = setInterval(() => {
+      const now = new Date();
+      const { ended, alerts } = restStep({ endsAt: restEndsAt }, before, now);
+      before = now;
+      if (alerts) {
+        vibrate(ended);
+        if (restSoundOn) playRestBeep(ended);
+      }
+      if (ended) {
         setRest(null);
-      },
-      Math.max(0, rest.endsAt - Date.now()),
-    );
+        setRestFlashing(alerts);
+      }
+    }, REST_STEP_MS);
+    return () => clearInterval(timer);
+  }, [restEndsAt, restSoundOn]);
+
+  useEffect(() => {
+    if (!restFlashing) return;
+    const timer = setTimeout(() => setRestFlashing(false), REST_FLASH_MS);
     return () => clearTimeout(timer);
-  }, [rest]);
+  }, [restFlashing]);
 
   const moveRestEnd = (seconds: number) => setRest((current) => current && adjustRest(current, seconds, new Date()));
   const extendRest = () => moveRestEnd(REST_ADJUSTMENT_SECONDS);
   const shortenRest = () => moveRestEnd(-REST_ADJUSTMENT_SECONDS);
   const skipRest = useCallback(() => setRest(null), []);
+  const showRest = (expanded: boolean) => setRest((current) => current && { ...current, expanded });
+  const expandRest = () => showRest(true);
+  const minimizeRest = () => showRest(false);
 
   const removeWorkoutExercise = useCallback(
     (workoutExerciseId: string) => run(() => logbook.removeWorkoutExercise(workoutExerciseId)),
@@ -404,6 +462,11 @@ export function LogbookProvider({ children }: { children: ReactNode }) {
         extendRest,
         shortenRest,
         skipRest,
+        expandRest,
+        minimizeRest,
+        restFlashing,
+        restSoundOn,
+        setRestSoundOn,
         restChoice,
         chooseRest,
         nextSetDraft: logbook.nextSetDraft,

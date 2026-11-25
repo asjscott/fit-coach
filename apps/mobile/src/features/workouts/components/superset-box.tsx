@@ -12,7 +12,6 @@ import { describeSet, plannedSetsLabel, straightToLabel, supersetNote } from "..
 import { exerciseName, targetReading } from "../library";
 import { useLogbook } from "../logbook-provider";
 import { ExerciseBox, ExerciseLogging } from "./current-exercise-box";
-import { RestTimer } from "./rest-timer";
 import { WorkoutExerciseMenu } from "./workout-exercise-menu";
 import { useWeightUnit } from "@/features/user/current-user-provider";
 
@@ -112,7 +111,6 @@ export function SupersetBox({ pair, letter, currentId, onChoose }: SupersetBoxPr
           </AlertText>
         </Alert>
       ) : null}
-      <RestTimer />
     </ExerciseBox>
   );
 }

@@ -8,7 +8,7 @@ Result codes: **✅ pass** · **❌ fail** · **⚠️ works but feels off** · 
 
 ## What's left
 
-- **Run on the phone now:** R1, U1, U2, LS2, PR1. Each is a part no run has covered yet.
+- **Run on the phone now:** R1, U1, U2, LS2, PR1, RS1–RS7. Each is a part no run has covered yet.
 - **M7, on the phones:** WI4, WI6, F4, FL6, SC3, SC4, TC4, FI6, TB2, NA1. Session 5 passed the rest of M7 on the simulators and phones; these are the parts not yet seen, and the offline checks again after #170–#174.
 - **Run when you next train:** P9 and S1, a full Workout with a timer, resting as the timer says. Both can be one session.
 - **🕒 Due later, while you use the app:** C5 (the day after a check-in), P16 (a Monday), J2 (after a week with jumps on), P17 (after a few weeks), DL1 and DL2 (the 5th week of a Block: the week starting 4 Mondays after the Monday of the week Assessment B was done).
@@ -176,6 +176,25 @@ Result codes: **✅ pass** · **❌ fail** · **⚠️ works but feels off** · 
 ## Timing
 
 - [ ] **P9** The estimated time is honest: run a full Standard Workout with a timer. The 5-minute warm-up is a spec assumption "unless it proves wrong on a phone".
+  - Result: · Notes:
+
+## Rest screen (#179)
+
+On the installed web app on the iPhone, with the silent switch off and the volume up.
+
+- [ ] **RS1** Log a Set and put the phone down a few steps away: the countdown reads from across the room, in light and dark, and shows the next Set and its target.
+  - Result: · Notes:
+- [ ] **RS2** Keep music playing in another app and rest to the end: it beeps at 3, 2, 1 and 0, loud enough to notice, and the music carries on.
+  - Result: · Notes:
+- [ ] **RS3** The phone vibrates at 3, 2, 1 and 0 where it can (Android; Safari on the iPhone can't). Where it can't, the rest works the same otherwise.
+  - Result: · Notes:
+- [ ] **RS4** At 0 the screen flashes twice and the logging screen is back, with the next Set's steppers ready. With Reduce Motion on (Settings → Accessibility → Motion), there's no flash.
+  - Result: · Notes:
+- [ ] **RS5** Turn Sound off during a rest: the rest ends silently. Close and reopen the app: the next rest still has it off. Turn it on mid-rest: it beeps again.
+  - Result: · Notes:
+- [ ] **RS6** Lock the phone, or switch apps, for part of a rest: on return the time left is right. Stay away past its end: it's closed, with no beep, vibration or flash. The next rest still beeps.
+  - Result: · Notes:
+- [ ] **RS7** With VoiceOver, the countdown reads as "Rest, 1:05 left", and the buttons behind the rest screen can't be reached.
   - Result: · Notes:
 
 ## Supersets (#96)
