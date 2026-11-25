@@ -2,21 +2,22 @@ import type { FastifyPluginAsyncZod } from "fastify-type-provider-zod";
 import { BarcodeParams, ErrorResponse, Food, FoodSearchQuery, FoodSearchResults } from "@fit/shared";
 import { requireAuth, userIdOf } from "../auth";
 import type { FoodSources } from "../food-sources";
-import { findSavedFoodByBarcode, searchSavedFoods } from "../saved-foods";
+import { findSavedFoodByBarcode } from "../saved-foods";
+import { searchSavedFoodsAndMeals } from "../saved-foods-and-meals";
 
 // Finding food. The phone never calls a food source itself: this proxies them, so their keys stay on the server
 export const foodRoutes: FastifyPluginAsyncZod<{ foodSources: FoodSources }> = async (app, { foodSources }) => {
   // Every route in this file needs a signed-in user
   app.addHook("preHandler", requireAuth);
 
-  // Foods matching the words: the user's Saved Foods by name, then generic before branded (spec #158 stories 64 and
-  // 69). When the outside source is down the Saved Foods are still listed, flagged so the phone can say so
+  // Foods matching the words: the user's Saved Foods and Saved Meals by name, then generic before branded (spec #158
+  // stories 64 and 69, #188 story 38). With the outside source down, only theirs, flagged so the phone can say so
   app.get(
     "/foods/search",
     { schema: { querystring: FoodSearchQuery, response: { 200: FoodSearchResults } } },
     async (req) => {
       const [saved, outside] = await Promise.all([
-        searchSavedFoods(userIdOf(req)!, req.query.q),
+        searchSavedFoodsAndMeals(userIdOf(req)!, req.query.q),
         foodSources.search(req.query.q).catch((err: unknown) => {
           req.log.error(err, "Food search failed");
           return null;

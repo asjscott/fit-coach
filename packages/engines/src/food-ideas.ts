@@ -1,6 +1,7 @@
-import type { Diet, DietKind, Food, FoodIdea, FoodIdeaKind, Meal } from "@fit/shared";
+import type { DailyTargets, Diet, DietKind, Food, FoodIdea, FoodIdeaKind, Meal, Nutrients } from "@fit/shared";
 import { FOOD_IDEAS } from "./data/food-ideas";
 import { portionNutrients } from "./food-portion";
+import { nutritionRanges, rangeState } from "./nutrition-ranges";
 
 // The kinds of Food Idea each Diet eats
 const KINDS: Record<DietKind, FoodIdeaKind[]> = {
@@ -13,17 +14,31 @@ const KINDS: Record<DietKind, FoodIdeaKind[]> = {
 // How many Food Ideas the Coach offers at once
 const OFFERED = 2;
 
-// The Food Ideas to fill what's left of the day (spec #158 "Diet and Food Ideas"): none once protein is met, otherwise
-// the two with the most protein per kcal that the Diet allows and that fit in the kcal left
-export function foodIdeas(diet: Diet, kcalLeft: number, proteinLeft: number, ideas = FOOD_IDEAS): FoodIdea[] {
-  if (proteinLeft <= 0) return [];
+// The Food Ideas to fill what's left of the day: none once protein is in range, otherwise up to two the Diet allows,
+// the most protein per kcal first, that together stay under the top of the kcal range (spec #188 stories 11 and 12)
+export function foodIdeas(
+  diet: Diet,
+  targets: Pick<DailyTargets, "kcal" | "proteinG">,
+  totals: Pick<Nutrients, "kcal" | "proteinG">,
+  ideas = FOOD_IDEAS,
+): FoodIdea[] {
+  const ranges = nutritionRanges(targets);
+  if (rangeState(totals.proteinG, ranges.proteinG).state !== "below") return [];
   const proteinPerKcal = ({ nutrients }: FoodIdea) => nutrients.proteinG / nutrients.kcal;
-  return ideas
+  const allowed = ideas
     .filter((idea) => KINDS[diet.kind].includes(idea.kind))
     .filter((idea) => !idea.contains.some((food) => diet.avoid.includes(food)))
-    .filter((idea) => idea.nutrients.kcal <= kcalLeft)
-    .sort((a, b) => proteinPerKcal(b) - proteinPerKcal(a))
-    .slice(0, OFFERED);
+    .sort((a, b) => proteinPerKcal(b) - proteinPerKcal(a));
+
+  const offered: FoodIdea[] = [];
+  let kcal = totals.kcal;
+  for (const idea of allowed) {
+    if (offered.length === OFFERED) break;
+    if (rangeState(kcal + idea.nutrients.kcal, ranges.kcal).state === "over") continue;
+    offered.push(idea);
+    kcal += idea.nutrients.kcal;
+  }
+  return offered;
 }
 
 // A Food Idea as the one food shape, to log through the same route as any food: its portion is its one serving

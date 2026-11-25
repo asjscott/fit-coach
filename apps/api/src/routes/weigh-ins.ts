@@ -2,6 +2,7 @@ import type { FastifyPluginAsyncZod } from "fastify-type-provider-zod";
 import { bodyWeightKg, ErrorResponse, LocalDate, User, WeighInUpload } from "@fit/shared";
 import { z } from "zod";
 import { requireAuth, userIdOf } from "../auth";
+import { keepTodaysTargets } from "../daily-targets";
 import { requireLoggableDate } from "../loggable-date";
 import { findUser } from "../users";
 import { keepWeighIn } from "../weigh-ins";
@@ -33,6 +34,7 @@ export const weighInRoutes: FastifyPluginAsyncZod = async (app) => {
       requireLoggableDate(date, user.timeZone, "A Weigh-in");
       // The exact kg of what was entered, as onboarding stores it, so 180 lb reads back as 180 lb
       await keepWeighIn(clerkUserId, date, bodyWeightKg(req.body.weight, req.body.unit));
+      await keepTodaysTargets(clerkUserId);
       return userResponse((await findUser(clerkUserId))!);
     },
   );

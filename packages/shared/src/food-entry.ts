@@ -1,25 +1,12 @@
 import { z } from "zod";
 import { LocalDate } from "./check-in";
-import { Food, Nutrients } from "./food";
+import { Food, Nutrients, Portion, PortionChoice } from "./food";
+import { RequestId } from "./request-id";
 
 // The four meals of a day, in the order the Food tab lists them
 export const Meal = z.enum(["breakfast", "lunch", "dinner", "snacks"]);
 export type Meal = z.infer<typeof Meal>;
 export const MEALS = Meal.options;
-
-// How much of a food the user ate, as they chose it: grams, or a count of one of the food's own servings by its label
-export const PortionChoice = z.union([
-  z.strictObject({ grams: z.number().positive().max(5000) }),
-  z.strictObject({ serving: z.string().min(1), count: z.number().positive().max(100) }),
-]);
-export type PortionChoice = z.infer<typeof PortionChoice>;
-
-// A logged portion: its grams, and the serving and count it was chosen as, if it was
-export const Portion = z.object({
-  grams: z.number().positive(),
-  serving: z.object({ label: z.string(), count: z.number().positive() }).optional(),
-});
-export type Portion = z.infer<typeof Portion>;
 
 // One food the user ate, in a meal of a day (GLOSSARY.md). The food is kept as it was when logged, and the nutrients
 // are its portion's, worked out by the server then: a later change to the food never changes the day (ADR 0002)
@@ -33,10 +20,6 @@ export const FoodEntry = z.object({
   nutrients: Nutrients,
 });
 export type FoodEntry = z.infer<typeof FoodEntry>;
-
-// Made by the phone for each thing the user does, and sent again with a retry, so a retry after a lost answer adds
-// nothing more
-const RequestId = z.uuid();
 
 // POST /days/:date/food-entries: a food, from any source, into a meal. Saved Foods, Food Ideas and Tell the coach all
 // log through this
