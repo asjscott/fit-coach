@@ -15,7 +15,7 @@ import { fonts, radii, spacing, useTheme } from "@/theme";
 import { errorMessage } from "@/utils/error-message";
 import { plannedSetsLabel, previousSetsLabel } from "../format";
 import { offersLastSetRpe, withRpe } from "../last-set-rpe";
-import { exerciseName, setReading } from "../library";
+import { exerciseName, setReading, type SetReading } from "../library";
 import { useLogbook } from "../logbook-provider";
 import { protocolNote } from "../protocol-note";
 import { draftValues, loadStep, rpeMissing, setDraft, SET_FIELDS, type SetDraft } from "../set-entry";
@@ -175,7 +175,7 @@ export function ExerciseLogging({
           initial={editingSet}
           asksRpe={asksRpe}
           loadSteps={loadSteps}
-          jump={reading.jump}
+          reading={reading}
           submitLabel={`Save set ${editingIndex + 1}`}
           onSubmit={async (values) => {
             await editSet(id, editingIndex, values);
@@ -199,7 +199,7 @@ export function ExerciseLogging({
           initial={nextSetDraft(workoutExercise, protocol)}
           asksRpe={asksRpe}
           loadSteps={loadSteps}
-          jump={reading.jump}
+          reading={reading}
           submitLabel={`Log set ${nextNumber}`}
           onSubmit={(values) => logSet(id, values)}
         />
@@ -266,8 +266,7 @@ type SetEntryProps = {
   // Asks how hard the Set felt, for an Assessment Workout's test Sets
   asksRpe?: boolean;
   loadSteps: LoadSteps;
-  // A jump's reps are entered as contacts (#105)
-  jump?: boolean;
+  reading: SetReading;
   submitLabel: string;
   onSubmit: (values: SetValues) => Promise<void>;
   // Shown under the submit button, e.g. Cancel while editing
@@ -282,7 +281,7 @@ function SetEntry({
   initial,
   asksRpe = false,
   loadSteps,
-  jump = false,
+  reading,
   submitLabel,
   onSubmit,
   children,
@@ -320,7 +319,7 @@ function SetEntry({
         return field === "load" ? (
           <SetStepper key={field} field={field} value={value} onChange={onChange} {...loadSteps} />
         ) : (
-          <SetStepper key={field} field={field} value={value} onChange={onChange} jump={jump} />
+          <SetStepper key={field} field={field} value={value} onChange={onChange} reading={reading} />
         );
       })}
       {asksRpe ? (

@@ -47,8 +47,9 @@ Schemas shared by app and API: packages/shared/src/workouts.ts
   Profile's loads for the Exercise (`exerciseLoadsByEquipmentKg`, one list per kind of equipment, staying on the kind
   the load is on: see below) as the user sees them, so a load a hair off the one shown never sticks, staying put past
   the lightest or heaviest, and by 5 lb or 2 kg when the loads aren't known. `set-entry.ts` also parses the typed text,
-  steps reps (1) and seconds (5), and names the load step for screen readers (`loadStepLabel`: "Next heavier weight", or
-  "Plus 5 lb" when the loads aren't known).
+  steps reps (1) and seconds (5, at every length, #177), and names the load step for screen readers (`loadStepLabel`: "Next heavier weight", or
+  "Plus 5 lb" when the loads aren't known). Timed Sets read and step in seconds; only the one-Set walk (`takesOneSet`)
+  uses minutes, through `SetReading.inMinutes`, so pass `setReading(slug)` wherever its Sets or target are shown.
 - **One Load Step is the next load the profile has** (#127). `availableLoadsKg` (`packages/engines/src/equipment.ts`)
   lists them: dumbbells, kettlebells, the bar plus plate pairs (summed in the unit the plates are sized in, so pound
   plates make exact pound loads) and a cable stack from `loads.cable_machine.stepKg`; `loadsByEquipmentKg` gives the

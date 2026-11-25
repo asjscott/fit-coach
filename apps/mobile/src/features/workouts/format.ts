@@ -193,8 +193,7 @@ export function elapsedClockLabel(ms: number) {
 }
 
 // A Workout Exercise's Sets on one line, each unit said once where it can be: "18 kg × 10, 10, 8",
-// "16 kg × 10, 18 kg × 8", "12, 10 reps", a Jump's "6, 6 contacts", "45, 40 s", "1 min 30 s, 1 min 15 s". Empty with
-// no Sets
+// "16 kg × 10, 18 kg × 8", "12, 10 reps", a Jump's "6, 6 contacts", "90, 75 s", the walk's "20 min". Empty with no Sets
 export function setsSummary(sets: readonly Set[], unit: WeightUnit, reading?: SetReading) {
   const parts = sets.map((set) => setParts(set, unit, reading));
   const first = parts[0];
@@ -214,17 +213,17 @@ export function setsSummary(sets: readonly Set[], unit: WeightUnit, reading?: Se
 export const previousSetsLabel = (sets: readonly Set[], unit: WeightUnit, reading?: SetReading) =>
   `Last: ${setsSummary(sets, unit, reading)}`;
 
-// A Set's target as a Set reads: "20 kg × 8", "12 reps", "40 s", "Medium band × 12". A timed target of a minute or more
-// reads in minutes, as the walk's "20 min" (#109). A load rounds to 0.5 of the user's unit, which also hides the
+// A Set's target as a Set reads: "20 kg × 8", "12 reps", "40 s", "Medium band × 12". Only the walk's reads in
+// minutes, "20 min" (#109, #177). A load rounds to 0.5 of the user's unit, which also hides the
 // floating-point noise of a profile's summed loads
-export function setTargetLabel(target: SetTarget, unit: WeightUnit) {
+export function setTargetLabel(target: SetTarget, unit: WeightUnit, reading?: SetReading) {
   switch (target.unit) {
     case "kg":
       return describeSet({ kind: "external", kg: target.kg, reps: target.reps }, unit);
     case "reps":
       return describeSet({ kind: "bodyweight", reps: target.reps }, unit);
     case "seconds":
-      return describeSet({ kind: "timed", seconds: target.seconds }, unit);
+      return describeSet({ kind: "timed", seconds: target.seconds }, unit, reading);
     case "band":
       return `${bandLevelLabels[target.level]} band × ${target.reps}`;
   }
@@ -235,7 +234,8 @@ type PlannedSets = NonNullable<InProgressWorkoutExercise["planned"]>;
 // What the plan sets for an Exercise: "3 sets · 20 kg × 8", with " per side" for a one-sided Exercise, and a jump's
 // reps as contacts: "3 sets · 10 contacts" (#105). A load is in the user's unit
 export const plannedSetsLabel = ({ sets, target }: PlannedSets, unit: WeightUnit, reading?: SetReading) => {
-  const label = reading?.jump && target.unit === "reps" ? `${target.reps} contacts` : setTargetLabel(target, unit);
+  const label =
+    reading?.jump && target.unit === "reps" ? `${target.reps} contacts` : setTargetLabel(target, unit, reading);
   return `${setsLabel(sets)} · ${label}${reading?.unilateral ? " per side" : ""}`;
 };
 
@@ -262,8 +262,8 @@ export function workoutExerciseSummary(
   return previous?.length ? previousSetsLabel(previous, unit, reading) : "Not started";
 }
 
-// A Set's numbers and the units after them, as it reads: 16 "kg ×" 10, 12 "reps", 45 "s", and a Jump's 10 "contacts"
-// (#141). A load is in the user's unit, to 0.5 of it
+// A Set's numbers and the units after them, as it reads: 16 "kg ×" 10, 12 "reps", 90 "s", a Jump's 10 "contacts"
+// (#141), and the walk's 20 "min". A load is in the user's unit, to 0.5 of it
 export function setParts(set: Set | SetValues, unit: WeightUnit, reading?: SetReading): [number, string][] {
   switch (set.kind) {
     case "external":
@@ -274,12 +274,12 @@ export function setParts(set: Set | SetValues, unit: WeightUnit, reading?: SetRe
     case "bodyweight":
       return [[set.reps, reading?.jump ? "contacts" : "reps"]];
     case "timed":
-      return durationParts(set.seconds);
+      return reading?.inMinutes ? minutesParts(set.seconds) : [[set.seconds, "s"]];
   }
 }
 
-// A minute or more reads in minutes, as the walk's "20 min" (#109): "45 s", "1 min 30 s"
-export function durationParts(seconds: number): [number, string][] {
+// The walk's time, in minutes from a minute (#109): "20 min", "1 min 30 s", "45 s"
+export function minutesParts(seconds: number): [number, string][] {
   if (seconds < 60) return [[seconds, "s"]];
   const over = seconds % 60;
   return [[Math.floor(seconds / 60), "min"], ...(over ? [[over, "s"] as [number, string]] : [])];
