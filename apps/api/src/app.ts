@@ -11,7 +11,9 @@ import { foodRoutes } from "./routes/foods";
 import { nutritionHistoryRoutes } from "./routes/nutrition-history";
 import { plannedWorkoutRoutes } from "./routes/planned-workouts";
 import { savedFoodRoutes } from "./routes/saved-foods";
+import { savedMealRoutes } from "./routes/saved-meals";
 import { ensureSavedFoodIndexes } from "./saved-foods";
+import { ensureSavedMealIndexes } from "./saved-meals";
 import { tellTheCoachRoutes } from "./routes/tell-the-coach";
 import { userRoutes } from "./routes/users";
 import { weighInRoutes } from "./routes/weigh-ins";
@@ -89,6 +91,7 @@ export async function buildApp({
   await setUp("create weigh-in indexes", ensureWeighInIndexes);
   await setUp("create food entry indexes", ensureFoodEntryIndexes);
   await setUp("create saved food indexes", ensureSavedFoodIndexes);
+  await setUp("create saved meal indexes", ensureSavedMealIndexes);
   await setUp("create daily targets indexes", ensureDailyTargetsIndexes);
   await setUp("create water indexes", ensureWaterIndexes);
   await setUp("migrate users", migrateUsers);
@@ -106,6 +109,7 @@ export async function buildApp({
   await app.register(foodRoutes, { foodSources: sources });
   await app.register(foodEntryRoutes);
   await app.register(savedFoodRoutes);
+  await app.register(savedMealRoutes);
   await app.register(waterRoutes);
   await app.register(tellTheCoachRoutes, { foodSources: sources });
   registerTestErrorRoute(app);

@@ -110,15 +110,20 @@ export async function listSavedFoods(clerkUserId: string): Promise<Food[]> {
   return (await savedFoods.find({ clerkUserId }).collation(BY_NAME).sort({ name: 1 }).toArray()).map(toFood);
 }
 
-const BY_NAME = { locale: "en", strength: 2 };
-const SEARCH_LIMIT = 10;
+export const BY_NAME = { locale: "en", strength: 2 };
+export const SEARCH_LIMIT = 10;
 const escapeRegExp = (text: string) => text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
-// The user's Saved Foods whose name has every word of the search in it, whatever the case, by name
-export async function searchSavedFoods(clerkUserId: string, query: string): Promise<Food[]> {
+// A name with every word of the search in it, whatever the case
+export function nameMatches(query: string) {
   const words = query.trim().split(/\s+/).filter(Boolean);
+  return { $and: words.map((word) => ({ name: { $regex: escapeRegExp(word), $options: "i" } })) };
+}
+
+// The user's Saved Foods that match a search by name, by name
+export async function searchSavedFoods(clerkUserId: string, query: string): Promise<Food[]> {
   const docs = await savedFoods
-    .find({ clerkUserId, $and: words.map((word) => ({ name: { $regex: escapeRegExp(word), $options: "i" } })) })
+    .find({ clerkUserId, ...nameMatches(query) })
     .collation(BY_NAME)
     .sort({ name: 1 })
     .limit(SEARCH_LIMIT)

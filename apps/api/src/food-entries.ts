@@ -52,7 +52,7 @@ const toEntry = ({ _id, date, meal, loggedAt, food, portion, nutrients }: FoodEn
 });
 
 // Logs a food into a meal of the date, its portion's nutrients worked out now and kept (ADR 0002). Null when the
-// portion names a serving the food doesn't have. A request id already logged answers its Food Entry, not created
+// portion is one the food can't be logged by. A request id already logged answers its Food Entry, not created
 export async function addFoodEntry(
   clerkUserId: string,
   date: string,
@@ -161,7 +161,7 @@ export async function findFoodEntry(clerkUserId: string, id: string): Promise<Fo
 }
 
 // Moves a Food Entry to another meal, or changes its portion, working the nutrients out again from the food as it was
-// logged. Null when the portion names a serving the food doesn't have, or there's no such entry
+// logged. Null when the portion is one the food can't be logged by, or there's no such entry
 export async function changeFoodEntry(
   clerkUserId: string,
   entry: FoodEntry,

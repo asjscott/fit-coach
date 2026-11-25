@@ -3,7 +3,7 @@ import type { Food, Nutrients, Portion, PortionChoice } from "@fit/shared";
 const NUTRIENT_KEYS = ["kcal", "proteinG", "carbsG", "fatG", "fibreG"] as const satisfies (keyof Nutrients)[];
 
 // Each nutrient worked out the same way
-const eachNutrient = (amount: (key: keyof Nutrients) => number) =>
+export const eachNutrient = (amount: (key: keyof Nutrients) => number) =>
   Object.fromEntries(NUTRIENT_KEYS.map((key) => [key, amount(key)])) as Nutrients;
 
 // What a portion of a food holds, from its figures per 100 g. Unrounded: the phone rounds for display, and a Food
@@ -17,10 +17,13 @@ export function sumNutrients(portions: Nutrients[]): Nutrients {
   return eachNutrient((key) => portions.reduce((sum, portion) => sum + portion[key], 0));
 }
 
-// The grams a portion choice comes to, with the serving it was chosen as. Null for a serving the food doesn't have.
-// The API logs by this, and the phone shows what will be logged by it
+// Whether a food can be logged in grams: any but a Saved Meal that says it can't
+export const allowsGrams = (food: Food) => food.savedMeal?.gramsAllowed ?? true;
+
+// The grams a portion choice comes to, with the serving it was chosen as. Null for a serving the food doesn't have, or
+// grams it can't be logged in. The API logs by this, and the phone shows what will be logged by it
 export function portionOf(food: Food, choice: PortionChoice): Portion | null {
-  if ("grams" in choice) return { grams: choice.grams };
+  if ("grams" in choice) return allowsGrams(food) ? { grams: choice.grams } : null;
   const serving = food.servings.find((s) => s.label === choice.serving);
   if (!serving) return null;
   return { grams: serving.grams * choice.count, serving: { label: serving.label, count: choice.count } };
