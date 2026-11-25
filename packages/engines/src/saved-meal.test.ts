@@ -58,6 +58,31 @@ describe("logging a Saved Meal", () => {
   });
 });
 
+// Spec #188 story 40: 1,400 kcal of ingredients cooked down to 1,600 g in one pot
+describe("a Saved Meal with a cooked weight", () => {
+  const cooked = savedMealFood({ id: "m1", name: "Chicken and rice", servings: 4, ingredients, cookedGrams: 1600 });
+
+  it("has a serving of the cooked weight over the servings, holding as much as without one", () => {
+    expect(cooked.servings).toEqual([{ label: "1 serving", grams: 400 }]);
+    expect(portionNutrients(cooked.per100g, 400).kcal).toBeCloseTo(350);
+  });
+
+  it("can be logged in grams: 350 g is 350/1,600 of its nutrients", () => {
+    expect(allowsGrams(cooked)).toBe(true);
+    expect(portionOf(cooked, { grams: 350 })).toEqual({ grams: 350 });
+    const nutrients = portionNutrients(cooked.per100g, 350);
+    expect(nutrients.kcal).toBeCloseTo(306.25);
+    expect(nutrients.proteinG).toBeCloseTo(29.75);
+  });
+
+  it("opens to its ingredients at the grams logged: 400 g is a quarter of each", () => {
+    expect(ingredientsAtPortion(cooked, 400)).toEqual([
+      { food: chicken, portion: { grams: 150 } },
+      { food: rice, portion: { grams: 100, serving: { label: "1 cup", count: 0.5 } } },
+    ]);
+  });
+});
+
 describe("ingredientsAtPortion", () => {
   it("shares out the ingredients to the portion: half a serving is an eighth of each", () => {
     expect(ingredientsAtPortion(bowl, 125)).toEqual([

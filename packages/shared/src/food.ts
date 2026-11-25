@@ -87,10 +87,14 @@ export const SavedFoodInput = z.object({
 });
 export type SavedFoodInput = z.input<typeof SavedFoodInput>;
 
+export const MAX_COOKED_GRAMS = 100_000;
+
 // A new Saved Meal, or an edited one: its ingredients' grams are worked out by the server, as a Food Entry's are
 export const SavedMealInput = z.object({
   name: z.string().trim().min(1).max(100),
   servings: z.number().positive().max(100),
+  // What it weighs cooked, so it can be logged in grams too
+  cookedGrams: z.number().positive().max(MAX_COOKED_GRAMS).optional(),
   ingredients: z
     .array(z.object({ food: IngredientFood, portion: PortionChoice }))
     .min(1)

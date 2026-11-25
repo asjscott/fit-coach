@@ -1,18 +1,28 @@
 import { ingredientsAtPortion, portionChoiceOf, portionNutrients, savedMealFood } from "@fit/engines";
-import type { Food, FoodEntry, Ingredient, IngredientFood, SavedMealInput } from "@fit/shared";
+import {
+  type Food,
+  type FoodEntry,
+  type Ingredient,
+  type IngredientFood,
+  MAX_COOKED_GRAMS,
+  type SavedMealInput,
+} from "@fit/shared";
 import { oneDecimal, wholeNumber } from "../nutrition/format";
 import { amountOf } from "./food-portion";
 import { entryPortion } from "./today-so-far";
 
-// A Saved Meal's fields as typed, and the ingredients chosen so far (spec #188 stories 31 to 35)
-export type SavedMealForm = { name: string; servings: string; ingredients: Ingredient[] };
+// A Saved Meal's fields as typed, and the ingredients chosen so far (spec #188 stories 31 to 35). The cooked
+// weight may be left empty (story 40)
+export type SavedMealForm = { name: string; servings: string; cookedGrams: string; ingredients: Ingredient[] };
 
-export const EMPTY_SAVED_MEAL: SavedMealForm = { name: "", servings: "", ingredients: [] };
+export const EMPTY_SAVED_MEAL: SavedMealForm = { name: "", servings: "", cookedGrams: "", ingredients: [] };
 
 // The form for editing a Saved Meal
-export const savedMealForm = ({ name, savedMeal }: Food): SavedMealForm => ({
+export const savedMealForm = ({ name, savedMeal, servings }: Food): SavedMealForm => ({
   name,
   servings: savedMeal ? String(savedMeal.servings) : "",
+  // Rounded, as a serving's weight times the servings may be a hair off what was typed
+  cookedGrams: savedMeal?.gramsAllowed ? String(Number((servings[0].grams * savedMeal.servings).toFixed(2))) : "",
   ingredients: savedMeal?.ingredients ?? [],
 });
 
@@ -34,9 +44,14 @@ export function savedMealInput(form: SavedMealForm): { input: SavedMealInput } |
   const servings = amountOf(form.servings);
   if (!servings) return { error: "Enter how many servings it makes" };
   if (servings > MAX_SERVINGS) return { error: `A Saved Meal makes at most ${MAX_SERVINGS} servings` };
+  const cookedGrams = amountOf(form.cookedGrams);
+  if (!cookedGrams && form.cookedGrams.trim()) return { error: "Enter the cooked weight in grams, or leave it empty" };
+  if (cookedGrams && cookedGrams > MAX_COOKED_GRAMS) {
+    return { error: `A Saved Meal weighs at most ${MAX_COOKED_GRAMS} g cooked` };
+  }
   if (!form.ingredients.length) return { error: "Add at least one ingredient" };
   const ingredients = form.ingredients.map(({ food, portion }) => ({ food, portion: portionChoiceOf(portion) }));
-  return { input: { name, servings, ingredients } };
+  return { input: { name, servings, ...(cookedGrams && { cookedGrams }), ingredients } };
 }
 
 // "350 kcal · 34 g protein per serving", as the Saved Meal is built. Null until there's something to divide

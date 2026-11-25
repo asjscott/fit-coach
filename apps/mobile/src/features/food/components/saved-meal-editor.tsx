@@ -182,6 +182,21 @@ export function SavedMealEditor({
           </View>
         </View>
 
+        <View style={styles.cooked}>
+          <Text size="xs" weight="semiBold" color="muted">
+            Cooked weight in grams (optional)
+          </Text>
+          <Input>
+            <InputField
+              value={form.cookedGrams}
+              onChangeText={(cookedGrams) => change({ cookedGrams })}
+              placeholder="Lets you log it in grams too"
+              keyboardType="decimal-pad"
+              accessibilityLabel="Cooked weight in grams, optional. Lets you log it in grams too"
+            />
+          </Input>
+        </View>
+
         <View>
           <Text size="xs" color="muted" weight="semiBold">
             INGREDIENTS
@@ -385,6 +400,7 @@ const styles = StyleSheet.create({
   fields: { flexDirection: "row", gap: spacing[2] },
   name: { flex: 1, gap: spacing[1] },
   servings: { width: 96, gap: spacing[1] },
+  cooked: { gap: spacing[1] },
   empty: { marginTop: spacing[2] },
   ingredient: { borderBottomWidth: StyleSheet.hairlineWidth },
   row: { flexDirection: "row", alignItems: "center", gap: spacing[2], minHeight: 44 },

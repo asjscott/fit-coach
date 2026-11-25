@@ -102,6 +102,7 @@ describe("POST /saved-meals", () => {
 
     await refused({ name: " " });
     await refused({ servings: 0 });
+    await refused({ cookedGrams: 0 });
     await refused({ ingredients: [] });
     await refused({ ingredients: [{ food: usdaChicken, portion: { serving: "1 breast", count: 1 } }] });
     await refused({ ingredients: [{ food: meal, portion: { serving: "1 serving", count: 1 } }] });
@@ -172,6 +173,58 @@ describe("logging a Saved Meal", () => {
     expect(copied.body).toMatchObject({ entries: [{ date: today, food: meal, portion: { grams: 67.5 } }] });
 
     expect((await user.delete(`/food-entries/${logged.id}`)).statusCode).toBe(204);
+  });
+});
+
+// Story 40
+describe("a Saved Meal's cooked weight", () => {
+  const lunchOf = (food: Food, grams: number) => ({ meal: "lunch", food, portion: { grams } });
+
+  it("sets its serving, and lets it be logged and changed by grams", async () => {
+    const user = await api.signIn();
+    const meal = await makeMeal(user, { ...(await chickenWraps(user)), cookedGrams: 1600 });
+
+    expect(meal).toMatchObject({
+      servings: [{ label: "1 serving", grams: 400 }],
+      savedMeal: { servings: 4, gramsAllowed: true },
+    });
+    // 350/1,600 of 1,200 kcal and 114 g protein
+    const { statusCode, body } = await user.post("/days/today/food-entries", lunchOf(meal, 350));
+    expect(statusCode).toBe(201);
+    expect(body).toMatchObject({
+      portion: { grams: 350 },
+      nutrients: { kcal: expect.closeTo(262.5), proteinG: expect.closeTo(24.9375) },
+    });
+    const changed = await user.patch(`/food-entries/${(body as FoodEntry).id}`, { portion: { grams: 800 } });
+    expect(changed.body).toMatchObject({ nutrients: { kcal: expect.closeTo(600) } });
+    expect(await addOne(user, meal)).toMatchObject({
+      portion: { grams: 400 },
+      nutrients: { kcal: expect.closeTo(300) },
+    });
+  });
+
+  it("can be added, changed and cleared, and the days already logged stay as they were", async () => {
+    const user = await api.signIn();
+    const input = await chickenWraps(user);
+    const meal = await makeMeal(user, input);
+    const update = async (changes: object) =>
+      (await user.put(`/saved-meals/${meal.id}`, { ...input, ...changes })).body as Food;
+    const byServing = await addOne(user, meal);
+
+    const added = await update({ cookedGrams: 1600 });
+    expect(added).toMatchObject({ servings: [{ grams: 400 }], savedMeal: { gramsAllowed: true } });
+    const byGrams = (await user.post("/days/today/food-entries", lunchOf(added, 350))).body as FoodEntry;
+    const changed = await update({ cookedGrams: 1200 });
+    expect(changed).toMatchObject({ servings: [{ grams: 300 }], savedMeal: { gramsAllowed: true } });
+    const cleared = await update({});
+    expect(cleared).toEqual(meal);
+
+    expect(await entriesToday(user)).toEqual([byServing, byGrams]);
+    expect((await user.post("/days/today/food-entries", lunchOf(cleared, 350))).statusCode).toBe(400);
+    expect((await user.patch(`/food-entries/${byServing.id}`, { portion: { grams: 350 } })).statusCode).toBe(400);
+    // The one logged by grams still can be: it's kept as it was when logged
+    const regrammed = await user.patch(`/food-entries/${byGrams.id}`, { portion: { grams: 800 } });
+    expect(regrammed.body).toMatchObject({ nutrients: { kcal: expect.closeTo(600) } });
   });
 });
 
