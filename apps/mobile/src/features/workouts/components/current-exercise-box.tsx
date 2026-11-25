@@ -97,7 +97,7 @@ function TestWayOut({
     <Stack spacing={2} style={styles.entry}>
       {swap ? (
         <LoadingButton
-          label={`Can't do one? Swap to ${swap.name.toLowerCase()}`}
+          label={`Swap to ${swap.name.toLowerCase()}`}
           size="md"
           action="secondary"
           disabled={busy}
