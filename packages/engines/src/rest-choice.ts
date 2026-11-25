@@ -1,12 +1,12 @@
 import { z } from "zod";
 
-// The rest the user chooses on Today (#178): Auto, each Exercise's own, or one length for every Exercise. Kept on the
-// phone only, so it shapes how a Workout is done but never the stored plan (ADR 0003)
-export const RestChoice = z.union([z.literal("auto"), z.number().min(30).max(180).multipleOf(15)]);
-export type RestChoice = z.infer<typeof RestChoice>;
+// Auto, each Exercise's own rest, or one length for every Exercise: 30 s to 3 min in 15 s steps (#178)
+export const REST_CHOICES = ["auto", 30, 45, 60, 75, 90, 105, 120, 135, 150, 165, 180] as const;
 
-// Auto, then 30 s to 3 min in 15 s steps
-export const REST_CHOICES: readonly RestChoice[] = ["auto", 30, 45, 60, 75, 90, 105, 120, 135, 150, 165, 180];
+// The rest the user chooses on Today. Kept on the phone only, so it shapes how a Workout is done but never the stored
+// plan (ADR 0003)
+export const RestChoice = z.literal(REST_CHOICES);
+export type RestChoice = z.infer<typeof RestChoice>;
 
 // The Auto rest after a Set (#95): what's left of the Set's time once the Set itself is done, but never under 45 seconds
 const SET_SECONDS = 30;

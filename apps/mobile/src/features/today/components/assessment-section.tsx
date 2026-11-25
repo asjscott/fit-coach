@@ -31,7 +31,7 @@ const RETAKE_LINE =
   "Your deload week is a good time to check your strength. Only the Exercises it tests, and any you didn't do this Block, get new levels.";
 
 const untestedNote = (untested: TestedPattern[]) =>
-  `No test suits your injuries and equipment for ${patternsInWords(untested)}, so ${untested.length > 1 ? "they're" : "it's"} estimated from your other results.`;
+  `No test suits your injuries and equipment for ${patternsInWords(untested)}, so ${untested.length > 1 ? "they're" : "it's"} estimated.`;
 
 // The same offer as Today's main card, for a user who has no plan until the Assessment is done
 export function AssessmentCard({

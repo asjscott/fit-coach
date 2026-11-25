@@ -265,9 +265,9 @@ describe("setTargetLabel", () => {
     );
   });
 
-  it("rounds a load to 0.5 of the user's unit, so a profile's summed loads show no floating-point noise", () => {
-    expect(setTargetLabel({ unit: "kg", kg: 6.25, reps: 8 }, "kg")).toBe("6.5 kg × 8");
-    expect(setTargetLabel({ unit: "kg", kg: 2.5 + 0.1 + 0.2, reps: 8 }, "kg")).toBe("3 kg × 8");
+  it("names a load as it's sized, with no floating-point noise of a profile's summed loads", () => {
+    expect(setTargetLabel({ unit: "kg", kg: 6.25, reps: 8 }, "kg")).toBe("6.25 kg × 8");
+    expect(setTargetLabel({ unit: "kg", kg: 2.5 + 0.1 + 0.2, reps: 8 }, "kg")).toBe("2.8 kg × 8");
   });
 });
 
@@ -599,9 +599,9 @@ describe("loads in the user's unit", () => {
     ]);
   });
 
-  it("rounds a load to 0.5 of the user's unit", () => {
+  it("shows a load sized in the user's unit as it is, and rounds one in the other to 0.5", () => {
     expect(loadLabel(20, "lb")).toBe("44 lb");
-    expect(loadLabel(16.25, "kg")).toBe("16.5 kg");
+    expect(loadLabel(16.25, "kg")).toBe("16.25 kg");
   });
 
   it("says the weight once in a Sets summary and Previous Sets when every Set used it", () => {

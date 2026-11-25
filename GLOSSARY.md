@@ -92,6 +92,10 @@ _Avoid_: Session, planned session, program
 The Workout on offer today: the Planned Workout on the Workout Length and equipment chosen for it, cut to fit, with its estimated time and any Exercise with no alternative left out. Choices stay on the phone, last for one Workout and never change the Planned Workout.
 _Avoid_: Today's session, adjusted plan
 
+**Rest Choice**:
+How long the user wants the rests between Sets, chosen on Today and kept on the phone: Auto, each Exercise's own rest, or one length from 30 seconds to 3 minutes for every Exercise. It decides how many of the plan's Sets fit the Workout Length, but never changes the Planned Workout. An Assessment Workout always rests on Auto.
+_Avoid_: Rest setting, rest preference, rest timer (for the choice)
+
 **Weekly Budget**:
 How many credited Sets each of the budgeted Muscles should get in a week, set by the user's Goal and days per week. Workout Length decides how much of it is delivered, not the budget itself. Eight Muscles are budgeted for every Goal, and calves too for athletic and build_muscle; other Muscles aren't budgeted. The Coach plans a Muscle up to a cap of about 130% of its budget, counted from the Week Ledger and the Sets already planned: it adds no Exercise, a Jump included, that would take one of its primary Muscles over it, while secondary credit counts towards a Muscle's total but never keeps an Exercise out.
 _Avoid_: Weekly target, quota, weekly volume
@@ -159,6 +163,14 @@ _Avoid_: Strength score, base e1RM
 **Load Step**:
 The move from one load to the next an Equipment Profile has for one kind of equipment, such as from the 25 lb to the 30 lb dumbbells, or a set step for cable and machine. Progression moves a weighted Exercise up or down one Load Step at a time.
 _Avoid_: Increment, jump, plate step
+
+**Range**:
+The reps or seconds that are valid for a target, shown with it: "8–12", or "15+" with no top. It stretches to take in a target outside it. A fixed dose, such as a carry's or the deload week's, has none and reads as one number.
+_Avoid_: Rep window, bracket
+
+**Aim**:
+The target inside its Range that the Coach asks for today: "8–12 · aim for 9". A Set anywhere in the Range is valid; beating the Aim raises the next one.
+_Avoid_: Goal (for this), limit
 
 **Miss**:
 A Workout in which an Exercise's Sets average more than 2 reps, or 10 seconds, short of their target and, where there's a rep range, under its bottom: Sets inside the range are valid, so never a Miss. Bodyweight and timed Exercises have no range, so only the shortfall counts. Two in a row, counted over the Workouts that include that Exercise, drop it a Load Step, or lower a bodyweight or timed target. A skipped Workout isn't one, and nothing in a deload week is, though a deload week doesn't break the run either.

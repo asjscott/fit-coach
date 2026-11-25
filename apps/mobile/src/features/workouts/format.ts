@@ -149,7 +149,7 @@ export function weekDatesLabel(start: Date, now = new Date(), locale?: string) {
 // A Volume in whole units of the user's with thousands separators, e.g. "6,420"; the unit is drawn separately
 export const volumeLabel = (kg: number, unit: WeightUnit) => Math.round(fromKg(kg, unit)).toLocaleString();
 
-// A load to 0.5 of the user's unit, with the unit: "25 lb", "16.5 kg"
+// A load in the user's unit (loadInUnit), with the unit: "25 lb", "16.5 kg"
 export const loadLabel = (kg: number, unit: WeightUnit) => `${loadInUnit(kg, unit)} ${unit}`;
 
 // A weight to the tenth of the user's unit, such as an Estimated maximum or body weight: "16.8 kg", "37 lb"
@@ -214,8 +214,8 @@ export const previousSetsLabel = (sets: readonly Set[], unit: WeightUnit, readin
   `Last: ${setsSummary(sets, unit, reading)}`;
 
 // A Set's target as a Set reads: "20 kg × 8", "12 reps", "40 s", "Medium band × 12". Only the walk's reads in
-// minutes, "20 min" (#109, #177). A load rounds to 0.5 of the user's unit, which also hides the
-// floating-point noise of a profile's summed loads. With its Exercise's reading, " per side" for a one-sided Exercise,
+// minutes, "20 min" (#109, #177). loadInUnit hides the floating-point noise of a
+// profile's summed loads. With its Exercise's reading, " per side" for a one-sided Exercise,
 // a Jump's reps as contacts (#105), and its range (#183): "20 kg × 8–12 · aim for 9", "10–15 reps", "60+ s"
 export function setTargetLabel(target: SetTarget, unit: WeightUnit, reading?: TargetReading) {
   const perSide = reading?.unilateral ? " per side" : "";
@@ -290,7 +290,7 @@ export function workoutExerciseSummary(
 }
 
 // A Set's numbers and the units after them, as it reads: 16 "kg ×" 10, 12 "reps", 90 "s", a Jump's 10 "contacts"
-// (#141), and the walk's 20 "min". A load is in the user's unit, to 0.5 of it
+// (#141), and the walk's 20 "min". A load is in the user's unit
 export function setParts(set: Set | SetValues, unit: WeightUnit, reading?: SetReading): [number, string][] {
   switch (set.kind) {
     case "external":
@@ -305,7 +305,7 @@ export function setParts(set: Set | SetValues, unit: WeightUnit, reading?: SetRe
   }
 }
 
-// The walk's time, in minutes from a minute (#109): "20 min", "1 min 30 s", "45 s"
+// The walk's time, or a rest choice, in minutes from a minute (#109): "20 min", "1 min 30 s", "45 s"
 export function minutesParts(seconds: number): [number, string][] {
   if (seconds < 60) return [[seconds, "s"]];
   const over = seconds % 60;
@@ -322,9 +322,10 @@ export const leadParts = (parts: readonly [number, string][]) =>
 
 // A Set as its Load Type records it: "16 kg × 10", a Jump's "10 contacts"; add " per side" for a one-sided Exercise
 export const describeSet = (set: Set | SetValues, unit: WeightUnit, reading?: SetReading) =>
-  setParts(set, unit, reading)
-    .map(([value, label]) => (label ? `${value} ${label}` : String(value)))
-    .join(" ");
+  partsLabel(setParts(set, unit, reading));
+
+const partsLabel = (parts: readonly [number, string][]) =>
+  parts.map(([value, label]) => (label ? `${value} ${label}` : String(value))).join(" ");
 
 // A superset's letter by its place among the Workout's supersets, from 0: A makes A1 and A2, as gym programmes write them
 export const supersetLetter = (index: number) => String.fromCharCode(65 + index);
@@ -334,10 +335,7 @@ export const straightToLabel = (name: string) => `No rest: straight to ${name}`;
 
 // A rest choice on Today: "Auto", "45 s", "1 min 15 s"
 export function restChoiceLabel(choice: RestChoice) {
-  if (choice === "auto") return "Auto";
-  const minutes = Math.floor(choice / 60);
-  const seconds = choice % 60;
-  return [minutes && `${minutes} min`, seconds && `${seconds} s`].filter(Boolean).join(" ");
+  return choice === "auto" ? "Auto" : partsLabel(minutesParts(choice));
 }
 
 // The superset box's note on its rests, as pairRestPlan gives them (#111)

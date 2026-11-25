@@ -1,4 +1,6 @@
 import type { InProgressWorkout, InProgressWorkoutExercise } from "@fit/shared";
+import { testProgress } from "./assessment-protocol";
+import type { ProfileWithLoads } from "./equipment";
 import { takesOneSet, type LoggedWorkoutExercise } from "./recovery-workout";
 import { restSeconds, type RestChoice } from "./rest-choice";
 import { secondsPerSetOf, supersetPartner } from "./supersets";
@@ -21,14 +23,18 @@ export const startRest = (slug: string, now: Date, choice?: RestChoice): Rest =>
 // is behind and has Sets left, as the user goes straight to it, and after the pair's second Set it's the longer of
 // the two rests. Once the other has all its Sets, the one left rests as usual. The walk has no rest after it, and
 // nor does a Set of a Workout logged afterwards, which happened on another day (#153). An Assessment always rests as on
-// Auto, so its tests aren't held back by tiredness (#178). The Workout's last planned Set has none (#180)
+// Auto, so its tests aren't held back by tiredness (#178). The Workout's last planned Set has none (#180), nor the Set
+// that leaves an Assessment no test to do
 export function restAfterSet(
-  { workoutExercises, pastStart, assessment }: Pick<InProgressWorkout, "workoutExercises" | "pastStart" | "assessment">,
+  workout: Pick<InProgressWorkout, "workoutExercises" | "pastStart" | "assessment" | "bodyProfile">,
   workoutExerciseId: string,
   now: Date,
   chosen: RestChoice = "auto",
+  equipmentProfile?: ProfileWithLoads,
 ): Rest | null {
+  const { workoutExercises, pastStart, assessment } = workout;
   if (pastStart) return null;
+  if (assessment && equipmentProfile && testProgress(workout, equipmentProfile).allDone) return null;
   const choice = assessment ? "auto" : chosen;
   const logged = workoutExercises.find(({ id }) => id === workoutExerciseId);
   if (!logged || takesOneSet(logged.slug) || isLastPlannedSet(workoutExercises, logged)) return null;

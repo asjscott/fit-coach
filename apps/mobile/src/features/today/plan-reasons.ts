@@ -1,4 +1,5 @@
 import { muscleGroupsOf, type Muscle, type MuscleGroup, type PlanReason, type ProgressionChange } from "@fit/shared";
+import { inWords } from "../../utils/in-words";
 import { exerciseName } from "../workouts/library";
 import { weekdayLabel } from "../workouts/format";
 import { localDateText } from "../workouts/local-date-time";
@@ -18,8 +19,7 @@ const ORDER: PlanReason["code"][] = ["recovering", "budget-met", "behind"];
 function groupsAre(muscles: readonly Muscle[]) {
   const groups = muscleGroupsOf(muscles);
   if (!groups.length) return null;
-  const names = groups.map((group) => GROUP_NAMES[group].name);
-  const listed = names.length > 1 ? `${names.slice(0, -1).join(", ")} and ${names.at(-1)}` : names[0];
+  const listed = inWords(groups.map((group) => GROUP_NAMES[group].name));
   const plural = groups.length > 1 || GROUP_NAMES[groups[0]].plural;
   return `${listed} ${plural ? "are" : "is"}`;
 }

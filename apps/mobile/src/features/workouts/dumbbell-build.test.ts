@@ -73,31 +73,19 @@ describe("dumbbellBuildLabel", () => {
     for (const load of ["16", "17.2", "0", "", "abc"]) expect(label("dumbbell-curl", load)).toBeUndefined();
   });
 
-  // The stepper shows loads to the nearest 0.5
-  it("finds a load with a finer fraction from the load the stepper shows, or as typed exactly", () => {
+  it("finds a load with a finer fraction, as it's shown", () => {
     // 4 + 0.625 on each end
     const equipment = profile({ plates: [[0.625, 4]] });
     const build = "Each dumbbell: 0.63 lb each end";
-    expect(label("dumbbell-curl", "5.5", equipment)).toBe(build);
     expect(label("dumbbell-curl", "5.25", equipment)).toBe(build);
-    expect(label("dumbbell-curl", "5.3", equipment)).toBeUndefined();
-  });
-
-  it("prefers the load typed to another that shows the same", () => {
-    // 4 + 0.625 on each end is 5.25, which also shows as 5.5
-    const equipment = profile({
-      plates: [
-        [0.625, 2],
-        [0.75, 2],
-      ],
-    });
-    expect(label("goblet-squat", "5.5", equipment)).toBe("One dumbbell: 0.75 lb each end");
+    expect(label("dumbbell-curl", "5.5", equipment)).toBeUndefined();
   });
 
   it("shows plates sized in another unit in the user's", () => {
     const equipment = profile({ bar: 2, plates: [[1.25, 4]], in: "kg" });
-    // 4.5 kg, which the stepper shows as 10 lb
-    expect(label("dumbbell-curl", "10", equipment)).toBe("Each dumbbell: 2.76 lb each end");
+    // 4.5 kg, which the stepper shows as 10 lb. Typed, 10 lb is another load
+    expect(dumbbellBuildLabel("dumbbell-curl", equipment, "lb")("10", 4.5)).toBe("Each dumbbell: 2.76 lb each end");
+    expect(label("dumbbell-curl", "10", equipment)).toBeUndefined();
     expect(dumbbellBuildLabel("dumbbell-curl", equipment, "kg")("4.5")).toBe("Each dumbbell: 1.25 kg each end");
   });
 

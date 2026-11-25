@@ -441,7 +441,7 @@ export function createLogbook({
         injuries,
         bodyProfile,
       }: {
-        equipmentProfile: Parameters<typeof chooseTests>[0];
+        equipmentProfile: ProfileWithLoads;
         bodyProfile: BodyProfile;
       } & Pick<UserProfile, "injuries">,
       now: Date,

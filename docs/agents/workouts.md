@@ -39,13 +39,13 @@ Schemas shared by app and API: packages/shared/src/workouts.ts
 - **Exercises come from the library built into the app** (`EXERCISES` in `@fit/engines`), not `/exercises`, so the picker
   works offline; an unknown slug is shown as-is (`exerciseName`).
 - **Loads are stored in kg and shown in the user's unit** (#126). `User.unit` is lb or kg, lb when never chosen
-  (`useWeightUnit`, picked on Profile). Every label in `format.ts` takes the unit and rounds a load to 0.5 of it
-  (`loadInUnit`, `packages/shared/src/units.ts`). A load typed in pounds is stored as its exact kg (`toKg`), never
+  (`useWeightUnit`, picked on Profile). Every label in `format.ts` takes the unit and names a load with `loadInUnit`
+  (`packages/shared/src/units.ts`): one sized in the unit as it is, one sized in the other to the nearest 0.5. A load typed in pounds is stored as its exact kg (`toKg`), never
   rounded, so 25 lb always shows back as 25 lb; `Set.kg` has no step rule. Equipment Profile weights are entered in
   the unit too (`loads.ts`, its own lb and kg size lists).
-- **The load stepper steps through real loads** (#58): `loadStep` in `set-entry.ts` steps the primary Equipment
+- **The load stepper steps through real loads** (#58): `createLoadSteps` in `set-entry.ts` steps the primary Equipment
   Profile's loads for the Exercise (`exerciseLoadsByEquipmentKg`, one list per kind of equipment, staying on the kind
-  the load is on: see below) as the user sees them, so a load a hair off the one shown never sticks, staying put past
+  the load is on: see below) by their exact kg, which the draft keeps and logs until the load is typed over, staying put past
   the lightest or heaviest, and by 5 lb or 2 kg when the loads aren't known. `set-entry.ts` also parses the typed text,
   steps reps (1) and seconds (5, at every length, #177), and names the load step for screen readers (`loadStepLabel`: "Next heavier weight", or
   "Plus 5 lb" when the loads aren't known). Timed Sets read and step in seconds; only the one-Set walk (`takesOneSet`)
@@ -63,12 +63,13 @@ Schemas shared by app and API: packages/shared/src/workouts.ts
   of Full gym's equipment and no free weights listed (the onboarding gym) has Full gym's loads. Full gym's loads follow the unit (`builtInEquipment(choice, unit)`), so the unit is part of
   `planInputsKey`. The onboarding gym is asked only for its cable step (`loadTagsAsked`).
 - **Bar-and-plates dumbbells** (#181). `dumbbellBuilds` (`packages/engines/src/dumbbells.ts`) gives every load one
-  dumbbell makes and its build; `dumbbellBuild` in `equipment.ts` gives the build of one load. A library Exercise's
+  dumbbell makes and its build; `dumbbellBuild` in `equipment.ts` gives the build of one load. `dumbbellEnds` (`@fit/shared`) bounds the work: the profile's schema refuses plates with
+  too many end weights to try, and the form says why. A library Exercise's
   `dumbbells` says it takes one or two (the integrity test requires it): two use half of each plate count, and
   `ownedOptions` drops the dumbbell way of doing it when there's one bar, so availability needs a profile's loads as well
   as its tags. The stored collection needs `seed:exercises` for the Exercise library screen to follow it.
   Logging shows how to build the load in the stepper under it (#182, `dumbbell-build.ts`): a load the dumbbells make,
-  matched as it's shown (to 0.5 of the unit) or exactly, on the kind of equipment the stepper steps it on.
+  stepped to or typed exactly, on the kind of equipment the stepper steps it on.
 - **A past Workout starts up to 7 days before its last Set** (#129). `WorkoutUpload` (`@fit/shared`) is the rule, and
   both POST /workouts (400) and the Logbook's finish use it, so a Pending Workout always uploads. It counts back from
   the Sets, not the clock, so an upload that comes days late isn't refused; `Workout` itself doesn't have the rule, so
@@ -88,17 +89,17 @@ Schemas shared by app and API: packages/shared/src/workouts.ts
 - **A rest fills the screen** (#179): `RestScreen`, a React Native modal over the logging screen. The provider's rest
   holds `expanded` and `afterId`, the Workout Exercise whose Set it follows. Logging a Set that starts a rest expands it;
   minimised, it's the `RestTimer` bar over Finish, and a tap on its countdown expands it again. `upNext`
-  (`up-next.ts`) is the Set coming next, and `LastSetRpe` rates the logged Set on either screen. The provider looks at
+  (`@fit/engines`) is the Set coming next, and `LastSetRpe` rates the logged Set on either screen. The provider looks at
   the rest every 100 ms (`restStep`), as a timeout stops while the phone sleeps: it beeps and vibrates as the countdown
   turns to 3, 2, 1 and 0, flashes at 0 (`RestFlash`, none with reduced motion), and a rest that ended in the background
   closes quietly. Sound is the web build's only (`rest-sound.web.ts`, unlocked by the Log set tap), so the phone apps,
   with no sound module, vibrate and don't show the switch. The switch is kept in device storage
   (`stored-rest-sound.ts`).
-- **Next exercise, Log extra set and Finish workout** (#180): `nextStep` (`next-step.ts`) says what moves on from an
+- **Next exercise, Log extra set and Finish workout** (#180): `nextStep` (`@fit/engines`) says what moves on from an
   Exercise and whether it's the main button. `nextPlannedExercise` finds the next one, in order after the current and
   wrapping round, with a superset as one step; the rest screen's "Next" goes by it too. `WorkoutView` gives the same
   action to the Exercise's box and the rest screen, and holds which Exercise Log extra set opened. A Workout's last
-  planned Set has no rest (`restAfterSet`); a Set past the plan rests as usual.
+  planned Set has no rest (`restAfterSet`), nor does the Set that finishes an Assessment's last test; a Set past the plan rests as usual.
 - **The rest choice is a phone-only preference** (#178): Auto or 30 s to 3 min in 15 s steps, picked on Today, stored in
   device storage (`stored-rest-choice.ts`) and held as `restChoice` on the LogbookProvider. Never on the server, in the
   Logbook or on the Planned Workout (ADR 0003), which is still built at Long on Auto. `restAfterSet`, `pairRestPlan`

@@ -1,4 +1,4 @@
-import { chooseTests } from "@fit/engines";
+import { chooseTests, NO_EQUIPMENT } from "@fit/engines";
 import { useMemo } from "react";
 import { useCurrentUser, usePrimaryEquipmentProfile } from "@/features/user/current-user-provider";
 
@@ -6,5 +6,5 @@ import { useCurrentUser, usePrimaryEquipmentProfile } from "@/features/user/curr
 export function useChosenTests() {
   const injuries = useCurrentUser().user?.profile.injuries;
   const equipmentProfile = usePrimaryEquipmentProfile();
-  return useMemo(() => chooseTests(equipmentProfile ?? { tags: [] }, injuries ?? []), [equipmentProfile, injuries]);
+  return useMemo(() => chooseTests(equipmentProfile ?? NO_EQUIPMENT, injuries ?? []), [equipmentProfile, injuries]);
 }

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { nextStep } from "./next-step";
+import { nextPlannedExercise, nextStep } from "./next-step";
 
 const exercise = (id: string, logged: number, planned?: number, supersetWith?: string) => ({
   id,
@@ -83,5 +83,58 @@ describe("nextStep", () => {
   it("is none in an Assessment Workout, which has Next test", () => {
     const workoutExercises = [exercise("squat", 2), exercise("plank", 0)];
     expect(nextStep({ workoutExercises, assessment: "single" }, "squat")).toBeNull();
+  });
+});
+
+describe("nextPlannedExercise", () => {
+  const planned = { sets: 3, target: { unit: "reps", reps: 8 } } as const;
+
+  it("is the first Exercise of a Workout just started from a plan", () => {
+    expect(
+      nextPlannedExercise([
+        { id: "squat", sets: [], planned },
+        { id: "row", sets: [], planned },
+      ]),
+    ).toBe("squat");
+  });
+
+  it("is the first still short of its target Sets when the Workout is reopened", () => {
+    expect(
+      nextPlannedExercise([
+        { id: "squat", sets: [{}, {}, {}], planned },
+        { id: "row", sets: [{}], planned },
+        { id: "press", sets: [], planned },
+      ]),
+    ).toBe("row");
+  });
+
+  it("is the next in order after the current one, wrapping to any skipped", () => {
+    const workoutExercises = [
+      { id: "squat", sets: [], planned },
+      { id: "row", sets: [{}, {}, {}], planned },
+      { id: "press", sets: [{}, {}, {}], planned },
+      { id: "curl", sets: [{}], planned },
+    ];
+    expect(nextPlannedExercise(workoutExercises, "row")).toBe("curl");
+    expect(nextPlannedExercise(workoutExercises, "curl")).toBe("squat");
+  });
+
+  it("treats a superset as one step, opening on whoever's turn it is", () => {
+    const pairOf = (press: number, row: number) => [
+      { id: "squat", sets: [], planned },
+      { id: "press", sets: Array(press).fill({}), planned: { ...planned, supersetWith: "row" } },
+      { id: "curl", sets: [], planned },
+      { id: "row", sets: Array(row).fill({}), planned: { ...planned, supersetWith: "press" } },
+    ];
+    expect(nextPlannedExercise(pairOf(3, 3), "row")).toBe("curl");
+    expect(nextPlannedExercise(pairOf(1, 0), "squat")).toBe("row");
+  });
+
+  it("is none in a Manual Workout", () => {
+    expect(nextPlannedExercise([{ id: "squat", sets: [] }])).toBeUndefined();
+  });
+
+  it("is none once every target is met", () => {
+    expect(nextPlannedExercise([{ id: "squat", sets: [{}, {}, {}], planned }])).toBeUndefined();
   });
 });

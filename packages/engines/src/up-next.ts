@@ -1,6 +1,6 @@
-import { supersetPartner, supersetTurn } from "@fit/engines";
 import type { InProgressWorkoutExercise } from "@fit/shared";
-import { nextPlannedExercise } from "./current-workout-exercise";
+import { nextPlannedExercise } from "./next-step";
+import { supersetPartner, supersetTurn } from "./supersets";
 
 export type UpNext = {
   workoutExercise: InProgressWorkoutExercise;
@@ -18,9 +18,7 @@ export function upNext(
 ): UpNext | null {
   const after = workoutExercises.find(({ id }) => id === afterId);
   const next = takesSets
-    ? after && takesSets(after)
-      ? after
-      : workoutExercises.find(takesSets)
+    ? [...(after ? [after] : []), ...workoutExercises].find(takesSets)
     : nextUnderPlan(workoutExercises, after);
   if (!next) return null;
   return { workoutExercise: next, setNumber: next.sets.length + 1, plannedSets: next.planned?.sets };

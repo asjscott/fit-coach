@@ -27,6 +27,7 @@ import { useKeepAwake } from "expo-keep-awake";
 import { createContext, use, useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import { AppState, Vibration } from "react-native";
 import { useApi } from "@/api";
+import { usePrimaryEquipmentProfile } from "@/features/user/current-user-provider";
 import { deviceStorage } from "./device-storage";
 import { finishCelebration } from "./finish-celebration";
 import { useSyncTriggers } from "./hooks/use-sync-triggers";
@@ -66,7 +67,7 @@ type LogbookContextValue = {
   testProgress: Logbook["testProgress"];
   // Swaps a pull-up test for the inverted row, or passes over a test with no Set
   swapTest: Logbook["swapTest"];
-  skipTest: (workoutExerciseId: string) => Promise<void>;
+  skipTest: Logbook["skipTest"];
   addWorkoutExercise: (exercise: Pick<Exercise, "slug" | "loadType">) => Promise<void>;
   removeWorkoutExercise: (workoutExerciseId: string) => Promise<void>;
   logSet: (workoutExerciseId: string, values: SetValues) => Promise<void>;
@@ -149,6 +150,7 @@ const LogbookContext = createContext<LogbookContextValue | null>(null);
 // in-progress Workout with every screen
 export function LogbookProvider({ children }: { children: ReactNode }) {
   const api = useApi();
+  const primaryEquipment = usePrimaryEquipmentProfile();
   const [logbook] = useState<Logbook>(() =>
     createLogbook({
       storage: deviceStorage,
@@ -289,8 +291,15 @@ export function LogbookProvider({ children }: { children: ReactNode }) {
   );
 
   const skipTest = useCallback(
-    (workoutExerciseId: string) => run(() => logbook.skipTest(workoutExerciseId)),
-    [logbook, run],
+    async (workoutExerciseId: string) => {
+      const skipping = logbook.skipTest(workoutExerciseId);
+      await run(() => skipping);
+      const skipped = await skipping;
+      // With no test left, there's nothing to rest for
+      if (primaryEquipment && logbook.testProgress(skipped, primaryEquipment).allDone) setRest(null);
+      return skipped;
+    },
+    [logbook, run, primaryEquipment],
   );
 
   const startPlannedWorkout = useCallback(
@@ -313,10 +322,10 @@ export function LogbookProvider({ children }: { children: ReactNode }) {
       const now = new Date();
       await run(() => logbook.logSet(workoutExerciseId, values, now));
       const logged = await logbook.inProgress();
-      const started = logged && restAfterSet(logged, workoutExerciseId, now, restChoice);
+      const started = logged && restAfterSet(logged, workoutExerciseId, now, restChoice, primaryEquipment);
       setRest(started && { ...started, afterId: workoutExerciseId, expanded: true });
     },
-    [logbook, run, restChoice],
+    [logbook, run, restChoice, primaryEquipment],
   );
 
   // Beeps and vibrates in the last seconds and at the end, unless it ended while the app was in the background (that

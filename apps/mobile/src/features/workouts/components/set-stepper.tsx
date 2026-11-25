@@ -1,5 +1,4 @@
 import type { StepDirection } from "@fit/engines";
-import type { WeightUnit } from "@fit/shared";
 import { useEffect, useRef, useState } from "react";
 import { StyleSheet } from "react-native";
 import { Icon, type IconName } from "@/components/icons";
@@ -9,46 +8,41 @@ import { Text } from "@/components/text";
 import { bigNumber, radii, spacing, useTheme } from "@/theme";
 import { startRepeating } from "../hold-to-repeat";
 import type { SetReading } from "../library";
-import { fieldStepper, loadStepper, stepValue, type LoadStep, type SetField } from "../set-entry";
-
-// A load is typed and stepped in the user's unit
-export type LoadSteps = {
-  step: LoadStep;
-  // Else a load steps by 5 lb or 2 kg, and screen readers say so
-  loadsKnown: boolean;
-  unit: WeightUnit;
-};
+import { fieldStepper, loadReading, stepValue, type LoadEntry, type LoadSteps, type SetField } from "../set-entry";
 
 export type SetStepperProps = {
   // What's typed, e.g. "16.5"
   value: string;
-  onChange: (value: string) => void;
-} & (
-  | ({ field: "load" } & LoadSteps)
-  | {
-      field: Exclude<SetField, "load">;
-      // How the Exercise's Sets read: a Jump's reps are its contacts (#105), the walk's seconds minutes
-      reading: SetReading;
-    }
-);
+} &
+  // A load's exact kg comes with it, unless it's typed
+  (
+    | { field: "load"; kg?: number; steps: LoadSteps; onChange: (value: string, kg?: number) => void }
+    | {
+        onChange: (value: string) => void;
+        field: Exclude<SetField, "load">;
+        // How the Exercise's Sets read: a Jump's reps are its contacts (#105), the walk's seconds minutes
+        reading: SetReading;
+      }
+  );
 
 // One Set value with − and + either side: a load to the next load, reps by 1, seconds by 5 (the walk by the
 // minute, #145), repeating while held. Any value can still be typed: the walk shows in minutes, as seconds while being
 // typed
 export function SetStepper(props: SetStepperProps) {
   const { value, onChange } = props;
-  const stepper =
-    props.field === "load"
-      ? loadStepper(props.step, props.loadsKnown, props.unit)
-      : fieldStepper(props.field, props.reading);
+  const stepper = props.field === "load" ? loadReading(props.steps) : fieldStepper(props.field, props.reading);
   const [typing, setTyping] = useState(false);
   const shown = stepper.shown(value, typing);
   // The latest value, so steps repeated while held build on each other before the parent re-renders
-  const latest = useRef(value);
-  latest.current = value;
+  const latest = useRef<LoadEntry>({ text: value });
+  latest.current = { text: value, kg: props.field === "load" ? props.kg : undefined };
   const step = (direction: StepDirection) => {
-    latest.current = stepValue(stepper, latest.current, direction);
-    onChange(latest.current);
+    const { current } = latest;
+    latest.current =
+      props.field === "load"
+        ? props.steps.step(current, direction)
+        : { text: stepValue(fieldStepper(props.field, props.reading), current.text, direction) };
+    onChange(latest.current.text, latest.current.kg);
   };
 
   return (
@@ -56,7 +50,7 @@ export function SetStepper(props: SetStepperProps) {
       <StepButton icon="minus" label={stepper.stepLabel(value, -1)} onStep={() => step(-1)} />
       <InputField
         value={shown.value}
-        onChangeText={onChange}
+        onChangeText={(text) => onChange(text)}
         onFocus={() => setTyping(true)}
         onBlur={() => setTyping(false)}
         placeholder="0"
