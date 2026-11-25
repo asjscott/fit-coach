@@ -40,7 +40,7 @@ function nextUnderPlan(
   };
   const turn = after && turnOf(after);
   if (turn) return turn;
-  const nextId = nextPlannedExercise(workoutExercises);
+  const nextId = nextPlannedExercise(workoutExercises, after?.id);
   const next = workoutExercises.find(({ id }) => id === nextId);
   return next && turnOf(next);
 }

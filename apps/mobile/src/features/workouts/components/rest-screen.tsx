@@ -19,11 +19,15 @@ import { useLogbook, type CurrentRest } from "../logbook-provider";
 import { protocolNote } from "../protocol-note";
 import { hasRestSound, unlockRestSound } from "../rest-sound";
 import { upNext } from "../up-next";
+import { NextButtons, type NextAction } from "./current-exercise-box";
 import { LastSetRpe } from "./last-set-rpe";
 
+type RestScreenProps = { workout: InProgressWorkout; next?: NextAction };
+
 // The rest filling the screen (#179): a countdown to read across the room, the Set coming next and large buttons. It
-// minimises to the bar (RestTimer), and goes at zero, leaving the logging screen it's over ready for the next Set
-export function RestScreen({ workout }: { workout: InProgressWorkout }) {
+// minimises to the bar (RestTimer), and goes at zero, leaving the logging screen it's over ready for the next Set. `next`
+// moves on from the Exercise it follows, carrying the rest on as the bar (#180)
+export function RestScreen({ workout, next }: RestScreenProps) {
   const { rest, minimizeRest } = useLogbook();
   const { colors } = useTheme();
   const expanded = !!rest?.expanded;
@@ -33,14 +37,14 @@ export function RestScreen({ workout }: { workout: InProgressWorkout }) {
       {/* A presented screen needs its own provider on iOS (docs/agents/workouts.md, #68) */}
       <SafeAreaProvider>
         <SafeAreaView style={[styles.screen, { backgroundColor: colors.bg }]} edges={["top", "bottom"]}>
-          {rest && expanded ? <Resting rest={rest} workout={workout} /> : null}
+          {rest && expanded ? <Resting rest={rest} workout={workout} next={next} /> : null}
         </SafeAreaView>
       </SafeAreaProvider>
     </Modal>
   );
 }
 
-function Resting({ rest, workout }: { rest: CurrentRest; workout: InProgressWorkout }) {
+function Resting({ rest, workout, next }: RestScreenProps & { rest: CurrentRest }) {
   const { extendRest, shortenRest, skipRest, minimizeRest, restSoundOn, setRestSoundOn } = useLogbook();
   const logged = workout.workoutExercises.find(({ id }) => id === rest.afterId);
 
@@ -77,6 +81,11 @@ function Resting({ rest, workout }: { rest: CurrentRest; workout: InProgressWork
         <Next workout={workout} afterId={rest.afterId} />
         {logged ? <LastSetRpe workoutExercise={logged} /> : null}
       </ScrollView>
+      {next ? (
+        <View style={styles.nextButtons}>
+          <NextButtons next={next} />
+        </View>
+      ) : null}
       <HStack spacing={3}>
         <BigButton label={`−${REST_ADJUSTMENT_SECONDS} s`} onPress={shortenRest} />
         <BigButton label="Skip" onPress={skipRest} />
@@ -178,5 +187,6 @@ const styles = StyleSheet.create({
   clock: { fontFamily: fonts.bold, fontVariant: TABULAR },
   next: { alignItems: "center", gap: spacing[1] },
   name: { fontFamily: fonts.bold, fontSize: 28, lineHeight: 34 },
+  nextButtons: { marginBottom: spacing[3] },
   bigButton: { flex: 1, height: 80, paddingHorizontal: spacing[2] },
 });

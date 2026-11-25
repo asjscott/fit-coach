@@ -94,6 +94,11 @@ Schemas shared by app and API: packages/shared/src/workouts.ts
   closes quietly. Sound is the web build's only (`rest-sound.web.ts`, unlocked by the Log set tap), so the phone apps,
   with no sound module, vibrate and don't show the switch. The switch is kept in device storage
   (`stored-rest-sound.ts`).
+- **Next exercise, Log extra set and Finish workout** (#180): `nextStep` (`next-step.ts`) says what moves on from an
+  Exercise and whether it's the main button. `nextPlannedExercise` finds the next one, in order after the current and
+  wrapping round, with a superset as one step; the rest screen's "Next" goes by it too. `WorkoutView` gives the same
+  action to the Exercise's box and the rest screen, and holds which Exercise Log extra set opened. A Workout's last
+  planned Set has no rest (`restAfterSet`); a Set past the plan rests as usual.
 - **The rest choice is a phone-only preference** (#178): Auto or 30 s to 3 min in 15 s steps, picked on Today, stored in
   device storage (`stored-rest-choice.ts`) and held as `restChoice` on the LogbookProvider. Never on the server, in the
   Logbook or on the Planned Workout (ADR 0003), which is still built at Long on Auto. `restAfterSet`, `pairRestPlan`

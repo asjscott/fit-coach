@@ -197,6 +197,9 @@ On the installed web app on the iPhone, with the silent switch off and the volum
 - [ ] **RS7** With VoiceOver, the countdown reads as "Rest, 1:05 left", and the buttons behind the rest screen can't be reached.
   - Result: · Notes:
 
+- [ ] **RS8** Log an Exercise's last planned Set: the rest screen has the rating, Next exercise and Log extra set, all in sight without scrolling. Next exercise opens the next Exercise with the rest as a bar (#180).
+  - Result: · Notes:
+
 ## Supersets (#96)
 
 A Workout pairs Exercises only when it wouldn't otherwise fit its Length. Pairs form where the Patterns go together (push with pull or hinge, squat with core), never with a one-sided Exercise or a carry. On the simulators, Bodyweight only on Short paired them. The sheet then says "Paired into supersets to fit the time" and shows "Superset with …" under each paired Exercise.

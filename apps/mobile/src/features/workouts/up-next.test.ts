@@ -31,6 +31,12 @@ describe("what's next while resting", () => {
     );
   });
 
+  it("is the next in order after it, though one before it was skipped", () => {
+    expect(next([exercise("squat", 0, 3), exercise("row", 2, 2), exercise("curl", 1, 3)], "row")).toBe(
+      "curl, Set 2 of 3",
+    );
+  });
+
   it("is nothing once every planned Set is done", () => {
     expect(next([exercise("squat", 3, 3), exercise("row", 2, 2)], "row")).toBeNull();
   });
