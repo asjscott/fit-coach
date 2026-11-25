@@ -4,6 +4,7 @@ import { Box } from "@/components/box";
 import { RHFChipSelect, RHFMultiSelect, RHFTextField, type Option } from "@/components/hook-form";
 import { HStack, Stack } from "@/components/stack";
 import { bandLevelLabels, loadOptions } from "@/features/equipment/loads";
+import { BarAndPlatesField } from "./bar-and-plates-field";
 import { useWeightUnit } from "@/features/user/current-user-provider";
 
 // Weights are offered and entered in the user's unit
@@ -13,6 +14,7 @@ const weightOptions = (weights: number[], unit: WeightUnit): Option[] =>
 const dumbbellKindOptions: Option[] = [
   { value: "adjustable", label: "Adjustable" },
   { value: "fixed", label: "Fixed set" },
+  { value: "bar_and_plates", label: "Bar and plates" },
 ];
 
 const bandLevelOptions: Option[] = BandLevel.options.map((value) => ({ value, label: bandLevelLabels[value] }));
@@ -44,6 +46,7 @@ export function EquipmentLoadsField({ tags }: { tags: EquipmentTag[] }) {
               </Box>
             </HStack>
           )}
+          {dumbbellKind === "bar_and_plates" && <BarAndPlatesField />}
           {dumbbellKind === "fixed" && (
             <RHFMultiSelect
               name="loads.dumbbells.weights"

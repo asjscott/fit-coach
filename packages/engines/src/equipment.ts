@@ -11,6 +11,7 @@ import {
   type InjuryTag,
 } from "@fit/shared";
 import { exerciseBySlug } from "./data/exercises";
+import { dumbbellBuilds, type DumbbellBuild } from "./dumbbells";
 
 // Owning one item means owning another, e.g. a power rack includes a pull-up bar
 const IMPLIES: Partial<Record<EquipmentTag, EquipmentTag[]>> = {
@@ -20,6 +21,9 @@ const IMPLIES: Partial<Record<EquipmentTag, EquipmentTag[]>> = {
 
 // An Equipment Profile as far as the loads it offers go
 export type ProfileWithLoads = Pick<EquipmentProfile, "tags" | "loads">;
+
+// The equipment of a user with no Equipment Profile yet
+export const NO_EQUIPMENT: ProfileWithLoads = { tags: [], loads: {} };
 
 export function expandTags(tags: EquipmentTag[]): Set<EquipmentTag> {
   const owned = new Set(tags);
@@ -78,18 +82,25 @@ export function matchesBuiltIn(profile: Pick<EquipmentProfile, "tags">, choice: 
   return owned.size === builtIn.size && [...owned].every((tag) => builtIn.has(tag));
 }
 
-export function ownedOptions(
-  exercise: Pick<Exercise, "equipmentOptions">,
-  profile: Pick<EquipmentProfile, "tags">,
-): EquipmentTag[][] {
+// What says how an Exercise can be done: its ways of doing it, and how many dumbbells those with dumbbells take
+export type ExerciseEquipment = Pick<Exercise, "equipmentOptions" | "dumbbells">;
+
+// Each way the profile can do the Exercise. The dumbbells may be one bar, which can't do a two-dumbbell Exercise (#181)
+export function ownedOptions(exercise: ExerciseEquipment, profile: ProfileWithLoads): EquipmentTag[][] {
   const owned = expandTags(profile.tags);
+  if (hasTooFewDumbbells(exercise, profile)) owned.delete("dumbbells");
   return exercise.equipmentOptions.filter((option) => option.every((tag) => owned.has(tag)));
 }
 
-export const isAvailable = (
-  exercise: Pick<Exercise, "equipmentOptions">,
-  profile: Pick<EquipmentProfile, "tags">,
-): boolean => ownedOptions(exercise, profile).length > 0;
+export function hasTooFewDumbbells(
+  exercise: Pick<Exercise, "dumbbells">,
+  { loads: { dumbbells } }: Pick<EquipmentProfile, "loads">,
+): boolean {
+  return dumbbells?.kind === "bar_and_plates" && dumbbells.bars < (exercise.dumbbells ?? 1);
+}
+
+export const isAvailable = (exercise: ExerciseEquipment, profile: ProfileWithLoads): boolean =>
+  ownedOptions(exercise, profile).length > 0;
 
 // The heaviest barbell load worth listing; plates are assumed plentiful, so only the sizes owned limit the loads
 const MAX_BARBELL_KG = 300;
@@ -116,7 +127,12 @@ function barbellLoadsKg({ barKg, platesKg }: { barKg: number; platesKg: number[]
   return reachable.flatMap((ok, q) => (ok ? [toKg(bar + (2 * q) / QUARTERS, unit)] : []));
 }
 
-function dumbbellLoadsKg(dumbbells: NonNullable<EquipmentProfile["loads"]["dumbbells"]>): number[] {
+// One dumbbell's loads, for an Exercise that takes this many
+function dumbbellLoadsKg(
+  dumbbells: NonNullable<EquipmentProfile["loads"]["dumbbells"]>,
+  taken: Exercise["dumbbells"],
+): number[] {
+  if (dumbbells.kind === "bar_and_plates") return dumbbellBuilds(dumbbells, taken).map(({ kg }) => kg);
   if (dumbbells.kind === "fixed") return dumbbells.weightsKg;
   const { minKg, maxKg, stepKg } = dumbbells;
   const count = Math.floor((maxKg - minKg) / stepKg + 1e-9) + 1;
@@ -139,20 +155,16 @@ export type LoadsByEquipment = readonly (readonly number[])[];
 // The loads of each kind of equipment the Equipment Profile has for an Exercise, in kg: the dumbbells, kettlebells,
 // bar plus plate pairs or cable stack it has. For a dumbbell or kettlebell Exercise a load is one implement's weight.
 // A kind the profile lists no loads for is left out
-export const loadsByEquipmentKg = (
-  exercise: Pick<Exercise, "equipmentOptions">,
-  profile: ProfileWithLoads,
-): number[][] => [...loadsByKindKg(exercise, profile).values()];
+export const loadsByEquipmentKg = (exercise: ExerciseEquipment, profile: ProfileWithLoads): number[][] => [
+  ...loadsByKindKg(exercise, profile).values(),
+];
 
 // loadsByEquipmentKg keyed by the kind of equipment, in the same order
-export function loadsByKindKg(
-  exercise: Pick<Exercise, "equipmentOptions">,
-  profile: ProfileWithLoads,
-): Map<EquipmentTag, number[]> {
+export function loadsByKindKg(exercise: ExerciseEquipment, profile: ProfileWithLoads): Map<EquipmentTag, number[]> {
   const tags = [...new Set(ownedOptions(exercise, profile).flat())];
   return new Map(
     tags.flatMap((tag) => {
-      const loads = loadsOfKindKg(tag, profile.loads);
+      const loads = loadsOfKindKg(tag, profile.loads, exercise);
       return loads.length ? [[tag, lightestFirst(loads)] as const] : [];
     }),
   );
@@ -162,12 +174,27 @@ export function loadsByKindKg(
 function loadsOfKindKg(
   tag: EquipmentTag,
   { dumbbells, kettlebells, barbell, cable_machine }: ProfileWithLoads["loads"],
+  exercise: ExerciseEquipment,
 ): number[] {
-  if (tag === "dumbbells" && dumbbells) return dumbbellLoadsKg(dumbbells);
+  if (tag === "dumbbells" && dumbbells) return dumbbellLoadsKg(dumbbells, exercise.dumbbells);
   if (tag === "kettlebells" && kettlebells) return kettlebells.weightsKg;
   if (tag === "barbell" && barbell) return barbellLoadsKg(barbell);
   if (tag === "cable_machine" && cable_machine) return cableLoadsKg(cable_machine);
   return [];
+}
+
+// The plates on each end of one dumbbell for this load of the Exercise, or undefined when the profile's dumbbells
+// aren't bar and plates or don't make it
+export function dumbbellBuild(
+  exercise: ExerciseEquipment,
+  profile: ProfileWithLoads,
+  kg: number,
+): DumbbellBuild["endsKg"] | undefined {
+  const { dumbbells } = profile.loads;
+  const canUseThem = ownedOptions(exercise, profile).some((option) => option.includes("dumbbells"));
+  if (!canUseThem || dumbbells?.kind !== "bar_and_plates") return undefined;
+  const builds = dumbbellBuilds(dumbbells, exercise.dumbbells);
+  return builds.find((build) => Math.abs(build.kg - kg) <= SAME_LOAD_TOLERANCE)?.endsKg;
 }
 
 // Sorted, with loads a rounding error apart kept once
@@ -178,7 +205,7 @@ export function lightestFirst(loadsKg: readonly number[]): number[] {
 
 // The loads the Equipment Profile offers for an Exercise, lightest first, from every kind of equipment it can be done
 // with. Empty when the profile doesn't say what it has
-export const availableLoadsKg = (exercise: Pick<Exercise, "equipmentOptions">, profile: ProfileWithLoads): number[] =>
+export const availableLoadsKg = (exercise: ExerciseEquipment, profile: ProfileWithLoads): number[] =>
   lightestFirst(loadsByEquipmentKg(exercise, profile).flat());
 
 // An Exercise's loads by slug, for callers that hold only a Workout Exercise; empty when either the Exercise or the
@@ -238,7 +265,7 @@ export function stepperLoad(
 // dumbbells, plate pairs on the bar, kettlebells or the cable stack's step. Undefined past the heaviest or lightest
 // load, or when the profile lists no loads for the Exercise, so there's no step to take
 export const nextLoadKg = (
-  exercise: Pick<Exercise, "equipmentOptions">,
+  exercise: ExerciseEquipment,
   profile: ProfileWithLoads,
   kg: number,
   direction: StepDirection,
@@ -266,11 +293,7 @@ export function roundToLoadKg(kg: number, loadsKg: number[]): number {
 const ASSUMED_BAR_KG = 20;
 
 // True when every way the profile can do the Exercise needs a barbell, and kg is lighter than the bar alone
-export function isUnderEmptyBar(
-  kg: number,
-  exercise: Pick<Exercise, "equipmentOptions">,
-  profile: ProfileWithLoads,
-): boolean {
+export function isUnderEmptyBar(kg: number, exercise: ExerciseEquipment, profile: ProfileWithLoads): boolean {
   const options = ownedOptions(exercise, profile);
   const needsBar = options.length > 0 && options.every((option) => option.includes("barbell"));
   return needsBar && kg < (profile.loads.barbell?.barKg ?? ASSUMED_BAR_KG);

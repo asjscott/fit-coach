@@ -226,6 +226,11 @@ A Workout pairs Exercises only when it wouldn't otherwise fit its Length. Pairs 
 - [ ] **LS2** On a home Equipment Profile with a cable machine selected, the weights stage shows "Cable and machine step (lb)" next to the other equipment, and the step saved there moves the cable targets and stepper.
   - Result: · Notes:
 
+## Bar-and-plates dumbbells (#181)
+
+- [ ] **BP1** In Edit profile, at home with dumbbells, choose **Bar and plates** and enter a 4 lb bar × 2, 3 lb × 4 and 5 lb × 4, adding and removing a row on the way. Profile's Equipment reads "Dumbbells (2 × 4 lb bars, 4 × 3 lb and 4 × 5 lb plates)", editing again shows it back, and a goblet squat's stepper goes 12, 13, 14.
+  - Result: · Notes:
+
 ## PRs (#130)
 
 - [ ] **PR1** Beat an Exercise's best with signal and Save workout. While the "Workout saved. New PR: …" toast is up (about 10 s), tap **See workout**: it opens the Workout in History with "New PR · …" under that Exercise.
@@ -245,11 +250,11 @@ A Workout pairs Exercises only when it wouldn't otherwise fit its Length. Pairs 
 
 ## Deload week and the retest (#137)
 
-🕒 In the 5th week of a Block: the week starting 4 Mondays after the Monday of the week the Assessment's B was done.
+🕒 In the 5th week of a Block: the week starting 4 Mondays after the Monday of the week the Assessment was done.
 
-- [ ] **DL1** In the deload week, open the Next Workout sheet on Today: the Exercises and Sets are as usual, weighted targets about 10% lighter (on a real dumbbell, plate or stack step), and bodyweight, band and timed targets about 70% of last week's (never under 5 reps or 15 s unless they were already). Below the plan, a "Retake the Assessment" section explains that only the Exercises it tests, and any not done this Block, get new levels, with Start assessment A. The wording reads well and doesn't feel pushy.
+- [ ] **DL1** In the deload week, open the Next Workout sheet on Today: the Exercises and Sets are as usual, weighted targets about 10% lighter (on a real dumbbell, plate or stack step), and bodyweight, band and timed targets about 70% of last week's (never under 5 reps or 15 s unless they were already). Below the plan, a "Retake the Assessment" section explains that only the Exercises it tests, and any not done this Block, get new levels, with Start assessment. The wording reads well and doesn't feel pushy.
   - Result: · Notes:
-- [ ] **DL2** Dismiss the retest with the ×: it stays gone for the rest of the week. On the Monday after, the plan is back to the usual loads and there's no retest. Or, instead, take A and B in the deload week: the Results open as usual, and next week an Exercise you trained this Block but the Assessment didn't test keeps the target it had reached.
+- [ ] **DL2** Dismiss the retest with the ×: it stays gone for the rest of the week. On the Monday after, the plan is back to the usual loads and there's no retest. Or, instead, take it in the deload week: the Results open as usual, and next week an Exercise you trained this Block but the Assessment didn't test keeps the target it had reached.
   - Result: · Notes:
 
 ## M7: Weigh-ins, food and water (#161–#168)

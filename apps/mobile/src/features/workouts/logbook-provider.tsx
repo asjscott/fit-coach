@@ -48,7 +48,7 @@ type LogbookContextValue = {
   start: () => Promise<void>;
   // Starts a Manual Workout logged afterwards, for an earlier day (#129)
   startPast: (pastStart: Date) => Promise<void>;
-  // Starts Assessment Workout A or B with its tests already added
+  // Starts the Assessment Workout with its tests already added
   startAssessment: (options: AssessmentOptions) => Promise<void>;
   // The latest Planned Workout on the phone, read from it, and whether it's known to be out of date
   plannedWorkoutCopy: PlannedWorkoutCopy;

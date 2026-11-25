@@ -33,7 +33,7 @@ export type AssessmentEstimate = z.infer<typeof AssessmentEstimate>;
 export const AssessmentPattern = z.discriminatedUnion("estimated", [AssessmentTest, AssessmentEstimate]);
 export type AssessmentPattern = z.infer<typeof AssessmentPattern>;
 
-// The results of one pair of Assessment Workouts (GLOSSARY.md), a snapshot: deleting either Workout leaves it be
+// The results of one Assessment Workout, or an old A and B (GLOSSARY.md), a snapshot: deleting a Workout leaves it be
 export const Assessment = z.object({
   id: z.uuid(),
   // The Workouts it came from, in the order they started

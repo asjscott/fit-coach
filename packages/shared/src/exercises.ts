@@ -36,6 +36,8 @@ export const Exercise = z
     patterns: z.array(z.object({ pattern: Pattern, credit: z.number().min(0).max(1) })),
     muscles: z.object({ primary: z.array(Muscle).min(1), secondary: z.array(Muscle) }),
     equipmentOptions: z.array(z.array(EquipmentTag)).min(1), // any one option works; [[]] = no equipment
+    // How many dumbbells it takes, for one that can be done with them (#181); absent from a collection seeded before it
+    dumbbells: z.union([z.literal(1), z.literal(2)]).optional(),
     loadType: LoadType,
     unilateral: z.boolean(),
     ballistic: z.boolean().default(false), // the default covers an exercises collection seeded before this field
