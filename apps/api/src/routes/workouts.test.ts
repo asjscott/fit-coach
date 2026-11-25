@@ -34,7 +34,7 @@ describe("POST /workouts", () => {
 
     expect((await user.post("/workouts", b)).statusCode).toBe(201);
     const latest = (await user.get("/assessments/latest")).body as LatestAssessment;
-    expect(latest?.assessment).toMatchObject({ aWorkoutId: a.id, bWorkoutId: b.id });
+    expect(latest?.assessment).toMatchObject({ workoutIds: [a.id, b.id] });
     expect(latest?.workingLevels).toEqual(
       expect.arrayContaining([
         expect.objectContaining({ slug: "goblet-squat", unit: "kg" }),

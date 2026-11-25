@@ -9,7 +9,7 @@ const workout = (id: string, day: string, assessment?: "A" | "B", isPending = fa
   ...(assessment && { assessment }),
 });
 // The latest Assessment, from a B started on this day
-const assessment = (id: string, day: string) => ({ id, bStartedAt: `2026-10-${day}T08:00:00.000Z` });
+const assessment = (id: string, day: string) => ({ id, lastStartedAt: `2026-10-${day}T08:00:00.000Z` });
 // Today's offer on 23 October with History loaded, a test for every Pattern, and nothing dismissed unless a test says so
 const offer = (
   workouts: AssessmentOfferInput["workouts"],

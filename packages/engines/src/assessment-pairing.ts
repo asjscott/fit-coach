@@ -3,7 +3,7 @@ import type { Assessment, AssessmentPart, Workout } from "@fit/shared";
 // What pairing needs from an Assessment Workout
 export type AssessmentWorkoutRef = Pick<Workout, "id" | "startedAt"> & { assessment: AssessmentPart };
 
-export type AssessmentPair = Pick<Assessment, "aWorkoutId" | "bWorkoutId">;
+export type AssessmentPair = Pick<Assessment, "workoutIds">;
 
 // The latest of the Workouts that is Assessment Workout `part`, and started before `before` when given
 export function latestAssessmentWorkout<W extends Pick<Workout, "startedAt" | "assessment">>(
@@ -24,7 +24,7 @@ export function pairToAssess(
   { workouts, assessments }: { workouts: AssessmentWorkoutRef[]; assessments: AssessmentPair[] },
 ): AssessmentPair | null {
   // Each Workout is in at most one Assessment, so a retried upload recomputes nothing
-  const assessed = new Set(assessments.flatMap(({ aWorkoutId, bWorkoutId }) => [aWorkoutId, bWorkoutId]));
+  const assessed = new Set(assessments.flatMap(({ workoutIds }) => workoutIds));
   const latestABefore = (b: AssessmentWorkoutRef) => latestAssessmentWorkout(workouts, "A", b.startedAt);
   const pairs = (a: AssessmentWorkoutRef | undefined, b: AssessmentWorkoutRef) =>
     a !== undefined && latestABefore(b)?.id === a.id && !assessed.has(a.id) && !assessed.has(b.id);
@@ -34,5 +34,5 @@ export function pairToAssess(
     workout.assessment === "B"
       ? [latestABefore(workout), workout]
       : [workout, inOrder.find((other) => other.assessment === "B" && pairs(workout, other))];
-  return a && b && pairs(a, b) ? { aWorkoutId: a.id, bWorkoutId: b.id } : null;
+  return a && b && pairs(a, b) ? { workoutIds: [a.id, b.id] } : null;
 }

@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { weekOfBlock } from "./block";
 
 // B started on Wednesday 4 November 2026, in New York
-const assessment = { bStartedAt: "2026-11-04T23:00:00.000Z" };
+const assessment = { lastStartedAt: "2026-11-04T23:00:00.000Z" };
 const timeZone = "America/New_York";
 const at = (iso: string) => new Date(iso);
 
@@ -30,7 +30,7 @@ describe("weekOfBlock", () => {
 
   it("turns the week at Monday in the user's timezone, not UTC's", () => {
     // B started on Monday 2 November in Auckland, while it was still Sunday 1 November in UTC
-    const auckland = { bStartedAt: "2026-11-01T19:00:00.000Z" };
+    const auckland = { lastStartedAt: "2026-11-01T19:00:00.000Z" };
     const timeZone = "Pacific/Auckland";
     expect(weekOfBlock(auckland, at("2026-11-08T10:30:00Z"), timeZone)).toEqual({ week: 1, deload: false });
     // Monday 9 November in Auckland, still Sunday 8 November in UTC
@@ -40,7 +40,7 @@ describe("weekOfBlock", () => {
   it("restarts at week 1 for a newer Assessment, even part-way through a Block", () => {
     expect(weekOfBlock(assessment, at("2026-11-18T14:00:00Z"), timeZone)).toEqual({ week: 3, deload: false });
     // Retaken on Tuesday 17 November
-    const retake = { bStartedAt: "2026-11-17T23:00:00.000Z" };
+    const retake = { lastStartedAt: "2026-11-17T23:00:00.000Z" };
     expect(weekOfBlock(retake, at("2026-11-18T14:00:00Z"), timeZone)).toEqual({ week: 1, deload: false });
     expect(weekOfBlock(retake, at("2026-12-14T14:00:00Z"), timeZone)).toEqual({ week: 5, deload: true });
   });

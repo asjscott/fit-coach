@@ -7,20 +7,20 @@ import {
   pairToAssess,
   type LegacyWorkingLevel,
 } from "@fit/engines";
-import type { ClientSession } from "mongodb";
+import { MongoServerError, type ClientSession } from "mongodb";
 import { Assessment, LatestAssessment, WorkingLevel, type WorkingLevelMover, type Workout } from "@fit/shared";
 import { client, db } from "./db";
 import { equipmentProfilesOf, findUser, type OnboardedUser } from "./users";
 import { toWorkout, workouts } from "./workouts";
 
 // One document per Assessment, a snapshot: deleting either Assessment Workout leaves it be
-type AssessmentDoc = Omit<Assessment, "createdAt" | "bStartedAt"> & {
+type AssessmentDoc = Omit<Assessment, "createdAt" | "lastStartedAt"> & {
   clerkUserId: string;
   createdAt: Date;
-  bStartedAt: Date;
+  lastStartedAt: Date;
 };
 
-// One document per user and slug; the newest Assessment (by when its B started) sets them, keeping on a retake the
+// One document per user and slug; the newest Assessment (by when its last Workout started) sets them, keeping on a retake the
 // last Block's progress (#137)
 type WorkingLevelDoc = WorkingLevel & { clerkUserId: string; assessmentId: string };
 
@@ -28,10 +28,9 @@ export const assessments = db.collection<AssessmentDoc>("assessments");
 export const workingLevels = db.collection<WorkingLevelDoc>("workingLevels");
 
 export async function ensureAssessmentIndexes() {
-  await assessments.createIndex({ clerkUserId: 1, bStartedAt: -1 });
+  await assessments.createIndex({ clerkUserId: 1, lastStartedAt: -1 });
   // A Workout is in at most one Assessment, however many uploads pair it at once
-  await assessments.createIndex({ clerkUserId: 1, aWorkoutId: 1 }, { unique: true });
-  await assessments.createIndex({ clerkUserId: 1, bWorkoutId: 1 }, { unique: true });
+  await assessments.createIndex({ clerkUserId: 1, workoutIds: 1 }, { unique: true });
   await workingLevels.createIndex({ clerkUserId: 1, slug: 1 }, { unique: true });
 }
 
@@ -57,9 +56,7 @@ export async function assessIfPaired(clerkUserId: string, workout: Workout, user
           { projection: { id: 1, startedAt: 1, assessment: 1 }, session },
         )
         .toArray();
-      const assessed = await assessments
-        .find({ clerkUserId }, { projection: { aWorkoutId: 1, bWorkoutId: 1 }, session })
-        .toArray();
+      const assessed = await assessments.find({ clerkUserId }, { projection: { workoutIds: 1 }, session }).toArray();
       const pair = pairToAssess(
         { id: workout.id, startedAt: workout.startedAt, assessment: part },
         {
@@ -76,21 +73,22 @@ export async function assessIfPaired(clerkUserId: string, workout: Workout, user
         const doc = await workouts.findOne({ clerkUserId, id }, { session });
         return doc && toWorkout(doc);
       };
-      const a = await load(pair.aWorkoutId);
-      const b = await load(pair.bWorkoutId);
+      const [aId, bId] = pair.workoutIds;
+      const a = aId && (await load(aId));
+      const b = bId && (await load(bId));
       if (!a || !b) return;
 
       const result = assess(a, b, user.bodyProfile, user.equipmentProfiles);
       const id = randomUUID();
-      const bStartedAt = new Date(result.assessment.bStartedAt);
+      const lastStartedAt = new Date(result.assessment.lastStartedAt);
       await assessments.insertOne(
-        { ...result.assessment, id, clerkUserId, createdAt: new Date(), bStartedAt },
+        { ...result.assessment, id, clerkUserId, createdAt: new Date(), lastStartedAt },
         { session },
       );
       // A pair completed late by an old A is kept, but mustn't overwrite the Working Levels of a newer Assessment
       const newest = await assessments.findOne(
         { clerkUserId },
-        { sort: { bStartedAt: -1 }, projection: { id: 1 }, session },
+        { sort: { lastStartedAt: -1 }, projection: { id: 1 }, session },
       );
       if (newest?.id !== id) return;
       // A retake keeps the last Block's progress (#137): the levels of Exercises it didn't test that have Sets logged
@@ -111,7 +109,7 @@ export async function assessIfPaired(clerkUserId: string, workout: Workout, user
               .toArray()
               .then((docs) => docs.map((doc) => ({ ...doc, startedAt: doc.startedAt.toISOString() }))),
             assessment: result.assessment,
-            aStartedAt: a.startedAt,
+            firstStartedAt: a.startedAt,
             timeZone: user.timeZone,
           })
         : new Set<string>();
@@ -131,8 +129,28 @@ export async function assessIfPaired(clerkUserId: string, workout: Workout, user
   );
 }
 
+// #185's one-off migration, safe to run repeatedly: each Assessment stored before it, with its A, B and B-start fields,
+// in the new shape. It runs before ensureAssessmentIndexes: the old unique indexes would refuse a user's second
+// migrated Assessment, and the new one a second unmigrated one
+export async function migrateAssessments() {
+  for (const index of ["clerkUserId_1_bStartedAt_-1", "clerkUserId_1_aWorkoutId_1", "clerkUserId_1_bWorkoutId_1"]) {
+    try {
+      await assessments.dropIndex(index);
+    } catch (err) {
+      // Already dropped, or a new database with no Assessments yet
+      const isGone =
+        err instanceof MongoServerError && (err.codeName === "IndexNotFound" || err.codeName === "NamespaceNotFound");
+      if (!isGone) throw err;
+    }
+  }
+  await assessments.updateMany({ workoutIds: { $exists: false } }, [
+    { $set: { workoutIds: ["$aWorkoutId", "$bWorkoutId"], lastStartedAt: "$bStartedAt" } },
+    { $unset: ["aWorkoutId", "bWorkoutId", "bStartedAt"] },
+  ]);
+}
+
 // #131's one-off migration, safe to run repeatedly: each Working Level stored before it (no misses) in the new shape
-// (migrateWorkingLevel), moved by the B of the Assessment that set it. The user's current plan was built from the old
+// (migrateWorkingLevel), moved by the last Workout of the Assessment that set it. The user's current plan was built from the old
 // levels, so it's made due (a plan without builtAt is due once) and the next visit to Today rebuilds it
 export async function migrateWorkingLevels() {
   const legacy = await workingLevels.find({ misses: { $exists: false } }).toArray();
@@ -146,7 +164,10 @@ export async function migrateWorkingLevels() {
       const assessment = await assessments.findOne({ clerkUserId, id: assessmentId });
       setBy.set(
         assessmentId,
-        assessment && { workoutId: assessment.bWorkoutId, startedAt: assessment.bStartedAt.toISOString() },
+        assessment && {
+          workoutId: assessment.workoutIds.at(-1)!,
+          startedAt: assessment.lastStartedAt.toISOString(),
+        },
       );
     }
     for (const doc of docs) {
@@ -163,16 +184,16 @@ export async function migrateWorkingLevels() {
   }
 }
 
-// The newest Assessment (its B started last) with its Working Levels, or null before the first
+// The newest Assessment (its last Workout started last) with its Working Levels, or null before the first
 export async function findLatestAssessment(clerkUserId: string): Promise<LatestAssessment> {
-  const doc = await assessments.findOne({ clerkUserId }, { sort: { bStartedAt: -1 } });
+  const doc = await assessments.findOne({ clerkUserId }, { sort: { lastStartedAt: -1 } });
   if (!doc) return null;
   const levels = await workingLevels.find({ clerkUserId }).toArray();
   return LatestAssessment.parse({
     assessment: Assessment.parse({
       ...doc,
       createdAt: doc.createdAt.toISOString(),
-      bStartedAt: doc.bStartedAt.toISOString(),
+      lastStartedAt: doc.lastStartedAt.toISOString(),
     }),
     workingLevels: levels.map((level) => WorkingLevel.parse(level)),
   });

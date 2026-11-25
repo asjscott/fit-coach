@@ -108,9 +108,8 @@ export function assess(
   );
   return {
     assessment: {
-      aWorkoutId: a.id,
-      bWorkoutId: b.id,
-      bStartedAt: b.startedAt,
+      workoutIds: [a.id, b.id],
+      lastStartedAt: b.startedAt,
       bodyWeightKg: profile.weightKg,
       patterns,
     },
