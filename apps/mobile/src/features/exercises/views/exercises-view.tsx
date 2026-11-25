@@ -1,3 +1,4 @@
+import { NO_EQUIPMENT } from "@fit/engines";
 import { router } from "expo-router";
 import { useState } from "react";
 import { SectionList, View } from "react-native";
@@ -20,8 +21,8 @@ export default function ExercisesView() {
   const [showAll, setShowAll] = useState(false);
 
   // No primary profile counts as no equipment
-  const tags = usePrimaryEquipmentProfile()?.tags ?? [];
-  const { sections, availableCount, total } = librarySections(exercises ?? [], { tags, showAll });
+  const equipmentProfile = usePrimaryEquipmentProfile() ?? NO_EQUIPMENT;
+  const { sections, availableCount, total } = librarySections(exercises ?? [], { equipmentProfile, showAll });
 
   if (isLoading) return <Loading message="Loading Exercises…" />;
 
@@ -57,7 +58,7 @@ export default function ExercisesView() {
             accessibilityRole="link"
             name={exercise.name}
             unavailable={!available}
-            detail={available ? undefined : `Needs: ${neededEquipment(exercise, tags)}`}
+            detail={available ? undefined : `Needs: ${neededEquipment(exercise, equipmentProfile)}`}
             chevron
             onPress={() => router.push(`/profile/exercises/${exercise.slug}`)}
           />

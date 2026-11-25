@@ -33,6 +33,70 @@ describe("an Equipment Profile's loads in the user's unit", () => {
     });
   });
 
+  // Stories 38 to 40 of #176
+  describe("bar-and-plates dumbbells", () => {
+    const form = {
+      dumbbells: {
+        kind: "bar_and_plates" as const,
+        bar: 4,
+        bars: 2,
+        plates: [
+          { size: 3, count: 4 },
+          { size: 2.2, count: 2 },
+        ],
+      },
+    };
+
+    it("are stored as the exact kg of any sizes entered in pounds", () => {
+      expect(toLoads(form, ["dumbbells"], "lb").dumbbells).toEqual({
+        kind: "bar_and_plates",
+        barKg: toKg(4, "lb"),
+        bars: 2,
+        plates: [
+          { kg: toKg(3, "lb"), count: 4 },
+          { kg: toKg(2.2, "lb"), count: 2 },
+        ],
+      });
+    });
+
+    it("are shown back as entered", () => {
+      expect(toLoadsForm(toLoads(form, ["dumbbells"], "lb"), "lb")).toMatchObject(form);
+      expect(toLoadsForm(toLoads(form, ["dumbbells"], "kg"), "kg")).toMatchObject(form);
+    });
+
+    it("can be bars with no plates", () => {
+      const barOnly = { dumbbells: { kind: "bar_and_plates" as const, bar: 4, bars: 1 } };
+      expect(LoadsForm.safeParse(barOnly).success).toBe(true);
+      expect(toLoads(barOnly, ["dumbbells"], "kg").dumbbells).toMatchObject({ barKg: 4, bars: 1, plates: [] });
+    });
+
+    const problemPaths = (dumbbells: object) =>
+      LoadsForm.safeParse({ dumbbells: { ...form.dumbbells, ...dumbbells } }).error?.issues.map(({ path }) =>
+        path.join("."),
+      );
+
+    it("need the bar's weight, how many bars, and every plate's size and count", () => {
+      expect(problemPaths({})).toBeUndefined();
+      expect(problemPaths({ bar: null, bars: null })).toEqual(["dumbbells.bar", "dumbbells.bars"]);
+      expect(problemPaths({ plates: [{ size: null, count: null }] })).toEqual([
+        "dumbbells.plates.0.size",
+        "dumbbells.plates.0.count",
+      ]);
+    });
+
+    it("need at least one bar, and whole numbers of bars and plates", () => {
+      expect(problemPaths({ bars: 0 })).toEqual(["dumbbells.bars"]);
+      expect(problemPaths({ bars: 1.5 })).toEqual(["dumbbells.bars"]);
+      expect(problemPaths({ plates: [{ size: 3, count: 2.5 }] })).toEqual(["dumbbells.plates.0.count"]);
+    });
+
+    // A row left half filled can't block the form once another kind is chosen
+    it("need nothing once another kind is chosen", () => {
+      const blank = { bar: null, plates: [{ size: null, count: null }] };
+      expect(problemPaths({ kind: "fixed", ...blank })).toBeUndefined();
+    });
+  });
+
   it("shows loads entered in pounds back as entered", () => {
     const form = {
       dumbbells: { kind: "fixed" as const, weights: ["20", "25"] },

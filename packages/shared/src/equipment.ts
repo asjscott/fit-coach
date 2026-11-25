@@ -136,10 +136,25 @@ export type BuiltInEquipment = z.infer<typeof BuiltInEquipment>;
 
 const kg = z.number().positive().max(200);
 
+// More than a home has, and few enough that the loads they make are quick to work out
+export const MAX_DUMBBELL_BARS = 20;
+export const MAX_DUMBBELL_PLATES = 20;
+export const MAX_DUMBBELL_PLATE_SIZES = 8;
+
 export const DumbbellLoads = z.discriminatedUnion("kind", [
   z.object({ kind: z.literal("adjustable"), minKg: kg, maxKg: kg, stepKg: kg }),
   z.object({ kind: z.literal("fixed"), weightsKg: z.array(kg).min(1) }),
+  // Bars of one weight, collars included, and how many of each size of plate there are between them all
+  z.object({
+    kind: z.literal("bar_and_plates"),
+    barKg: kg,
+    bars: z.number().int().min(1).max(MAX_DUMBBELL_BARS),
+    plates: z
+      .array(z.object({ kg, count: z.number().int().min(1).max(MAX_DUMBBELL_PLATES) }))
+      .max(MAX_DUMBBELL_PLATE_SIZES),
+  }),
 ]);
+export type BarAndPlates = Extract<z.infer<typeof DumbbellLoads>, { kind: "bar_and_plates" }>;
 
 export const BandLevel = z.enum(["light", "medium", "heavy", "extra_heavy"]);
 export type BandLevel = z.infer<typeof BandLevel>;

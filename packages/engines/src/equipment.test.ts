@@ -17,13 +17,13 @@ const exercise = (slug: string) => {
   return found;
 };
 
-const owning = (...tags: EquipmentTag[]) => ({ tags });
+const owning = (...tags: EquipmentTag[]): ProfileWithLoads => ({ tags, loads: {} });
 
 describe("isAvailable", () => {
   it("needs a bar or a table for an inverted row", () => {
-    expect(isAvailable(exercise("inverted-row"), { tags: [] })).toBe(false);
-    expect(isAvailable(exercise("inverted-row"), { tags: ["pull_up_bar"] })).toBe(true);
-    expect(isAvailable(exercise("inverted-row"), { tags: ["table"] })).toBe(true);
+    expect(isAvailable(exercise("inverted-row"), owning())).toBe(false);
+    expect(isAvailable(exercise("inverted-row"), owning("pull_up_bar"))).toBe(true);
+    expect(isAvailable(exercise("inverted-row"), owning("table"))).toBe(true);
   });
 
   it("makes a bodyweight exercise ([[]]) available with no equipment", () => {

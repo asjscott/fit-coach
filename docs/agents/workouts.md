@@ -61,6 +61,11 @@ Schemas shared by app and API: packages/shared/src/workouts.ts
   `apps/api/src/users.ts`): a cable machine with no step steps 10 lb or 5 kg by the user's unit, and a profile with all
   of Full gym's equipment and no free weights listed (the onboarding gym) has Full gym's loads. Full gym's loads follow the unit (`builtInEquipment(choice, unit)`), so the unit is part of
   `planInputsKey`. The onboarding gym is asked only for its cable step (`loadTagsAsked`).
+- **Bar-and-plates dumbbells** (#181). `dumbbellBuilds` (`packages/engines/src/dumbbells.ts`) gives every load one
+  dumbbell makes and its build; `dumbbellBuild` in `equipment.ts` gives the build of one load. A library Exercise's
+  `dumbbells` says it takes one or two (the integrity test requires it): two use half of each plate count, and
+  `ownedOptions` drops the dumbbell way of doing it when there's one bar, so availability needs a profile's loads as well
+  as its tags. The stored collection needs `seed:exercises` for the Exercise library screen to follow it.
 - **A past Workout starts up to 7 days before its last Set** (#129). `WorkoutUpload` (`@fit/shared`) is the rule, and
   both POST /workouts (400) and the Logbook's finish use it, so a Pending Workout always uploads. It counts back from
   the Sets, not the clock, so an upload that comes days late isn't refused; `Workout` itself doesn't have the rule, so
