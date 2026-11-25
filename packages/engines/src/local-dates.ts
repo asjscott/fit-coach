@@ -25,11 +25,27 @@ export function dayBefore(date: string): string {
   return isoDate(day);
 }
 
+export function dayAfter(date: string): string {
+  const day = calendarDay(date);
+  day.setUTCDate(day.getUTCDate() + 1);
+  return isoDate(day);
+}
+
 export const isLoggableDate = (date: string, now: Date, timeZone: string) =>
   loggableDates(now, timeZone).includes(date);
 
 // The day of the week of a calendar date
 export const weekdayOf = (date: string): Weekday => Weekday.options[(calendarDay(date).getUTCDay() + 6) % 7];
+
+// The seven dates of a calendar date's week, Monday first
+export function weekDates(date: string): string[] {
+  const monday = calendarDay(mondayOfDate(date));
+  return Array.from({ length: 7 }, (_, i) => {
+    const day = new Date(monday);
+    day.setUTCDate(monday.getUTCDate() + i);
+    return isoDate(day);
+  });
+}
 
 // The Monday of a calendar date's week, which runs Monday to Sunday as the Week Ledger's does
 export function mondayOfDate(date: string): string {

@@ -7,7 +7,8 @@ import { spacing } from "@/theme";
 import { dayRings, type DayRing } from "../day-rings";
 
 // Equal rings for the day (prototype variant J): all four on Today, and kcal, protein and fibre on the Food tab, which
-// has its own water. Water is shown, never logged, here. With onPress, each ring is a button (Today's open Food)
+// has its own water. Water is shown, never logged, here. With onPress, each ring is a button (Today's open Food,
+// and the Food tab's Nutrition History)
 export function DayRings({
   day,
   only,
@@ -18,7 +19,7 @@ export function DayRings({
   day: Day;
   only?: DayRing["key"][];
   size?: number;
-  onPress?: () => void;
+  onPress?: (key: DayRing["key"]) => void;
   // What pressing does, for screen readers
   pressHint?: string;
 }) {
@@ -46,7 +47,7 @@ export function DayRings({
           <Pressable
             key={ring.key}
             style={styles.ring}
-            onPress={onPress}
+            onPress={() => onPress(ring.key)}
             accessibilityRole="button"
             accessibilityLabel={ring.label}
             accessibilityHint={pressHint}

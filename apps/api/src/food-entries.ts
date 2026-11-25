@@ -191,3 +191,23 @@ export async function findMeals(clerkUserId: string, date: string): Promise<{ me
   const meals = MEALS.map((meal: Meal) => ({ meal, entries: entries.filter((e) => e.meal === meal) }));
   return { meals, totals };
 }
+
+// What each of the dates with a Food Entry adds up to; a date with none has no total
+export async function findTotals(clerkUserId: string, dates: string[]): Promise<Map<string, Nutrients>> {
+  const entries = await foodEntries
+    .find({ clerkUserId, date: { $in: dates } })
+    .project<Pick<FoodEntryDoc, "date" | "nutrients">>({ date: 1, nutrients: 1 })
+    .toArray();
+  return new Map(
+    [...new Set(entries.map((entry) => entry.date))].map((date) => [
+      date,
+      sumNutrients(entries.filter((entry) => entry.date === date).map((entry) => entry.nutrients)),
+    ]),
+  );
+}
+
+// The date of the user's first Food Entry, by the day it's for; null with none
+export async function firstLoggedDate(clerkUserId: string): Promise<string | null> {
+  const first = await foodEntries.findOne({ clerkUserId }, { sort: { date: 1 }, projection: { date: 1 } });
+  return first?.date ?? null;
+}

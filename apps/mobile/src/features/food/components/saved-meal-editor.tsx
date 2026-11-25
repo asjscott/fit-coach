@@ -40,6 +40,7 @@ import { ScanButton } from "./scan-button";
 // here changes a day. Rendered only while open, so each opening starts from the meal or an empty one
 export function SavedMealEditor({
   food,
+  start = EMPTY_SAVED_MEAL,
   choices,
   onSaved,
   onDeleted,
@@ -48,6 +49,8 @@ export function SavedMealEditor({
 }: {
   // The Saved Meal being edited; none for a new one
   food?: Food;
+  // What a new one starts from, as "Save as meal" does
+  start?: SavedMealForm;
   // Recent and Saved Foods, to add from
   choices: RecentChoice[] | undefined;
   onSaved: (food: Food) => void;
@@ -59,7 +62,7 @@ export function SavedMealEditor({
   const { colors } = useTheme();
   const savedMeals = useSavedMeals();
   const savedFoods = useSavedFoods();
-  const [form, setForm] = useState<SavedMealForm>(() => (food ? savedMealForm(food) : EMPTY_SAVED_MEAL));
+  const [form, setForm] = useState<SavedMealForm>(() => (food ? savedMealForm(food) : start));
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState<"saving" | "deleting" | null>(null);
   const [confirmsDelete, setConfirmsDelete] = useState(false);

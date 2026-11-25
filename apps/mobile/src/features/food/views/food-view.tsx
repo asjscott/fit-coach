@@ -10,6 +10,7 @@ import { LoadingButton } from "@/components/loading-button";
 import { Screen } from "@/components/screen";
 import { Spinner } from "@/components/spinner";
 import { Text } from "@/components/text";
+import { useToast } from "@/contexts/toast-context";
 import { DayRings } from "@/features/nutrition/components/day-rings";
 import { useDay } from "@/features/nutrition/hooks/use-day";
 import { useTimeZone } from "@/features/user/current-user-provider";
@@ -29,6 +30,7 @@ import { useFoodSearch } from "../hooks/use-food-search";
 import { useRecentAndSaved } from "../hooks/use-recent-and-saved";
 import { useSavedFoods } from "../hooks/use-saved-foods";
 import { copyLabel, foodKey } from "../recent-and-saved";
+import { type SavedMealForm, savedMealFormFromEntries } from "../saved-meal-form";
 import { dayStepLabel } from "../today-so-far";
 
 // Create food (with the barcode scanned, when it came from a scan), or a Saved Food being edited
@@ -82,8 +84,9 @@ export default function FoodView() {
   const [found, setFound] = useState<Food | null>(null);
   const [lookingUp, setLookingUp] = useState(false);
   const [editing, setEditing] = useState<Editing | null>(null);
-  // A new Saved Meal, or the one being edited, which takes the whole screen
-  const [editingMeal, setEditingMeal] = useState<{ food?: Food } | null>(null);
+  // A new Saved Meal, perhaps started from a day's meal, or the one being edited, which takes the whole screen
+  const [editingMeal, setEditingMeal] = useState<{ food?: Food; start?: SavedMealForm } | null>(null);
+  const { showToast } = useToast();
   // The Recent or Saved Food open to log on the Ideas and recent half
   const [chosen, setChosen] = useState<string | null>(null);
 
@@ -128,8 +131,10 @@ export default function FoodView() {
     setEditing(null);
     setEditingMeal(null);
     savedFoodChanged();
+    // Made from what's already logged, so it isn't offered to log again
+    if (editingMeal?.start) showToast("Saved Meal saved", { type: "success" });
     // A Saved Food fixed from Ideas and recent stays open there to log
-    if (half === "ideas") setChosen(foodKey(food));
+    else if (half === "ideas") setChosen(foodKey(food));
     // A food just made or fixed opens to log it: in the search it came from, or on its own after a scan
     else if (searching) {
       setFound(null);
@@ -148,6 +153,7 @@ export default function FoodView() {
     return (
       <SavedMealEditor
         food={editingMeal.food}
+        start={editingMeal.start}
         choices={recent.choices}
         onSaved={saved}
         onDeleted={deleted}
@@ -194,7 +200,19 @@ export default function FoodView() {
           <>
             <DayStepper daysBefore={daysBefore} onChange={setDaysBefore} />
             {day ? (
-              <DayRings day={day} only={["kcal", "protein", "fibre"]} size={72} />
+              <DayRings
+                day={day}
+                only={["kcal", "protein", "fibre"]}
+                size={72}
+                // Nutrition History has no fibre, so its ring opens on kcal too
+                onPress={(key) =>
+                  router.push({
+                    pathname: "/nutrition-history",
+                    params: { measure: key === "protein" ? "protein" : "kcal" },
+                  })
+                }
+                pressHint="Opens Nutrition History"
+              />
             ) : isOffline ? null : (
               <Spinner />
             )}
@@ -282,6 +300,7 @@ export default function FoodView() {
                 onAddTo={addTo}
                 copyLabel={copyLabel(daysBefore)}
                 onCopy={(meal: Meal) => entries.copy(date, meal)}
+                onSaveAsMeal={(entries) => setEditingMeal({ start: savedMealFormFromEntries(entries) })}
                 onChange={async (entry: FoodEntry, change: FoodEntryChange) => {
                   const ok = await entries.change(entry.id, change);
                   // A Food Entry moved to another meal is shown there
