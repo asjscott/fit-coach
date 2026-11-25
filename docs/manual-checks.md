@@ -236,6 +236,14 @@ On the installed web app on the iPhone, with the silent switch off and the volum
   - Result: · Notes:
 - [ ] **GF6** With VoiceOver, the clock reads as "Hold, 0:12 left", each change is announced with the next hold's name, and the buttons behind can't be reached. With Reduce Motion on there's no flash.
   - Result: · Notes:
+- [ ] **GF7** Back repeats the previous hold, and when it ends there's still one Set for it; leaving before then keeps the old one. Back to a skipped hold logs it. Both go on to the first hold left.
+  - Result: · Notes:
+- [ ] **GF8** Mid-flow, force-quit the app and reopen it: Resume workout opens the flow, paused at the first hold not logged, and Resume sounds as before.
+  - Result: · Notes:
+- [ ] **GF9** Leave timer, log or delete a hold's Set, then Continue holds: it starts at the first hold left, and doesn't go back over the skipped ones.
+  - Result: · Notes:
+- [ ] **GF10** Add a Recovery Exercise (not the walk) to a Manual Workout: Start timer runs both sides and logs its Set with no rest, then returns to the logging screen. The walk has no timer.
+  - Result: · Notes:
 
 ## Supersets (#96)
 

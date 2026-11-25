@@ -105,7 +105,7 @@ function InProgress({ workout }: { workout: InProgressWorkout }) {
     if (nextTestId) choose(nextTestId);
   };
   // The way into the guided flow when it isn't running, while a hold is left
-  const guided = isGuidedWorkout(workout) ? guidedPlace(workout, {}) : undefined;
+  const guided = isGuidedWorkout(workout) ? guidedPlace(workout, { skips: {} }) : undefined;
   const groups = supersetGroups(workoutExercises);
   const pairs = groups.filter((group) => group.length === 2);
 

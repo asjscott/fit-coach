@@ -14,6 +14,7 @@ import { describe, expect, it, vi } from "vitest";
 import { EXERCISES } from "./data/exercises";
 import { daysWorkout, equipmentChoices } from "./days-workout";
 import { builtInEquipment, NO_EQUIPMENT } from "./equipment";
+import { backHold, guidedPlace, holdLogged } from "./guided-flow";
 import {
   createLogbook,
   finishTimes,
@@ -1469,6 +1470,31 @@ describe("Logbook: Planned Workouts", () => {
       ["cat-cow", "timed", { sets: 2, target: { unit: "seconds", seconds: 45 } }],
     ]);
     expect(logbook.nextSetDraft(workout.workoutExercises[0])).toEqual({ kind: "timed", seconds: 45 });
+  });
+
+  it("replaces a hold's Set when the guided flow repeats it, and resumes at the first not logged", async () => {
+    const { logbook, storage } = setup(memoryStorage(), offline);
+    const hold = { sets: 1, target: { unit: "seconds" as const, seconds: 45 } };
+    const { workoutExercises } = await logbook.startMobilityWorkout(
+      [
+        { ...hold, slug: "cat-cow" },
+        { ...hold, slug: "pigeon" },
+      ],
+      at("09:00"),
+    );
+    const catCow = workoutExercises[0]!.id;
+    await logbook.logSet(catCow, { kind: "timed", seconds: 20 }, at("09:01"));
+
+    const workout = (await logbook.inProgress())!;
+    const course = backHold(workout, { skips: {} });
+    const { replaces } = guidedPlace(workout, course);
+    await logbook.editSet(catCow, replaces!, { kind: "timed", seconds: 45 });
+
+    // As after the app was killed
+    const reopened = (await setup(storage).logbook.inProgress())!;
+    expect(reopened.workoutExercises[0]!.sets).toMatchObject([{ seconds: 45 }]);
+    expect(guidedPlace(reopened, { skips: {} })).toMatchObject({ current: { slug: "pigeon" }, position: 2 });
+    expect(guidedPlace(reopened, holdLogged(workout, course))).toMatchObject({ current: { slug: "pigeon" } });
   });
 
   it("starts a Recovery Workout with a hold the user's injuries rule out replaced", async () => {

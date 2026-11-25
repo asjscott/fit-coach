@@ -1,5 +1,6 @@
 import {
   exerciseLoadsByEquipmentKg,
+  holdAlone,
   isRatedTest,
   isSkippedTest,
   strengthHold,
@@ -148,7 +149,8 @@ export function ExerciseLogging({
   hideTarget = false,
   onLog,
 }: Pick<CurrentExerciseBoxProps, "workoutExercise" | "next"> & { hideTarget?: boolean; onLog?: () => void }) {
-  const { workout, logSet, editSet, deleteSet, nextSetDraft, protocolState, startHold, heldSeconds } = useLogbook();
+  const { workout, logSet, editSet, deleteSet, nextSetDraft, protocolState, startHold, startGuideAlone, heldSeconds } =
+    useLogbook();
   const primaryEquipment = usePrimaryEquipmentProfile();
   const unit = useWeightUnit();
   const { showToast } = useToast();
@@ -168,6 +170,7 @@ export function ExerciseLogging({
   // A test that's done, or the walk once its one Set is logged (#109)
   const done = (!!protocol && takesNoMoreSets(protocol)) || !takesAnotherSet(workoutExercise);
   const hold = workout && strengthHold(workoutExercise, workout);
+  const alone = workout && holdAlone(workoutExercise, workout);
   const asksRpe = !!workout && isRatedTest(workout, loadType);
   const loadSteps = useMemo(
     () => createLoadSteps(exerciseLoadsByEquipmentKg(slug, primaryEquipment), unit),
@@ -271,7 +274,7 @@ export function ExerciseLogging({
           buildLabel={buildLabel}
           reading={reading}
           held={heldSeconds?.workoutExerciseId === id ? heldSeconds : null}
-          onStartHold={hold ? () => startHold(id, hold) : undefined}
+          onStartHold={hold ? () => startHold(id, hold) : alone ? () => startGuideAlone(id) : undefined}
           submitLabel={`Log set ${nextNumber}`}
           onSubmit={(values) => {
             onLog?.();
