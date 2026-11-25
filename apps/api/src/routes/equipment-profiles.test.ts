@@ -1,6 +1,8 @@
-import { EquipmentTag, toKg, type EquipmentProfileInput, type User } from "@fit/shared";
+import { EquipmentTag, loadInUnit, toKg, type EquipmentProfileInput, type User } from "@fit/shared";
+import { exerciseBySlug } from "@fit/engines";
 import { describe, expect, it } from "vitest";
-import { useRouteTestApi } from "../test/route-test-api";
+import { DUMBBELLS_AT_HOME, useRouteTestApi } from "../test/route-test-api";
+import { assessedUser, currentPlan } from "../test/uploads";
 
 const api = useRouteTestApi();
 
@@ -82,5 +84,71 @@ describe("an Equipment Profile's cable and machine step", () => {
     });
 
     expect(created.statusCode).toBe(400);
+  });
+});
+
+// Stories 38 to 51 of #176: dumbbells of bars and plates (#181)
+describe("an Equipment Profile's bar-and-plates dumbbells", () => {
+  const lb = (pounds: number) => toKg(pounds, "lb");
+  // The loads of one dumbbell that 4 lb bars with 3 lb × 4 and 5 lb × 4 make, for an Exercise taking one
+  const ONE_DUMBBELL_LB = [4, 7, 10, 12, 13, 14, 15, 16, 17, 18, 20, 21, 22, 23, 24, 25, 26, 27, 28, 30, 31, 33, 36];
+  const TWO_DUMBBELLS_LB = [4, 7, 10, 12, 14, 15, 17, 20];
+  const takesTwo = (slug: string) => exerciseBySlug(slug)?.dumbbells === 2;
+
+  const withBars = (bars: number): EquipmentProfileInput => ({
+    ...DUMBBELLS_AT_HOME,
+    loads: {
+      dumbbells: {
+        kind: "bar_and_plates",
+        barKg: lb(4),
+        bars,
+        plates: [
+          { kg: lb(3), count: 4 },
+          { kg: lb(5), count: 4 },
+        ],
+      },
+    },
+  });
+
+  const savedOver = async (profile: EquipmentProfileInput) => {
+    const user = await assessedUser(api);
+    const before = await currentPlan(user);
+    const [stored] = ((await user.get("/user")).body as User).equipmentProfiles;
+    const saved = await user.put(`/user/equipment-profiles/${stored!.id}`, profile);
+    expect(saved.statusCode).toBe(200);
+    return { user, before, plan: await currentPlan(user) };
+  };
+
+  it("are saved as their exact kg", async () => {
+    const { user } = await savedOver(withBars(2));
+
+    const [stored] = ((await user.get("/user")).body as User).equipmentProfiles;
+    expect(stored!.loads).toEqual(withBars(2).loads);
+  });
+
+  it("rebuild the plan, at loads they make", async () => {
+    const { before, plan } = await savedOver(withBars(2));
+
+    expect(plan.id).not.toBe(before.id);
+    const weighted = plan.plannedExercises.flatMap(({ slug, target }) =>
+      target.unit === "kg" ? [{ slug, pounds: loadInUnit(target.kg, "lb") }] : [],
+    );
+    // Both kinds are planned, so both lists of loads are checked
+    expect(new Set(weighted.map(({ slug }) => takesTwo(slug)))).toEqual(new Set([true, false]));
+    for (const { slug, pounds } of weighted)
+      expect(takesTwo(slug) ? TWO_DUMBBELLS_LB : ONE_DUMBBELL_LB, slug).toContain(pounds);
+  });
+
+  it("plan no two-dumbbell Exercise with one bar", async () => {
+    const { plan } = await savedOver(withBars(1));
+
+    const slugs = plan.plannedExercises.map(({ slug }) => slug);
+    expect(slugs.length).toBeGreaterThan(0);
+    expect(slugs.filter(takesTwo)).toEqual([]);
+  });
+
+  it("can't have no bar", async () => {
+    const user = await api.signIn();
+    expect((await user.post("/user/equipment-profiles", withBars(0))).statusCode).toBe(400);
   });
 });

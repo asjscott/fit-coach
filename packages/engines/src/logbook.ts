@@ -8,7 +8,6 @@ import {
   WorkoutUpload,
   type AssessmentPart,
   type BodyProfile,
-  type EquipmentProfile,
   type Exercise,
   type InProgressWorkoutExercise,
   type LoadType,
@@ -445,7 +444,7 @@ export function createLogbook({
         bodyProfile,
       }: {
         part: AssessmentPart;
-        equipmentProfile: Pick<EquipmentProfile, "tags">;
+        equipmentProfile: Parameters<typeof chooseTests>[0];
         bodyProfile: BodyProfile;
       } & Pick<UserProfile, "injuries">,
       now: Date,
