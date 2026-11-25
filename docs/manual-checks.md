@@ -207,6 +207,11 @@ A Workout pairs Exercises only when it wouldn't otherwise fit its Length. Pairs 
 - [ ] **LS2** On a home Equipment Profile with a cable machine selected, the weights stage shows "Cable and machine step (lb)" next to the other equipment, and the step saved there moves the cable targets and stepper.
   - Result: · Notes:
 
+## Bar-and-plates dumbbells (#181)
+
+- [ ] **BP1** In Edit profile, at home with dumbbells, choose **Bar and plates** and enter a 4 lb bar × 2, 3 lb × 4 and 5 lb × 4, adding and removing a row on the way. Profile's Equipment reads "Dumbbells (2 × 4 lb bars, 4 × 3 lb and 4 × 5 lb plates)", editing again shows it back, and a goblet squat's stepper goes 12, 13, 14.
+  - Result: · Notes:
+
 ## PRs (#130)
 
 - [ ] **PR1** Beat an Exercise's best with signal and Save workout. While the "Workout saved. New PR: …" toast is up (about 10 s), tap **See workout**: it opens the Workout in History with "New PR · …" under that Exercise.

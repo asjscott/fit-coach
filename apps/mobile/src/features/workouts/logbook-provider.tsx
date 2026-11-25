@@ -1,11 +1,13 @@
 import {
+  adjustRest,
   createLogbook,
-  extendRest,
+  REST_ADJUSTMENT_SECONDS,
   restAfterSet,
   type FinishResult,
   type Logbook,
   type PlannedWorkoutCopy,
   type Rest,
+  type RestChoice,
   type UnseenPrs,
   type WorkoutTimes,
 } from "@fit/engines";
@@ -27,6 +29,9 @@ import { useApi } from "@/api";
 import { deviceStorage } from "./device-storage";
 import { finishCelebration } from "./finish-celebration";
 import { useSyncTriggers } from "./hooks/use-sync-triggers";
+import { createStoredRestChoice } from "./stored-rest-choice";
+
+const storedRestChoice = createStoredRestChoice(deviceStorage);
 
 type LogbookContextValue = {
   // null when no Workout is in progress
@@ -60,7 +65,12 @@ type LogbookContextValue = {
   // The rest after the last Set logged, or null: every Log set starts or restarts it, and Finish or Discard ends it
   rest: Rest | null;
   extendRest: () => void;
+  // Ends the rest when less than the 15 s it takes off is left
+  shortenRest: () => void;
   skipRest: () => void;
+  // How long the rests are, chosen on Today and remembered on the phone (#178)
+  restChoice: RestChoice;
+  chooseRest: (choice: RestChoice) => void;
   // The values a new Set starts with: a test's suggested load, else the last Set's, or null for the first
   nextSetDraft: Logbook["nextSetDraft"];
   // Ends the Workout with these times, resolving as soon as it is a Pending Workout, then
@@ -153,6 +163,9 @@ export function LogbookProvider({ children }: { children: ReactNode }) {
   const celebrating = useRef(new Set<string>());
   // Held in memory only, as it belongs to the Workout, not an Exercise: a force-quit loses it
   const [rest, setRest] = useState<Rest | null>(null);
+  // null until it's read from the phone or chosen
+  const [chosenRest, setChosenRest] = useState<RestChoice | null>(null);
+  const restChoice = chosenRest ?? "auto";
   // Counted, as a sync and a finish can overlap
   const [syncsUnderWay, setSyncsUnderWay] = useState(0);
 
@@ -207,6 +220,18 @@ export function LogbookProvider({ children }: { children: ReactNode }) {
     sync();
   }, [logbook, refreshPending, sync]);
 
+  useEffect(() => {
+    storedRestChoice.read().then(
+      (stored) => setChosenRest((current) => current ?? stored),
+      () => {},
+    );
+  }, []);
+
+  const chooseRest = useCallback((choice: RestChoice) => {
+    setChosenRest(choice);
+    storedRestChoice.keep(choice).catch(() => {});
+  }, []);
+
   useSyncTriggers(sync);
 
   const start = useCallback(() => run(() => logbook.start(new Date())), [logbook, run]);
@@ -236,9 +261,9 @@ export function LogbookProvider({ children }: { children: ReactNode }) {
       const now = new Date();
       await run(() => logbook.logSet(workoutExerciseId, values, now));
       const logged = await logbook.inProgress();
-      setRest(logged && restAfterSet(logged, workoutExerciseId, now));
+      setRest(logged && restAfterSet(logged, workoutExerciseId, now, restChoice));
     },
-    [logbook, run],
+    [logbook, run, restChoice],
   );
 
   // One vibration at the end, unless it ended while the app was in the background (that alert waits for M8)
@@ -254,7 +279,9 @@ export function LogbookProvider({ children }: { children: ReactNode }) {
     return () => clearTimeout(timer);
   }, [rest]);
 
-  const extendCurrentRest = useCallback(() => setRest((current) => current && extendRest(current)), []);
+  const moveRestEnd = (seconds: number) => setRest((current) => current && adjustRest(current, seconds, new Date()));
+  const extendRest = () => moveRestEnd(REST_ADJUSTMENT_SECONDS);
+  const shortenRest = () => moveRestEnd(-REST_ADJUSTMENT_SECONDS);
   const skipRest = useCallback(() => setRest(null), []);
 
   const removeWorkoutExercise = useCallback(
@@ -359,8 +386,11 @@ export function LogbookProvider({ children }: { children: ReactNode }) {
         editSet,
         deleteSet,
         rest,
-        extendRest: extendCurrentRest,
+        extendRest,
+        shortenRest,
         skipRest,
+        restChoice,
+        chooseRest,
         nextSetDraft: logbook.nextSetDraft,
         finish,
         finishAtLastSet,

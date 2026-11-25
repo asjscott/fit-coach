@@ -32,6 +32,19 @@ describe("double progression at upload (#132)", () => {
     });
   });
 
+  // Spec #176 story 67: beating the target moves it to what was done
+  it("puts a beaten target to the lowest Set + 1 rep, for the next Planned Workout", async () => {
+    const user = await assessedUser(api);
+    const row = { slug: "one-arm-dumbbell-row", sets: [lifted(14, 11), lifted(14, 11), lifted(14, 11)] };
+    await upload(user, at(100, [row]));
+
+    expect((await workingLevels(user)).get(row.slug)).toMatchObject({ kg: 14, reps: 12 });
+    expect(await plannedExercise(user, row.slug)).toMatchObject({
+      target: { unit: "kg", kg: 14, reps: 12 },
+      change: { code: "target-up" },
+    });
+  });
+
   // Stories 30–32, 37: a different load becomes the new base, then the top of the range takes one Load Step, to the
   // reps Epley predicts there
   it("steps the load up from the top of the range to the reps Epley predicts there", async () => {
@@ -164,14 +177,14 @@ describe("uploads that never move a level twice or backwards (#132)", () => {
 
   it("leaves a level to a later Workout when an earlier, Pending Workout uploads after it", async () => {
     const user = await assessedUser(api);
-    const earlier = at(100, [{ slug: "goblet-squat", sets: [lifted(12, 8), lifted(12, 8)] }]);
+    const earlier = at(100, [{ slug: "goblet-squat", sets: [lifted(12, 10), lifted(12, 10)] }]);
     const later = at(75, [{ slug: "goblet-squat", sets: reachingNine }]);
     await upload(user, later);
-    // The later Workout put the target up to 9 from 8; the earlier one would put it up again
+    // The later Workout put the target up to 10, one past its 9s; the earlier one's 10s would put it up again
     await upload(user, earlier);
 
     expect((await workingLevels(user)).get("goblet-squat")).toMatchObject({
-      reps: 9,
+      reps: 10,
       movedBy: { workoutId: later.id, startedAt: later.startedAt },
     });
   });
@@ -221,6 +234,17 @@ describe("Misses at upload (#134)", () => {
     await upload(user, at(100, [{ slug: "goblet-squat", sets: [lifted(12, 5), lifted(12, 5)] }]));
 
     expect((await workingLevels(user)).get("goblet-squat")).toMatchObject({ kg: 12, reps: 8, misses: 1 });
+  });
+
+  // Spec #176 story 69
+  it("counts no Miss when the Sets average inside the range", async () => {
+    const user = await assessedUser(api);
+    const slug = "goblet-squat";
+    // A new base of 14 kg × 12, then 9s
+    await upload(user, at(250, [{ slug, sets: [lifted(14, 12), lifted(14, 12)] }]));
+    await upload(user, at(200, [{ slug, sets: [lifted(14, 9), lifted(14, 9), lifted(14, 9)] }]));
+
+    expect((await workingLevels(user)).get(slug)).toMatchObject({ kg: 14, reps: 12, misses: 0 });
   });
 
   // Story 49

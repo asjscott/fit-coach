@@ -1,6 +1,6 @@
-import { Exercise, Pattern, PRESETS, type EquipmentTag, type Muscle } from "@fit/shared";
+import { Exercise, Pattern, PRESETS, type Muscle } from "@fit/shared";
 import { describe, expect, it } from "vitest";
-import { builtInEquipment, isAvailable } from "../equipment";
+import { builtInEquipment, isAvailable, type ProfileWithLoads } from "../equipment";
 import { EXERCISES } from "./exercises";
 
 // The jump ladder, easiest first
@@ -73,8 +73,53 @@ describe("exercise library", () => {
     expect(() => Exercise.parse(exercise)).not.toThrow();
   });
 
+  // Story 49 of #176: how many dumbbells, so the loads and what one bar can do are known (#181)
+  it("says one or two for every Exercise that can be done with dumbbells, and for no other", () => {
+    const canUseDumbbells = (e: Exercise) => e.equipmentOptions.some((option) => option.includes("dumbbells"));
+    expect(EXERCISES.filter((e) => canUseDumbbells(e) !== (e.dumbbells !== undefined)).map((e) => e.slug)).toEqual([]);
+  });
+
+  // The spec's lists (#176); a dumbbell Exercise on neither is decided by its movement
+  it.each([
+    [
+      1,
+      [
+        "goblet-squat",
+        "one-arm-dumbbell-row",
+        "single-arm-dumbbell-bench-press",
+        "single-arm-overhead-press",
+        "suitcase-carry",
+        "dumbbell-overhead-triceps-extension",
+        "dumbbell-single-leg-romanian-deadlift",
+        "calf-raise",
+        "overhead-carry",
+        "dumbbell-hip-thrust",
+      ],
+    ],
+    [
+      2,
+      [
+        "dumbbell-floor-press",
+        "dumbbell-bench-press",
+        "dumbbell-overhead-press",
+        "dumbbell-lateral-raise",
+        "chest-supported-dumbbell-row",
+        "dumbbell-curl",
+        "dumbbell-romanian-deadlift",
+        "dumbbell-reverse-lunge",
+        "dumbbell-bulgarian-split-squat",
+        "renegade-row",
+        "farmers-carry",
+        "front-rack-carry",
+        "dumbbell-step-up",
+      ],
+    ],
+  ])("takes %i dumbbells for the spec's Exercises", (count, expected) => {
+    expect(EXERCISES.flatMap((e) => (e.dumbbells === count ? [e.slug] : [])).sort()).toEqual([...expected].sort());
+  });
+
   // Story 12: budgets the library couldn't reach before (#101)
-  const primaryOn = (muscle: Muscle, profile: { tags: EquipmentTag[] }) =>
+  const primaryOn = (muscle: Muscle, profile: ProfileWithLoads) =>
     EXERCISES.filter((e) => !e.recovery && e.muscles.primary.includes(muscle) && isAvailable(e, profile)).map(
       (e) => e.slug,
     );
@@ -96,7 +141,10 @@ describe("exercise library", () => {
     const missing = Pattern.options
       .filter((pattern) => pattern !== "carry")
       .filter(
-        (pattern) => !EXERCISES.some((e) => e.patterns.some((p) => p.pattern === pattern) && isAvailable(e, preset)),
+        (pattern) =>
+          !EXERCISES.some(
+            (e) => e.patterns.some((p) => p.pattern === pattern) && isAvailable(e, { ...preset, loads: {} }),
+          ),
       );
     expect(missing).toEqual([]);
   });

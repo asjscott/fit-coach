@@ -62,9 +62,9 @@ function pluralName(slug: string) {
 export function progressionChangeLine(change: ProgressionChange | undefined, slug: string): string | null {
   switch (change?.code) {
     case "target-up":
-      return "One more rep: every Set reached the target.";
+      return "More reps: every Set reached the target.";
     case "seconds-up":
-      return "Five more seconds: every Set reached the target.";
+      return "More seconds: every Set reached the target.";
     case "load-up":
       return "Heavier: every Set reached the top of the range.";
     case "new-base":

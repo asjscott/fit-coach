@@ -15,7 +15,7 @@ import { fonts, radii, spacing, useTheme } from "@/theme";
 import { errorMessage } from "@/utils/error-message";
 import { plannedSetsLabel, previousSetsLabel } from "../format";
 import { offersLastSetRpe, withRpe } from "../last-set-rpe";
-import { exerciseName, setReading, type SetReading } from "../library";
+import { exerciseName, targetReading, type SetReading } from "../library";
 import { useLogbook } from "../logbook-provider";
 import { protocolNote } from "../protocol-note";
 import { draftValues, loadStep, rpeMissing, setDraft, SET_FIELDS, type SetDraft } from "../set-entry";
@@ -81,7 +81,7 @@ export function ExerciseLogging({
   const [actionsIndex, setActionsIndex] = useState<number | null>(null);
   const [deletingIndex, setDeletingIndex] = useState<number | null>(null);
   const { id, slug, loadType, sets, previousSets, planned } = workoutExercise;
-  const reading = setReading(slug);
+  const reading = targetReading(slug, workout?.deloadWeek);
   const editingSet = editingIndex === null ? undefined : sets[editingIndex];
   const lastSet = sets.at(-1);
   const nextNumber = sets.length + 1;

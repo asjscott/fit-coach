@@ -141,6 +141,8 @@ export const InProgressWorkout = z.object({
   // logging began, so the clock and the forgotten check follow the logging; Finish starts the times here
   pastStart: z.iso.datetime().optional(),
   plannedWorkoutId,
+  // Its plan was built for the deload week, so its targets are one number (#183). Dropped at Finish
+  deloadWeek: z.boolean().optional(),
   workoutExercises: z.array(
     z
       .object({

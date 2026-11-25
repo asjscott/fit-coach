@@ -7,7 +7,6 @@ import {
   Workout,
   WorkoutUpload,
   type BodyProfile,
-  type EquipmentProfile,
   type Exercise,
   type InProgressWorkoutExercise,
   type LoadType,
@@ -354,7 +353,7 @@ export function createLogbook({
   async function startWithTargets(
     plannedExercises: readonly (Pick<PlannedExercise, "slug" | "sets" | "target"> & { supersetWith?: string })[],
     now: Date,
-    plannedWorkoutId?: string,
+    { id: plannedWorkoutId, deloadWeek }: Partial<Pick<PlannedWorkout, "id" | "deloadWeek">> = {},
   ) {
     const fromServer = await Promise.all(
       plannedExercises.map(({ slug }) => previousSetsSource.forExercise(slug).catch(() => null)),
@@ -377,6 +376,7 @@ export function createLogbook({
         id: newId(),
         startedAt: now.toISOString(),
         ...(plannedWorkoutId && { plannedWorkoutId }),
+        ...(deloadWeek && { deloadWeek }),
         workoutExercises,
       };
       await write(workout);
@@ -441,7 +441,7 @@ export function createLogbook({
         injuries,
         bodyProfile,
       }: {
-        equipmentProfile: Pick<EquipmentProfile, "tags">;
+        equipmentProfile: Parameters<typeof chooseTests>[0];
         bodyProfile: BodyProfile;
       } & Pick<UserProfile, "injuries">,
       now: Date,
@@ -470,9 +470,9 @@ export function createLogbook({
     // Starts a Planned Workout with its Exercises added and nothing logged: only what the user does counts, and
     // the targets start each Exercise's first Set. Works with no signal, and later edits never touch the link
     startPlannedWorkout: (
-      { id: plannedWorkoutId, plannedExercises }: Pick<PlannedWorkout, "id" | "plannedExercises">,
+      { plannedExercises, ...plan }: Pick<PlannedWorkout, "id" | "plannedExercises" | "deloadWeek">,
       now: Date,
-    ) => startWithTargets(plannedExercises, now, plannedWorkoutId),
+    ) => startWithTargets(plannedExercises, now, plan),
 
     // Starts the Recovery Workout the same way, from the library built into the app, so it works with no signal. It
     // links to no plan, so the Planned Workout stays current and is offered again

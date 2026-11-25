@@ -1,6 +1,6 @@
-import { TestedPattern, type EquipmentProfile, type Exercise, type InjuryTag, type Pattern } from "@fit/shared";
+import { TestedPattern, type Exercise, type InjuryTag, type Pattern } from "@fit/shared";
 import { exerciseBySlug } from "./data/exercises";
-import { isAvailable, isSafeFor } from "./equipment";
+import { isAvailable, isSafeFor, type ProfileWithLoads } from "./equipment";
 
 // The Patterns the Assessment Workout tests, in the order its tests are done: each follows one for the other half of
 // the body
@@ -36,11 +36,14 @@ export type ChosenTests = Record<TestedPattern, Exercise | null>;
 
 // One test Exercise per tested Pattern from the Equipment Profile: the first on its list that's available and safe,
 // or null when none is
-export function chooseTests(equipmentProfile: Pick<EquipmentProfile, "tags">, injuries: InjuryTag[]): ChosenTests {
+export function chooseTests(
+  { tags, loads = {} }: Pick<ProfileWithLoads, "tags"> & Partial<ProfileWithLoads>,
+  injuries: InjuryTag[],
+): ChosenTests {
   const choose = (pattern: TestedPattern) =>
     CANDIDATE_TESTS[pattern]
       .map(requireExercise)
-      .find((exercise) => isAvailable(exercise, equipmentProfile) && isSafeFor(exercise, injuries)) ?? null;
+      .find((exercise) => isAvailable(exercise, { tags, loads }) && isSafeFor(exercise, injuries)) ?? null;
   return Object.fromEntries(TestedPattern.options.map((pattern) => [pattern, choose(pattern)])) as ChosenTests;
 }
 
