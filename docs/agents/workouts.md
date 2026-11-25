@@ -95,6 +95,15 @@ Schemas shared by app and API: packages/shared/src/workouts.ts
   closes quietly. Sound is the web build's only (`rest-sound.web.ts`, unlocked by the Log set tap), so the phone apps,
   with no sound module, vibrate and don't show the switch. The switch is kept in device storage
   (`stored-rest-sound.ts`).
+- **The hold timer** (#196): `hold-timer.ts` (`@fit/engines`) works out a hold's phase, seconds and due cues from its
+  description (`Hold`: lead-in, sides, target, and whether it ends on Stop or at the target), its `HoldRun` (start and
+  pauses) and now, and counts no ticks. The guided flow (#195) builds on the same module. `strengthHold` gives a Workout
+  Exercise's hold, or null for one that isn't timed or is a Recovery Exercise, the walk included; an Assessment's has no
+  target. Running, it's `hold` on the LogbookProvider, in memory beside the rest, which starting it clears. The provider
+  looks at it every 100 ms and beeps, vibrates and flashes at the bottom and top of the range (once for one number),
+  with the rest's sound, switch and `RestFlash`; a cue long past on return from the background isn't given.
+  `HoldScreen` is a modal like the rest screen and shares its `BigClock` and `SoundSwitch`. Stop leaves whole seconds in
+  `heldSeconds`, which that Exercise's new Set's stepper takes until the Set is logged; Cancel leaves them as they were.
 - **Next exercise, Log extra set and Finish workout** (#180): `nextStep` (`@fit/engines`) says what moves on from an
   Exercise and whether it's the main button. `nextPlannedExercise` finds the next one, in order after the current and
   wrapping round, with a superset as one step; the rest screen's "Next" goes by it too. `WorkoutView` gives the same

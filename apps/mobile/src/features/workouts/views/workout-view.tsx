@@ -19,6 +19,7 @@ import { useNow } from "@/hooks/use-now";
 import { fonts, spacing, useTheme } from "@/theme";
 import { errorMessage } from "@/utils/error-message";
 import { CurrentExerciseBox, type NextAction } from "../components/current-exercise-box";
+import { HoldScreen } from "../components/hold-screen";
 import { RestScreen } from "../components/rest-screen";
 import { RestTimer } from "../components/rest-timer";
 import { SupersetBox } from "../components/superset-box";
@@ -189,6 +190,7 @@ function InProgress({ workout }: { workout: InProgressWorkout }) {
           fullWidth
         />
       </View>
+      <HoldScreen workout={workout} />
       <RestScreen workout={workout} next={nextAfterRest} />
       <ConfirmModal
         isOpen={confirmingDiscard}

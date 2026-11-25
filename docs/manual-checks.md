@@ -203,6 +203,23 @@ On the installed web app on the iPhone, with the silent switch off and the volum
 - [ ] **RS8** Log an Exercise's last planned Set: the rest screen has the rating, Next exercise and Log extra set, all in sight without scrolling. Next exercise opens the next Exercise with the rest as a bar (#180).
   - Result: · Notes:
 
+## Hold timer (#196)
+
+On the installed web app on the iPhone, with the silent switch off and the volume up.
+
+- [ ] **HT1** On a planned plank, tap Start timer: 5 s to get into position, then a countdown to the bottom of the range and up past it, readable from a plank on the floor, in light and dark.
+  - Result: · Notes:
+- [ ] **HT2** It beeps and flashes (and vibrates on Android) at the bottom and again at the top of the range; once for a single number (a deload week, or 60 s). Music in another app carries on. With Sound off, it's silent.
+  - Result: · Notes:
+- [ ] **HT3** Stop fills in the seconds and logs nothing; they can be corrected before Log set, and the next Set starts from what was logged, then rests as usual. Cancel, in the 5 s or during the hold, leaves the seconds as they were. Starting during a rest ends the rest.
+  - Result: · Notes:
+- [ ] **HT4** In an Assessment it counts up from 0 after the 5 s, with no sound, vibration or flash. The walk, mobility Exercises and carries have no Start timer.
+  - Result: · Notes:
+- [ ] **HT5** Lock the phone, or switch apps, for part of a hold: on return the seconds are right, with no late beep. Left alone, the screen stays awake.
+  - Result: · Notes:
+- [ ] **HT6** With VoiceOver, the clock reads as "Hold, 0:12 left", each change (Hold, Target reached, Top of the range) is announced, and the buttons behind can't be reached. With Reduce Motion on there's no flash.
+  - Result: · Notes:
+
 ## Supersets (#96)
 
 A Workout pairs Exercises only when it wouldn't otherwise fit its Length. Pairs form where the Patterns go together (push with pull or hinge, squat with core), never with a one-sided Exercise or a carry. On the simulators, Bodyweight only on Short paired them. The sheet then says "Paired into supersets to fit the time" and shows "Superset with …" under each paired Exercise.
