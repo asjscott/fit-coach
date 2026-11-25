@@ -1,12 +1,16 @@
 import type { Food, Ingredient, Portion, PortionChoice, SavedMealParts } from "@fit/shared";
 import { eachNutrient, portionNutrients, sumNutrients } from "./food-portion";
 
-export type SavedMealFields = { id: string; name: string } & Pick<SavedMealParts, "servings" | "ingredients">;
+export type SavedMealFields = { id: string; name: string; cookedGrams?: number } & Pick<
+  SavedMealParts,
+  "servings" | "ingredients"
+>;
 
 // A Saved Meal as a food to log (spec #188, "Saved Meals"): one serving is its weight over its servings, and it holds
-// what its ingredients hold together
-export function savedMealFood({ id, name, servings, ingredients }: SavedMealFields): Food {
-  const grams = ingredients.reduce((sum, { portion }) => sum + portion.grams, 0);
+// what its ingredients hold together. Its weight is the cooked weight, without which it can't be logged in grams, else
+// its ingredients' together
+export function savedMealFood({ id, name, servings, ingredients, cookedGrams }: SavedMealFields): Food {
+  const grams = cookedGrams ?? ingredients.reduce((sum, { portion }) => sum + portion.grams, 0);
   const total = sumNutrients(ingredients.map(({ food, portion }) => portionNutrients(food.per100g, portion.grams)));
   return {
     source: "meal",
@@ -14,7 +18,7 @@ export function savedMealFood({ id, name, servings, ingredients }: SavedMealFiel
     name,
     per100g: eachNutrient((key) => (total[key] / grams) * 100),
     servings: [{ label: "1 serving", grams: grams / servings }],
-    savedMeal: { servings, ingredients, gramsAllowed: false },
+    savedMeal: { servings, ingredients, gramsAllowed: cookedGrams !== undefined },
   };
 }
 

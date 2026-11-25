@@ -12,6 +12,7 @@ type SavedMealDoc = {
   clerkUserId: string;
   name: string;
   servings: number;
+  cookedGrams?: number;
   ingredients: Ingredient[];
   requestId?: string;
   updatedAt: Date;
@@ -28,8 +29,8 @@ export async function ensureSavedMealIndexes() {
   );
 }
 
-const toFood = ({ _id, name, servings, ingredients }: SavedMealDoc): Food =>
-  savedMealFood({ id: _id.toHexString(), name, servings, ingredients });
+const toFood = ({ _id, name, servings, ingredients, cookedGrams }: SavedMealDoc): Food =>
+  savedMealFood({ id: _id.toHexString(), name, servings, ingredients, cookedGrams });
 
 // The ingredients with their grams worked out. Null when a portion names a serving its food doesn't have
 function ingredientsOf(inputs: SavedMealInput["ingredients"]): Ingredient[] | null {
@@ -46,7 +47,7 @@ function ingredientsOf(inputs: SavedMealInput["ingredients"]): Ingredient[] | nu
 // already saved answers its Saved Meal, not created
 export async function createSavedMeal(
   clerkUserId: string,
-  { name, servings, ingredients: inputs, requestId }: SavedMealCreate,
+  { name, servings, ingredients: inputs, cookedGrams, requestId }: SavedMealCreate,
 ): Promise<{ food: Food; created: boolean } | "noServing"> {
   const ingredients = ingredientsOf(inputs);
   if (!ingredients) return "noServing";
@@ -56,6 +57,7 @@ export async function createSavedMeal(
     name,
     servings,
     ingredients,
+    ...(cookedGrams && { cookedGrams }),
     ...(requestId && { requestId }),
     updatedAt: new Date(),
   };
@@ -69,19 +71,22 @@ export async function createSavedMeal(
   return { food: toFood(doc), created: true };
 }
 
-// Replaces a Saved Meal's name, servings and ingredients. Food Entries logged from it keep their own copy, so no day
-// changes. Null when the user has no Saved Meal with that id
+// Replaces a Saved Meal's name, servings, ingredients and cooked weight, cleared when there's none. Food Entries logged
+// from it keep their own copy, so no day changes. Null when the user has no Saved Meal with that id
 export async function updateSavedMeal(
   clerkUserId: string,
   id: string,
-  { name, servings, ingredients: inputs }: SavedMealInput,
+  { name, servings, ingredients: inputs, cookedGrams }: SavedMealInput,
 ): Promise<Food | "noServing" | null> {
   if (!ObjectId.isValid(id)) return null;
   const ingredients = ingredientsOf(inputs);
   if (!ingredients) return "noServing";
   const doc = await savedMeals.findOneAndUpdate(
     { clerkUserId, _id: new ObjectId(id) },
-    { $set: { name, servings, ingredients, updatedAt: new Date() } },
+    {
+      $set: { name, servings, ingredients, ...(cookedGrams && { cookedGrams }), updatedAt: new Date() },
+      ...(!cookedGrams && { $unset: { cookedGrams: "" } }),
+    },
     { returnDocument: "after" },
   );
   return doc && toFood(doc);

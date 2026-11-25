@@ -28,7 +28,7 @@ const ingredients: Ingredient[] = [
   { food: chicken, portion: { grams: 600 } },
   { food: rice, portion: { grams: 400, serving: { label: "1 cup", count: 2 } } },
 ];
-const form = { name: " Chicken and rice ", servings: "4", ingredients };
+const form = { name: " Chicken and rice ", servings: "4", cookedGrams: "", ingredients };
 const bowl: Food = {
   source: "meal",
   id: "m1",
@@ -65,6 +65,17 @@ describe("savedMealInput", () => {
     });
   });
 
+  // Story 40
+  it("sends the cooked weight when there is one", () => {
+    expect(savedMealInput({ ...form, cookedGrams: "1600,5" })).toMatchObject({ input: { cookedGrams: 1600.5 } });
+    expect(savedMealInput({ ...form, cookedGrams: "0" })).toEqual({
+      error: "Enter the cooked weight in grams, or leave it empty",
+    });
+    expect(savedMealInput({ ...form, cookedGrams: "100001" })).toEqual({
+      error: "A Saved Meal weighs at most 100000 g cooked",
+    });
+  });
+
   it("says the first thing to fix", () => {
     expect(savedMealInput({ ...form, name: " " })).toEqual({ error: "Give the Saved Meal a name" });
     expect(savedMealInput({ ...form, servings: "" })).toEqual({ error: "Enter how many servings it makes" });
@@ -75,7 +86,21 @@ describe("savedMealInput", () => {
 
 describe("savedMealForm", () => {
   it("edits a Saved Meal from its name, servings and ingredients", () => {
-    expect(savedMealForm(bowl)).toEqual({ name: "Chicken and rice", servings: "4", ingredients });
+    expect(savedMealForm(bowl)).toEqual({
+      name: "Chicken and rice",
+      servings: "4",
+      cookedGrams: "",
+      ingredients,
+    });
+  });
+
+  it("starts from its cooked weight, whatever it divides into", () => {
+    const thirds: Food = {
+      ...bowl,
+      servings: [{ label: "1 serving", grams: 1600 / 49 }],
+      savedMeal: { servings: 49, ingredients, gramsAllowed: true },
+    };
+    expect(savedMealForm(thirds).cookedGrams).toBe("1600");
   });
 });
 
