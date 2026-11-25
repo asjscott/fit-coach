@@ -1,6 +1,6 @@
 import type { Food, Portion } from "@fit/shared";
 import { useState } from "react";
-import { portionChoice, portionGrams, type PortionUnit } from "../food-portion";
+import { amountChosen, portionChoice, portionGrams, type PortionUnit, startingAmount } from "../food-portion";
 
 const DEFAULT_GRAMS = "100";
 
@@ -11,13 +11,19 @@ export function usePortion(food: Food, logged?: Portion) {
     const serving = logged ? food.servings.find((s) => s.label === logged.serving?.label) : food.servings[0];
     return serving && (!logged || logged.serving) ? { unit: "serving", serving } : { unit: "g" };
   });
-  const [amount, setAmount] = useState(() => {
-    if (!logged) return unit.unit === "g" ? DEFAULT_GRAMS : "1";
-    return String(unit.unit === "serving" && logged.serving ? logged.serving.count : logged.grams);
+  // The logged portion's amount, until another unit is chosen
+  const [start, setStart] = useState<number | null>(() => {
+    if (!logged) return null;
+    return unit.unit === "serving" && logged.serving ? logged.serving.count : logged.grams;
   });
+  const [amount, setAmount] = useState(() =>
+    start !== null ? startingAmount(start) : unit.unit === "g" ? DEFAULT_GRAMS : "1",
+  );
+  const chosen = amountChosen(amount, start);
 
   const choose = (next: PortionUnit) => {
     setUnit(next);
+    setStart(null);
     setAmount(next.unit === "g" ? DEFAULT_GRAMS : "1");
   };
 
@@ -26,9 +32,9 @@ export function usePortion(food: Food, logged?: Portion) {
     amount,
     setAmount,
     choose,
-    grams: portionGrams(unit, amount),
+    grams: portionGrams(unit, chosen),
     // What to send the API, null until the amount is a number above 0
-    choice: portionChoice(unit, amount),
+    choice: portionChoice(unit, chosen),
   };
 }
 

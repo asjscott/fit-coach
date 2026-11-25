@@ -52,7 +52,7 @@ const toEntry = ({ _id, date, meal, loggedAt, food, portion, nutrients }: FoodEn
 });
 
 // Logs a food into a meal of the date, its portion's nutrients worked out now and kept (ADR 0002). Null when the
-// portion names a serving the food doesn't have. A request id already logged answers its Food Entry, not created
+// portion is one the food can't be logged by. A request id already logged answers its Food Entry, not created
 export async function addFoodEntry(
   clerkUserId: string,
   date: string,
@@ -161,7 +161,7 @@ export async function findFoodEntry(clerkUserId: string, id: string): Promise<Fo
 }
 
 // Moves a Food Entry to another meal, or changes its portion, working the nutrients out again from the food as it was
-// logged. Null when the portion names a serving the food doesn't have, or there's no such entry
+// logged. Null when the portion is one the food can't be logged by, or there's no such entry
 export async function changeFoodEntry(
   clerkUserId: string,
   entry: FoodEntry,
@@ -190,4 +190,24 @@ export async function findMeals(clerkUserId: string, date: string): Promise<{ me
   const totals = sumNutrients(entries.map((entry) => entry.nutrients));
   const meals = MEALS.map((meal: Meal) => ({ meal, entries: entries.filter((e) => e.meal === meal) }));
   return { meals, totals };
+}
+
+// What each of the dates with a Food Entry adds up to; a date with none has no total
+export async function findTotals(clerkUserId: string, dates: string[]): Promise<Map<string, Nutrients>> {
+  const entries = await foodEntries
+    .find({ clerkUserId, date: { $in: dates } })
+    .project<Pick<FoodEntryDoc, "date" | "nutrients">>({ date: 1, nutrients: 1 })
+    .toArray();
+  return new Map(
+    [...new Set(entries.map((entry) => entry.date))].map((date) => [
+      date,
+      sumNutrients(entries.filter((entry) => entry.date === date).map((entry) => entry.nutrients)),
+    ]),
+  );
+}
+
+// The date of the user's first Food Entry, by the day it's for; null with none
+export async function firstLoggedDate(clerkUserId: string): Promise<string | null> {
+  const first = await foodEntries.findOne({ clerkUserId }, { sort: { date: 1 }, projection: { date: 1 } });
+  return first?.date ?? null;
 }

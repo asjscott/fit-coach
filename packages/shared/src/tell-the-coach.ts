@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { LocalDate } from "./check-in";
-import { Food } from "./food";
-import { Meal, PortionChoice } from "./food-entry";
+import { Food, PortionChoice } from "./food";
+import { Meal } from "./food-entry";
 
 // GET /tell-the-coach: whether the box shows. It doesn't when the API has no Gemini key, which the phone never sees
 export const TellTheCoachStatus = z.object({ available: z.boolean() });

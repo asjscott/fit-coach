@@ -3,6 +3,7 @@ import { ObjectId } from "mongodb";
 import { db } from "./db";
 import { isDuplicateKey } from "./duplicate-key";
 import { barcodeKey } from "./food-sources/barcode";
+import { BY_NAME, nameMatches, SEARCH_LIMIT } from "./name-search";
 
 // The shape of a Saved Food document in MongoDB: a food the user made from a label (spec #158, "Saved Foods and
 // Recent"). `barcodeKey` is the barcode without its leading zeros, so a scan reads it however the phone sees the code
@@ -110,15 +111,10 @@ export async function listSavedFoods(clerkUserId: string): Promise<Food[]> {
   return (await savedFoods.find({ clerkUserId }).collation(BY_NAME).sort({ name: 1 }).toArray()).map(toFood);
 }
 
-const BY_NAME = { locale: "en", strength: 2 };
-const SEARCH_LIMIT = 10;
-const escapeRegExp = (text: string) => text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-
-// The user's Saved Foods whose name has every word of the search in it, whatever the case, by name
+// The user's Saved Foods that match a search by name, by name
 export async function searchSavedFoods(clerkUserId: string, query: string): Promise<Food[]> {
-  const words = query.trim().split(/\s+/).filter(Boolean);
   const docs = await savedFoods
-    .find({ clerkUserId, $and: words.map((word) => ({ name: { $regex: escapeRegExp(word), $options: "i" } })) })
+    .find({ clerkUserId, ...nameMatches(query) })
     .collation(BY_NAME)
     .sort({ name: 1 })
     .limit(SEARCH_LIMIT)

@@ -194,13 +194,21 @@ _Avoid_: Meal log, food log item, intake
 A food that belongs to the user, made by them from a label when no source had it, and found again by its name or barcode. The foods they logged lately are Recent, not Saved Foods.
 _Avoid_: Favourite, custom food, my foods
 
+**Saved Meal**:
+Something the user makes again and again: a name, its ingredients, each a food and a portion kept as they were when added, and how many servings they make. It's listed with the Saved Foods and logged as one Food Entry, by servings or, when it has a cooked weight, by grams too. The Food Entry opens to the ingredients. Another Saved Meal can't be an ingredient. A meal, alone, is Breakfast, Lunch, Dinner or Snacks.
+_Avoid_: Recipe, meal (for this), custom meal
+
 **Activity Level**:
 How much the user moves in daily life, their strength Workouts included but never their Activities: sedentary, lightly active, active or very active.
 _Avoid_: Activity (for this), lifestyle, exercise level
 
 **Daily Targets**:
-The calories, protein, fat, carbs, fibre and water the Coach sets the user for each day, the same every day, from their latest Weigh-in, Activity Level and Goal. Fibre is the user's to change; the others follow the rules.
+The calories, protein, fat, carbs, fibre and water the Coach sets the user for each day, the same every day, from their latest Weigh-in, Activity Level and Goal. Fibre is the user's to change; the others follow the rules. Calories and protein are each a range around their target, 5% either side for calories and 90–120% for protein, and a day is below, in range or over each.
 _Avoid_: Macros, budget (the Weekly Budget is for Sets), goals
+
+**Nutrition History**:
+A week, Monday to Sunday, of the calories or protein the user ate each day against that day's range, with their daily average. The average leaves out today and days with no Food Entry; water alone doesn't count as one.
+_Avoid_: History (alone, which is Workouts), food log, trends
 
 **Weigh-in**:
 The user's body weight for one week, Monday to Sunday: at most one per week, a later one replacing it. The latest is the body weight everything else reads.

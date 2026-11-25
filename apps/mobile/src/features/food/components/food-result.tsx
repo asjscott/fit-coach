@@ -1,5 +1,6 @@
+import { portionNutrients } from "@fit/engines";
 import type { Food, FoodEntryAdd, Meal } from "@fit/shared";
-import { useState } from "react";
+import { type ReactNode, useState } from "react";
 import { StyleSheet, View } from "react-native";
 import { Icon } from "@/components/icons";
 import { LoadingButton } from "@/components/loading-button";
@@ -28,17 +29,53 @@ export function FoodResult({
   meal: Meal | null;
   // Logs it, answering whether that worked
   onLog: (add: FoodEntryAdd) => Promise<boolean>;
-  // Opens a Saved Food to edit or delete it
+  // Opens a Saved Food or Saved Meal to edit or delete it
   onEdit?: (food: Food) => void;
 }) {
-  const { colors } = useTheme();
-  const detail = [
-    food.source === "saved" ? "Saved food" : null,
-    food.brand,
-    `${wholeNumber(food.per100g.kcal)} kcal per 100 g`,
-  ]
+  const editLabel =
+    food.source === "saved" ? "Edit saved food" : food.source === "saved_meal" ? "Edit saved meal" : undefined;
+  return (
+    <FoodRow food={food} open={open} onToggle={onToggle}>
+      {/* Starts again from the food as it is now when a Saved Food is edited, so its serving is the new one */}
+      <LogFood key={JSON.stringify(food)} food={food} meal={meal} onLog={onLog} />
+      {onEdit && editLabel ? (
+        <LoadingButton
+          label={editLabel}
+          size="sm"
+          action="secondary"
+          variant="link"
+          icon="pencil"
+          onPress={() => onEdit(food)}
+          style={styles.edit}
+        />
+      ) : null}
+    </FoodRow>
+  );
+}
+
+// "Saved food · Simply · 400 kcal per 100 g". A Saved Meal's is per serving, as it's logged
+function detailOf({ source, brand, per100g, servings, savedMeal }: Food) {
+  if (savedMeal) {
+    return `Saved meal · ${wholeNumber(portionNutrients(per100g, servings[0].grams).kcal)} kcal per serving`;
+  }
+  return [source === "saved" ? "Saved food" : null, brand, `${wholeNumber(per100g.kcal)} kcal per 100 g`]
     .filter(Boolean)
     .join(" · ");
+}
+
+// A food's name and detail, opening to its children
+export function FoodRow({
+  food,
+  open,
+  onToggle,
+  children,
+}: {
+  food: Food;
+  open: boolean;
+  onToggle: () => void;
+  children: ReactNode;
+}) {
+  const { colors } = useTheme();
   return (
     <View style={[styles.result, { borderTopColor: colors.line }]}>
       <Pressable
@@ -50,24 +87,12 @@ export function FoodResult({
         <View style={styles.resultText}>
           <Text weight="semiBold">{food.name}</Text>
           <Text size="sm" color="subtle">
-            {detail}
+            {detailOf(food)}
           </Text>
         </View>
         <Icon name={open ? "chevronUp" : "chevronDown"} color="subtle" size={20} />
       </Pressable>
-      {/* Starts again from the food as it is now when a Saved Food is edited, so its serving is the new one */}
-      {open ? <LogFood key={JSON.stringify(food)} food={food} meal={meal} onLog={onLog} /> : null}
-      {open && onEdit && food.source === "saved" ? (
-        <LoadingButton
-          label="Edit saved food"
-          size="sm"
-          action="secondary"
-          variant="link"
-          icon="pencil"
-          onPress={() => onEdit(food)}
-          style={styles.edit}
-        />
-      ) : null}
+      {open ? children : null}
     </View>
   );
 }
