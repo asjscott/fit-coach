@@ -1,4 +1,12 @@
-import { nextPlannedExercise, nextStep, setCount, supersetGroups, workoutVolume } from "@fit/engines";
+import {
+  guidedPlace,
+  isGuidedWorkout,
+  nextPlannedExercise,
+  nextStep,
+  setCount,
+  supersetGroups,
+  workoutVolume,
+} from "@fit/engines";
 import type { InProgressWorkout } from "@fit/shared";
 import { Stack as NavStack, router } from "expo-router";
 import { useState } from "react";
@@ -19,6 +27,7 @@ import { useNow } from "@/hooks/use-now";
 import { fonts, spacing, useTheme } from "@/theme";
 import { errorMessage } from "@/utils/error-message";
 import { CurrentExerciseBox, type NextAction } from "../components/current-exercise-box";
+import { GuidedScreen } from "../components/guided-screen";
 import { HoldScreen } from "../components/hold-screen";
 import { RestScreen } from "../components/rest-screen";
 import { RestTimer } from "../components/rest-timer";
@@ -46,7 +55,7 @@ export default function WorkoutView() {
 
 function InProgress({ workout }: { workout: InProgressWorkout }) {
   const { colors } = useTheme();
-  const { discard, testProgress, skipTest, rest, minimizeRest } = useLogbook();
+  const { discard, testProgress, skipTest, rest, minimizeRest, startGuide } = useLogbook();
   const primaryEquipment = usePrimaryEquipmentProfile();
   const { showToast } = useToast();
   const leaveWorkout = useLeaveWorkout();
@@ -95,6 +104,8 @@ function InProgress({ workout }: { workout: InProgressWorkout }) {
     const { nextTestId } = primaryEquipment ? testProgress(skipped, primaryEquipment) : {};
     if (nextTestId) choose(nextTestId);
   };
+  // The way into the guided flow when it isn't running, while a hold is left
+  const guided = isGuidedWorkout(workout) ? guidedPlace(workout, {}) : undefined;
   const groups = supersetGroups(workoutExercises);
   const pairs = groups.filter((group) => group.length === 2);
 
@@ -182,6 +193,14 @@ function InProgress({ workout }: { workout: InProgressWorkout }) {
       </KeyboardAwareScrollView>
       <View style={[styles.footer, { borderTopColor: colors.line, backgroundColor: colors.bg }]}>
         <RestTimer />
+        {guided?.current ? (
+          <LoadingButton
+            label={guided.done > 0 ? "Continue holds" : "Start holds"}
+            onPress={startGuide}
+            fullWidth
+            style={styles.guide}
+          />
+        ) : null}
         {/* Finish is the main button once every test is done; finishing early stays possible (untested Patterns) */}
         <LoadingButton
           label="Finish"
@@ -191,6 +210,7 @@ function InProgress({ workout }: { workout: InProgressWorkout }) {
         />
       </View>
       <HoldScreen workout={workout} />
+      <GuidedScreen />
       <RestScreen workout={workout} next={nextAfterRest} />
       <ConfirmModal
         isOpen={confirmingDiscard}
@@ -280,5 +300,6 @@ const styles = StyleSheet.create({
     borderBottomWidth: StyleSheet.hairlineWidth,
   },
   addLabel: { fontFamily: fonts.semiBold },
+  guide: { marginBottom: spacing[3] },
   footer: { paddingHorizontal: spacing[5], paddingVertical: spacing[3], borderTopWidth: StyleSheet.hairlineWidth },
 });

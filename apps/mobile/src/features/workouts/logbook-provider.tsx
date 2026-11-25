@@ -2,12 +2,24 @@ import {
   adjustRest,
   createLogbook,
   finishedHoldSeconds,
+  guidedHold,
+  guidedPlace,
+  guidedStep,
   holdCues,
+  holdState,
+  isGuidedWorkout,
+  isHoldPaused,
   NO_EQUIPMENT,
+  pauseHold,
   REST_ADJUSTMENT_SECONDS,
   restAfterSet,
   restStep,
+  resumeHold,
+  startGuidedRun,
+  takesAnotherSet,
   type FinishResult,
+  type GuidedPlace,
+  type GuidedSkips,
   type Hold,
   type HoldRun,
   type Logbook,
@@ -49,6 +61,9 @@ export type CurrentRest = Rest & { afterId: string; expanded: boolean };
 
 // The hold being timed, for a Workout Exercise's next Set (#196)
 export type CurrentHold = { workoutExerciseId: string; hold: Hold; run: HoldRun };
+
+// The guided flow under way (#200): where it is, the current hold's run, and whether logging the hold failed
+export type CurrentGuide = { skips: GuidedSkips; place: GuidedPlace; run: HoldRun; failed?: boolean };
 
 // What a stopped hold fills in, until its Set is logged
 export type HeldSeconds = { workoutExerciseId: string; seconds: number };
@@ -101,6 +116,15 @@ type LogbookContextValue = {
   stopHold: () => void;
   cancelHold: () => void;
   heldSeconds: HeldSeconds | null;
+  // The guided flow of a Recovery Workout's holds, or null. Starting one ends a rest; it logs each hold as it ends. Where
+  // it is comes from the logged Sets and its skips, so leaving it keeps only the Sets
+  guide: CurrentGuide | null;
+  startGuide: () => Promise<void>;
+  pauseGuide: () => void;
+  // Also tries again to log a hold that couldn't be
+  resumeGuide: () => void;
+  skipGuidedHold: () => void;
+  leaveGuide: () => void;
   // True for a moment as a rest ends or a hold's target is reached, for the screen to flash
   restFlashing: boolean;
   // Whether a rest beeps as it ends and a hold at its target, remembered on the phone
@@ -217,6 +241,9 @@ export function LogbookProvider({ children }: { children: ReactNode }) {
   // In memory only too, like the rest
   const [hold, setHold] = useState<CurrentHold | null>(null);
   const [heldSeconds, setHeldSeconds] = useState<HeldSeconds | null>(null);
+  // In memory only too: a force-quit loses its skips
+  const [guide, setGuide] = useState<CurrentGuide | null>(null);
+  const loggingHold = useRef(false);
   const [restFlashing, setRestFlashing] = useState(false);
   // null until it's read from the phone or chosen
   const [chosenRestSound, setChosenRestSound] = useState<boolean | null>(null);
@@ -343,9 +370,27 @@ export function LogbookProvider({ children }: { children: ReactNode }) {
     [logbook, run, primaryEquipment, injuries],
   );
 
+  // From where the logged Sets leave it; nothing when the Workout isn't guided or has no hold left. The sound is
+  // unlocked before anything waits, as it must come from the tap
+  const startGuide = useCallback(async () => {
+    unlockRestSound();
+    const stored = await logbook.inProgress();
+    if (!stored || !isGuidedWorkout(stored)) return;
+    const place = guidedPlace(stored, {});
+    if (!place.current) return;
+    setRest(null);
+    setRestFlashing(false);
+    setHold(null);
+    setGuide({ skips: {}, place, run: startGuidedRun(new Date(), AppState.currentState === "background") });
+  }, [logbook]);
+
   const startMobilityWorkout = useCallback(
-    (holds: readonly RecoveryExercise[]) => run(() => logbook.startMobilityWorkout(holds, new Date())),
-    [logbook, run],
+    async (holds: readonly RecoveryExercise[]) => {
+      unlockRestSound();
+      await run(() => logbook.startMobilityWorkout(holds, new Date()));
+      await startGuide();
+    },
+    [logbook, run, startGuide],
   );
 
   const addWorkoutExercise = useCallback(
@@ -365,8 +410,11 @@ export function LogbookProvider({ children }: { children: ReactNode }) {
       const logged = await logbook.inProgress();
       const started = logged && restAfterSet(logged, workoutExerciseId, now, restChoice, primaryEquipment);
       setRest(started && { ...started, afterId: workoutExerciseId, expanded: true });
+      // The walk goes straight on to the holds
+      const exercise = logged?.workoutExercises.find(({ id }) => id === workoutExerciseId);
+      if (exercise && !takesAnotherSet(exercise)) await startGuide();
     },
-    [logbook, run, restChoice, primaryEquipment],
+    [logbook, run, restChoice, primaryEquipment, startGuide],
   );
 
   // Beeps and vibrates in the last seconds and at the end, unless it ended while the app was in the background (that
@@ -413,6 +461,83 @@ export function LogbookProvider({ children }: { children: ReactNode }) {
     return () => clearInterval(timer);
   }, [hold, restSoundOn]);
 
+  // Looks at the guided flow's hold, alerts, and at its end logs its Set and goes on to the next. A pause while it logs
+  // holds for the next one
+  useEffect(() => {
+    const current = guide?.place.current;
+    if (!guide || !current || isHoldPaused(guide.run)) return;
+    const timed = guidedHold(current);
+
+    const logHold = async () => {
+      if (loggingHold.current) return;
+      loggingHold.current = true;
+      try {
+        const set = { kind: "timed" as const, seconds: current.seconds };
+        await run(() => logbook.logSet(current.workoutExerciseId, set, new Date()));
+        const logged = await logbook.inProgress();
+        setGuide(
+          (now) =>
+            now &&
+            logged && {
+              skips: now.skips,
+              place: guidedPlace(logged, now.skips),
+              run: startGuidedRun(new Date(), isHoldPaused(now.run)),
+            },
+        );
+      } catch {
+        setGuide((now) => now && { ...now, run: pauseHold(now.run, new Date()), failed: true });
+      } finally {
+        loggingHold.current = false;
+      }
+    };
+
+    let before = new Date();
+    const timer = setInterval(() => {
+      const now = new Date();
+      const step = guidedStep(timed, guide.run, before, now);
+      before = now;
+      if (step.run !== guide.run) setGuide((latest) => latest && { ...latest, run: step.run });
+      if (step.alert) {
+        vibrate(step.alert === "long");
+        if (restSoundOn) playRestBeep(step.alert === "long");
+        if (step.alert === "long") setRestFlashing(true);
+      }
+      if (step.done) logHold();
+    }, REST_STEP_MS);
+    return () => clearInterval(timer);
+  }, [guide, restSoundOn, logbook, run]);
+
+  const pauseGuide = useCallback(
+    () => setGuide((current) => current && { ...current, run: pauseHold(current.run, new Date()) }),
+    [],
+  );
+
+  // Locking the phone or switching apps pauses it where it was
+  useEffect(() => {
+    const listening = AppState.addEventListener("change", (state) => {
+      if (state === "background") pauseGuide();
+    });
+    return () => listening.remove();
+  }, [pauseGuide]);
+
+  const resumeGuide = () => {
+    unlockRestSound();
+    setGuide((current) => current && { ...current, run: resumeHold(current.run, new Date()), failed: false });
+  };
+
+  // Not once the hold is done and being logged, unless that failed
+  const skipGuidedHold = () => {
+    unlockRestSound();
+    const skipped = guide?.place.current;
+    if (!skipped || loggingHold.current) return;
+    if (!guide.failed && holdState(guidedHold(skipped), guide.run, new Date()).phase === "done") return;
+    const id = skipped.workoutExerciseId;
+    const skips = { ...guide.skips, [id]: (guide.skips[id] ?? 0) + 1 };
+    if (workout) setGuide({ skips, place: guidedPlace(workout, skips), run: startGuidedRun(new Date()) });
+  };
+
+  const leaveGuide = useCallback(() => setGuide(null), []);
+
   // The sound is unlocked before anything waits, as it must come from the tap
   const startHold = useCallback((workoutExerciseId: string, started: Hold) => {
     unlockRestSound();
@@ -434,6 +559,7 @@ export function LogbookProvider({ children }: { children: ReactNode }) {
   const endTimers = useCallback(() => {
     setRest(null);
     setHold(null);
+    setGuide(null);
     setHeldSeconds(null);
   }, []);
 
@@ -560,6 +686,12 @@ export function LogbookProvider({ children }: { children: ReactNode }) {
         stopHold,
         cancelHold,
         heldSeconds,
+        guide,
+        startGuide,
+        pauseGuide,
+        resumeGuide,
+        skipGuidedHold,
+        leaveGuide,
         restFlashing,
         restSoundOn,
         setRestSoundOn,

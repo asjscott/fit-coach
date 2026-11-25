@@ -104,6 +104,14 @@ Schemas shared by app and API: packages/shared/src/workouts.ts
   with the rest's sound, switch and `RestFlash`; a cue long past on return from the background isn't given.
   `HoldScreen` is a modal like the rest screen and shares its `BigClock` and `SoundSwitch`. Stop leaves whole seconds in
   `heldSeconds`, which that Exercise's new Set's stepper takes until the Set is logged; Cancel leaves them as they were.
+- **The guided flow** (#200): `guided-flow.ts` (`@fit/engines`) says whether a Workout is guided (every Exercise a Recovery
+  Exercise, some planned holds), where it is from the logged Sets and this run's skips (`guidedPlace`), and what happens
+  between looks (`guidedStep`). `guide` on the LogbookProvider, in memory like the hold, logs each hold's Set through the
+  Logbook as its last side ends, with no RPE, then starts the next with a 10 s change. Going to the background pauses it,
+  as does a gap of over 2 s between looks, for a phone that froze without saying. Logging the walk or starting a Mobility
+  Workout starts it; "Start holds" / "Continue holds" on the logging screen does otherwise. A Set that can't be stored
+  pauses it with Try again. `GuidedScreen` is the modal; the last hold, or Finish early, leads to Finish, which shows
+  Holds in place of Volume and Sets. No Recovery Exercise starts a rest (`restAfterSet`).
 - **Next exercise, Log extra set and Finish workout** (#180): `nextStep` (`@fit/engines`) says what moves on from an
   Exercise and whether it's the main button. `nextPlannedExercise` finds the next one, in order after the current and
   wrapping round, with a superset as one step; the rest screen's "Next" goes by it too. `WorkoutView` gives the same
