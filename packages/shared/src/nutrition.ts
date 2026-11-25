@@ -50,6 +50,27 @@ export const Day = z.object({
 });
 export type Day = z.infer<typeof Day>;
 
+// GET /nutrition-history/:date: the Monday to Sunday week the date is in, in the user's timezone (GLOSSARY.md)
+export const NutritionWeek = z.object({
+  // Today in the user's timezone, which can be in another week
+  today: LocalDate,
+  // The date of the user's first Food Entry, however far back; null with none
+  firstLoggedDate: LocalDate.nullable(),
+  days: z
+    .array(
+      z.object({
+        date: LocalDate,
+        totals: Nutrients.pick({ kcal: true, proteinG: true }),
+        // The day's own, as it kept them
+        targets: DailyTargets.pick({ kcal: true, proteinG: true }),
+        // Whether the day has a Food Entry; water alone doesn't count
+        logged: z.boolean(),
+      }),
+    )
+    .length(7),
+});
+export type NutritionWeek = z.infer<typeof NutritionWeek>;
+
 // One glass of water on the Food tab, in ml: the steps the phone sets the day's water in
 export const WATER_GLASS_ML = 250;
 

@@ -60,8 +60,15 @@ export async function keepTodaysTargets(clerkUserId: string): Promise<void> {
 // The date's Daily Targets: today's as they are now, a past day's as they last were, and the current ones for a past
 // day with none stored or a day to come
 export async function targetsOn(user: OnboardedDoc, date: string): Promise<DailyTargets> {
+  return (await targetsOnDates(user, [date]))[0];
+}
+
+// The same for several dates, in their order
+export async function targetsOnDates(user: OnboardedDoc, dates: string[]): Promise<DailyTargets[]> {
   const today = todayOf(user);
-  if (date === today) await keepTodaysTargets(user.clerkUserId);
-  const kept = date <= today ? await keptTargets.findOne({ clerkUserId: user.clerkUserId, date }) : null;
-  return kept?.targets ?? currentTargets(user, date);
+  if (dates.includes(today)) await keepTodaysTargets(user.clerkUserId);
+  const kept = await keptTargets
+    .find({ clerkUserId: user.clerkUserId, date: { $in: dates.filter((date) => date <= today) } })
+    .toArray();
+  return dates.map((date) => kept.find((doc) => doc.date === date)?.targets ?? currentTargets(user, date));
 }

@@ -8,6 +8,7 @@ import { dayRoutes } from "./routes/days";
 import { exerciseRoutes } from "./routes/exercises";
 import { foodEntryRoutes } from "./routes/food-entries";
 import { foodRoutes } from "./routes/foods";
+import { nutritionHistoryRoutes } from "./routes/nutrition-history";
 import { plannedWorkoutRoutes } from "./routes/planned-workouts";
 import { savedFoodRoutes } from "./routes/saved-foods";
 import { savedMealRoutes } from "./routes/saved-meals";
@@ -103,6 +104,7 @@ export async function buildApp({
   await app.register(plannedWorkoutRoutes);
   await app.register(checkInRoutes);
   await app.register(dayRoutes);
+  await app.register(nutritionHistoryRoutes);
   await app.register(weighInRoutes);
   await app.register(foodRoutes, { foodSources: sources });
   await app.register(foodEntryRoutes);
