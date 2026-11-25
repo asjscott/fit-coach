@@ -1271,6 +1271,18 @@ describe("Logbook: Planned Workouts", () => {
     expect(await logbook.inProgress()).toEqual(workout);
   });
 
+  it("keeps on the Workout that its plan was built for the deload week, and drops it at Finish", async () => {
+    const { logbook } = setup();
+
+    await logbook.startPlannedWorkout({ ...plan(gobletSquat), deloadWeek: true }, at("09:00"));
+
+    const started = await logbook.inProgress();
+    expect(started?.deloadWeek).toBe(true);
+    await logbook.logSet(started!.workoutExercises[0].id, { kind: "external", kg: 18, reps: 8 }, at("09:05"));
+    await logbook.finish({ startedAt: at("09:00"), endedAt: at("09:30"), now: at("09:30") });
+    expect((await logbook.pending())[0]).not.toHaveProperty("deloadWeek");
+  });
+
   it("starts the day's Workout at the chosen Workout Length, linked to the whole plan", async () => {
     const { logbook } = setup();
     // 1500 s at Short: 480 s of goblet squat, 300 s of plank and 360 s of push-up leave 360 s, so 3 overhead press Sets

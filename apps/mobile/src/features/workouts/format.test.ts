@@ -29,7 +29,7 @@ import {
   workoutTimesLabel,
   workoutWhenLabel,
 } from "./format";
-import type { SetReading } from "./library";
+import { targetReading, type SetReading } from "./library";
 
 // How a one-sided Exercise's Sets read, and a Jump's
 const oneSided: SetReading = { unilateral: true, jump: false };
@@ -250,6 +250,52 @@ describe("setTargetLabel", () => {
   it("rounds a load to 0.5 of the user's unit, so a profile's summed loads show no floating-point noise", () => {
     expect(setTargetLabel({ unit: "kg", kg: 6.25, reps: 8 }, "kg")).toBe("6.5 kg × 8");
     expect(setTargetLabel({ unit: "kg", kg: 2.5 + 0.1 + 0.2, reps: 8 }, "kg")).toBe("3 kg × 8");
+  });
+});
+
+// Stories 62–66 (#183)
+describe("setTargetLabel with its Exercise's range", () => {
+  it.each([
+    ["a weighted target", "goblet-squat", { unit: "kg", kg: 20, reps: 9 }, "20 kg × 8–12 · aim for 9"],
+    ["one past the range", "goblet-squat", { unit: "kg", kg: 20, reps: 14 }, "20 kg × 8–20 · aim for 14"],
+    ["one short of the range", "goblet-squat", { unit: "kg", kg: 20, reps: 6 }, "20 kg × 6–12 · aim for 6"],
+    ["a band target", "band-row", { unit: "band", level: "medium", reps: 12 }, "Medium band × 10–15 · aim for 12"],
+    ["a bodyweight target", "push-up", { unit: "reps", reps: 10 }, "10–15 reps"],
+    ["a bodyweight target at the top", "push-up", { unit: "reps", reps: 15 }, "15+ reps"],
+    ["a timed target", "plank", { unit: "seconds", seconds: 40 }, "40–60 s"],
+    ["a timed target at the top", "plank", { unit: "seconds", seconds: 60 }, "60+ s"],
+    [
+      "a one-sided target",
+      "one-arm-dumbbell-row",
+      { unit: "kg", kg: 20, reps: 9 },
+      "20 kg × 8–12 per side · aim for 9",
+    ],
+    ["a one-sided timed target", "side-plank", { unit: "seconds", seconds: 40 }, "40–60 s per side"],
+    ["a Ballistic Exercise", "kettlebell-swing", { unit: "kg", kg: 16, reps: 8 }, "16 kg × 8"],
+    ["a Jump", "box-jump", { unit: "reps", reps: 5 }, "5 contacts"],
+    ["a carry", "farmers-carry", { unit: "kg", kg: 20, reps: 8 }, "20 kg × 8"],
+    ["a Recovery Exercise", "cat-cow", { unit: "seconds", seconds: 45 }, "45 s"],
+    ["an Exercise this app version doesn't know", "not-in-library", { unit: "reps", reps: 10 }, "10 reps"],
+  ] as const)("reads %s", (_name, slug, target, label) => {
+    expect(setTargetLabel(target, "kg", targetReading(slug, undefined))).toBe(label);
+  });
+
+  it("reads a load in pounds", () => {
+    const target = { unit: "kg", kg: 9.0718474, reps: 9 } as const;
+    expect(setTargetLabel(target, "lb", targetReading("goblet-squat", false))).toBe("20 lb × 8–12 · aim for 9");
+  });
+
+  it("reads one number in the deload week", () => {
+    const reading = targetReading("one-arm-dumbbell-row", true);
+    expect(setTargetLabel({ unit: "kg", kg: 12, reps: 8 }, "kg", reading)).toBe("12 kg × 8 per side");
+    expect(setTargetLabel({ unit: "seconds", seconds: 40 }, "kg", targetReading("plank", true))).toBe("40 s");
+  });
+
+  it("is what Today and the logging screen's rows show after the Sets", () => {
+    const planned = { sets: 3, target: { unit: "kg", kg: 20, reps: 9 } } as const;
+    const reading = targetReading("goblet-squat", undefined);
+    expect(plannedSetsLabel(planned, "kg", reading)).toBe("3 sets · 20 kg × 8–12 · aim for 9");
+    expect(workoutExerciseSummary([], "kg", undefined, planned, reading)).toBe("3 sets · 20 kg × 8–12 · aim for 9");
   });
 });
 

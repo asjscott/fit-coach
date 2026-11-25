@@ -30,6 +30,7 @@ export function useDaysWorkout(plannedWorkout: PlannedWorkout | null, checkIn?: 
     today: {
       ...daysWorkout(plannedWorkout, choices, profile?.goal),
       id: plannedWorkoutId,
+      deloadWeek: plannedWorkout.deloadWeek,
       workoutLength: choices.workoutLength,
       equipment: choices.equipment,
       equipmentChoices: equipmentChoices(plannedWorkout),

@@ -224,6 +224,9 @@ Schemas: packages/shared/src/planned-workouts.ts
 - **Starting takes a snapshot.** Exercises are copied in with `planned: {sets, target}`, dropped at Finish, so a rebuild
   can't touch a Workout under way. Discarding it shows the copy again. No Sets are logged at Start. `nextSetDraft` goes
   test load, then last Set, then target.
+- **Targets read as a range and an aim** (#183): `setTargetLabel` with `targetReading(slug, deloadWeek)`, whose range is
+  `targetRange` (target-range.ts), worked out on the phone and not stored. `deloadWeek` is on the Planned Workout, set
+  by the server, and copied to the In-progress Workout at Start; with it, targets are one number.
 - **A Workout started from a plan opens on its first Exercise short of its target** (`nextPlannedExercise`), not the
   last one as a Manual Workout does.
 - **`plannedWorkoutId` survives any edit**, and a finished Workout marks its plan finished only if it's still current.

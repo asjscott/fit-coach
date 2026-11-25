@@ -331,6 +331,7 @@ export default function TodayView() {
           cue={plannedWorkout?.cue}
           reasons={reasonLines}
           plannedExercises={today.plannedExercises}
+          deloadWeek={today.deloadWeek}
           estimatedSeconds={today.estimatedSeconds}
           dropped={today.dropped}
           workoutLength={today.workoutLength}

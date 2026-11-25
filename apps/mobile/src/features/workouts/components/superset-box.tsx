@@ -9,7 +9,8 @@ import { HStack } from "@/components/stack";
 import { Text } from "@/components/text";
 import { fonts, radii, spacing, useTheme } from "@/theme";
 import { describeSet, plannedSetsLabel, straightToLabel, supersetNote } from "../format";
-import { exerciseName, setReading } from "../library";
+import { exerciseName, targetReading } from "../library";
+import { useLogbook } from "../logbook-provider";
 import { ExerciseBox, ExerciseLogging } from "./current-exercise-box";
 import { RestTimer } from "./rest-timer";
 import { WorkoutExerciseMenu } from "./workout-exercise-menu";
@@ -31,6 +32,7 @@ export type SupersetBoxProps = {
 // with no rest between them, and the rest after the pair's second Set is the longer of the two. Once the one with fewer
 // Sets is done, the other rests its own time, as the note says
 export function SupersetBox({ pair, letter, currentId, onChoose }: SupersetBoxProps) {
+  const { workout } = useLogbook();
   const unit = useWeightUnit();
   const { colors } = useTheme();
   const [first, second] = pair;
@@ -55,7 +57,7 @@ export function SupersetBox({ pair, letter, currentId, onChoose }: SupersetBoxPr
       {pair.map((workoutExercise, i) => {
         const open = workoutExercise.id === openId;
         const { id, slug, sets, planned } = workoutExercise;
-        const reading = setReading(slug);
+        const reading = targetReading(slug, workout?.deloadWeek);
         const done = !!planned && sets.length >= planned.sets;
         const setsSoFar = sets.map((set) => describeSet(set, unit, reading)).join(", ");
         const summary = done
