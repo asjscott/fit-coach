@@ -310,12 +310,16 @@ Schema: ProgressionChange (packages/shared/src/progression.ts), on WorkingLevel.
   absent = 0; every judged Workout adds 1, a step up or new base resets it); it handles RPE 10 itself so the Workout
   still counts. It still Misses. A carry (kg level with no `repRange`) moves only to a different logged load
   (`new-base`, reps kept), whatever the RPE, and never Misses.
-- **Ladders** (#135: `bodyweightLadder`, `timedLadder`, `bandLadder`, last in `RULES`): +1 rep to 15, +5 seconds to
-  60, then `outgrown` (the planner gives the `progression` variant, whose level is seeded like any other). A band
-  level climbs 10–15 reps, then steps to the next band the primary profile lists (`ownedBandLevels`) at 10, and at the
-  heaviest climbs to 20 then is outgrown. A band Set's logged kg is ignored: the level's band is assumed.
+- **Beating the target** (#184, ADR 0007): a target inside the range is an aim, so when every judged Set reaches it the
+  next is the lowest judged Set + 1 rep (+ 5 seconds), capped at the top of the range or ladder. A weighted or band
+  target already at the top or past it is capped at 20 instead (`beatenTarget`).
+- **Ladders** (#135: `bodyweightLadder`, `timedLadder`, `bandLadder`, last in `RULES`): the lowest Set + 1 rep to 15,
+  or plus 5 seconds to 60, then `outgrown` (the planner gives the `progression` variant, whose level is seeded like any
+  other). A band level climbs 10–15 reps, then steps to the next band the primary profile lists (`ownedBandLevels`) at
+  10, and at the heaviest climbs to 20 then is outgrown. A band Set's logged kg is ignored: the level's band is assumed.
 - **Misses** (#134, `missesBringItDown`, before the #136 rules): judged Sets averaging more than 2 reps (10
-  seconds) short of target add to the level's `misses` and hold it; the second in a row drops a weighted level one
+  seconds) short of target, and under the bottom of the range for a weighted or band level, add to the level's
+  `misses` and hold it; the second in a row drops a weighted level one
   Load Step to the bottom of the range (`load-down`), or the target 2 reps when that step is over 12% lighter or there
   isn't one (`target-down`), and a bodyweight or band target 2 reps or a timed one 10 seconds, never to an easier
   variant. `moved()` sets `misses` to 0 unless the rule passes it, so any other move ends the run; UNMOVED keeps it

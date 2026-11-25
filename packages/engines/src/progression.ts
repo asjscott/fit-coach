@@ -95,7 +95,8 @@ const notInTheDeloadWeek: ProgressionRule = ({ deloadWeek }) => (deloadWeek ? UN
 const atLeastTwoSets: ProgressionRule = ({ sets, plannedSets }) =>
   sets.length >= Math.min(2, plannedSets ?? 2) ? undefined : UNMOVED;
 
-// Story 46: a Miss is Sets averaging more than 2 reps short of the target, or 10 seconds for a timed Exercise
+// Story 46: a Miss is Sets averaging more than 2 reps short of the target, or 10 seconds for a timed Exercise, and, where
+// there's a rep range, under its bottom too: Sets inside the range are still valid (spec #176, story 69)
 const MISS_REPS = 2;
 const MISS_SECONDS = 10;
 // Story 47: two Misses in a row bring the Exercise down
@@ -111,16 +112,11 @@ const secondsOf = (set: Set) => ("seconds" in set ? set.seconds : 0);
 function isMiss(judgement: Judgement): boolean | undefined {
   const { level, exercise, sets } = judgement;
   if (isJump(exercise)) return undefined;
-  switch (level.unit) {
-    case "kg":
-      if (!repRange(exercise, level.unit) || !atLevelLoad(judgement)) return undefined;
-      return level.reps - average(sets.map(repsOf)) > MISS_REPS;
-    case "seconds":
-      return level.seconds - average(sets.map(secondsOf)) > MISS_SECONDS;
-    case "reps":
-    case "band":
-      return level.reps - average(sets.map(repsOf)) > MISS_REPS;
-  }
+  const range = repRange(exercise, level.unit);
+  if (level.unit === "kg" && (!range || !atLevelLoad(judgement))) return undefined;
+  if (level.unit === "seconds") return level.seconds - average(sets.map(secondsOf)) > MISS_SECONDS;
+  const reps = average(sets.map(repsOf));
+  return level.reps - reps > MISS_REPS && (!range || reps < range.min);
 }
 
 // The level two Misses in a row bring it down to (stories 47–50): a weighted one a Load Step down at the bottom of the
@@ -221,10 +217,15 @@ function loadStepUp({ level, exercise, equipmentProfile, sets }: Judgement, rang
   return reps >= range.min ? { kg, reps: Math.min(reps, range.max) } : undefined;
 }
 
+// Story 67 (spec #176): the target after every Set reached it, the lowest Set + 1 rep, capped at the top of the range, or
+// at 20 where the reps are already climbing past it
+const beatenTarget = (target: number, sets: readonly Set[], range: RepRange) =>
+  Math.min(fewestReps(sets) + 1, target < range.max ? range.max : MAX_REPS);
+
 const outgrown: ProgressionChange = { code: "outgrown" };
 
-// Stories 29–35, weighted double progression: every Set at the target puts it up 1 rep. Every Set at the top of the
-// range takes one Load Step up, once Epley predicts at least the bottom of the range there; until then, and at the
+// Stories 29–35, weighted double progression: every Set at the target puts it 1 rep above the lowest Set. Every Set at
+// the top of the range takes one Load Step up, once Epley predicts at least the bottom of the range there; until then, and at the
 // heaviest load the profile has, the target climbs to 20. At 20 it holds while a heavier load is there, and with none,
 // the Exercise is outgrown: the planner gives its harder variant if the profile can do it, or holds it
 const doubleProgression: ProgressionRule = (judgement) => {
@@ -234,16 +235,18 @@ const doubleProgression: ProgressionRule = (judgement) => {
   if (fewestReps(sets) < level.reps) return moved(judgement, {}, null);
   const stepUp = fewestReps(sets) >= range.max ? loadStepUp(judgement, range) : undefined;
   if (stepUp) return moved(judgement, stepUp, { code: "load-up" });
-  if (level.reps < MAX_REPS) return moved(judgement, { reps: level.reps + 1 }, { code: "target-up" });
+  if (level.reps < MAX_REPS) {
+    return moved(judgement, { reps: beatenTarget(level.reps, sets, range) }, { code: "target-up" });
+  }
   // At 20 with a heavier load there, it holds until Epley reaches the step
   if (nextLoadKg(exercise, equipmentProfile, level.kg, 1) !== undefined) return moved(judgement, {}, null);
   return moved(judgement, { outgrown: true }, outgrown);
 };
 
-// A timed target goes up this much at a time
+// A timed target goes up to this much above the lowest Set
 const TIMED_STEP_SECONDS = 5;
 
-// Stories 53, 55: every Set at the target puts a bodyweight one up 1 rep, to 15. At 15 on every Set, the Exercise is
+// Stories 53, 55: every Set at the target puts a bodyweight one 1 rep above the lowest Set, to 15. At 15 on every Set, the Exercise is
 // outgrown: the planner gives its harder variant, seeded from Reference Strength, if the profile can do it, or holds it
 const bodyweightLadder: ProgressionRule = (judgement) => {
   const { level, sets } = judgement;
@@ -251,27 +254,26 @@ const bodyweightLadder: ProgressionRule = (judgement) => {
   const fewest = fewestReps(sets);
   if (fewest >= BODYWEIGHT_TOP_REPS) return moved(judgement, { reps: BODYWEIGHT_TOP_REPS, outgrown: true }, outgrown);
   if (fewest < level.reps) return moved(judgement, {}, null);
-  return moved(judgement, { reps: Math.min(level.reps + 1, BODYWEIGHT_TOP_REPS) }, { code: "target-up" });
+  return moved(judgement, { reps: Math.min(fewest + 1, BODYWEIGHT_TOP_REPS) }, { code: "target-up" });
 };
 
-// Stories 54, 55: as the bodyweight ladder, 5 seconds at a time to 60. A seeded target is judged by the whole seconds
+// Stories 54, 55: as the bodyweight ladder, 5 seconds above the lowest Set, to 60. A seeded target is judged by the whole seconds
 // it's prescribed as
 const timedLadder: ProgressionRule = (judgement) => {
   const { level, sets } = judgement;
   if (level.unit !== "seconds") return undefined;
   const fewest = Math.min(...sets.map(secondsOf));
   if (fewest >= TIMED_TOP_SECONDS) return moved(judgement, { seconds: TIMED_TOP_SECONDS, outgrown: true }, outgrown);
-  const target = Math.round(level.seconds);
-  if (fewest < target) return moved(judgement, {}, null);
+  if (fewest < Math.round(level.seconds)) return moved(judgement, {}, null);
   return moved(
     judgement,
-    { seconds: Math.min(target + TIMED_STEP_SECONDS, TIMED_TOP_SECONDS) },
+    { seconds: Math.min(fewest + TIMED_STEP_SECONDS, TIMED_TOP_SECONDS) },
     { code: "seconds-up" },
   );
 };
 
 // Stories 58, 59: a band Exercise's double progression, its Sets assumed to use the band its level names. Every Set at
-// the target puts it up 1 rep; every Set at the top of the range (15) steps to the next band the profile has, at the
+// the target puts it 1 rep above the lowest Set; every Set at the top of the range (15) steps to the next band the profile has, at the
 // bottom of the range. At the heaviest band, the reps climb to 20 and then the Exercise is outgrown, as at the
 // heaviest load
 const bandLadder: ProgressionRule = (judgement) => {
@@ -284,7 +286,7 @@ const bandLadder: ProgressionRule = (judgement) => {
   const heavier = ownedBandLevels(exercise, [equipmentProfile]).find((band) => rank(band) > rank(level.level));
   if (fewest >= range.max && heavier) return moved(judgement, { level: heavier, reps: range.min }, { code: "load-up" });
   if (level.reps >= MAX_REPS) return moved(judgement, { outgrown: true }, outgrown);
-  return moved(judgement, { reps: level.reps + 1 }, { code: "target-up" });
+  return moved(judgement, { reps: beatenTarget(level.reps, sets, range) }, { code: "target-up" });
 };
 
 // In order: the first to decide wins. The deload week (#137) comes right after notAnAssessment and returns UNMOVED, so
