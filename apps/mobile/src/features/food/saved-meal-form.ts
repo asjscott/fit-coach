@@ -1,5 +1,5 @@
-import { portionChoiceOf, portionNutrients, savedMealFood } from "@fit/engines";
-import type { Food, Ingredient, IngredientFood, SavedMealInput } from "@fit/shared";
+import { ingredientsAtPortion, portionChoiceOf, portionNutrients, savedMealFood } from "@fit/engines";
+import type { Food, FoodEntry, Ingredient, IngredientFood, SavedMealInput } from "@fit/shared";
 import { oneDecimal, wholeNumber } from "../nutrition/format";
 import { amountOf } from "./food-portion";
 import { entryPortion } from "./today-so-far";
@@ -14,6 +14,15 @@ export const savedMealForm = ({ name, savedMeal }: Food): SavedMealForm => ({
   name,
   servings: savedMeal ? String(savedMeal.servings) : "",
   ingredients: savedMeal?.ingredients ?? [],
+});
+
+// The form for a Saved Meal started from a day's meal: a logged Saved Meal adds its own ingredients, as it can't be one
+// (story 33)
+export const savedMealFormFromEntries = (entries: FoodEntry[]): SavedMealForm => ({
+  ...EMPTY_SAVED_MEAL,
+  ingredients: entries.flatMap(({ food, portion }) =>
+    isIngredientFood(food) ? [{ food, portion }] : ingredientsAtPortion(food, portion.grams),
+  ),
 });
 
 const MAX_SERVINGS = 100;

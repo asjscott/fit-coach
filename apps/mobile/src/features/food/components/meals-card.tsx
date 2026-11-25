@@ -12,7 +12,8 @@ import { EntryEditor } from "./entry-editor";
 import { wholeNumber } from "../../nutrition/format";
 
 // The day's four meals under its totals (prototype variant J's Today so far): each shows its number of foods and kcal,
-// and opens, one at a time, to its Food Entries, "Add to (meal)" and "Copy from yesterday" (spec #158 stories 49 to 53)
+// and opens, one at a time, to its Food Entries, "Add to (meal)" and "Copy from yesterday" (spec #158 stories 49 to 53),
+// and "Save as meal" when it has any (spec #188 story 33)
 export function MealsCard({
   day,
   title,
@@ -21,6 +22,7 @@ export function MealsCard({
   onAddTo,
   copyLabel,
   onCopy,
+  onSaveAsMeal,
   onChange,
   onDelete,
 }: {
@@ -33,6 +35,8 @@ export function MealsCard({
   copyLabel: string;
   // Copies the day before's entries in the meal after its own (stories 52 and 53), answering whether that worked
   onCopy: (meal: Meal) => Promise<boolean>;
+  // Starts a Saved Meal from the meal's Food Entries
+  onSaveAsMeal: (entries: FoodEntry[]) => void;
   onChange: (entry: FoodEntry, change: FoodEntryChange) => Promise<boolean>;
   onDelete: (entry: FoodEntry) => Promise<boolean>;
 }) {
@@ -123,6 +127,16 @@ export function MealsCard({
                     onPress={() => copy(meal)}
                   />
                 </View>
+                {entries.length ? (
+                  <LoadingButton
+                    label="Save as meal"
+                    size="sm"
+                    action="secondary"
+                    variant="link"
+                    onPress={() => onSaveAsMeal(entries)}
+                    style={styles.saveAsMeal}
+                  />
+                ) : null}
               </>
             ) : null}
           </View>
@@ -139,5 +153,6 @@ const styles = StyleSheet.create({
   rowBetween: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", gap: spacing[2] },
   mealSummary: { flexDirection: "row", alignItems: "center", gap: spacing[1] },
   entryName: { flex: 1 },
+  saveAsMeal: { alignSelf: "flex-end" },
   add: { paddingVertical: spacing[1] },
 });
