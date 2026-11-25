@@ -67,6 +67,8 @@ Schemas shared by app and API: packages/shared/src/workouts.ts
   `dumbbells` says it takes one or two (the integrity test requires it): two use half of each plate count, and
   `ownedOptions` drops the dumbbell way of doing it when there's one bar, so availability needs a profile's loads as well
   as its tags. The stored collection needs `seed:exercises` for the Exercise library screen to follow it.
+  Logging shows how to build the load in the stepper under it (#182, `dumbbell-build.ts`): a load the dumbbells make,
+  matched as it's shown (to 0.5 of the unit) or exactly, on the kind of equipment the stepper steps it on.
 - **A past Workout starts up to 7 days before its last Set** (#129). `WorkoutUpload` (`@fit/shared`) is the rule, and
   both POST /workouts (400) and the Logbook's finish use it, so a Pending Workout always uploads. It counts back from
   the Sets, not the clock, so an upload that comes days late isn't refused; `Workout` itself doesn't have the rule, so

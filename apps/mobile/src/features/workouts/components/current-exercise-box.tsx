@@ -7,7 +7,7 @@ import {
   testSwap,
 } from "@fit/engines";
 import { RPE_SCALE, type InProgressWorkoutExercise, type LoadType, type Set, type SetValues } from "@fit/shared";
-import { useState, type ReactNode } from "react";
+import { useMemo, useState, type ReactNode } from "react";
 import { StyleSheet, View } from "react-native";
 import { Alert, AlertIcon, AlertText } from "@/components/alert";
 import { ConfirmModal } from "@/components/choice-modal";
@@ -20,6 +20,7 @@ import { useToast } from "@/contexts/toast-context";
 import { useCurrentUser, usePrimaryEquipmentProfile, useWeightUnit } from "@/features/user/current-user-provider";
 import { fonts, radii, spacing, useTheme } from "@/theme";
 import { errorMessage } from "@/utils/error-message";
+import { dumbbellBuildLabel, type BuildLabel } from "../dumbbell-build";
 import { plannedSetsLabel, previousSetsLabel } from "../format";
 import { offersLastSetRpe, withRpe } from "../last-set-rpe";
 import { exerciseName, targetReading, type SetReading } from "../library";
@@ -164,6 +165,7 @@ export function ExerciseLogging({
     loadsKnown: loadsByEquipmentKg.length > 0,
     unit,
   };
+  const buildLabel = useMemo(() => dumbbellBuildLabel(slug, primaryEquipment, unit), [slug, primaryEquipment, unit]);
 
   return (
     <>
@@ -241,6 +243,7 @@ export function ExerciseLogging({
           initial={editingSet}
           asksRpe={asksRpe}
           loadSteps={loadSteps}
+          buildLabel={buildLabel}
           reading={reading}
           submitLabel={`Save set ${editingIndex + 1}`}
           onSubmit={async (values) => {
@@ -265,6 +268,7 @@ export function ExerciseLogging({
           initial={nextSetDraft(workoutExercise, protocol)}
           asksRpe={asksRpe}
           loadSteps={loadSteps}
+          buildLabel={buildLabel}
           reading={reading}
           submitLabel={`Log set ${nextNumber}`}
           onSubmit={(values) => logSet(id, values)}
@@ -332,6 +336,8 @@ type SetEntryProps = {
   // Asks how hard the Set felt, for an Assessment Workout's test Sets
   asksRpe?: boolean;
   loadSteps: LoadSteps;
+  // How to build the load in the stepper, shown under it
+  buildLabel: BuildLabel;
   reading: SetReading;
   submitLabel: string;
   onSubmit: (values: SetValues) => Promise<void>;
@@ -347,6 +353,7 @@ function SetEntry({
   initial,
   asksRpe = false,
   loadSteps,
+  buildLabel,
   reading,
   submitLabel,
   onSubmit,
@@ -374,6 +381,8 @@ function SetEntry({
     }
   };
 
+  const build = draft.load === undefined ? undefined : buildLabel(draft.load);
+
   return (
     <Stack spacing={3} style={styles.entry}>
       <Text size="sm" color="muted" weight="semiBold">
@@ -383,7 +392,14 @@ function SetEntry({
         const value = draft[field] ?? "";
         const onChange = (text: string) => setDraftState((prev) => ({ ...prev, [field]: text }));
         return field === "load" ? (
-          <SetStepper key={field} field={field} value={value} onChange={onChange} {...loadSteps} />
+          <Stack key={field} spacing={1}>
+            <SetStepper field={field} value={value} onChange={onChange} {...loadSteps} />
+            {build ? (
+              <Text size="sm" color="muted" centered>
+                {build}
+              </Text>
+            ) : null}
+          </Stack>
         ) : (
           <SetStepper key={field} field={field} value={value} onChange={onChange} reading={reading} />
         );
