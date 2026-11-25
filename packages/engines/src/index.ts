@@ -23,6 +23,7 @@ export * from "./equipment";
 export * from "./fatigue";
 export * from "./food-ideas";
 export * from "./food-portion";
+export * from "./hold-timer";
 export { isJump, JUMP_SETS, JUMP_WORKOUTS_PER_WEEK, JUMPS_PER_WORKOUT } from "./jumps";
 export * from "./local-dates";
 export * from "./logbook";
