@@ -2,7 +2,15 @@ import type { Muscle } from "@fit/shared";
 import { describe, expect, it } from "vitest";
 import { exerciseBySlug } from "./data/exercises";
 import { builtInEquipment, NO_EQUIPMENT } from "./equipment";
-import { mobilitySeconds, mobilityWorkout, recoveryWorkoutKind, type MobilityOptions } from "./mobility-workout";
+import {
+  alternativeHolds,
+  mobilitySeconds,
+  mobilityWorkout,
+  recoveryWorkoutKind,
+  removeHold,
+  swapHold,
+  type MobilityOptions,
+} from "./mobility-workout";
 
 const now = new Date("2026-11-04T12:00:00.000Z");
 const loggedAt = "2026-11-04T06:00:00.000Z";
@@ -138,6 +146,70 @@ describe("mobilityWorkout", () => {
       ["knees-to-chest", 2],
       ["lying-hamstring-stretch", 2],
     ]);
+  });
+});
+
+describe("changing a Mobility Workout's holds", () => {
+  const hold = (slug: string, seconds = 45, sets = 1) => ({
+    slug,
+    sets,
+    target: { unit: "seconds" as const, seconds },
+  });
+  const holds = [hold("pigeon"), hold("cat-cow")];
+  const alternatives = (changes: Partial<Parameters<typeof alternativeHolds>[0]> = {}) =>
+    alternativeHolds({ slug: "pigeon", holds, injuries: [], equipmentProfile: NO_EQUIPMENT, ...changes });
+
+  it("offers those sharing a primary Muscle first, then the rest", () => {
+    const shares = alternatives().map((slug) =>
+      exerciseBySlug(slug)!.muscles.primary.some((muscle) => loosens("pigeon", muscle)),
+    );
+    expect(shares[0]).toBe(true);
+    expect(shares.at(-1)).toBe(false);
+    expect(shares.lastIndexOf(true)).toBeLessThan(shares.indexOf(false));
+  });
+
+  it("offers neither the walk nor what's already in the list", () => {
+    expect(alternatives()).toContain("figure-four");
+    for (const slug of ["walk", "pigeon", "cat-cow"]) expect(alternatives()).not.toContain(slug);
+    expect(alternatives({ holds: [...holds, hold("figure-four")] })).not.toContain("figure-four");
+  });
+
+  it("offers only what the injuries and equipment allow", () => {
+    const roller = { ...builtInEquipment("bodyweight_only", "kg"), tags: ["foam_roller" as const] };
+    expect(alternatives()).not.toContain("foam-roll-quads");
+    expect(alternatives({ equipmentProfile: roller })).toContain("foam-roll-quads");
+    expect(alternatives()).toContain("couch-stretch");
+    expect(alternatives({ injuries: ["knee"] })).not.toContain("couch-stretch");
+  });
+
+  it("offers none when everything possible is in the list", () => {
+    expect(
+      alternatives({
+        slug: "knees-to-chest",
+        holds: [hold("knees-to-chest"), hold("lying-hamstring-stretch")],
+        injuries: ["neck", "shoulder", "elbow", "wrist", "lower_back", "hip", "knee", "ankle"],
+      }),
+    ).toEqual([]);
+  });
+
+  it("swaps a hold in its place, for the new one's own time, keeping its Sets", () => {
+    const changed = swapHold([hold("pigeon", 45, 2), hold("cat-cow")], "pigeon", "standing-quad-stretch");
+    expect(changed.map(({ slug, sets }) => [slug, sets])).toEqual([
+      ["standing-quad-stretch", 2],
+      ["cat-cow", 1],
+    ]);
+    expect(changed[0].target).toEqual({
+      unit: "seconds",
+      seconds: exerciseBySlug("standing-quad-stretch")!.holdSeconds,
+    });
+  });
+
+  it("removes a hold and its time, but never the last one", () => {
+    // Pigeon is 2 × 55 s, cat-cow 55 s
+    expect(mobilitySeconds(holds)).toBe(165);
+    const left = removeHold(holds, "pigeon");
+    expect(mobilitySeconds(left)).toBe(55);
+    expect(removeHold(left, "cat-cow")).toEqual(left);
   });
 });
 

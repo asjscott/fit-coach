@@ -1,4 +1,14 @@
-import { mobilityWorkout, NO_EQUIPMENT, withPending, type MobilityFocus, type MobilityMinutes } from "@fit/engines";
+import {
+  alternativeHolds,
+  mobilityWorkout,
+  NO_EQUIPMENT,
+  removeHold,
+  swapHold,
+  withPending,
+  type MobilityFocus,
+  type MobilityMinutes,
+  type RecoveryExercise,
+} from "@fit/engines";
 import { useEffect, useState } from "react";
 import { useCurrentUser, usePrimaryEquipmentProfile } from "@/features/user/current-user-provider";
 import { deviceStorage } from "@/features/workouts/device-storage";
@@ -13,6 +23,8 @@ const storedMobility = createStoredMobility(deviceStorage);
 export function useMobility(now: Date) {
   // null until it's been read from the phone
   const [stored, setStored] = useState<StoredMobility | null>(null);
+  // The list once the user has changed it, for this showing, length and focus only
+  const [changed, setChanged] = useState<{ now: Date; holds: RecoveryExercise[] } | null>(null);
   const { workouts } = useHistory();
   const { pending } = useLogbook();
   const equipmentProfile = usePrimaryEquipmentProfile() ?? NO_EQUIPMENT;
@@ -29,13 +41,27 @@ export function useMobility(now: Date) {
     storedMobility.keep(next).catch(() => {});
   };
 
+  const pick = () =>
+    stored
+      ? mobilityWorkout({ ...stored, workouts: withPending(pending, workouts), injuries, equipmentProfile, now })
+      : [];
+  const holds = changed?.now === now ? changed.holds : pick();
+
   return {
     stored,
-    holds: stored
-      ? mobilityWorkout({ ...stored, workouts: withPending(pending, workouts), injuries, equipmentProfile, now })
-      : [],
-    chooseMinutes: (minutes: MobilityMinutes) => keep({ minutes }),
-    chooseFocus: (focus: MobilityFocus) => keep({ focus }),
+    holds,
+    // Choosing again picks again, so it drops any changes
+    chooseMinutes: (minutes: MobilityMinutes) => {
+      setChanged(null);
+      keep({ minutes });
+    },
+    chooseFocus: (focus: MobilityFocus) => {
+      setChanged(null);
+      keep({ focus });
+    },
+    alternativesTo: (slug: string) => alternativeHolds({ slug, holds, injuries, equipmentProfile }),
+    swap: (slug: string, toSlug: string) => setChanged({ now, holds: swapHold(holds, slug, toSlug) }),
+    remove: (slug: string) => setChanged({ now, holds: removeHold(holds, slug) }),
     // Once it starts, for the next to vary from
     keepExercises: (lastExercises: string[]) => keep({ lastExercises }),
   };
