@@ -70,6 +70,8 @@ describe("POST /workouts", () => {
     const recovery = workout(2, [
       { slug: "walk", sets: [held(20 * 60)] },
       { slug: "cat-cow", sets: [held(45), held(45)] },
+      // One of the Exercises added in #197
+      { slug: "pigeon", sets: [held(90)] },
     ]);
     expect((await user.post("/workouts", recovery)).statusCode).toBe(201);
 
