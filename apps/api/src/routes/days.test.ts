@@ -1,6 +1,6 @@
 import { ideaFood } from "@fit/engines";
 import type { Day, Food, FoodEntry, User } from "@fit/shared";
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { localDate } from "../test/dates";
 import { ONBOARDED_PROFILE, useRouteTestApi } from "../test/route-test-api";
 
@@ -106,6 +106,180 @@ const eaten = (name: string, per100g: Partial<Food["per100g"]>): Food => ({
 
 type Signed = Awaited<ReturnType<typeof api.signIn>>;
 const today = async (user: Signed) => (await user.get("/days/today")).body as Day;
+
+// Pago Pago (UTC−11) is always at least a day behind Kiritimati (UTC+14), so moving a user there ends their day
+const EARLIER = "Pacific/Pago_Pago";
+const LATER = "Pacific/Kiritimati";
+
+async function userOnEarlierDay() {
+  const user = await api.signIn();
+  await user.patch("/user", { timeZone: EARLIER });
+  return { user, date: localDate(EARLIER) };
+}
+const endDay = (user: Signed) => user.patch("/user", { timeZone: LATER });
+const targetsOn = async (user: Signed, date: string) => ((await user.get(`/days/${date}`)).body as Day).targets;
+
+const weighIn = async (user: Signed, timeZone: string, weight: number) =>
+  expect((await user.put(`/weigh-ins/${localDate(timeZone)}`, { weight, unit: "kg" })).statusCode).toBe(200);
+
+describe("GET /days/:date kept Daily Targets", () => {
+  // Spec #188 stories 14 and 17: a later Weigh-in or Goal doesn't rewrite the past
+  it("keeps a day's targets once it's over, through a Weigh-in and a change of Goal", async () => {
+    const { user, date } = await userOnEarlierDay();
+    const then = await targetsOn(user, "today");
+    expect(then.proteinG).toBe(160);
+
+    await endDay(user);
+    await weighIn(user, LATER, 90);
+    await user.patch("/user", { profile: { goal: "athletic", fibreTargetG: 30 } });
+
+    expect(await targetsOn(user, date)).toEqual(then);
+    // 1.6 g × 90 kg
+    expect(await targetsOn(user, "today")).toMatchObject({ proteinG: 144, fibreG: 30 });
+  });
+
+  // Story 15: the last targets the day had stand, without the day being read after the change
+  it("keeps the last change made during the day", async () => {
+    const { user, date } = await userOnEarlierDay();
+    await targetsOn(user, "today");
+    await weighIn(user, EARLIER, 90);
+    await user.patch("/user", { profile: { goal: "athletic" } });
+
+    await endDay(user);
+    await user.patch("/user", { profile: { goal: "lose_fat" } });
+
+    expect((await targetsOn(user, date)).proteinG).toBe(144);
+  });
+
+  it("keeps a Weigh-in made during the day, without the day being read after it", async () => {
+    const { user, date } = await userOnEarlierDay();
+    await weighIn(user, EARLIER, 90);
+
+    await endDay(user);
+    await user.patch("/user", { profile: { goal: "athletic" } });
+
+    // 2 g × 90 kg
+    expect((await targetsOn(user, date)).proteinG).toBe(180);
+  });
+
+  // The server's clock moved on (only Date, so nothing waiting on a timer stops), since moving the user's timezone is
+  // itself a change that keeps the new day's targets
+  describe("on a new day", () => {
+    afterEach(() => void vi.useRealTimers());
+    const moveOnADay = () => vi.setSystemTime(Date.now() + 24 * 60 * 60 * 1000);
+
+    it.each(["logged", "copied from yesterday"])("keeps the day's targets when food is %s", async (how) => {
+      vi.useFakeTimers({ toFake: ["Date"] });
+      const user = await api.signIn();
+      const yesterday = localDate("UTC");
+      const food = { meal: "lunch", food: eaten("rice", { kcal: 100 }), portion: { grams: 100 } };
+      await user.post(`/days/${yesterday}/food-entries`, food);
+
+      moveOnADay();
+      const date = localDate("UTC");
+      const added =
+        how === "logged"
+          ? await user.post("/days/today/food-entries", food)
+          : await user.post(`/days/${date}/meals/lunch/copy-from-yesterday`);
+      expect(added.statusCode).toBe(201);
+
+      moveOnADay();
+      await user.patch("/user", { profile: { goal: "athletic" } });
+
+      expect((await targetsOn(user, date)).proteinG).toBe(160);
+    });
+
+    // The unique index lets one of them insert the day; the others must not fail on it
+    it("keeps the day's targets when its first reads race", async () => {
+      vi.useFakeTimers({ toFake: ["Date"] });
+      const user = await api.signIn();
+      moveOnADay();
+      const date = localDate("UTC");
+
+      const reads = await Promise.all(Array.from({ length: 12 }, () => user.get("/days/today")));
+      expect(reads.map((read) => read.statusCode)).toEqual(reads.map(() => 200));
+
+      moveOnADay();
+      await user.patch("/user", { profile: { goal: "athletic" } });
+      expect((await targetsOn(user, date)).proteinG).toBe(160);
+    });
+  });
+
+  // Story 16
+  it("judges food logged late against the day's own targets, leaving them as they were", async () => {
+    const { user, date } = await userOnEarlierDay();
+    await endDay(user);
+    await user.patch("/user", { profile: { goal: "athletic" } });
+
+    const added = await user.post(`/days/${date}/food-entries`, {
+      meal: "lunch",
+      food: eaten("protein", { proteinG: 100 }),
+      portion: { grams: 160 },
+    });
+
+    expect(added.statusCode).toBe(201);
+    const day = (await user.get(`/days/${date}`)).body as Day;
+    expect(day.targets.proteinG).toBe(160);
+    expect(day.totals.proteinG).toBe(160);
+    // 160 g meets the day's own target
+    expect(day.ideas).toEqual([]);
+  });
+
+  // Story 18: a day from before targets were kept is never stored, even by logging to it
+  it("judges a past day with none kept against the current targets, and doesn't keep them", async () => {
+    const user = await api.signIn();
+    const date = localDate("UTC", 3);
+    expect((await targetsOn(user, date)).proteinG).toBe(160);
+    await user.post(`/days/${date}/food-entries`, {
+      meal: "lunch",
+      food: eaten("protein", { proteinG: 100 }),
+      portion: { grams: 10 },
+    });
+
+    await user.patch("/user", { profile: { goal: "athletic" } });
+
+    // 1.6 g × 80 kg
+    expect((await targetsOn(user, date)).proteinG).toBe(128);
+  });
+
+  it("keeps a day to come following the current targets", async () => {
+    const { user } = await userOnEarlierDay();
+    await endDay(user);
+    const tomorrow = localDate(LATER);
+    // Back on the earlier date, the later one is still to come
+    await user.patch("/user", { timeZone: EARLIER });
+    await user.patch("/user", { profile: { goal: "athletic" } });
+
+    expect((await targetsOn(user, tomorrow)).proteinG).toBe(128);
+  });
+
+  it("settles on the last change when reads and changes race", async () => {
+    const { user, date } = await userOnEarlierDay();
+
+    const answers = await Promise.all([
+      ...Array.from({ length: 8 }, () => user.get("/days/today")),
+      user.patch("/user", { profile: { goal: "athletic" } }),
+      ...Array.from({ length: 8 }, () => user.get(`/days/${date}`)),
+    ]);
+    expect(answers.map((answer) => answer.statusCode)).toEqual(answers.map(() => 200));
+
+    await endDay(user);
+    await user.patch("/user", { profile: { goal: "lose_fat" } });
+    expect((await targetsOn(user, date)).proteinG).toBe(128);
+  });
+
+  it("keeps a day's targets per user", async () => {
+    const { user, date } = await userOnEarlierDay();
+    const { user: other } = await userOnEarlierDay();
+    await other.patch("/user", { profile: { goal: "athletic" } });
+
+    await endDay(user);
+    await endDay(other);
+
+    expect((await targetsOn(user, date)).proteinG).toBe(160);
+    expect((await targetsOn(other, date)).proteinG).toBe(128);
+  });
+});
 
 describe("GET /days/:date Food Ideas", () => {
   // Spec #158 stories 34 and 56: two Food Ideas to fill what's left, with nothing eaten
