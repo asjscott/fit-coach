@@ -1,6 +1,7 @@
 import { stepperLoad, UNKNOWN_LOADS_STEP_KG, type LoadsByEquipment, type StepDirection } from "@fit/engines";
 import { loadInUnit, toKg, type LoadType, type SetValues, type WeightUnit } from "@fit/shared";
-import { durationParts, leadParts } from "./format";
+import { leadParts, minutesParts } from "./format";
+import type { SetReading } from "./library";
 
 // Entering a Set's values with −/+ steppers: what each step adds, and turning typed text into the values the
 // Logbook checks. A load is typed and stepped in the user's unit, and becomes its exact kg only once logged (#126)
@@ -50,32 +51,32 @@ export function rpeMissing(asksRpe: boolean, rpe: number | undefined): boolean {
   return asksRpe && rpe === undefined;
 }
 
-// A timed Set's seconds as the stepper shows them, read as the target and the logged Set read (#145): 1200 shows as
+// The walk's seconds as the stepper shows them, read as its target and logged Set read (#145): 1200 shows as
 // "20" "min", 90 as "1 min 30" "s". Only whole seconds are shown so: anything else shows as typed
-export function secondsField(text: string): { value: string; unit: string } {
+function minutesField(text: string): { value: string; unit: string } {
   const trimmed = text.trim();
   if (!/^\d+$/.test(trimmed)) return { value: text, unit: "s" };
-  const parts = durationParts(Number(trimmed));
+  const parts = minutesParts(Number(trimmed));
   const [value, unit] = parts.at(-1)!;
   return { value: `${leadParts(parts)}${value}`, unit };
 }
 
-// For screen readers, what one step of a timed Set adds or takes away: "Plus 1 minute", "Minus 5 seconds"
-export function secondsStepLabel(text: string, direction: StepDirection): string {
+// For screen readers, what one step of the walk adds or takes away: "Plus 1 minute", "Minus 5 seconds"
+function minutesStepLabel(text: string, direction: StepDirection): string {
   const typed = parseField(text);
   const from = Number.isFinite(typed) ? Math.round(typed) : 0;
   const byMinute = direction === 1 ? from >= MINUTE : from > MINUTE;
   return `${direction === 1 ? "Plus" : "Minus"} ${byMinute ? "1 minute" : `${STEPS.seconds} seconds`}`;
 }
 
-// A load has no fixed step: it goes to the next load the equipment has (loadStep). Seconds step by 5 under a minute;
-// a minute or more goes to the next or previous whole minute (secondsStep)
+// A load has no fixed step: it goes to the next load the equipment has (loadStep). Seconds step by 5 at every
+// length (#177), except the walk's (minutesStep)
 const STEPS: Record<Exclude<SetField, "load">, number> = { reps: 1, seconds: 5 };
 
 const MINUTE = 60;
 
-// A 20-minute walk steps by the minute and a short hold by 5 s (#145): 55 s → 1 min → 2 min, and 1 min → 55 s
-function secondsStep(seconds: number, direction: StepDirection): number {
+// The walk goes to the next or previous whole minute, and by 5 s under one (#145): 55 s → 1 min → 2 min → 1 min → 55 s
+function minutesStep(seconds: number, direction: StepDirection): number {
   if (direction === 1 && seconds >= MINUTE) return (Math.floor(seconds / MINUTE) + 1) * MINUTE;
   if (direction === -1 && seconds > MINUTE) return (Math.ceil(seconds / MINUTE) - 1) * MINUTE;
   return seconds + STEPS.seconds * direction;
@@ -118,10 +119,14 @@ export type FieldStepper = {
 
 const asTyped = (unit: string) => (text: string) => ({ value: text, unit, name: unit });
 
+// For screen readers: "Plus 1 rep", "Minus 5 seconds"
+const fixedStepLabel = (step: string) => (_: string, direction: StepDirection) =>
+  `${direction === 1 ? "Plus" : "Minus"} ${step}`;
+
 // Reps, or a Jump's contacts, by 1
 const countStepper = (one: string, many: string): FieldStepper => ({
   shown: asTyped(many),
-  stepLabel: (_, direction) => `${direction === 1 ? "Plus" : "Minus"} ${STEPS.reps} ${one}`,
+  stepLabel: fixedStepLabel(`${STEPS.reps} ${one}`),
   resolution: 1,
   next: (from, direction) => from + STEPS.reps * direction,
   keyboardType: "number-pad",
@@ -130,18 +135,31 @@ const countStepper = (one: string, many: string): FieldStepper => ({
 export const FIELD_STEPPERS = {
   reps: countStepper("rep", "reps"),
   contacts: countStepper("contact", "contacts"),
-  // In minutes from a minute (#145), as seconds while being typed
   seconds: {
+    shown: (text) => ({ value: text, unit: "s", name: "seconds" }),
+    stepLabel: fixedStepLabel(`${STEPS.seconds} seconds`),
+    resolution: 1,
+    next: (from, direction) => from + STEPS.seconds * direction,
+    keyboardType: "number-pad",
+  },
+  // The walk's seconds: in minutes from a minute (#145), as seconds while being typed
+  minutes: {
     shown: (text, typing) => {
-      const { value, unit } = typing ? { value: text, unit: "s" } : secondsField(text);
+      const { value, unit } = typing ? { value: text, unit: "s" } : minutesField(text);
       return { value, unit, name: unit === "min" ? "minutes" : "seconds" };
     },
-    stepLabel: secondsStepLabel,
+    stepLabel: minutesStepLabel,
     resolution: 1,
-    next: secondsStep,
+    next: minutesStep,
     keyboardType: "number-pad",
   },
 } satisfies Record<string, FieldStepper>;
+
+// The stepper for an Exercise's reps or seconds, as its Sets read
+export function fieldStepper(field: Exclude<SetField, "load">, reading: SetReading): FieldStepper {
+  if (field === "reps") return reading.jump ? FIELD_STEPPERS.contacts : FIELD_STEPPERS.reps;
+  return reading.inMinutes ? FIELD_STEPPERS.minutes : FIELD_STEPPERS.seconds;
+}
 
 // A load to 0.5 of the user's unit, as it's shown, to the next load `step` gives
 export const loadStepper = (step: LoadStep, loadsKnown: boolean, unit: WeightUnit): FieldStepper => ({
