@@ -96,29 +96,28 @@ function Guiding({ guide, current }: { guide: CurrentGuide; current: GuidedHold 
         <HStack spacing={3}>
           <LoadingButton
             label="Back"
-            size="lg"
+            size="xl"
             action="secondary"
             disabled={!hasPrevious}
             onPress={backGuidedHold}
-            style={styles.halfButton}
+            style={styles.sideButton}
           />
           {alone ? null : (
             <LoadingButton
               label="Skip"
-              size="lg"
+              size="xl"
               action="secondary"
               onPress={skipGuidedHold}
-              style={styles.halfButton}
+              style={styles.sideButton}
             />
           )}
+          <LoadingButton
+            label={failed ? "Try again" : paused ? "Resume" : "Pause"}
+            size="xl"
+            onPress={paused ? resumeGuide : pauseGuide}
+            style={styles.mainButton}
+          />
         </HStack>
-        <LoadingButton
-          label={failed ? "Try again" : paused ? "Resume" : "Pause"}
-          size="xl"
-          onPress={paused ? resumeGuide : pauseGuide}
-          fullWidth
-          style={styles.bigButton}
-        />
         <HStack spacing={3}>
           <LoadingButton
             label="Leave timer"
@@ -153,6 +152,7 @@ const styles = StyleSheet.create({
   top: { justifyContent: "space-between", minHeight: 48 },
   content: { flexGrow: 1, justifyContent: "center", gap: spacing[6], paddingVertical: spacing[4] },
   name: { fontFamily: fonts.bold, fontSize: 28, lineHeight: 34 },
-  bigButton: { height: 80 },
+  sideButton: { flex: 1, height: 80, paddingHorizontal: spacing[1] },
+  mainButton: { flex: 1.6, height: 80, paddingHorizontal: spacing[1] },
   halfButton: { flex: 1, paddingHorizontal: spacing[2] },
 });
