@@ -15,7 +15,7 @@ A movement in the library, such as a goblet squat, with how it is loaded, the mu
 _Avoid_: Movement, lift
 
 **Recovery Exercise**:
-A walk or a mobility hold, made for the Recovery Workout. It has no Pattern, credits no Muscle, and the Coach never plans one into a training Workout.
+A walk or a mobility hold, made for the Recovery Workout. Each hold has an area (hips and legs, back and spine, or chest and shoulders) and a hold time, per side; the walk has neither. It has no Pattern, credits no Muscle, and the Coach never plans one into a training Workout.
 _Avoid_: Stretch, mobility exercise, cooldown
 
 **Pattern**:
@@ -129,7 +129,7 @@ The most the user wants a Workout to take, 5 minutes of warm-up included: Short 
 _Avoid_: Mode, session type
 
 **Recovery Workout**:
-A walk or mobility Workout the user chooses in place of the Day's Workout, for one day, and what the Coach plans when the 130% cap leaves nothing else to add. Unlike a Rest Day, it's something they do. It credits no Sets.
+A walk or mobility Workout the user chooses in place of the Day's Workout, for one day, and what the Coach plans when the 130% cap leaves nothing else to add. Unlike a Rest Day, it's something they do. It credits no Sets. A hold the user's injuries or equipment rule out is replaced by one like it.
 _Avoid_: Recovery day, recovery session
 
 **Block**:

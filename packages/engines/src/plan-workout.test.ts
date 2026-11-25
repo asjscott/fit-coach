@@ -4,7 +4,7 @@ import { exerciseBySlug, EXERCISES } from "./data/exercises";
 import { builtInEquipment, type ProfileWithLoads } from "./equipment";
 import { daysWorkout } from "./days-workout";
 import { planWorkout, type PlanWorkoutInput } from "./plan-workout";
-import { RECOVERY_WORKOUT } from "./recovery-workout";
+import { RECOVERY_WORKOUT, recoveryWorkoutFor } from "./recovery-workout";
 
 const dumbbells: ProfileWithLoads = {
   tags: ["dumbbells"],
@@ -374,6 +374,25 @@ describe("planWorkout", () => {
       for (const { slug, target, alternatives } of plan({ workouts, workingLevels: withBench }).plannedExercises) {
         for (const options of Object.values(alternatives ?? {})) expect(options).toEqual([{ slug, target }]);
       }
+    });
+
+    // Story 30 of #195: the phone's start and the plan share one choice (#197)
+    it("replaces a hold an injury rules out, as starting one on the phone does", () => {
+      const workouts = [week({ ...met, "dumbbell-lateral-raise": 20, plank: 20 })];
+      const planned = plan({ workouts, workingLevels: withBench, injuries: ["shoulder"] }).plannedExercises;
+      const planOf = planned.map(({ slug, sets, target }) => ({ slug, sets, target }));
+      expect(planOf).toEqual(recoveryWorkoutFor({ equipmentProfile: dumbbells, injuries: ["shoulder"] }));
+      expect(planOf).not.toEqual(RECOVERY_WORKOUT);
+    });
+
+    it("rolls only on a built-in choice with a foam roller", () => {
+      const workouts = [week({ ...met, "dumbbell-lateral-raise": 20, plank: 20 })];
+      const equipmentProfile = { ...dumbbells, tags: [...dumbbells.tags, "foam_roller" as const] };
+      const planned = plan({ workouts, workingLevels: withBench, injuries: ["shoulder"], equipmentProfile });
+      const rolled = planned.plannedExercises.find(({ slug }) => slug === "foam-roll-upper-back");
+      const options = rolled?.alternatives?.bodyweight_only;
+      expect(options).toBeDefined();
+      expect(options?.map(({ slug }) => slug)).not.toContain("foam-roll-upper-back");
     });
 
     it("uses the rest of the time once what's left of the budget is planned", () => {

@@ -1,6 +1,7 @@
 import {
   adjustRest,
   createLogbook,
+  NO_EQUIPMENT,
   REST_ADJUSTMENT_SECONDS,
   restAfterSet,
   restStep,
@@ -27,7 +28,7 @@ import { useKeepAwake } from "expo-keep-awake";
 import { createContext, use, useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import { AppState, Vibration } from "react-native";
 import { useApi } from "@/api";
-import { usePrimaryEquipmentProfile } from "@/features/user/current-user-provider";
+import { useCurrentUser, usePrimaryEquipmentProfile } from "@/features/user/current-user-provider";
 import { deviceStorage } from "./device-storage";
 import { finishCelebration } from "./finish-celebration";
 import { useSyncTriggers } from "./hooks/use-sync-triggers";
@@ -151,6 +152,7 @@ const LogbookContext = createContext<LogbookContextValue | null>(null);
 export function LogbookProvider({ children }: { children: ReactNode }) {
   const api = useApi();
   const primaryEquipment = usePrimaryEquipmentProfile();
+  const injuries = useCurrentUser().user?.profile.injuries;
   const [logbook] = useState<Logbook>(() =>
     createLogbook({
       storage: deviceStorage,
@@ -307,7 +309,17 @@ export function LogbookProvider({ children }: { children: ReactNode }) {
     [logbook, run],
   );
 
-  const startRecoveryWorkout = useCallback(() => run(() => logbook.startRecoveryWorkout(new Date())), [logbook, run]);
+  // What's built for the user's injuries and equipment, as far as the phone knows them
+  const startRecoveryWorkout = useCallback(
+    () =>
+      run(() =>
+        logbook.startRecoveryWorkout(
+          { equipmentProfile: primaryEquipment ?? NO_EQUIPMENT, injuries: injuries ?? [] },
+          new Date(),
+        ),
+      ),
+    [logbook, run, primaryEquipment, injuries],
+  );
 
   const addWorkoutExercise = useCallback(
     (exercise: Pick<Exercise, "slug" | "loadType">) => run(() => logbook.addWorkoutExercise(exercise)),

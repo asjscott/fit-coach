@@ -13,7 +13,7 @@ import type {
 import { describe, expect, it, vi } from "vitest";
 import { EXERCISES } from "./data/exercises";
 import { daysWorkout, equipmentChoices } from "./days-workout";
-import { builtInEquipment } from "./equipment";
+import { builtInEquipment, NO_EQUIPMENT } from "./equipment";
 import {
   createLogbook,
   finishTimes,
@@ -1438,7 +1438,7 @@ describe("Logbook: Planned Workouts", () => {
   it("starts a Recovery Workout: about 30 minutes of timed Sets, whatever the Length", async () => {
     const { logbook } = setup();
 
-    const workout = await logbook.startRecoveryWorkout(at("09:00"));
+    const workout = await logbook.startRecoveryWorkout({ equipmentProfile: NO_EQUIPMENT, injuries: [] }, at("09:00"));
 
     expect(workout.plannedWorkoutId).toBeUndefined();
     expect(
@@ -1451,6 +1451,17 @@ describe("Logbook: Planned Workouts", () => {
       ["worlds-greatest-stretch", "timed", [], { sets: 2, target: { unit: "seconds", seconds: 45 } }],
     ]);
     expect(logbook.nextSetDraft(workout.workoutExercises[0])).toEqual({ kind: "timed", seconds: 1200 });
+  });
+
+  it("starts a Recovery Workout with a hold the user's injuries rule out replaced", async () => {
+    const { logbook } = setup();
+    const options = { equipmentProfile: NO_EQUIPMENT, injuries: ["hip" as const] };
+    const { workoutExercises } = await logbook.startRecoveryWorkout(options, at("09:00"));
+    expect(workoutExercises[1]).toMatchObject({
+      slug: "standing-quad-stretch",
+      loadType: "timed",
+      planned: { sets: 2, target: { unit: "seconds", seconds: 30 } },
+    });
   });
 
   it("starts with no signal, with Previous Sets from Pending Workouts", async () => {
@@ -1938,7 +1949,10 @@ describe("the Planned Workout on the phone", () => {
   describe("over a Recovery Workout", () => {
     // Logs every Set the Recovery Workout plans, at its targets, and finishes
     async function finishRecovery(logbook: ReturnType<typeof setup>["logbook"]) {
-      const { workoutExercises } = await logbook.startRecoveryWorkout(at("09:00"));
+      const { workoutExercises } = await logbook.startRecoveryWorkout(
+        { equipmentProfile: NO_EQUIPMENT, injuries: [] },
+        at("09:00"),
+      );
       for (const { id, planned } of workoutExercises) {
         for (let i = 0; i < planned!.sets; i++) {
           await logbook.logSet(

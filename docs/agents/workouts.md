@@ -299,7 +299,9 @@ Schemas: packages/shared/src/planned-workouts.ts
   a Recovery Exercise nothing, and the planner never picks one. It links to no plan, POST /workouts doesn't rebuild
   after one, and on the phone it neither makes the plan stale nor sets `awaitingNextPlan`, so the same plan stays on
   offer. The walk is one Set (#109, `takesOneSet`): `restAfterSet` gives no rest after it, and the logging screen
-  offers "Next exercise" rather than a Set 2 (`takesAnotherSet`). Recovery Exercises have no Pattern and no strength ratio, so no Working Level. `recovery` also needs
+  offers "Next exercise" rather than a Set 2 (`takesAnotherSet`). Recovery Exercises have no Pattern and no strength ratio, so no Working Level. Every one
+  but the walk has an `area` and `holdSeconds` (per side, #197). `recoveryWorkoutFor` replaces a hold ruled out by
+  injuries or equipment, for the phone's start and the planner's fallback alike. `recovery`, `area` and the rest need
   `seed:exercises` re-run, as `ballistic` did.
 - **Jumps come only from the jump rule** (#105, `jumps.ts`): athletic, `UserProfile.includeJumps` on, the squat tested
   rather than estimated, and no knee or ankle injury (`avoidWith`). `possibleExercises` leaves them out, so the score
@@ -316,8 +318,7 @@ Schemas: packages/shared/src/planned-workouts.ts
   included, is left out when a primary Muscle with a budget would go over 1.3 × its budget, counting the Week Ledger
   (secondary credit included) and the Sets already planned. So the plan can end well short of Long, and the Day's
   Workout's `estimatedSeconds` is the honest time. When the cap leaves nothing at all, the plan is the Recovery Workout
-  (`whenCapped`), which credits nothing, its Exercises standing as themselves on every built-in choice; were it not to
-  fit the equipment, injuries or time, one Set of the best Exercise within the cap. A stored plan needs an Exercise. `pnpm --filter @fit/engines simulate` prints each Muscle's share of its
+  (`recoveryWorkoutFor`), which credits nothing and always has its walk. A stored plan needs an Exercise. `pnpm --filter @fit/engines simulate` prints each Muscle's share of its
   budget from primary credit and in total; `plan-outcomes.test.ts` pins the primary side.
 - **A heavy two-legged squat once a week for athletic and build_muscle** (`requiredSquat`, #100 and spec #119's
   review): back squat, else goblet squat, first in the Workout until the week has had 3 Sets of it, as both Goals score
