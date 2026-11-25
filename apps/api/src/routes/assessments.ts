@@ -3,7 +3,7 @@ import { LatestAssessment } from "@fit/shared";
 import { requireAuth, userIdOf } from "../auth";
 import { findLatestAssessment } from "../assessments";
 
-// The signed-in user's Assessments, worked out by POST /workouts when a pair of Assessment Workouts is complete
+// The signed-in user's Assessments, worked out by POST /workouts when a Workout completes one
 export const assessmentRoutes: FastifyPluginAsyncZod = async (app) => {
   app.addHook("preHandler", requireAuth);
 

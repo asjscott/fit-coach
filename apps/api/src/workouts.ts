@@ -21,7 +21,7 @@ export async function ensureWorkoutIndexes() {
   await workouts.createIndex({ clerkUserId: 1, startedAt: -1 });
   // Previous Sets: the newest Workout with a given Exercise
   await workouts.createIndex({ clerkUserId: 1, "workoutExercises.slug": 1, startedAt: -1 });
-  // Pairing Assessment Workouts: the user's As and Bs
+  // The user's Assessment Workouts
   await workouts.createIndex({ clerkUserId: 1, assessment: 1, startedAt: -1 });
 }
 

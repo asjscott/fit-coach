@@ -32,9 +32,10 @@ export type Set = z.infer<typeof Set>;
 // What the user enters for a Set; the Logbook adds loggedAt
 export type SetValues = Set extends infer S ? (S extends Set ? Omit<S, "loggedAt"> : never) : never;
 
-// Which of the two Assessment Workouts (GLOSSARY.md) a Workout is; absent on any other Workout
-export const AssessmentPart = z.enum(["A", "B"]);
-export type AssessmentPart = z.infer<typeof AssessmentPart>;
+// Which Assessment Workout (GLOSSARY.md) a Workout is; absent on any other Workout. "single" is the only one started
+// since #186: A and B are the old pair, still stored, pending or in progress
+export const AssessmentMarker = z.enum(["single", "A", "B"]);
+export type AssessmentMarker = z.infer<typeof AssessmentMarker>;
 
 // The Load Type is a snapshot, so the server can check Sets without knowing the library.
 // The slug is checked for shape only: the phone's library and the server's can drift apart
@@ -78,7 +79,7 @@ export const Workout = z
     id: z.uuid(),
     startedAt: z.iso.datetime(),
     endedAt: z.iso.datetime(),
-    assessment: AssessmentPart.optional(),
+    assessment: AssessmentMarker.optional(),
     plannedWorkoutId,
     workoutExercises: z.array(WorkoutExercise).min(1),
     // Set by the server once the upload has looked for them, and ignored when a phone sends them
@@ -133,7 +134,7 @@ export type PreviousSetsQuery = z.infer<typeof PreviousSetsQuery>;
 export const InProgressWorkout = z.object({
   id: z.uuid(),
   startedAt: z.iso.datetime(),
-  assessment: AssessmentPart.optional(),
+  assessment: AssessmentMarker.optional(),
   // An Assessment Workout's first suggested loads come from the profile it started with, not a later edit
   bodyProfile: BodyProfile.optional(),
   // A Manual Workout logged afterwards (#129): when it was done, on an earlier day in the last 7. startedAt stays when

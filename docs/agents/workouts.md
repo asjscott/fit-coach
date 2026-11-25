@@ -91,26 +91,28 @@ Schemas shared by app and API: packages/shared/src/workouts.ts
 
 ## Assessment (spec #29)
 
-Two Assessment Workouts (A: squat, hinge, core; B: push, pull) give the Assessment and the first Working Levels.
+One Assessment Workout (squat, push, hinge, pull, core; `assessment: "single"`) gives the Assessment and the first
+Working Levels. Before #186 there were two, A (squat, hinge, core) and B (push, pull): stored, pending and in-progress
+ones still parse, sync and pair, but none is started any more.
 
 ```text
 Today offer (packages/engines/src/assessment-offer.ts assessmentOffer, rendered by
-  apps/mobile/src/features/today/components/assessment-section.tsx): start A / start B (+ Redo A), each naming its
-  untested Patterns / unavailable (canAssess: A or B has no test) / "Results once synced" / Results link, each
-  dismissable (hooks/use-dismissed-offer.ts, keyed by offerKey). Tests from hooks/use-chosen-tests.ts
-Retake: Profile (features/user/views/profile-view.tsx) starts A, unless canAssess is false
+  apps/mobile/src/features/today/components/assessment-section.tsx): start, naming the untested
+  Patterns / unavailable (canAssess: no Pattern has a test) / "Results once synced" (pendingAssessment) / Results link,
+  each dismissable (hooks/use-dismissed-offer.ts, keyed by offerKey). Tests from hooks/use-chosen-tests.ts
+Retake: Profile (features/user/views/profile-view.tsx) starts it, unless canAssess is false
 Starting (features/assessment/hooks/use-start-assessment.ts → Logbook.startAssessment in packages/engines/src/logbook.ts)
   └─ chooseTests (packages/engines/src/assessment-tests.ts): ranked list per Pattern, first available and safe;
-     partTests (a part's tests in order, and its untested Patterns), canAssess, ASSESSMENT_PATTERNS, testedPatternOf,
+     assessmentTests (the tests in order, and the untested Patterns), canAssess, ASSESSMENT_PATTERNS, testedPatternOf,
      referencePatternOf (carry follows hinge)
 Logging (features/workouts/components/current-exercise-box.tsx renders Logbook.protocolState as a banner, worded by
   protocol-note.ts, and Logbook.nextSetDraft)
   └─ protocolState (packages/engines/src/assessment-protocol.ts): first load, next load, at-heaviest, one-set, done,
      load-limited; isRatedTest says which test Sets take an RPE (weighted only); testProgress (the next test, all done)
      for views/workout-view.tsx
-Server (apps/api/src/assessments.ts assessIfPaired, called by POST /workouts in routes/workouts.ts)
-  ├─ pairToAssess (packages/engines/src/assessment-pairing.ts): which A and B make the Assessment; Today's offer shares
-  │  its latestAssessmentWorkout
+Server (apps/api/src/assessments.ts assessIfComplete, called by POST /workouts in routes/workouts.ts)
+  ├─ workoutsToAssess (packages/engines/src/assessment-pairing.ts): the single Workout, or which A and B, make the
+  │  Assessment; Today's offer shares its latestAssessmentWorkout
   └─ assess (packages/engines/src/assess.ts): top Sets, maximums, Reference Strengths, estimates
        ├─ ratio table: packages/engines/src/strength-ratios.ts (one entry per library Exercise)
        ├─ Working Levels: packages/engines/src/working-levels.ts seedWorkingLevels; the shape is WorkingLevel in
@@ -143,15 +145,17 @@ Schemas: packages/shared/src/assessments.ts; Set.rpe and Workout.assessment in w
 - **Load-limited means different things in the two places.** The Logbook ends a test only when a Set past 12 reps
   short of RPE 9 was at the heaviest load the Equipment Profile has (or the loads aren't known); `assess` has no loads,
   so any last Set past 12 reps without a top Set is load-limited.
-- **Pairing**: a B pairs with the latest A that started before it, unless that A is already in an Assessment; an A that
-  arrives late pairs with the first B it's the latest A for. A pair is assessed once, so a retried upload recomputes
-  nothing.
-- **Pairing runs in one transaction** (so MongoDB must be a replica set, as Atlas is and `dev:local` makes it): the
-  Assessment and its Working Levels are stored together or not at all. A unique index on `workoutIds`,
-  with an entry for each Workout, makes an upload racing another retry the transaction and find the pair taken.
-- **POST /workouts pairs on the 200 retry too, and a pairing failure fails the upload (500)** though the Workout is
+- **An old A with no B** stays in History and counts for nothing: Today offers the single Assessment to a user without
+  an Assessment, whatever As they have.
+- **Pairing** (old A and B only): a B pairs with the latest A that started before it, unless that A is already in an
+  Assessment; an A that arrives late pairs with the first B it's the latest A for. A pair is assessed once, so a retried
+  upload recomputes nothing. A single one is assessed by itself, once.
+- **Working out an Assessment runs in one transaction** (so MongoDB must be a replica set, as Atlas is and `dev:local`
+  makes it): the Assessment and its Working Levels are stored together or not at all. A unique index on `workoutIds`,
+  with an entry for each Workout, makes an upload racing another retry the transaction and find its Workouts taken.
+- **POST /workouts assesses on the 200 retry too, and a failure there fails the upload (500)** though the Workout is
   stored: the phone keeps it Pending, and the retry works the Assessment out.
-- **POST /workouts is refused (403) before onboarding**, so pairing always has the weight and gender `assess` needs.
+- **POST /workouts is refused (403) before onboarding**, so `assess` always has the weight and gender it needs.
   The app never offers logging before then: `(app)/_layout.tsx` sends a user who isn't onboarded to onboarding.
 - **"Newest" is by the last Workout's `startedAt` (`Assessment.lastStartedAt`), not server time.** Every Assessment is stored, but
   only the newest sets the Working Levels (a retake keeps the last Block's progress, #137); `GET /assessments/latest`
@@ -164,8 +168,8 @@ Schemas: packages/shared/src/assessments.ts; Set.rpe and Workout.assessment in w
   is under the empty bar, the profile's own or an assumed 20 kg (#70). The stored Working Level isn't changed.
 - **A weighted Working Level is a load and a target reps** (#131), seeded at the heaviest load the user's Equipment
   Profiles have at or below what Epley gives for the bottom of the range with 2 in reserve, or left unrounded when none
-  is that light, so a barbell lift under the bar stays out (#70). Each level also has `movedBy` (the Assessment's B, or
-  null when the planner works one out), `misses`, and `outgrown`: a bodyweight seed above 15 reps is stored at 15 and
+  is that light, so a barbell lift under the bar stays out (#70). Each level also has `movedBy` (the Assessment's last
+  Workout, or null when the planner works one out), `misses`, and `outgrown`: a bodyweight seed above 15 reps is stored at 15 and
   outgrown, as is a timed seed above 60 seconds at 60 (`TIMED_TOP_SECONDS`), and the planner gives an outgrown Exercise's place to its `progression` when it can (`withoutOutgrown`).
 - **Levels stored before #131 are converted at startup** (`migrateWorkingLevels` in `apps/api/src/assessments.ts`,
   rule in `migrateWorkingLevel`): any level without `misses`. It's idempotent, and makes the user's current plan due.
@@ -290,7 +294,7 @@ progressWorkingLevel (packages/engines/src/progression.ts): pure. ProgressionInp
   its Workout Exercise, the library Exercise, the primary Equipment Profile, deloadWeek, plannedSets) → Progression
   ({ level, change }) or null when it doesn't move the level. judge() picks the Sets (the lowest load used), then RULES
   run in order and the first to decide wins: return a Progression, UNMOVED, or undefined to pass on
-API: progressWorkingLevels (apps/api/src/progression.ts), called by POST /workouts after assessIfPaired and before
+API: progressWorkingLevels (apps/api/src/progression.ts), called by POST /workouts after assessIfComplete and before
   the rebuild, on retries too. Writes each moved level to workingLevels, guarded on the movedBy it read
 Planner: the level's change goes on its Planned Exercise (withChanges in plan-workout.ts), an outgrown one worded as
   harder-variant (on the variant given instead) or held-at-top; daysWorkout keeps it only on the Exercise itself
@@ -339,8 +343,8 @@ Schema: ProgressionChange (packages/shared/src/progression.ts), on WorkingLevel.
   target. Alternative Exercises too. Jumps halve their contacts instead (jumps.ts).
 - **Progression**: `notInTheDeloadWeek` returns UNMOVED, so nothing moves and the run of Misses stays.
 - **Today**: `assessmentOffer` gives `{ kind: "retake", deloadWeek }` in the deload week (keyed by the week's Monday, so
-  a dismissal lasts the week); `AssessmentSection` shows "Retake the Assessment" with Start assessment A.
-- **The retake** (`assessIfPaired`): when the user had an Assessment before, `keptByRetake` (block.ts) names the
+  a dismissal lasts the week); `AssessmentSection` shows "Retake the Assessment" with Start assessment.
+- **The retake** (`assessIfComplete`): when the user had an Assessment before, `keptByRetake` (block.ts) names the
   Exercises it didn't test that have Sets logged in non-Assessment Workouts in the `BLOCK_WEEKS` weeks up to its first Workout.
   Their stored levels stay; every other level is replaced by the new Assessment's, or goes.
 
@@ -350,7 +354,7 @@ Schema: ProgressionChange (packages/shared/src/progression.ts), on WorkingLevel.
 findPrs (packages/engines/src/prs.ts): pure. A Workout's PRs, one per Exercise, against the user's earlier Workouts;
   prMeasure says what an Exercise's PR measures (e1rm, load for 8 reps, reps, seconds) or null (carry, Recovery,
   unknown slug)
-API: recordPrs (apps/api/src/workouts.ts), called by POST /workouts after assessIfPaired. Stored on the workout doc as
+API: recordPrs (apps/api/src/workouts.ts), called by POST /workouts after assessIfComplete. Stored on the workout doc as
   `prs`, returned on Workout.prs by POST and GET /workouts (routes/prs.test.ts)
 Phone
   ├─ Logbook.sync keeps an upload's PRs under logbook:unseen-prs; unseenPrs / markPrsSeen
@@ -407,8 +411,8 @@ it("stores an upload once however often it's retried", async () => {
   route test can pin; say so in the test rather than reading the collection.
 - **Fixtures** are in `apps/api/src/test/workouts.ts`: `workout(startedHoursAgo, exercises, extra)`, where `extra` can
   set `assessment` or `plannedWorkoutId`; Sets (`lifted`, `repsDone`, `held`); and `assessmentPair()`, a dumbbell
-  user's A and B. Times count back from now, so a Workout lands in the plan's current week; `assessmentPair` starts 50
-  and 26 hours ago.
+  user's old A and B (`assessmentWorkout(startedHoursAgo)` is the same tests in a single one). Times count back from
+  now, so a Workout lands in the plan's current week; `assessmentPair` starts 50 and 26 hours ago.
 - **Uploading and reading back what an upload did** is in `apps/api/src/test/uploads.ts`, for progression's route
   tests: `assessedUser(api)` (assessed two weeks ago, so later Workouts can sit in an earlier week and be rested),
   `at(startedHoursAgo, exercises, extra)`, `upload`, `workingLevels`, `currentPlan` and `plannedExercise`. Use these

@@ -1,30 +1,32 @@
-import type { Assessment, AssessmentPart, Workout } from "@fit/shared";
+import type { Assessment, AssessmentMarker, Workout } from "@fit/shared";
 
 // What pairing needs from an Assessment Workout
-export type AssessmentWorkoutRef = Pick<Workout, "id" | "startedAt"> & { assessment: AssessmentPart };
+export type AssessmentWorkoutRef = Pick<Workout, "id" | "startedAt"> & { assessment: AssessmentMarker };
 
-export type AssessmentPair = Pick<Assessment, "workoutIds">;
+export type AssessmentWorkouts = Pick<Assessment, "workoutIds">;
 
-// The latest of the Workouts that is Assessment Workout `part`, and started before `before` when given
+// The latest of the Workouts that is this Assessment Workout, and started before `before` when given
 export function latestAssessmentWorkout<W extends Pick<Workout, "startedAt" | "assessment">>(
   workouts: readonly W[],
-  part: AssessmentPart,
+  marker: AssessmentMarker,
   before?: string,
 ): W | undefined {
   const time = (w: W) => Date.parse(w.startedAt);
   return workouts
-    .filter((w) => w.assessment === part && (before === undefined || time(w) < Date.parse(before)))
+    .filter((w) => w.assessment === marker && (before === undefined || time(w) < Date.parse(before)))
     .reduce<W | undefined>((latest, w) => (latest && time(latest) >= time(w) ? latest : w), undefined);
 }
 
-// The pair `workout` completes now it's on the server, or null. A B pairs with the latest A that started before it, so
-// an A that synced after its B completes the pair too, and a B whose A was deleted pairs with none
-export function pairToAssess(
+// The Workouts of the Assessment `workout` completes now it's on the server, or null. A single Assessment Workout is
+// one by itself. Of the old pairs, a B pairs with the latest A that started before it, so an A that synced after its B
+// completes the pair too, and a B whose A was deleted pairs with none
+export function workoutsToAssess(
   workout: AssessmentWorkoutRef,
-  { workouts, assessments }: { workouts: AssessmentWorkoutRef[]; assessments: AssessmentPair[] },
-): AssessmentPair | null {
+  { workouts, assessments }: { workouts: AssessmentWorkoutRef[]; assessments: AssessmentWorkouts[] },
+): AssessmentWorkouts | null {
   // Each Workout is in at most one Assessment, so a retried upload recomputes nothing
   const assessed = new Set(assessments.flatMap(({ workoutIds }) => workoutIds));
+  if (workout.assessment === "single") return assessed.has(workout.id) ? null : { workoutIds: [workout.id] };
   const latestABefore = (b: AssessmentWorkoutRef) => latestAssessmentWorkout(workouts, "A", b.startedAt);
   const pairs = (a: AssessmentWorkoutRef | undefined, b: AssessmentWorkoutRef) =>
     a !== undefined && latestABefore(b)?.id === a.id && !assessed.has(a.id) && !assessed.has(b.id);

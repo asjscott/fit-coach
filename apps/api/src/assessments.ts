@@ -4,16 +4,23 @@ import {
   BLOCK_WEEKS,
   keptByRetake,
   migrateWorkingLevel,
-  pairToAssess,
+  workoutsToAssess,
   type LegacyWorkingLevel,
 } from "@fit/engines";
 import { MongoServerError, type ClientSession } from "mongodb";
-import { Assessment, LatestAssessment, WorkingLevel, type WorkingLevelMover, type Workout } from "@fit/shared";
+import {
+  Assessment,
+  AssessmentMarker,
+  LatestAssessment,
+  WorkingLevel,
+  type WorkingLevelMover,
+  type Workout,
+} from "@fit/shared";
 import { client, db } from "./db";
 import { equipmentProfilesOf, findUser, type OnboardedUser } from "./users";
 import { toWorkout, workouts } from "./workouts";
 
-// One document per Assessment, a snapshot: deleting either Assessment Workout leaves it be
+// One document per Assessment, a snapshot: deleting an Assessment Workout leaves it be
 type AssessmentDoc = Omit<Assessment, "createdAt" | "lastStartedAt"> & {
   clerkUserId: string;
   createdAt: Date;
@@ -42,23 +49,24 @@ async function isRetake(clerkUserId: string, id: string, session: ClientSession)
   return (await assessments.countDocuments({ clerkUserId, id: { $ne: id } }, { session, limit: 1 })) > 0;
 }
 
-// For every uploaded Workout, retries included: stores the Assessment and Working Levels of a pair it completes. One
-// transaction, so a racing upload retries and finds the pair taken, and a failure stores nothing
-export async function assessIfPaired(clerkUserId: string, workout: Workout, user: OnboardedUser) {
-  const { assessment: part } = workout;
-  if (!part) return;
+// For every uploaded Workout, retries included: stores the Assessment it completes, by itself or with the other of an
+// old A and B, and its Working Levels. One transaction, so a racing upload retries and finds its Workouts taken, and a
+// failure stores nothing
+export async function assessIfComplete(clerkUserId: string, workout: Workout, user: OnboardedUser) {
+  const { assessment: marker } = workout;
+  if (!marker) return;
   await client.withSession((session) =>
     session.withTransaction(async () => {
       // One at a time: a transaction's session can't run operations in parallel
       const assessmentWorkouts = await workouts
         .find(
-          { clerkUserId, assessment: { $in: ["A", "B"] } },
+          { clerkUserId, assessment: { $in: AssessmentMarker.options } },
           { projection: { id: 1, startedAt: 1, assessment: 1 }, session },
         )
         .toArray();
       const assessed = await assessments.find({ clerkUserId }, { projection: { workoutIds: 1 }, session }).toArray();
-      const pair = pairToAssess(
-        { id: workout.id, startedAt: workout.startedAt, assessment: part },
+      const complete = workoutsToAssess(
+        { id: workout.id, startedAt: workout.startedAt, assessment: marker },
         {
           workouts: assessmentWorkouts.flatMap(({ id, startedAt, assessment }) =>
             assessment ? [{ id, startedAt: startedAt.toISOString(), assessment }] : [],
@@ -66,19 +74,18 @@ export async function assessIfPaired(clerkUserId: string, workout: Workout, user
           assessments: assessed,
         },
       );
-      if (!pair) return;
-      // The uploaded Workout is one of the pair, so only the other is read
-      const load = async (id: string) => {
-        if (id === workout.id) return workout;
-        const doc = await workouts.findOne({ clerkUserId, id }, { session });
-        return doc && toWorkout(doc);
-      };
-      const [aId, bId] = pair.workoutIds;
-      const a = aId && (await load(aId));
-      const b = bId && (await load(bId));
-      if (!a || !b) return;
+      if (!complete) return;
+      const loaded: Workout[] = [];
+      for (const id of complete.workoutIds) {
+        // The uploaded Workout is one of them, so only an old pair's other is read
+        const doc = id === workout.id ? null : await workouts.findOne({ clerkUserId, id }, { session });
+        if (id !== workout.id && !doc) return;
+        loaded.push(doc ? toWorkout(doc) : workout);
+      }
+      const [first] = loaded;
+      if (!first) return;
 
-      const result = assess(a, b, user.bodyProfile, user.equipmentProfiles);
+      const result = assess(loaded, user.bodyProfile, user.equipmentProfiles);
       const id = randomUUID();
       const lastStartedAt = new Date(result.assessment.lastStartedAt);
       await assessments.insertOne(
@@ -100,8 +107,8 @@ export async function assessIfPaired(clerkUserId: string, workout: Workout, user
                 {
                   clerkUserId,
                   startedAt: {
-                    $gte: new Date(Date.parse(a.startedAt) - RETAKE_LOOKBACK_MS),
-                    $lt: new Date(a.startedAt),
+                    $gte: new Date(Date.parse(first.startedAt) - RETAKE_LOOKBACK_MS),
+                    $lt: new Date(first.startedAt),
                   },
                 },
                 { projection: { startedAt: 1, assessment: 1, workoutExercises: 1 }, session },
@@ -109,7 +116,7 @@ export async function assessIfPaired(clerkUserId: string, workout: Workout, user
               .toArray()
               .then((docs) => docs.map((doc) => ({ ...doc, startedAt: doc.startedAt.toISOString() }))),
             assessment: result.assessment,
-            firstStartedAt: a.startedAt,
+            firstStartedAt: first.startedAt,
             timeZone: user.timeZone,
           })
         : new Set<string>();

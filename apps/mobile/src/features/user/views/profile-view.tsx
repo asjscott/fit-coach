@@ -119,8 +119,8 @@ export default function ProfileView() {
               label="Retake assessment"
               action="secondary"
               icon="dumbbell"
-              loading={assessment.starting === "A"}
-              onPress={() => assessment.start("A")}
+              loading={assessment.starting}
+              onPress={assessment.start}
             />
           )}
         </Section>

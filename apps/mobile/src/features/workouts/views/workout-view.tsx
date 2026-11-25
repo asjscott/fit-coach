@@ -67,11 +67,7 @@ function InProgress({ workout }: { workout: InProgressWorkout }) {
       <NavStack.Screen
         options={{
           headerTitle: () => (
-            <WorkoutTitle
-              title={workout.assessment ? `Assessment ${workout.assessment}` : "Workout"}
-              startedAt={workout.startedAt}
-              pastStart={workout.pastStart}
-            />
+            <WorkoutTitle title={workoutTitle(workout)} startedAt={workout.startedAt} pastStart={workout.pastStart} />
           ),
           headerRight: () => (
             <OverflowMenu
@@ -176,7 +172,11 @@ function InProgress({ workout }: { workout: InProgressWorkout }) {
   );
 }
 
-// "Workout" (or "Assessment A") over its start time, in the header, or the earlier day it's logged for (#129)
+// An old A or B in progress still says which
+const workoutTitle = ({ assessment }: InProgressWorkout) =>
+  assessment === undefined ? "Workout" : assessment === "single" ? "Assessment" : `Assessment ${assessment}`;
+
+// "Workout" (or "Assessment") over its start time, in the header, or the earlier day it's logged for (#129)
 function WorkoutTitle({ title, startedAt, pastStart }: { title: string; startedAt: string; pastStart?: string }) {
   return (
     <View style={styles.title}>

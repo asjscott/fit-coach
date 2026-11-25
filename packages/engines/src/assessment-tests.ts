@@ -1,19 +1,10 @@
-import {
-  AssessmentPart,
-  TestedPattern,
-  type EquipmentProfile,
-  type Exercise,
-  type InjuryTag,
-  type Pattern,
-} from "@fit/shared";
+import { TestedPattern, type EquipmentProfile, type Exercise, type InjuryTag, type Pattern } from "@fit/shared";
 import { exerciseBySlug } from "./data/exercises";
 import { isAvailable, isSafeFor } from "./equipment";
 
-// The Patterns each Assessment Workout tests, in the order its tests are done
-export const ASSESSMENT_PATTERNS: Record<AssessmentPart, TestedPattern[]> = {
-  A: ["squat", "hinge", "core"],
-  B: ["push", "pull"],
-};
+// The Patterns the Assessment Workout tests, in the order its tests are done: each follows one for the other half of
+// the body
+export const ASSESSMENT_PATTERNS: TestedPattern[] = ["squat", "push", "hinge", "pull", "core"];
 
 // Each Pattern's candidate tests, best first: two-sided weighted lifts, then the rest, ending with the one needing
 // the least equipment: nothing at all, but a bar or a table for pull. Band Exercises are never tests
@@ -53,15 +44,11 @@ export function chooseTests(equipmentProfile: Pick<EquipmentProfile, "tags">, in
   return Object.fromEntries(TestedPattern.options.map((pattern) => [pattern, choose(pattern)])) as ChosenTests;
 }
 
-// Assessment Workout A or B's tests in order, and its Patterns with no test, which the Assessment estimates
-export function partTests(tests: ChosenTests, part: AssessmentPart) {
-  const patterns = ASSESSMENT_PATTERNS[part];
-  return {
-    exercises: patterns.flatMap((pattern) => tests[pattern] ?? []),
-    untested: patterns.filter((pattern) => !tests[pattern]),
-  };
-}
+// The Assessment Workout's tests in order, and the Patterns with no test, which the Assessment estimates
+export const assessmentTests = (tests: ChosenTests) => ({
+  exercises: ASSESSMENT_PATTERNS.flatMap((pattern) => tests[pattern] ?? []),
+  untested: ASSESSMENT_PATTERNS.filter((pattern) => !tests[pattern]),
+});
 
-// Whether both Assessment Workouts have a test to do: with none for A or for B there would never be an Assessment
-export const canAssess = (tests: ChosenTests) =>
-  AssessmentPart.options.every((part) => partTests(tests, part).exercises.length > 0);
+// Whether any Pattern has a test to do: one is enough, as the others are estimated
+export const canAssess = (tests: ChosenTests) => assessmentTests(tests).exercises.length > 0;

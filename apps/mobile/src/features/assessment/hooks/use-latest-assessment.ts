@@ -6,7 +6,7 @@ import { errorMessage } from "@/utils/error-message";
 
 // The newest Assessment and its Working Levels from GET /assessments/latest: undefined until it arrives (or when it
 // can't), null when there's none yet. The phone keeps no copy. Reloads on every visit, and when a Pending Workout
-// uploads, since that may be the B that completes an Assessment
+// uploads, since that may be the one that completes an Assessment
 export function useLatestAssessment() {
   const api = useApi();
   const [latest, setLatest] = useState<LatestAssessment | undefined>(undefined);
