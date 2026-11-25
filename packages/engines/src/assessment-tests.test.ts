@@ -1,6 +1,6 @@
 import { PRESETS, type EquipmentTag, type Pattern } from "@fit/shared";
 import { describe, expect, it } from "vitest";
-import { canAssess, chooseTests, partTests, referencePatternOf } from "./assessment-tests";
+import { assessmentTests, canAssess, chooseTests, referencePatternOf } from "./assessment-tests";
 import { EXERCISES } from "./data/exercises";
 
 const preset = (name: string) => {
@@ -98,29 +98,45 @@ describe("chooseTests", () => {
   });
 });
 
-describe("partTests", () => {
-  it("gives B's tests in order and names a Pattern with no safe test as untested", () => {
+describe("assessmentTests", () => {
+  it("tests squat, push, hinge, pull and core in that order", () => {
+    const { exercises, untested } = assessmentTests(chooseTests({ tags: ["dumbbells"] }, []));
+    expect(exercises.map((exercise) => exercise.slug)).toEqual([
+      "goblet-squat",
+      "dumbbell-floor-press",
+      "dumbbell-romanian-deadlift",
+      "one-arm-dumbbell-row",
+      "plank",
+    ]);
+    expect(untested).toEqual([]);
+  });
+
+  it("names a Pattern with no safe test as untested", () => {
     // Every push on the list, push-up included, is flagged for a wrist injury
-    const { exercises, untested } = partTests(chooseTests({ tags: ["table"] }, ["wrist"]), "B");
-    expect(exercises.map((exercise) => exercise.slug)).toEqual(["inverted-row"]);
+    const { exercises, untested } = assessmentTests(chooseTests({ tags: ["table"] }, ["wrist"]));
+    expect(exercises.map((exercise) => exercise.slug)).toEqual([
+      "bodyweight-squat",
+      "single-leg-glute-bridge",
+      "inverted-row",
+      "plank",
+    ]);
     expect(untested).toEqual(["push"]);
   });
 });
 
 describe("canAssess", () => {
-  const bodyweight = chooseTests({ tags: ["table"] }, []);
+  const none = { squat: null, push: null, hinge: null, pull: null, core: null };
 
-  it("is false with no equipment and a wrist injury: B has neither a pull nor a safe push", () => {
-    expect(canAssess(chooseTests({ tags: [] }, ["wrist"]))).toBe(false);
+  it("is true with no equipment and a wrist injury, though push and pull have no test", () => {
+    expect(canAssess(chooseTests({ tags: [] }, ["wrist"]))).toBe(true);
   });
 
-  it("is true while A and B each have a test, though a Pattern has none", () => {
-    expect(canAssess({ ...bodyweight, push: null })).toBe(true);
+  it("is true while any one Pattern has a test", () => {
+    expect(canAssess({ ...none, core: chooseTests({ tags: [] }, []).core })).toBe(true);
   });
 
-  it("is false when A or B has no test at all", () => {
-    expect(canAssess({ ...bodyweight, push: null, pull: null })).toBe(false);
-    expect(canAssess({ ...bodyweight, squat: null, hinge: null, core: null })).toBe(false);
+  it("is false when no Pattern has one", () => {
+    expect(canAssess(none)).toBe(false);
   });
 });
 

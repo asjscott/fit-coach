@@ -31,7 +31,22 @@ export function workout(
   };
 }
 
-// A dumbbells-at-home user's pair of Assessment Workouts, A then B: each weighted test works up to RPE 9
+// A dumbbells-at-home user's single Assessment Workout, its tests as assessmentPair's
+export function assessmentWorkout(startedHoursAgo = 26): Workout {
+  return workout(
+    startedHoursAgo,
+    [
+      { slug: "goblet-squat", sets: [lifted(10, 5, 7), lifted(12, 5, 8), lifted(14, 5, 9)] },
+      { slug: "dumbbell-floor-press", sets: [lifted(10, 5, 8), lifted(12, 5, 9)] },
+      { slug: "dumbbell-romanian-deadlift", sets: [lifted(14, 5, 7), lifted(16, 5, 8), lifted(20, 5, 9)] },
+      { slug: "one-arm-dumbbell-row", sets: [lifted(14, 5, 8), lifted(16, 5, 9)] },
+      { slug: "plank", sets: [held(90)] },
+    ],
+    { assessment: "single" },
+  );
+}
+
+// A dumbbells-at-home user's old pair of Assessment Workouts, A then B: each weighted test works up to RPE 9
 export function assessmentPair(): [Workout, Workout] {
   const a = workout(
     50,

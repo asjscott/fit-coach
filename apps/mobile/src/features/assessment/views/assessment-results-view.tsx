@@ -1,4 +1,4 @@
-import { ASSESSMENT_PATTERNS, pendingB, withPending, workingLevelSections } from "@fit/engines";
+import { ASSESSMENT_PATTERNS, pendingAssessment, withPending, workingLevelSections } from "@fit/engines";
 import type { AssessmentTest, TestedPattern, WeightUnit, WorkingLevel } from "@fit/shared";
 import { StyleSheet, View } from "react-native";
 import { LoadingButton } from "@/components/loading-button";
@@ -16,9 +16,6 @@ import { SyncingNote } from "../components/syncing-note";
 import { useLatestAssessment } from "../hooks/use-latest-assessment";
 import { workingLevelLabel } from "../working-level-label";
 
-// In the order the tests were done: A's, then B's
-const PATTERN_ORDER = [...ASSESSMENT_PATTERNS.A, ...ASSESSMENT_PATTERNS.B];
-
 const ESTIMATED = "Estimated from your other results";
 
 // What a bodyweight or timed test's one Set measured
@@ -34,14 +31,14 @@ function maximumLabel({ topSet, maximum, loadLimited }: AssessmentTest, unit: We
     : { value: weight, caption: "Estimated maximum" };
 }
 
-// "Results once synced" while a B is Pending, since the server works out the Assessment once it has both
+// "Results once synced" while an Assessment Workout is Pending, since the server works out the Assessment
 export default function AssessmentResultsView() {
   const { latest, error, refresh } = useLatestAssessment();
   const { pending } = useLogbook();
   const primary = usePrimaryEquipmentProfile();
   const injuries = useCurrentUser().user?.profile.injuries;
 
-  if (pendingB(withPending(pending, null))) {
+  if (pendingAssessment(withPending(pending, null))) {
     return (
       <Screen edges={["bottom"]}>
         <SyncingNote />
@@ -61,7 +58,7 @@ export default function AssessmentResultsView() {
   if (latest === null) {
     return (
       <Screen edges={["bottom"]}>
-        <Text color="muted">Results show once both Assessment Workouts have reached the server.</Text>
+        <Text color="muted">Results show once your Assessment Workout has reached the server.</Text>
       </Screen>
     );
   }
@@ -71,7 +68,7 @@ export default function AssessmentResultsView() {
   return (
     <Screen scroll="screen" edges={["bottom"]}>
       <SectionLabel style={styles.sectionLabel}>Tests</SectionLabel>
-      {PATTERN_ORDER.map((pattern) => {
+      {ASSESSMENT_PATTERNS.map((pattern) => {
         const result = patterns[pattern];
         if (!result) return null;
         return result.estimated ? (

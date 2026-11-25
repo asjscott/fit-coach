@@ -2,7 +2,7 @@ import type { FastifyPluginAsyncZod } from "fastify-type-provider-zod";
 import { isRecoveryWorkout } from "@fit/engines";
 import { ErrorResponse, PreviousSets, PreviousSetsQuery, Workout, WorkoutsQuery, WorkoutUpload } from "@fit/shared";
 import { z } from "zod";
-import { assessIfPaired } from "../assessments";
+import { assessIfComplete } from "../assessments";
 import { requireAuth, userIdOf } from "../auth";
 import { finishPlannedWorkout, rebuildAfterDelete, rebuildAfterUpload } from "../planned-workouts";
 import { progressWorkingLevels } from "../progression";
@@ -43,16 +43,16 @@ export const workoutRoutes: FastifyPluginAsyncZod = async (app) => {
       const { workout, created } = await createWorkout(clerkUserId, req.body);
       const stored = toWorkout(workout);
       // A failure fails the upload, though the Workout is stored: the phone keeps it Pending, and its retry (the 200
-      // case) pairs it again, so the Assessment isn't lost
-      await assessIfPaired(clerkUserId, stored, user);
-      // Progression (#132): after pairing, so a retake's levels are the ones moved, and before the rebuild, so the
+      // case) tries again, so the Assessment isn't lost
+      await assessIfComplete(clerkUserId, stored, user);
+      // Progression (#132): after the Assessment, so a retake's levels are the ones moved, and before the rebuild, so the
       // next plan uses them. A failure fails the upload in the same way, and the retry moves what it didn't
       await progressWorkingLevels(clerkUserId, stored, user);
       // PRs (#130): found once and stored against the Workout, so the 200 retry answers with the same ones
       stored.prs = await recordPrs(clerkUserId, workout);
       // Before the rebuild, which would otherwise mark its plan replaced
       if (stored.plannedWorkoutId) await finishPlannedWorkout(clerkUserId, stored.plannedWorkoutId);
-      // After pairing, so a retake's plan uses the new Working Levels. A failure fails the upload in the same way.
+      // After the Assessment, so a retake's plan uses the new Working Levels. A failure fails the upload in the same way.
       // A Recovery Workout isn't training, so the plan, and its id, stay as they are
       if (!isRecoveryWorkout(stored)) {
         await rebuildAfterUpload(clerkUserId, user, { created, uploadedAt: workout.uploadedAt });

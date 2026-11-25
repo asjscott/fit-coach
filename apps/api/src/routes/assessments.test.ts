@@ -1,8 +1,8 @@
-import type { LatestAssessment, PlannedWorkout } from "@fit/shared";
+import type { LatestAssessment, PlannedWorkout, Workout } from "@fit/shared";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { type TestUser, useRouteTestApi } from "../test/route-test-api";
 import { at, upload } from "../test/uploads";
-import { assessmentPair, lifted } from "../test/workouts";
+import { assessmentPair, assessmentWorkout, lifted } from "../test/workouts";
 
 const api = useRouteTestApi();
 
@@ -43,6 +43,78 @@ describe("pairing Assessment Workouts (#185)", () => {
     for (const finished of [a, b]) expect((await user.post("/workouts", finished)).statusCode).toBe(200);
 
     expect(await latestAssessment(user)).toEqual(first);
+  });
+});
+
+describe("the single Assessment Workout (#186)", () => {
+  it("stores its Assessment and Working Levels once, however many uploads race and retry", async () => {
+    const user = await api.signIn();
+    const single = assessmentWorkout();
+    const racing = await Promise.all([single, single, single].map((finished) => user.post("/workouts", finished)));
+    expect(racing.every(({ statusCode }) => statusCode === 200 || statusCode === 201)).toBe(true);
+    const first = await latestAssessment(user);
+    expect(first?.assessment).toMatchObject({ workoutIds: [single.id], lastStartedAt: single.startedAt });
+    expect(Object.values(first!.assessment.patterns).map(({ estimated }) => estimated)).toEqual(Array(5).fill(false));
+    // 14 kg × 5 at RPE 9 seeds 12 kg × 8
+    expect(levelOf(first, "goblet-squat")).toMatchObject({ kg: 12, reps: 8, movedBy: { workoutId: single.id } });
+
+    expect((await user.post("/workouts", single)).statusCode).toBe(200);
+
+    expect(await latestAssessment(user)).toEqual(first);
+    expect((await user.post("/planned-workouts/current")).body).not.toBeNull();
+  });
+
+  it("estimates a Pattern it didn't test", async () => {
+    const user = await api.signIn();
+    const single = assessmentWorkout();
+    single.workoutExercises = single.workoutExercises.filter(({ slug }) => slug !== "dumbbell-floor-press");
+    await upload(user, single);
+
+    expect((await latestAssessment(user))?.assessment.patterns).toMatchObject({
+      squat: { estimated: false },
+      push: { estimated: true },
+    });
+  });
+
+  it("leaves an A with no B in History", async () => {
+    const user = await api.signIn();
+    const [a] = assessmentPair();
+    await upload(user, a);
+    const single = assessmentWorkout();
+    await upload(user, single);
+
+    expect((await latestAssessment(user))?.assessment.workoutIds).toEqual([single.id]);
+    const history = (await user.get("/workouts")).body as Workout[];
+    expect(history.map(({ id, assessment }) => [id, assessment])).toEqual([
+      [single.id, "single"],
+      [a.id, "A"],
+    ]);
+  });
+
+  it("keeps the progress of the Block before the retake started, though not of weeks before that", async () => {
+    const user = await api.signIn();
+    await upload(user, assessmentWorkout());
+    vi.setSystemTime(new Date(WEEK_2));
+    const slug = "dumbbell-lateral-raise";
+    const seeded = levelOf(await latestAssessment(user), slug);
+    if (seeded?.unit !== "kg") throw new Error("The lateral raise has no load");
+    await upload(user, at(3, [{ slug, sets: [lifted(seeded.kg, seeded.reps), lifted(seeded.kg, seeded.reps)] }]));
+    const progressed = levelOf(await latestAssessment(user), slug);
+    expect(progressed).toMatchObject({ reps: seeded.reps + 1 });
+
+    vi.setSystemTime(new Date(DELOAD_WEEK));
+    const retake = assessmentWorkout(3);
+    await upload(user, retake);
+    const retaken = await latestAssessment(user);
+    expect(retaken?.assessment.workoutIds).toEqual([retake.id]);
+    expect(levelOf(retaken, slug)).toEqual(progressed);
+    expect(levelOf(retaken, "goblet-squat")).toMatchObject({ movedBy: { workoutId: retake.id } });
+
+    // Five weeks on, the raise was last trained before the weeks this retake looks back over
+    vi.setSystemTime(new Date("2027-01-13T15:00:00Z"));
+    const later = assessmentWorkout(3);
+    await upload(user, later);
+    expect(levelOf(await latestAssessment(user), slug)).toMatchObject({ movedBy: { workoutId: later.id } });
   });
 });
 
@@ -113,6 +185,8 @@ async function latestAssessment(user: TestUser) {
 async function storeAsBefore185() {
   const { assessments } = await import("../assessments");
   await assessments.dropIndexes();
+  // Other tests' single ones, which #186 brought and the old indexes don't take
+  await assessments.deleteMany({ workoutIds: { $size: 1 } });
   await assessments.updateMany({ workoutIds: { $exists: true } }, [
     {
       $set: {

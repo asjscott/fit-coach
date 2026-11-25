@@ -98,7 +98,7 @@ const CORE_REPS = 10;
 
 const isBandTag = (tag: EquipmentTag): tag is BandTag => (BAND_TAGS as readonly EquipmentTag[]).includes(tag);
 
-// What the Working Levels are seeded from. movedBy is the Assessment's B, or absent when the planner works a level out
+// What the Working Levels are seeded from. movedBy is the Assessment's last Workout, or absent when the planner works a level out
 // for a profile added since
 type Seed = {
   referenceStrengths: Partial<Record<TestedPattern, number>>;
@@ -238,7 +238,7 @@ const LEGACY_REPS = 8;
 // A stored Working Level in the new shape: a weighted one at the heaviest load the profiles have at or below its kg,
 // at the bottom of its range; band reps clamped into 10–15; bodyweight reps capped at 15 and seconds at 60, outgrown
 // above them. movedBy
-// is the Assessment's B that set it
+// is the Assessment's last Workout, which set it
 export function migrateWorkingLevel(
   legacy: LegacyWorkingLevel,
   equipmentProfiles: readonly ProfileWithLoads[],
