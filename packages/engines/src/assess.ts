@@ -9,7 +9,7 @@ import {
   type Workout,
 } from "@fit/shared";
 import { isLoadLimited, isTopSet, TOP_SET_RPE } from "./assessment-protocol";
-import { ASSESSMENT_PATTERNS, testedPatternOf } from "./assessment-tests";
+import { testedPatternOf } from "./assessment-tests";
 import { e1rm, epley, MAX_E1RM_REPS } from "./e1rm";
 import type { ProfileWithLoads } from "./equipment";
 import { KG_PATTERNS, referenceStrength, STRENGTH_RATIOS, typicalReferenceStrength } from "./strength-ratios";
@@ -68,23 +68,21 @@ function estimateReferenceStrength(
   return typicalReferenceStrength(bodyProfile, pattern) * share * ESTIMATE_SHARE;
 }
 
-// Turns a pair of Assessment Workouts into the Assessment and the Working Levels it sets. Each Workout is read only
-// for the Patterns it tests. The Working Levels cover every Exercise available in any of the user's Equipment Profiles
+// Turns an Assessment's Workouts, in the order they started (one, or an old A and B), into the Assessment and the
+// Working Levels it sets. The Working Levels cover every Exercise available in any of the user's Equipment Profiles
 export function assess(
-  a: Workout,
-  b: Workout,
+  workouts: readonly Workout[],
   profile: BodyProfile,
   equipmentProfiles: ProfileWithLoads[],
 ): { assessment: Omit<Assessment, "id" | "createdAt">; workingLevels: WorkingLevel[] } {
+  const last = workouts.at(-1);
+  if (!last) throw new Error("An Assessment needs a Workout");
   const tests: Partial<Record<TestedPattern, AssessmentTest>> = {};
-  for (const [workout, part] of [
-    [a, "A"],
-    [b, "B"],
-  ] as const) {
+  for (const workout of workouts) {
     for (const { slug, sets } of workout.workoutExercises) {
       const pattern = testedPatternOf(slug);
       const top = topSetOf(sets);
-      if (!pattern || !ASSESSMENT_PATTERNS[part].includes(pattern) || !top) continue;
+      if (!pattern || !top) continue;
       const { topSet, loadLimited } = top;
       const maximum = maximumOf(slug, topSet, profile.weightKg);
       tests[pattern] = {
@@ -108,8 +106,8 @@ export function assess(
   );
   return {
     assessment: {
-      workoutIds: [a.id, b.id],
-      lastStartedAt: b.startedAt,
+      workoutIds: workouts.map(({ id }) => id),
+      lastStartedAt: last.startedAt,
       bodyWeightKg: profile.weightKg,
       patterns,
     },
@@ -117,7 +115,7 @@ export function assess(
       referenceStrengths,
       bodyWeightKg: profile.weightKg,
       equipmentProfiles,
-      movedBy: { workoutId: b.id, startedAt: b.startedAt },
+      movedBy: { workoutId: last.id, startedAt: last.startedAt },
     }),
   };
 }

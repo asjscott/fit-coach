@@ -139,11 +139,11 @@ _Avoid_: Off day, recovery day
 ### Assessment
 
 **Assessment Workout**:
-One of the two Workouts the Coach prescribes to measure the user's starting strength: A tests squat, hinge and core, B tests push and pull.
+The Workout the Coach prescribes to measure the user's starting strength: it tests squat, push, hinge, pull and core, in that order. Before, there were two: A (squat, hinge and core) and B (push and pull). An old A and B still make one Assessment; an A alone makes none.
 _Avoid_: Test session, baseline session, test workout
 
 **Assessment**:
-The results of one completed pair of Assessment Workouts: for each tested Pattern, the Exercise used, its top Set, the maximum estimated from it and the Reference Strength that follows. A test is load-limited when the heaviest load available couldn't reach RPE 9, so its maximum is only a lower bound. A bodyweight or timed test is one Set of as many reps or seconds as the user can do. A Pattern is untested when no test was safe for the user's injuries or its weighted test stopped short of RPE 9; its Reference Strength is then estimated from the other Patterns. The newest Assessment is the one that counts.
+The results of one Assessment Workout, or of an old A and B: for each tested Pattern, the Exercise used, its top Set, the maximum estimated from it and the Reference Strength that follows. A test is load-limited when the heaviest load available couldn't reach RPE 9, so its maximum is only a lower bound. A bodyweight or timed test is one Set of as many reps or seconds as the user can do. A Pattern is untested when no test was safe for the user's injuries or its weighted test stopped short of RPE 9; its Reference Strength is then estimated from the other Patterns. The newest Assessment is the one that counts.
 _Avoid_: Baseline, test results, fitness test
 
 **Working Level**:

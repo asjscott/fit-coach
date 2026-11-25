@@ -74,8 +74,8 @@ describe("Workout", () => {
     expect(Workout.safeParse(workout([rated])).success).toBe(false);
   });
 
-  it("keeps which Assessment Workout it is", () => {
-    expect(Workout.parse({ ...workout([gobletSquat]), assessment: "A" }).assessment).toBe("A");
+  it.each(["single", "A", "B"])("keeps that it's the Assessment Workout %s", (assessment) => {
+    expect(Workout.parse({ ...workout([gobletSquat]), assessment }).assessment).toBe(assessment);
   });
 
   it("keeps the Planned Workout it was started from", () => {
@@ -91,7 +91,7 @@ describe("Workout", () => {
     expect(Workout.safeParse({ ...workout([gobletSquat]), plannedWorkoutId: "plan-1" }).success).toBe(false);
   });
 
-  it("rejects an Assessment Workout other than A or B", () => {
+  it("rejects any other Assessment Workout", () => {
     expect(Workout.safeParse({ ...workout([gobletSquat]), assessment: "C" }).success).toBe(false);
   });
 });

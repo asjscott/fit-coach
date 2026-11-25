@@ -6,7 +6,6 @@ import {
   Pr,
   Workout,
   WorkoutUpload,
-  type AssessmentPart,
   type BodyProfile,
   type Exercise,
   type InProgressWorkoutExercise,
@@ -27,7 +26,7 @@ import {
   type ProtocolState,
   type TestProgress,
 } from "./assessment-protocol";
-import { canAssess, chooseTests, partTests } from "./assessment-tests";
+import { assessmentTests, canAssess, chooseTests } from "./assessment-tests";
 import { exerciseBySlug } from "./data/exercises";
 import {
   exerciseLoadsByEquipmentKg,
@@ -434,16 +433,14 @@ export function createLogbook({
       });
     },
 
-    // Starts Assessment Workout A or B with its tests already added, in order: one per Pattern, chosen from the
+    // Starts the Assessment Workout with its tests already added, in order: one per Pattern, chosen from the
     // primary Equipment Profile and the user's injuries. Body weight and gender are for the first suggested load
     startAssessment: async (
       {
-        part,
         equipmentProfile,
         injuries,
         bodyProfile,
       }: {
-        part: AssessmentPart;
         equipmentProfile: Parameters<typeof chooseTests>[0];
         bodyProfile: BodyProfile;
       } & Pick<UserProfile, "injuries">,
@@ -451,7 +448,7 @@ export function createLogbook({
     ) => {
       const tests = chooseTests(equipmentProfile, injuries);
       if (!canAssess(tests)) throw new LogbookError("No Assessment suits this equipment and these injuries");
-      const { exercises } = partTests(tests, part);
+      const { exercises } = assessmentTests(tests);
       const fromServer = await Promise.all(
         exercises.map(({ slug }) => previousSetsSource.forExercise(slug).catch(() => null)),
       );
@@ -461,7 +458,7 @@ export function createLogbook({
         const workout: InProgressWorkout = {
           id: newId(),
           startedAt: now.toISOString(),
-          assessment: part,
+          assessment: "single",
           bodyProfile,
           workoutExercises: exercises.map((exercise, i) => newWorkoutExercise(exercise, fromServer[i], pending)),
         };
