@@ -5,6 +5,7 @@ import { Column } from "@/components/column";
 import { Icon } from "@/components/icons";
 import { Pressable } from "@/components/pressable";
 import { SafeAreaProvider } from "@/components/safe-area-view";
+import { RestFlash } from "@/features/workouts/components/rest-flash";
 import { useLeaveWorkout } from "@/features/workouts/hooks/use-leave-workout";
 import { useStackScreenOptions } from "@/hooks/use-stack-screen-options";
 
@@ -33,6 +34,7 @@ export default function WorkoutLayout() {
           <Stack.Screen name="finish" options={{ title: "Finish workout" }} />
         </Stack>
       </Column>
+      <RestFlash />
     </IosModalSafeArea>
   );
 }

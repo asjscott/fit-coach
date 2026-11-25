@@ -75,10 +75,26 @@ export function pairRestPlan(pair: readonly [PairMember, PairMember], choice?: R
 }
 
 // Moves the current rest's end, earlier when negative; null when that ends it. The next rest is its usual length
-export function adjustRest(rest: Rest, seconds: number, now: Date): Rest | null {
+export function adjustRest<T extends Rest>(rest: T, seconds: number, now: Date): T | null {
   const endsAt = rest.endsAt + seconds * 1000;
-  return endsAt > now.getTime() ? { endsAt } : null;
+  return endsAt > now.getTime() ? { ...rest, endsAt } : null;
 }
 
 // Whole seconds left, rounded up so it reads 0 only once the rest is over
 export const restSecondsLeft = (rest: Rest, now: Date) => Math.max(0, Math.ceil((rest.endsAt - now.getTime()) / 1000));
+
+// The countdown alerts as it turns to each of these, and to zero
+const ALERT_SECONDS = 3;
+
+// A rest that ended this long ago, while the app was in the background, ends without an alert on return
+const LATE_REST_END_MS = 2000;
+
+// What happens to a rest between one look at it and the next: whether it's over, and whether to beep and vibrate, once
+// for each of the last seconds and at zero (#179)
+export function restStep(rest: Rest, before: Date, now: Date): { ended: boolean; alerts: boolean } {
+  const left = restSecondsLeft(rest, now);
+  const ended = left === 0;
+  const turned = left < restSecondsLeft(rest, before);
+  const late = ended && now.getTime() - rest.endsAt >= LATE_REST_END_MS;
+  return { ended, alerts: turned && left <= ALERT_SECONDS && !late };
+}

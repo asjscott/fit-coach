@@ -1,7 +1,7 @@
 import type { Set } from "@fit/shared";
 import { describe, expect, it } from "vitest";
 import { restSeconds } from "./rest-choice";
-import { adjustRest, pairRestPlan, restAfterSet, restSecondsLeft, startRest, type Rest } from "./rest-timer";
+import { adjustRest, pairRestPlan, restAfterSet, restSecondsLeft, restStep, startRest, type Rest } from "./rest-timer";
 
 const at = (iso: string) => new Date(iso);
 
@@ -209,8 +209,49 @@ describe("adjustRest", () => {
     expect(adjustRest(rest, -15, at("2026-11-09T10:02:16Z"))).toBeNull();
   });
 
+  it("keeps what else the rest holds", () => {
+    expect(adjustRest({ ...rest, expanded: true }, 15, atTwoMinutes)).toEqual({
+      endsAt: Date.parse("2026-11-09T10:02:45Z"),
+      expanded: true,
+    });
+  });
+
   it("leaves the next rest its usual length", () => {
     adjustRest(rest, 15, atTwoMinutes);
     expect(startRest("back-squat", at("2026-11-09T10:03:00Z")).endsAt).toBe(Date.parse("2026-11-09T10:05:30Z"));
+  });
+});
+
+describe("restStep", () => {
+  const rest: Rest = { endsAt: Date.parse("2026-11-09T10:01:30Z") };
+  const step = (before: string, now: string) =>
+    restStep(rest, at(`2026-11-09T10:${before}Z`), at(`2026-11-09T10:${now}Z`));
+
+  it("is quiet until the last 3 seconds", () => {
+    expect(step("01:25.900", "01:26.100")).toEqual({ ended: false, alerts: false });
+  });
+
+  it.each([
+    ["3", "01:26.950", "01:27.050"],
+    ["2", "01:27.950", "01:28.050"],
+    ["1", "01:28.950", "01:29.050"],
+  ])("alerts as the countdown turns to %s", (_, before, now) => {
+    expect(step(before, now)).toEqual({ ended: false, alerts: true });
+  });
+
+  it("alerts once for each of the last seconds", () => {
+    expect(step("01:27.050", "01:27.150")).toEqual({ ended: false, alerts: false });
+  });
+
+  it("alerts as it ends", () => {
+    expect(step("01:29.950", "01:30.050")).toEqual({ ended: true, alerts: true });
+  });
+
+  it("ends quietly when it ended a while ago, with the app in the background", () => {
+    expect(step("00:20.000", "03:00.000")).toEqual({ ended: true, alerts: false });
+  });
+
+  it("goes on quietly after the app was in the background for part of it", () => {
+    expect(step("00:20.000", "01:10.000")).toEqual({ ended: false, alerts: false });
   });
 });
