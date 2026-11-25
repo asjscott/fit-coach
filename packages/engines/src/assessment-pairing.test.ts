@@ -13,13 +13,13 @@ describe("pairToAssess", () => {
     const a1 = workout("a1", "01", "A");
     const a2 = workout("a2", "10", "A");
     const b = workout("b", "12", "B");
-    expect(pairToAssess(b, { workouts: [a1, a2, b], assessments: [] })).toEqual({ aWorkoutId: "a2", bWorkoutId: "b" });
+    expect(pairToAssess(b, { workouts: [a1, a2, b], assessments: [] })).toEqual({ workoutIds: ["a2", "b"] });
   });
 
   it("pairs an A that arrives after its B, when they synced out of order", () => {
     const a = workout("a", "10", "A");
     const b = workout("b", "12", "B");
-    expect(pairToAssess(a, { workouts: [b, a], assessments: [] })).toEqual({ aWorkoutId: "a", bWorkoutId: "b" });
+    expect(pairToAssess(a, { workouts: [b, a], assessments: [] })).toEqual({ workoutIds: ["a", "b"] });
   });
 
   it("pairs a B with the latest A before it even when a B with no Assessment sits between them", () => {
@@ -27,7 +27,7 @@ describe("pairToAssess", () => {
     const a = workout("a", "01", "A");
     const b1 = workout("b1", "03", "B");
     const b2 = workout("b2", "05", "B");
-    expect(pairToAssess(b2, { workouts: [a, b1, b2], assessments: [] })).toEqual({ aWorkoutId: "a", bWorkoutId: "b2" });
+    expect(pairToAssess(b2, { workouts: [a, b1, b2], assessments: [] })).toEqual({ workoutIds: ["a", "b2"] });
   });
 
   it("pairs an A that arrives late with the first B after it that has no Assessment yet", () => {
@@ -36,9 +36,9 @@ describe("pairToAssess", () => {
     const a = workout("a", "10", "A");
     const b1 = workout("b1", "12", "B");
     const b2 = workout("b2", "14", "B");
-    expect(
-      pairToAssess(a, { workouts: [a0, b1, b2, a], assessments: [{ aWorkoutId: "a0", bWorkoutId: "b1" }] }),
-    ).toEqual({ aWorkoutId: "a", bWorkoutId: "b2" });
+    expect(pairToAssess(a, { workouts: [a0, b1, b2, a], assessments: [{ workoutIds: ["a0", "b1"] }] })).toEqual({
+      workoutIds: ["a", "b2"],
+    });
   });
 
   it("doesn't pair an A that arrives late when a later A sits between it and the B", () => {
@@ -53,14 +53,12 @@ describe("pairToAssess", () => {
     const a1 = workout("a1", "01", "A");
     const b1 = workout("b1", "02", "B");
     const b2 = workout("b2", "12", "B");
-    expect(
-      pairToAssess(b2, { workouts: [a1, b1, b2], assessments: [{ aWorkoutId: "a1", bWorkoutId: "b1" }] }),
-    ).toBeNull();
+    expect(pairToAssess(b2, { workouts: [a1, b1, b2], assessments: [{ workoutIds: ["a1", "b1"] }] })).toBeNull();
   });
 
   it("makes no new Assessment when the same B is posted again", () => {
     const a = workout("a", "10", "A");
     const b = workout("b", "12", "B");
-    expect(pairToAssess(b, { workouts: [a, b], assessments: [{ aWorkoutId: "a", bWorkoutId: "b" }] })).toBeNull();
+    expect(pairToAssess(b, { workouts: [a, b], assessments: [{ workoutIds: ["a", "b"] }] })).toBeNull();
   });
 });

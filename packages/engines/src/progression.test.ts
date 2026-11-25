@@ -58,6 +58,43 @@ describe("progressWorkingLevel: double progression", () => {
     });
   });
 
+  // Spec #176 story 67: a target inside the range is an aim, so beating it catches up with what was done
+  it("puts the target to the lowest judged Set + 1 rep when every Set beats it", () => {
+    expect(progress(gobletSquat(14, 8), [lifted(14, 10), lifted(14, 11), lifted(14, 9)])).toMatchObject({
+      level: { kg: 14, reps: 10 },
+      change: { code: "target-up" },
+    });
+    expect(progress(gobletSquat(14, 8), [lifted(14, 11), lifted(14, 11), lifted(14, 11)])).toMatchObject({
+      level: { kg: 14, reps: 12 },
+      change: { code: "target-up" },
+    });
+  });
+
+  it("never puts a target inside the range past its top", () => {
+    // 14 kg × 13 lifts the 16 kg dumbbells only 7.6 times, so there's no Load Step yet
+    expect(progress(gobletSquat(14, 8), [lifted(14, 13), lifted(14, 13)])).toMatchObject({
+      level: { kg: 14, reps: 12 },
+      change: { code: "target-up" },
+    });
+  });
+
+  it("caps a target already climbing past the range at 20", () => {
+    expect(progress(gobletSquat(24, 13), [lifted(24, 16), lifted(24, 17)])).toMatchObject({
+      level: { kg: 24, reps: 17, outgrown: false },
+      change: { code: "target-up" },
+    });
+    expect(progress(gobletSquat(24, 13), [lifted(24, 23), lifted(24, 22)])).toMatchObject({
+      level: { kg: 24, reps: 20, outgrown: false },
+    });
+  });
+
+  it("takes the Load Step from the top of the range however far the target was below it", () => {
+    expect(progress(gobletSquat(20, 8), [lifted(20, 12), lifted(20, 12)])).toMatchObject({
+      level: { kg: 22, reps: 8 },
+      change: { code: "load-up" },
+    });
+  });
+
   it("leaves the load and target as they are when a Set falls short of the target, recording the Workout", () => {
     expect(progress(gobletSquat(14, 10), [lifted(14, 10), lifted(14, 9)])).toEqual({
       level: gobletSquat(14, 10, { movedBy: movedByThisWorkout }),
@@ -318,6 +355,15 @@ describe("progressWorkingLevel: bodyweight and timed ladders", () => {
     });
   });
 
+  // Spec #176 story 67
+  it.each([
+    ["bodyweight target to the lowest Set + 1 rep", pushUps(8), [repsDone(12), repsDone(11)], { reps: 12 }],
+    ["timed target to the lowest Set + 5 seconds", plank(30), [held(44), held(50)], { seconds: 49 }],
+    ["timed target no higher than 60 seconds", plank(30), [held(58), held(58)], { seconds: 60 }],
+  ])("puts a beaten %s", (_, workingLevel, sets, next) => {
+    expect(progress(workingLevel, sets)).toMatchObject({ level: { ...next, outgrown: false } });
+  });
+
   it("leaves a bodyweight target as it is when a Set falls short, recording the Workout", () => {
     expect(progress(pushUps(10), [repsDone(10), repsDone(9)])).toEqual({
       level: pushUps(10, { movedBy: movedByThisWorkout }),
@@ -377,6 +423,26 @@ describe("progressWorkingLevel: band ladders", () => {
     expect(progressBand(bandRow("light", 10), [banded(10), banded(11)])).toEqual({
       level: bandRow("light", 11, { movedBy: movedByThisWorkout, change: { code: "target-up" } }),
       change: { code: "target-up" },
+    });
+  });
+
+  // Spec #176 story 67
+  it("puts a beaten target to the lowest Set + 1 rep", () => {
+    expect(progressBand(bandRow("light", 10), [banded(13), banded(14)])).toMatchObject({
+      level: { level: "light", reps: 14 },
+      change: { code: "target-up" },
+    });
+  });
+
+  it("caps a beaten target at the heaviest band at the top of the range, or at 20 once past it", () => {
+    expect(progressBand(bandRow("heavy", 10), [banded(18), banded(18)])).toMatchObject({
+      level: { level: "heavy", reps: 15 },
+    });
+    expect(progressBand(bandRow("heavy", 15), [banded(18), banded(18)])).toMatchObject({
+      level: { level: "heavy", reps: 19 },
+    });
+    expect(progressBand(bandRow("heavy", 16), [banded(25), banded(25)])).toMatchObject({
+      level: { level: "heavy", reps: 20, outgrown: false },
     });
   });
 
@@ -583,6 +649,39 @@ describe("progressWorkingLevel: Misses", () => {
     });
   });
 
+  // Spec #176 stories 69, 70: Sets inside the range are never a Miss
+  it("doesn't count Sets averaging inside the range as a Miss, however far short of the target", () => {
+    expect(progress(gobletSquat(14, 12, { misses: 1 }), [lifted(14, 9), lifted(14, 9)])).toMatchObject({
+      level: { kg: 14, reps: 12, misses: 0 },
+      change: null,
+    });
+    // Averaging 8, the bottom of the range, from a target past its top
+    expect(progress(gobletSquat(14, 16), [lifted(14, 9), lifted(14, 7)])).toMatchObject({
+      level: { kg: 14, reps: 16, misses: 0 },
+    });
+    expect(progress(gobletSquat(14, 12), [lifted(14, 8), lifted(14, 7)])).toMatchObject({ level: { misses: 1 } });
+  });
+
+  it.each([
+    ["a barbell lift, 6–10", "back-squat", { unit: "kg", kg: 60, reps: 10 }, lifted(60, 6), lifted(60, 5)],
+    ["a band Exercise, 10–15", "band-row", { unit: "band", level: "light", reps: 15 }, lifted(1, 10), lifted(1, 9)],
+  ])("goes by its own range for %s", (_, slug, shape, inside, under) => {
+    const equipmentProfile = builtInEquipment("full_gym", "kg");
+    const workingLevel = level(slug, shape);
+    expect(progress(workingLevel, [inside, inside], { equipmentProfile })).toMatchObject({ level: { misses: 0 } });
+    expect(progress(workingLevel, [under, under], { equipmentProfile })).toMatchObject({ level: { misses: 1 } });
+  });
+
+  it("needs more than 2 reps short too, for a target at the bottom of the range", () => {
+    expect(progress(gobletSquat(14, 8), [lifted(14, 6), lifted(14, 6)])).toMatchObject({ level: { misses: 0 } });
+  });
+
+  // The bodyweight ladder has no bottom
+  it("counts a bodyweight Miss at more than 2 reps short of the target", () => {
+    const pushUps = level("push-up", { unit: "reps", reps: 15 });
+    expect(progress(pushUps, [repsDone(12), repsDone(12)])).toMatchObject({ level: { reps: 15, misses: 1 } });
+  });
+
   it("ends a run of Misses on a Workout that isn't one", () => {
     expect(progress(gobletSquat(14, 10, { misses: 1 }), [lifted(14, 9), lifted(14, 8)])).toMatchObject({
       level: { kg: 14, reps: 10, misses: 0 },
@@ -611,7 +710,7 @@ describe("progressWorkingLevel: Misses", () => {
   });
 
   it("drops the target 2 reps at the lightest load the profile has", () => {
-    expect(progress(gobletSquat(8, 12, { misses: 1 }), [lifted(8, 9), lifted(8, 9)])).toMatchObject({
+    expect(progress(gobletSquat(8, 12, { misses: 1 }), [lifted(8, 7), lifted(8, 7)])).toMatchObject({
       level: { kg: 8, reps: 10, misses: 0 },
       change: { code: "target-down" },
     });

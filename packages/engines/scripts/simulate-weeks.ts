@@ -101,7 +101,7 @@ export function simulate({ goal, days, length, lifter, profile, jumps = false }:
   for (let week = 0; week < WEEKS; week++) {
     const thisWeek = [];
     for (const now of workoutDates(week, days)) {
-      const deloadWeek = weekOfBlock({ bStartedAt: ASSESSED_AT }, now, TIME_ZONE)?.deload ?? false;
+      const deloadWeek = weekOfBlock({ lastStartedAt: ASSESSED_AT }, now, TIME_ZONE)?.deload ?? false;
       const plan = planWorkout({
         workouts: workouts.slice(-14),
         now,

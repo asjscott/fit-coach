@@ -8,7 +8,8 @@ import { Pressable } from "@/components/pressable";
 import { Text } from "@/components/text";
 import { bigNumber, radii, spacing, useTheme } from "@/theme";
 import { startRepeating } from "../hold-to-repeat";
-import { FIELD_STEPPERS, loadStepper, stepValue, type LoadStep, type SetField } from "../set-entry";
+import type { SetReading } from "../library";
+import { fieldStepper, loadStepper, stepValue, type LoadStep, type SetField } from "../set-entry";
 
 // A load is typed and stepped in the user's unit
 export type LoadSteps = {
@@ -26,20 +27,20 @@ export type SetStepperProps = {
   | ({ field: "load" } & LoadSteps)
   | {
       field: Exclude<SetField, "load">;
-      // A Jump's reps are its contacts (#105)
-      jump?: boolean;
+      // How the Exercise's Sets read: a Jump's reps are its contacts (#105), the walk's seconds minutes
+      reading: SetReading;
     }
 );
 
-// One Set value with − and + either side: a load to the next load, reps by 1, seconds by 5 or, from a minute, by the
-// minute, repeating while held. Any value can still be typed: seconds show in minutes from a minute (#145), as
-// seconds while being typed
+// One Set value with − and + either side: a load to the next load, reps by 1, seconds by 5 (the walk by the
+// minute, #145), repeating while held. Any value can still be typed: the walk shows in minutes, as seconds while being
+// typed
 export function SetStepper(props: SetStepperProps) {
   const { value, onChange } = props;
   const stepper =
     props.field === "load"
       ? loadStepper(props.step, props.loadsKnown, props.unit)
-      : FIELD_STEPPERS[props.field === "reps" && props.jump ? "contacts" : props.field];
+      : fieldStepper(props.field, props.reading);
   const [typing, setTyping] = useState(false);
   const shown = stepper.shown(value, typing);
   // The latest value, so steps repeated while held build on each other before the parent re-renders

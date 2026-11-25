@@ -4,8 +4,8 @@ const slug = z.string().regex(/^[a-z0-9-]+$/);
 
 // Why progression changed a Working Level (#132), which the Planned Workout shows with the Exercise. Later rules add
 // codes. On a Working Level:
-// - target-up: every Set reached the target, so the target went up 1 rep
-// - seconds-up: every Set of a timed Exercise reached the target, so it went up 5 seconds (#135)
+// - target-up: every Set reached the target, so the target went up to the lowest Set + 1 rep (capped)
+// - seconds-up: every Set of a timed Exercise reached the target, so it went up to the lowest Set + 5 seconds (#135)
 // - load-up: every Set reached the top of the range, so the load went up one Load Step, to the reps Epley predicts; for
 //   a band Exercise, to the next band at the bottom of the range (#135); for a weighted Ballistic Exercise, at its fixed 8
 //   reps, after a last Set of RPE 7 or lower or a 3rd Workout without RPE (#136)

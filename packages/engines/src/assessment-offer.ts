@@ -28,7 +28,7 @@ export type AssessmentOfferInput = {
   workouts: OfferWorkout[];
   historyLoaded: boolean;
   // The latest Assessment on the server, null when there is none, undefined until it arrives (or when it can't)
-  latestAssessment: Pick<Assessment, "id" | "bStartedAt"> | null | undefined;
+  latestAssessment: Pick<Assessment, "id" | "lastStartedAt"> | null | undefined;
   now: Date;
   // The tests the user's primary Equipment Profile and injuries allow
   tests: ChosenTests;
@@ -79,7 +79,7 @@ function currentOffer({
   if (syncing) return { kind: "syncing", bWorkoutId: syncing.id };
   // The first A ever, or a retake started after the latest Assessment's B. Without the server, only a Pending A is sure
   const aIsNew =
-    a && (latest === undefined ? a.isPending : !latest || Date.parse(a.startedAt) > Date.parse(latest.bStartedAt));
+    a && (latest === undefined ? a.isPending : !latest || Date.parse(a.startedAt) > Date.parse(latest.lastStartedAt));
   if (a && aAwaitsB && aIsNew) {
     const redoA = now.getTime() - Date.parse(a.startedAt) > STALE_A_MS;
     return start({ part: "B", aWorkoutId: a.id, redoA });
