@@ -1,6 +1,6 @@
 import type { AssessmentMarker, AssessmentPattern, EquipmentProfile, Set, WorkingLevel, Workout } from "@fit/shared";
 import { describe, expect, it } from "vitest";
-import { assess } from "./assess";
+import { assess, hasAssessmentResult, unmeasuredTests } from "./assess";
 
 const loggedAt = "2026-10-24T09:00:00.000Z";
 const rated = (kg: number, rpe: number, reps = 5): Set => ({ kind: "external", kg, reps, rpe, loggedAt });
@@ -404,5 +404,55 @@ describe("assess", () => {
       ];
       expect(workingLevels.map((level) => level.slug).sort()).toEqual(available.sort());
     });
+  });
+});
+
+// Spec #176 stories 5 to 8
+describe("finishing early", () => {
+  const single = (workoutExercises: { slug: string; sets: Set[] }[]) =>
+    assessmentWorkout(A_ID, "single", "2026-10-20T09:00:00.000Z", workoutExercises);
+
+  it("gives a result from the plank alone, the other Patterns at typical values less a fifth", () => {
+    const plankOnly = single([{ slug: "plank", sets: [held(75)] }]);
+    expect(hasAssessmentResult([plankOnly])).toBe(true);
+
+    const { patterns } = assess([plankOnly], profile, [home]).assessment;
+    expect(patterns.core).toMatchObject({ slug: "plank", referenceStrength: 75, estimated: false });
+    // 0.75 of an 80 kg man is typical for push: 60 kg, less a fifth
+    expect(patterns.push).toMatchObject({ estimated: true });
+    expect(patterns.push?.referenceStrength).toBeCloseTo(48, 5);
+  });
+
+  it("gives a result from any one weighted or bodyweight test", () => {
+    expect(hasAssessmentResult([single([{ slug: "goblet-squat", sets: [rated(14, 9)] }])])).toBe(true);
+    expect(hasAssessmentResult([single([{ slug: "push-up", sets: [maxReps(8)] }])])).toBe(true);
+  });
+
+  it("gives none when nothing was measured: no weighted test reached RPE 9 and no other was done", () => {
+    expect(hasAssessmentResult([single([{ slug: "goblet-squat", sets: [rated(10, 7), rated(12, 8)] }])])).toBe(false);
+  });
+
+  it("reads an old A and B together", () => {
+    const unfinishedA = single([{ slug: "goblet-squat", sets: [rated(10, 7)] }]);
+    expect(hasAssessmentResult([unfinishedA, b])).toBe(true);
+  });
+
+  it("takes the inverted row a pull-up was swapped for as pull's Reference Strength", () => {
+    const swapped = single([{ slug: "inverted-row", sets: [maxReps(12)] }]);
+    expect(assess([swapped], profile, [home]).assessment.patterns.pull).toMatchObject({
+      slug: "inverted-row",
+      topSet: { reps: 12 },
+      estimated: false,
+    });
+  });
+
+  it("names the tests that give no measure, in the Workout's order", () => {
+    const { workoutExercises } = single([
+      { slug: "goblet-squat", sets: [rated(14, 9)] },
+      { slug: "dumbbell-floor-press", sets: [rated(10, 7)] },
+      { slug: "pull-up", sets: [] },
+      { slug: "plank", sets: [held(60)] },
+    ]);
+    expect(unmeasuredTests({ workoutExercises }).map(({ slug }) => slug)).toEqual(["dumbbell-floor-press", "pull-up"]);
   });
 });

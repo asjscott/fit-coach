@@ -12,13 +12,12 @@ import { useStartAssessment } from "@/features/assessment/hooks/use-start-assess
 import { patternLabels } from "@/features/exercises/labels";
 import { useLogbook } from "@/features/workouts/logbook-provider";
 import { spacing } from "@/theme";
+import { inWords } from "@/utils/in-words";
 import { TodayCard, TodayCardLink } from "./today-card";
 
 // "squat, hinge and core"
-function patternsInWords(patterns: TestedPattern[]) {
-  const words = patterns.map((pattern) => patternLabels[pattern].toLowerCase());
-  return words.length > 1 ? `${words.slice(0, -1).join(", ")} and ${words.at(-1)}` : words[0];
-}
+const patternsInWords = (patterns: TestedPattern[]) =>
+  inWords(patterns.map((pattern) => patternLabels[pattern].toLowerCase()));
 
 const WHAT_IT_TESTS = `Tests your ${patternsInWords(ASSESSMENT_PATTERNS)}, so the Coach knows your starting strength.`;
 

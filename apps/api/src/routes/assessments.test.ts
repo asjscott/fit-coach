@@ -2,7 +2,7 @@ import type { LatestAssessment, PlannedWorkout, Workout } from "@fit/shared";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { type TestUser, useRouteTestApi } from "../test/route-test-api";
 import { at, upload } from "../test/uploads";
-import { assessmentPair, assessmentWorkout, lifted } from "../test/workouts";
+import { assessmentPair, assessmentWorkout, held, lifted, repsDone, workout } from "../test/workouts";
 
 const api = useRouteTestApi();
 
@@ -74,6 +74,53 @@ describe("the single Assessment Workout (#186)", () => {
       squat: { estimated: false },
       push: { estimated: true },
     });
+  });
+
+  // Spec #176 stories 7 and 8
+  it("gives a result from the plank alone", async () => {
+    const user = await api.signIn();
+    const plankOnly = workout(26, [{ slug: "plank", sets: [held(75)] }], { assessment: "single" });
+    await upload(user, plankOnly);
+
+    const latest = await latestAssessment(user);
+    expect(latest?.assessment).toMatchObject({
+      workoutIds: [plankOnly.id],
+      patterns: { core: { referenceStrength: 75, estimated: false }, squat: { estimated: true } },
+    });
+    expect(latest?.workingLevels.length).toBeGreaterThan(0);
+  });
+
+  it("sets pull's Reference Strength from an inverted row swapped in for the pull-up", async () => {
+    const user = await api.signIn();
+    const rows = { slug: "inverted-row", sets: [repsDone(12)] };
+    await upload(user, workout(26, [rows], { assessment: "single" }));
+
+    expect((await latestAssessment(user))?.assessment.patterns.pull).toMatchObject({
+      slug: "inverted-row",
+      estimated: false,
+    });
+  });
+
+  it("keeps one that measured nothing in History, makes no Assessment, and takes the next one", async () => {
+    const user = await api.signIn();
+    const light = { slug: "goblet-squat", sets: [lifted(10, 5, 7)] };
+    const nothing = workout(30, [light], { assessment: "single" });
+    await upload(user, nothing);
+    expect((await user.post("/workouts", nothing)).statusCode).toBe(200);
+    expect(await latestAssessment(user)).toBeNull();
+    expect(((await user.get("/workouts")).body as Workout[]).map(({ id }) => id)).toEqual([nothing.id]);
+
+    const single = assessmentWorkout();
+    await upload(user, single);
+    expect((await latestAssessment(user))?.assessment.workoutIds).toEqual([single.id]);
+  });
+
+  it("leaves the last Assessment and its Working Levels when a retake measured nothing", async () => {
+    const user = await api.signIn();
+    await upload(user, assessmentWorkout());
+    const before = await latestAssessment(user);
+    await upload(user, workout(3, [{ slug: "goblet-squat", sets: [lifted(10, 5, 7)] }], { assessment: "single" }));
+    expect(await latestAssessment(user)).toEqual(before);
   });
 
   it("leaves an A with no B in History", async () => {

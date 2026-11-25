@@ -26,7 +26,7 @@ import {
   type ProtocolState,
   type TestProgress,
 } from "./assessment-protocol";
-import { assessmentTests, canAssess, chooseTests } from "./assessment-tests";
+import { assessmentTests, canAssess, chooseTests, testSwap } from "./assessment-tests";
 import { exerciseBySlug } from "./data/exercises";
 import {
   exerciseLoadsByEquipmentKg,
@@ -467,6 +467,41 @@ export function createLogbook({
       });
     },
 
+    // Swaps a pull-up test for the inverted row in its place, when testSwap offers it
+    swapTest: async (
+      workoutExerciseId: string,
+      equipmentProfile: ProfileWithLoads,
+      injuries: UserProfile["injuries"],
+    ) => {
+      const swapOf = async () => {
+        const workout = await readOrThrow();
+        const test = findWorkoutExercise(workout, workoutExerciseId);
+        const exercise = workout.assessment && testSwap(test, equipmentProfile, injuries);
+        if (!exercise) throw new LogbookError("This test can't be swapped");
+        return { workout, test, exercise };
+      };
+      const { exercise } = await serially(swapOf);
+      const fromServer = await previousSetsSource.forExercise(exercise.slug).catch(() => null);
+      await serially(async () => {
+        // Again, as a Set may have been logged while the server was asked
+        const { workout, test } = await swapOf();
+        const swapped = { ...newWorkoutExercise(exercise, fromServer, await readPending()), id: test.id };
+        workout.workoutExercises = workout.workoutExercises.map((we) => (we === test ? swapped : we));
+        await write(workout);
+      });
+    },
+
+    // Passes over an Assessment Workout's test with no Set, which testProgress then leaves out. It can still be done
+    skipTest: (workoutExerciseId: string) =>
+      serially(async () => {
+        const workout = await readOrThrow();
+        const test = findWorkoutExercise(workout, workoutExerciseId);
+        if (!workout.assessment || test.sets.length > 0) throw new LogbookError("This test can't be skipped");
+        test.skipped = true;
+        await write(workout);
+        return workout;
+      }),
+
     // Starts a Planned Workout with its Exercises added and nothing logged: only what the user does counts, and
     // the targets start each Exercise's first Set. Works with no signal, and later edits never touch the link
     startPlannedWorkout: (
@@ -509,6 +544,7 @@ export function createLogbook({
         refuseUnratedTestSet(workout, values);
         refuseSetOnDoneTest(workout, workoutExercise);
         workoutExercise.sets.push({ ...values, loggedAt: now.toISOString() });
+        delete workoutExercise.skipped;
         await write(parseOrThrow(InProgressWorkout, workout));
         return workoutExercise;
       }),
