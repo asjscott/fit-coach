@@ -2,6 +2,7 @@ import {
   exerciseLoadsByEquipmentKg,
   isRatedTest,
   isSkippedTest,
+  strengthHold,
   takesAnotherSet,
   takesNoMoreSets,
   testSwap,
@@ -23,7 +24,7 @@ import { errorMessage } from "@/utils/error-message";
 import { dumbbellBuildLabel, type BuildLabel } from "../dumbbell-build";
 import { plannedSetsLabel, previousSetsLabel } from "../format";
 import { exerciseName, targetReading, type SetReading } from "../library";
-import { useLogbook } from "../logbook-provider";
+import { useLogbook, type HeldSeconds } from "../logbook-provider";
 import { protocolNote } from "../protocol-note";
 import {
   createLoadSteps,
@@ -147,7 +148,7 @@ export function ExerciseLogging({
   hideTarget = false,
   onLog,
 }: Pick<CurrentExerciseBoxProps, "workoutExercise" | "next"> & { hideTarget?: boolean; onLog?: () => void }) {
-  const { workout, logSet, editSet, deleteSet, nextSetDraft, protocolState } = useLogbook();
+  const { workout, logSet, editSet, deleteSet, nextSetDraft, protocolState, startHold, heldSeconds } = useLogbook();
   const primaryEquipment = usePrimaryEquipmentProfile();
   const unit = useWeightUnit();
   const { showToast } = useToast();
@@ -166,6 +167,7 @@ export function ExerciseLogging({
   const note = protocol && protocolNote(protocol, sets.length, loadType, { nextTest: !!next, unit });
   // A test that's done, or the walk once its one Set is logged (#109)
   const done = (!!protocol && takesNoMoreSets(protocol)) || !takesAnotherSet(workoutExercise);
+  const hold = workout && strengthHold(workoutExercise, workout);
   const asksRpe = !!workout && isRatedTest(workout, loadType);
   const loadSteps = useMemo(
     () => createLoadSteps(exerciseLoadsByEquipmentKg(slug, primaryEquipment), unit),
@@ -268,6 +270,8 @@ export function ExerciseLogging({
           loadSteps={loadSteps}
           buildLabel={buildLabel}
           reading={reading}
+          held={heldSeconds?.workoutExerciseId === id ? heldSeconds : null}
+          onStartHold={hold ? () => startHold(id, hold) : undefined}
           submitLabel={`Log set ${nextNumber}`}
           onSubmit={(values) => {
             onLog?.();
@@ -330,6 +334,9 @@ type SetEntryProps = {
   // How to build the load in the stepper, shown under it
   buildLabel: BuildLabel;
   reading: SetReading;
+  // The seconds a stopped hold fills in, and what starts one, for an Exercise with a hold timer
+  held?: HeldSeconds | null;
+  onStartHold?: () => void;
   submitLabel: string;
   onSubmit: (values: SetValues) => Promise<void>;
   // Shown under the submit button: Cancel while editing, or a secondary Next exercise
@@ -346,12 +353,19 @@ function SetEntry({
   loadSteps,
   buildLabel,
   reading,
+  held = null,
+  onStartHold,
   submitLabel,
   onSubmit,
   children,
 }: SetEntryProps) {
   const { showToast } = useToast();
   const [draft, setDraftState] = useState<SetDraft>(() => setDraft(loadType, initial, loadSteps));
+  const [filled, setFilled] = useState<HeldSeconds | null>(null);
+  if (held && held !== filled) {
+    setFilled(held);
+    setDraftState((prev) => ({ ...prev, seconds: String(held.seconds) }));
+  }
   const [rpe, setRpe] = useState<number | undefined>(initial?.rpe);
   const [saving, setSaving] = useState(false);
 
@@ -406,6 +420,9 @@ function SetEntry({
           />
         );
       })}
+      {onStartHold ? (
+        <LoadingButton label="Start timer" size="lg" action="secondary" onPress={onStartHold} fullWidth />
+      ) : null}
       {asksRpe ? (
         <Stack spacing={2}>
           <Text size="sm" color="muted">

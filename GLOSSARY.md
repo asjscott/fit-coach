@@ -96,6 +96,10 @@ _Avoid_: Today's session, adjusted plan
 How long the user wants the rests between Sets, chosen on Today and kept on the phone: Auto, each Exercise's own rest, or one length from 30 seconds to 3 minutes for every Exercise. It decides how many of the plan's Sets fit the Workout Length, but never changes the Planned Workout. An Assessment Workout always rests on Auto.
 _Avoid_: Rest setting, rest preference, rest timer (for the choice)
 
+**Hold timer**:
+The full-screen clock that times a Set of a timed Exercise that isn't a Recovery Exercise: 5 seconds to get into position, a countdown to the bottom of the target range, then up until the user stops it. It fills in the seconds to check and never logs the Set. In an Assessment it only counts up. It's never stored.
+_Avoid_: Stopwatch, plank timer, rest timer (for this)
+
 **Weekly Budget**:
 How many credited Sets each of the budgeted Muscles should get in a week, set by the user's Goal and days per week. Workout Length decides how much of it is delivered, not the budget itself. Eight Muscles are budgeted for every Goal, and calves too for athletic and build_muscle; other Muscles aren't budgeted. The Coach plans a Muscle up to a cap of about 130% of its budget, counted from the Week Ledger and the Sets already planned: it adds no Exercise, a Jump included, that would take one of its primary Muscles over it, while secondary credit counts towards a Muscle's total but never keeps an Exercise out.
 _Avoid_: Weekly target, quota, weekly volume

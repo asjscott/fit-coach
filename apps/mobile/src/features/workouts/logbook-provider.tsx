@@ -1,10 +1,14 @@
 import {
   adjustRest,
   createLogbook,
+  finishedHoldSeconds,
+  holdCues,
   REST_ADJUSTMENT_SECONDS,
   restAfterSet,
   restStep,
   type FinishResult,
+  type Hold,
+  type HoldRun,
   type Logbook,
   type PlannedWorkoutCopy,
   type Rest,
@@ -40,6 +44,12 @@ const storedRestSound = createStoredRestSound(deviceStorage);
 
 // A rest as it's shown: after which Workout Exercise's Set, and filling the screen or minimised to its bar (#179)
 export type CurrentRest = Rest & { afterId: string; expanded: boolean };
+
+// The hold being timed, for a Workout Exercise's next Set (#196)
+export type CurrentHold = { workoutExerciseId: string; hold: Hold; run: HoldRun };
+
+// What a stopped hold fills in, until its Set is logged
+export type HeldSeconds = { workoutExerciseId: string; seconds: number };
 
 type LogbookContextValue = {
   // null when no Workout is in progress
@@ -81,9 +91,15 @@ type LogbookContextValue = {
   skipRest: () => void;
   expandRest: () => void;
   minimizeRest: () => void;
-  // True for a moment as a rest ends, for the screen to flash
+  // The hold being timed, or null. Starting one ends a rest; Stop fills in its seconds, and Cancel leaves them
+  hold: CurrentHold | null;
+  startHold: (workoutExerciseId: string, hold: Hold) => void;
+  stopHold: () => void;
+  cancelHold: () => void;
+  heldSeconds: HeldSeconds | null;
+  // True for a moment as a rest ends or a hold's target is reached, for the screen to flash
   restFlashing: boolean;
-  // Whether a rest beeps as it ends, remembered on the phone
+  // Whether a rest beeps as it ends and a hold at its target, remembered on the phone
   restSoundOn: boolean;
   setRestSoundOn: (on: boolean) => void;
   // How long the rests are, chosen on Today and remembered on the phone (#178)
@@ -126,7 +142,7 @@ export type FinishOutcome =
   | { status: "pending"; workoutId: string; uploaded: Promise<boolean>; prs: Promise<Pr[]> }
   | { status: "nothing-to-save" };
 
-// How often a rest under way is looked at. A timeout to its end would stop while the phone sleeps
+// How often a rest or a hold under way is looked at. A timeout to its end would stop while the phone sleeps
 const REST_STEP_MS = 100;
 
 const REST_FLASH_MS = 1200;
@@ -136,7 +152,7 @@ function vibrate(end: boolean) {
   try {
     Vibration.vibrate(end ? 600 : 200);
   } catch {
-    // The rest still beeps and flashes
+    // It still beeps and flashes
   }
 }
 
@@ -193,6 +209,9 @@ export function LogbookProvider({ children }: { children: ReactNode }) {
   const celebrating = useRef(new Set<string>());
   // Held in memory only, as it belongs to the Workout, not an Exercise: a force-quit loses it
   const [rest, setRest] = useState<CurrentRest | null>(null);
+  // In memory only too, like the rest
+  const [hold, setHold] = useState<CurrentHold | null>(null);
+  const [heldSeconds, setHeldSeconds] = useState<HeldSeconds | null>(null);
   const [restFlashing, setRestFlashing] = useState(false);
   // null until it's read from the phone or chosen
   const [chosenRestSound, setChosenRestSound] = useState<boolean | null>(null);
@@ -320,6 +339,8 @@ export function LogbookProvider({ children }: { children: ReactNode }) {
     async (workoutExerciseId: string, values: SetValues) => {
       unlockRestSound();
       const now = new Date();
+      // Before the next Set's steppers are drawn, so they don't take it too
+      setHeldSeconds(null);
       await run(() => logbook.logSet(workoutExerciseId, values, now));
       const logged = await logbook.inProgress();
       const started = logged && restAfterSet(logged, workoutExerciseId, now, restChoice, primaryEquipment);
@@ -355,6 +376,46 @@ export function LogbookProvider({ children }: { children: ReactNode }) {
     const timer = setTimeout(() => setRestFlashing(false), REST_FLASH_MS);
     return () => clearTimeout(timer);
   }, [restFlashing]);
+
+  // Beeps, vibrates and flashes at the ends of the target; the other cues are the guided flow's
+  useEffect(() => {
+    if (!hold) return;
+    let before = new Date();
+    const timer = setInterval(() => {
+      const now = new Date();
+      const cues = holdCues(hold.hold, hold.run, before, now);
+      before = now;
+      if (!cues.some(({ cue }) => cue === "bottom" || cue === "top")) return;
+      vibrate(true);
+      if (restSoundOn) playRestBeep(true);
+      setRestFlashing(true);
+    }, REST_STEP_MS);
+    return () => clearInterval(timer);
+  }, [hold, restSoundOn]);
+
+  // The sound is unlocked before anything waits, as it must come from the tap
+  const startHold = useCallback((workoutExerciseId: string, started: Hold) => {
+    unlockRestSound();
+    setRest(null);
+    setRestFlashing(false);
+    setHold({ workoutExerciseId, hold: started, run: { startedAt: Date.now(), pauses: [] } });
+  }, []);
+
+  const stopHold = () => {
+    if (!hold) return;
+    const seconds = finishedHoldSeconds(hold.hold, hold.run, new Date());
+    setHeldSeconds({ workoutExerciseId: hold.workoutExerciseId, seconds });
+    setHold(null);
+  };
+
+  const cancelHold = useCallback(() => setHold(null), []);
+
+  // Once there's no Workout to time for
+  const endTimers = useCallback(() => {
+    setRest(null);
+    setHold(null);
+    setHeldSeconds(null);
+  }, []);
 
   const moveRestEnd = (seconds: number) => setRest((current) => current && adjustRest(current, seconds, new Date()));
   const extendRest = () => moveRestEnd(REST_ADJUSTMENT_SECONDS);
@@ -393,7 +454,7 @@ export function LogbookProvider({ children }: { children: ReactNode }) {
           result = await finishing();
         });
         if (!result || result.status === "nothing-to-save") return { status: "nothing-to-save" };
-        setRest(null);
+        endTimers();
         const { id } = result.workout;
         celebrating.current.add(id);
         // Only while the user can be looking at the toast, so a late upload's PRs go to Today instead (#142)
@@ -408,7 +469,7 @@ export function LogbookProvider({ children }: { children: ReactNode }) {
         setSyncsUnderWay((count) => count - 1);
       }
     },
-    [logbook, run, sync],
+    [logbook, run, sync, endTimers],
   );
 
   const finish = useCallback(
@@ -421,8 +482,8 @@ export function LogbookProvider({ children }: { children: ReactNode }) {
 
   const discard = useCallback(async () => {
     await run(() => logbook.discard());
-    setRest(null);
-  }, [logbook, run]);
+    endTimers();
+  }, [logbook, run, endTimers]);
 
   const isStale = useCallback(() => logbook.isStale(new Date()), [logbook]);
 
@@ -434,8 +495,8 @@ export function LogbookProvider({ children }: { children: ReactNode }) {
 
   const clear = useCallback(async () => {
     await run(() => logbook.clear());
-    setRest(null);
-  }, [logbook, run]);
+    endTimers();
+  }, [logbook, run, endTimers]);
 
   const queueCheckIn = useCallback(
     async (checkIn: DatedCheckIn) => {
@@ -473,6 +534,11 @@ export function LogbookProvider({ children }: { children: ReactNode }) {
         skipRest,
         expandRest,
         minimizeRest,
+        hold,
+        startHold,
+        stopHold,
+        cancelHold,
+        heldSeconds,
         restFlashing,
         restSoundOn,
         setRestSoundOn,
