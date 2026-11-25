@@ -124,7 +124,7 @@ describe("GET /nutrition-history/:date", () => {
     expect(firstLoggedDate).toBeNull();
   });
 
-  // Stories 14, 18 and 23: a day keeps the targets it had, and one with none kept follows the current ones
+  // Stories 14, 18 and 23: a day keeps the targets it had, and one before any were kept follows the current ones
   it("answers each day's own targets", async () => {
     const user = await api.signIn();
     await week(user);
@@ -134,6 +134,22 @@ describe("GET /nutrition-history/:date", () => {
     await user.patch("/user", { profile: { goal: "athletic" } });
 
     expect((await week(user)).days.map((day) => day.targets.proteinG)).toEqual([128, 128, 160, 128, 128, 128, 128]);
+  });
+
+  // A missed day's targets can't have changed, since any change would have kept them
+  it("answers a day with none kept the targets of the nearest earlier day, its week's or not", async () => {
+    const user = await api.signIn();
+    await week(user);
+    setNow("2026-11-20T12:00:00Z");
+    await user.patch("/user", { profile: { goal: "athletic" } });
+    setNow("2026-11-25T12:00:00Z");
+    await user.patch("/user", { profile: { goal: "lose_fat" } });
+
+    // Kept: Wednesday 18 and Friday 20, then Wednesday 25 a week later
+    expect((await week(user, "2026-11-18")).days.map((day) => day.targets.proteinG)).toEqual([
+      160, 160, 160, 160, 128, 128, 128,
+    ]);
+    expect((await week(user)).days.map((day) => day.targets.proteinG)).toEqual([128, 128, 160, 160, 160, 160, 160]);
   });
 
   it("keeps today's targets when it's read, as reading the day does", async () => {

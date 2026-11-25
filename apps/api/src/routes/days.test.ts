@@ -44,7 +44,7 @@ describe("GET /days/:date", () => {
   });
 
   // Spec #188 story 18: a past day with no targets kept is judged against the current ones, not those of its own year
-  it("works the age out from today's year, for a day before it with none kept too", async () => {
+  it("works the age out from today's year, for a day before any were kept too", async () => {
     setNow("2027-01-01T12:00:00Z");
     const user = await api.signIn();
 
@@ -236,7 +236,7 @@ describe("GET /days/:date kept Daily Targets", () => {
   });
 
   // Story 18: a day from before targets were kept is never stored, even by logging to it
-  it("judges a past day with none kept against the current targets, and doesn't keep them", async () => {
+  it("judges a past day before any were kept against the current targets, and doesn't keep them", async () => {
     const user = await api.signIn();
     const date = localDate("UTC", 3);
     expect((await targetsOn(user, date)).proteinG).toBe(160);

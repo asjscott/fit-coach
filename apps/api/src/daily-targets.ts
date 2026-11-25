@@ -57,8 +57,8 @@ export async function keepTodaysTargets(clerkUserId: string): Promise<void> {
   }
 }
 
-// The date's Daily Targets: today's as they are now, a past day's as they last were, and the current ones for a past
-// day with none stored or a day to come
+// The date's Daily Targets: today's as they are now, a past day's as they last were (the nearest earlier stored day's
+// when it has none of its own), and the current ones for a past day before any were stored or a day to come
 export async function targetsOn(user: OnboardedDoc, date: string): Promise<DailyTargets> {
   return (await targetsOnDates(user, [date]))[0];
 }
@@ -67,8 +67,20 @@ export async function targetsOn(user: OnboardedDoc, date: string): Promise<Daily
 export async function targetsOnDates(user: OnboardedDoc, dates: string[]): Promise<DailyTargets[]> {
   const today = todayOf(user);
   if (dates.includes(today)) await keepTodaysTargets(user.clerkUserId);
-  const kept = await keptTargets
-    .find({ clerkUserId: user.clerkUserId, date: { $in: dates.filter((date) => date <= today) } })
-    .toArray();
-  return dates.map((date) => kept.find((doc) => doc.date === date)?.targets ?? currentTargets(user, today));
+  const past = dates.filter((date) => date <= today).sort();
+  if (!past.length) return dates.map(() => currentTargets(user, today));
+  const { clerkUserId } = user;
+  const [before, within] = await Promise.all([
+    keptTargets.findOne({ clerkUserId, date: { $lt: past[0] } }, { sort: { date: -1 } }),
+    keptTargets
+      .find({ clerkUserId, date: { $gte: past[0], $lte: past[past.length - 1] } })
+      .sort({ date: -1 })
+      .toArray(),
+  ]);
+  // Newest first
+  const kept = before ? [...within, before] : within;
+  return dates.map((date) => {
+    const nearest = date <= today ? kept.find((doc) => doc.date <= date) : undefined;
+    return nearest?.targets ?? currentTargets(user, today);
+  });
 }
