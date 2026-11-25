@@ -26,7 +26,7 @@ import { muscleFatigue, tiredMuscles, type FatigueWorkout } from "./fatigue";
 import { isJump, JUMP_SETS, jumpCandidates, jumpsForWorkout } from "./jumps";
 import { planReasons } from "./plan-reasons";
 import { scoreExercise, type WeekSoFar } from "./plan-score";
-import { RECOVERY_WORKOUT, trainingWorkouts } from "./recovery-workout";
+import { possibleHolds, RECOVERY_WORKOUT, recoveryWorkoutFor, trainingWorkouts } from "./recovery-workout";
 import {
   addCredits,
   creditsPerSet,
@@ -461,34 +461,22 @@ function selectExercises(selection: Selection, weekSoFar: MuscleCredits): Planne
   }
 }
 
-// What's planned when the cap leaves nothing to add (story 17): the Recovery Workout, as it credits nothing, if the
-// equipment, injuries and time allow every Exercise in it; otherwise the smallest Workout within the cap, one Set of the
-// best Exercise that fits, and the Recovery Workout after all when nothing does
-function whenCapped(input: PlanWorkoutInput, { candidates, goal, budget }: Selection, ledger: MuscleCredits) {
-  const recoveryWorkout: PlannedExercise[] = RECOVERY_WORKOUT.map(({ slug, sets, target }) => ({ slug, sets, target }));
-  const exercises = recoveryWorkout.map(({ slug, sets }) => ({ exercise: exerciseBySlug(slug), sets }));
-  const allowed = exercises.every(
-    ({ exercise }) => exercise && isAvailable(exercise, input.equipmentProfile) && isSafeFor(exercise, input.injuries),
-  );
-  const seconds = exercises.reduce((total, { exercise, sets }) => total + (exercise?.secondsPerSet ?? 0) * sets, 0);
-  if (allowed && seconds <= WORKOUT_SECONDS) return recoveryWorkout;
-  const oneSet = candidates.filter((candidate) => withinCap(candidate, emptyDraft(), budget, ledger, 1));
-  const pick = highestScore(oneSet, { goal, budget, ledger });
-  if (!pick) return recoveryWorkout;
-  return [{ slug: pick.exercise.slug, sets: 1, target: pick.target, ...(pick.change && { change: pick.change }) }];
-}
-
-// The Recovery Workout's Exercises stay themselves on every built-in choice, as they need no equipment
-const recoveryCandidates = (input: PlanWorkoutInput, plannedExercises: readonly PlannedExercise[]) =>
+// What's planned when the cap leaves nothing to add (story 17): the Recovery Workout, as it credits nothing. A hold on
+// equipment stays itself on every built-in choice that has it, and gives way to a hold like it on the rest
+const recoveryCandidates = (input: PlanWorkoutInput) =>
   Object.fromEntries(
     BuiltInEquipment.options
       .filter((choice) => !matchesBuiltIn(input.equipmentProfile, choice))
       .map((choice) => {
-        const possible = plannedExercises.flatMap(({ slug, target }) => {
+        const walk = RECOVERY_WORKOUT.flatMap(({ slug, target }) => {
           const exercise = exerciseBySlug(slug);
-          return exercise ? [{ exercise, target }] : [];
+          return exercise?.oneSet ? [{ exercise, target }] : [];
         });
-        return [choice, { possible, pickable: [] }];
+        const holds = possibleHolds(builtInEquipment(choice, input.unit), input.injuries).map((exercise) => ({
+          exercise,
+          target: { unit: "seconds" as const, seconds: exercise.holdSeconds! },
+        }));
+        return [choice, { possible: [...walk, ...holds], pickable: holds }];
       }),
   );
 
@@ -526,13 +514,13 @@ export function planWorkout(input: PlanWorkoutInput): WorkoutPlan {
       requiredPick(candidates, thisWeek, { goal, budget, ledger }) ??
       requiredSquat(candidates, thisWeek, goal, isRested),
   };
-  // The cap always holds, the Week Ledger counting towards it, so with nothing left to add the plan is whenCapped's.
+  // The cap always holds, the Week Ledger counting towards it, so with nothing left to add the plan is the Recovery Workout.
   // The plan always has an Exercise
   const picked = selectExercises(selection, ledger);
-  const selected = picked.length ? picked : whenCapped(input, selection, ledger);
+  const selected: PlannedExercise[] = picked.length ? picked : recoveryWorkoutFor(input);
   const held = heldBack(candidates, selected, tired);
   const isRecovery = selected.every(({ slug }) => exerciseBySlug(slug)?.recovery);
-  const alternatives = isRecovery ? recoveryCandidates(input, selected) : builtInCandidates(input, thisWeek, lastWeek);
+  const alternatives = isRecovery ? recoveryCandidates(input) : builtInCandidates(input, thisWeek, lastWeek);
   return {
     weekStart: monday,
     plannedExercises: withAlternatives(selected, alternatives),
