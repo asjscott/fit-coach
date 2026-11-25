@@ -159,6 +159,8 @@ export function mobilityHoldLine(hold: RecoveryExercise, setLabel: string) {
 export const mobilityTotalLine = (holds: readonly RecoveryExercise[]) =>
   `${counted(holds.length, "hold")} · ${estimatedTimeLabel(mobilitySeconds(holds))}`;
 
+export const NO_OTHER_HOLDS = "There are no other holds you can do with your injuries and equipment.";
+
 // What's in a Planned Workout: "6 Exercises · 18 Sets · About 45 min", and "· lighter after your check-in" when it
 // took Sets off
 export function todayPlanLine(

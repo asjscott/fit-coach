@@ -27,7 +27,7 @@ export const possibleHolds = (equipmentProfile: ProfileWithLoads, injuries: read
   );
 
 // Most like the hold first: by the primary Muscles they share, then the same area, then the library's order
-const byLikeness = (hold: Exercise) => (a: Exercise, b: Exercise) =>
+export const byLikeness = (hold: Exercise) => (a: Exercise, b: Exercise) =>
   sharedPrimaryMuscles(hold, b) - sharedPrimaryMuscles(hold, a) ||
   Number(b.area === hold.area) - Number(a.area === hold.area);
 
