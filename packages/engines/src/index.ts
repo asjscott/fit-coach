@@ -35,4 +35,5 @@ export * from "./week-ledger";
 export * from "./weekly-budget";
 export * from "./workout-length";
 export * from "./working-level-sections";
+export * from "./target-range";
 export * from "./working-levels";

@@ -40,6 +40,18 @@ describe("the deload week (#137)", () => {
     expect((await workingLevels(user)).get(slug)).toMatchObject({ kg: 14, reps: 9 });
   });
 
+  // #183: the phone shows its targets as one number
+  it("says the plan was built for the deload week, and only then", async () => {
+    const user = await assessedUser();
+    expect((await currentPlan(user)).deloadWeek).toBeUndefined();
+
+    setClock(DELOAD_WEEK);
+    expect((await currentPlan(user)).deloadWeek).toBe(true);
+
+    setClock(NEXT_BLOCK);
+    expect((await currentPlan(user)).deloadWeek).toBeUndefined();
+  });
+
   // Story 68
   it("neither adds a Miss nor ends the run of Misses", async () => {
     const user = await assessedUser();
@@ -165,7 +177,10 @@ async function workingLevels(user: TestUser) {
   return new Map<string, WorkingLevel>(latest!.workingLevels.map((level) => [level.slug, level]));
 }
 
+async function currentPlan(user: TestUser) {
+  return (await user.post("/planned-workouts/current")).body as PlannedWorkout;
+}
+
 async function plannedExercise(user: TestUser, slug: string) {
-  const plan = (await user.post("/planned-workouts/current")).body as PlannedWorkout;
-  return plan.plannedExercises.find((exercise) => exercise.slug === slug);
+  return (await currentPlan(user)).plannedExercises.find((exercise) => exercise.slug === slug);
 }

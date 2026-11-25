@@ -14,7 +14,7 @@ import {
 import { pairRestPlan, type RestChoice } from "@fit/engines";
 import { getCalendars } from "expo-localization";
 import { bandLevelLabels } from "../equipment/loads";
-import { exerciseName, type SetReading } from "./library";
+import { exerciseName, type SetReading, type TargetReading } from "./library";
 
 // How Workouts and Sets read on screen
 
@@ -215,13 +215,32 @@ export const previousSetsLabel = (sets: readonly Set[], unit: WeightUnit, readin
 
 // A Set's target as a Set reads: "20 kg × 8", "12 reps", "40 s", "Medium band × 12". Only the walk's reads in
 // minutes, "20 min" (#109, #177). A load rounds to 0.5 of the user's unit, which also hides the
-// floating-point noise of a profile's summed loads
-export function setTargetLabel(target: SetTarget, unit: WeightUnit, reading?: SetReading) {
+// floating-point noise of a profile's summed loads. With its Exercise's reading, " per side" for a one-sided Exercise,
+// a Jump's reps as contacts (#105), and its range (#183): "20 kg × 8–12 · aim for 9", "10–15 reps", "60+ s"
+export function setTargetLabel(target: SetTarget, unit: WeightUnit, reading?: TargetReading) {
+  const perSide = reading?.unilateral ? " per side" : "";
+  const range = reading?.rangeOf?.(target);
+  if (!range) return `${oneNumberLabel(target, unit, reading)}${perSide}`;
+  const { min, max } = range;
+  const span = max === undefined ? `${min}+` : `${min}–${max}`;
+  switch (target.unit) {
+    case "kg":
+      return `${loadLabel(target.kg, unit)} × ${span}${perSide} · aim for ${target.reps}`;
+    case "band":
+      return `${bandLevelLabels[target.level]} band × ${span}${perSide} · aim for ${target.reps}`;
+    case "reps":
+      return `${span} reps${perSide}`;
+    case "seconds":
+      return `${span} s${perSide}`;
+  }
+}
+
+function oneNumberLabel(target: SetTarget, unit: WeightUnit, reading?: SetReading) {
   switch (target.unit) {
     case "kg":
       return describeSet({ kind: "external", kg: target.kg, reps: target.reps }, unit);
     case "reps":
-      return describeSet({ kind: "bodyweight", reps: target.reps }, unit);
+      return describeSet({ kind: "bodyweight", reps: target.reps }, unit, reading);
     case "seconds":
       return describeSet({ kind: "timed", seconds: target.seconds }, unit, reading);
     case "band":
@@ -231,13 +250,9 @@ export function setTargetLabel(target: SetTarget, unit: WeightUnit, reading?: Se
 
 type PlannedSets = NonNullable<InProgressWorkoutExercise["planned"]>;
 
-// What the plan sets for an Exercise: "3 sets · 20 kg × 8", with " per side" for a one-sided Exercise, and a jump's
-// reps as contacts: "3 sets · 10 contacts" (#105). A load is in the user's unit
-export const plannedSetsLabel = ({ sets, target }: PlannedSets, unit: WeightUnit, reading?: SetReading) => {
-  const label =
-    reading?.jump && target.unit === "reps" ? `${target.reps} contacts` : setTargetLabel(target, unit, reading);
-  return `${setsLabel(sets)} · ${label}${reading?.unilateral ? " per side" : ""}`;
-};
+// What the plan sets for an Exercise: "3 sets · 20 kg × 8–12 · aim for 9"
+export const plannedSetsLabel = ({ sets, target }: PlannedSets, unit: WeightUnit, reading?: TargetReading) =>
+  `${setsLabel(sets)} · ${setTargetLabel(target, unit, reading)}`;
 
 export const builtInEquipmentLabels: Record<BuiltInEquipment, string> = {
   full_gym: "Full gym",
@@ -255,7 +270,7 @@ export function workoutExerciseSummary(
   unit: WeightUnit,
   previous?: readonly Set[],
   planned?: PlannedSets,
-  reading?: SetReading,
+  reading?: TargetReading,
 ) {
   if (sets.length) return `${setsLabel(sets.length)} · ${setsSummary(sets, unit, reading)}`;
   if (planned) return plannedSetsLabel(planned, unit, reading);
