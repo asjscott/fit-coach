@@ -1,14 +1,7 @@
 import type { Set } from "@fit/shared";
 import { describe, expect, it } from "vitest";
-import {
-  extendRest,
-  pairRestPlan,
-  restAfterSet,
-  restSeconds,
-  restSecondsLeft,
-  startRest,
-  type Rest,
-} from "./rest-timer";
+import { restSeconds } from "./rest-choice";
+import { adjustRest, pairRestPlan, restAfterSet, restSecondsLeft, startRest, type Rest } from "./rest-timer";
 
 const at = (iso: string) => new Date(iso);
 
@@ -101,6 +94,34 @@ describe("restAfterSet", () => {
     });
   });
 
+  describe("with a chosen rest", () => {
+    it("rests the choice after a Set, whatever the Exercise", () => {
+      expect(secondsOf(restAfterSet(workout(0, 0), "squat", now, 30))).toBe(30);
+      expect(secondsOf(restAfterSet(workout(0, 0), "squat", now, 180))).toBe(180);
+    });
+
+    it("rests as usual on Auto", () => {
+      expect(secondsOf(restAfterSet(workout(0, 0), "squat", now, "auto"))).toBe(90);
+    });
+
+    it("rests it after a superset's round, and never mid-round", () => {
+      expect(restAfterSet(workout(1, 0), "press", now, 60)).toBeNull();
+      expect(secondsOf(restAfterSet(workout(1, 1), "row", now, 60))).toBe(60);
+    });
+
+    it("rests it once the other Exercise of a pair has no Sets left", () => {
+      expect(secondsOf(restAfterSet(workout(4, 3, 4), "press", now, 60))).toBe(60);
+    });
+
+    it("still doesn't rest on a past Workout", () => {
+      expect(restAfterSet({ ...workout(0, 0), pastStart: "2026-11-06T09:00:00.000Z" }, "squat", now, 60)).toBeNull();
+    });
+
+    it("rests as on Auto in an Assessment", () => {
+      expect(secondsOf(restAfterSet({ ...workout(0, 0), assessment: "A" }, "squat", now, 30))).toBe(90);
+    });
+  });
+
   describe("in the Recovery Workout", () => {
     const timed: Set = { kind: "timed", seconds: 45, loggedAt: now.toISOString() };
     const recovery = {
@@ -112,6 +133,7 @@ describe("restAfterSet", () => {
 
     it("doesn't rest after the walk, which goes straight on to the stretches", () => {
       expect(restAfterSet(recovery, "walk", now)).toBeNull();
+      expect(restAfterSet(recovery, "walk", now, 60)).toBeNull();
     });
 
     it("rests as usual between a stretch's Sets", () => {
@@ -138,6 +160,15 @@ describe("pairRestPlan", () => {
     expect(plan([0, 1], [0, 3])).toEqual({ pairSeconds: 90, fewer: { slug: "chin-up", otherSeconds: 45 } });
   });
 
+  it("rests the chosen rest after each round and once the other is done", () => {
+    const pair = [member("chin-up", 1, 1), member("dumbbell-lateral-raise", 1, 3)] as const;
+    expect(pairRestPlan(pair, 60)).toEqual({
+      pairSeconds: 60,
+      fewer: { slug: "chin-up", otherSeconds: 60 },
+      done: "chin-up",
+    });
+  });
+
   it("isn't done with the one with fewer Sets until the round it's in is over", () => {
     expect(plan([1, 1], [0, 3]).done).toBeUndefined();
     expect(plan([1, 1], [1, 3]).done).toBe("chin-up");
@@ -162,14 +193,24 @@ describe("restSecondsLeft", () => {
   });
 });
 
-describe("extendRest", () => {
+describe("adjustRest", () => {
+  const rest = startRest("back-squat", at("2026-11-09T10:00:00Z"));
+  const atTwoMinutes = at("2026-11-09T10:02:00Z");
+
   it("adds 15 seconds to the current rest", () => {
-    const rest = startRest("back-squat", at("2026-11-09T10:00:00Z"));
-    expect(restSecondsLeft(extendRest(rest), at("2026-11-09T10:02:00Z"))).toBe(45);
+    expect(adjustRest(rest, 15, atTwoMinutes)).toEqual({ endsAt: Date.parse("2026-11-09T10:02:45Z") });
+  });
+
+  it("takes 15 seconds off the current rest", () => {
+    expect(adjustRest(rest, -15, atTwoMinutes)).toEqual({ endsAt: Date.parse("2026-11-09T10:02:15Z") });
+  });
+
+  it("ends the rest when there's less than that left", () => {
+    expect(adjustRest(rest, -15, at("2026-11-09T10:02:16Z"))).toBeNull();
   });
 
   it("leaves the next rest its usual length", () => {
-    extendRest(startRest("back-squat", at("2026-11-09T10:00:00Z")));
+    adjustRest(rest, 15, atTwoMinutes);
     expect(startRest("back-squat", at("2026-11-09T10:03:00Z")).endsAt).toBe(Date.parse("2026-11-09T10:05:30Z"));
   });
 });

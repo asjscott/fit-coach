@@ -1,4 +1,4 @@
-import { restSecondsLeft, REST_EXTENSION_SECONDS } from "@fit/engines";
+import { REST_ADJUSTMENT_SECONDS, restSecondsLeft } from "@fit/engines";
 import { StyleSheet, View } from "react-native";
 import { LoadingButton } from "@/components/loading-button";
 import { HStack } from "@/components/stack";
@@ -16,7 +16,7 @@ export function RestTimer() {
 }
 
 function Countdown() {
-  const { rest, extendRest, skipRest } = useLogbook();
+  const { rest, extendRest, shortenRest, skipRest } = useLogbook();
   const now = useNow(250);
   if (!rest) return null;
   const clock = elapsedClockLabel(restSecondsLeft(rest, new Date(now)) * 1000);
@@ -26,7 +26,8 @@ function Countdown() {
       <Text weight="semiBold" style={styles.clock} accessibilityRole="timer" accessibilityLabel={`Rest, ${clock} left`}>
         {`Rest ${clock}`}
       </Text>
-      <LoadingButton label={`+${REST_EXTENSION_SECONDS} s`} size="sm" action="secondary" onPress={extendRest} />
+      <LoadingButton label={`−${REST_ADJUSTMENT_SECONDS} s`} size="sm" action="secondary" onPress={shortenRest} />
+      <LoadingButton label={`+${REST_ADJUSTMENT_SECONDS} s`} size="sm" action="secondary" onPress={extendRest} />
       <LoadingButton label="Skip" size="sm" action="secondary" onPress={skipRest} />
     </HStack>
   );

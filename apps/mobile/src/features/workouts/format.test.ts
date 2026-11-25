@@ -24,6 +24,7 @@ import {
   setTargetLabel,
   straightToLabel,
   supersetLetter,
+  restChoiceLabel,
   supersetNote,
   workoutExerciseSummary,
   workoutTimesLabel,
@@ -461,6 +462,18 @@ describe("straightToLabel", () => {
   });
 });
 
+describe("restChoiceLabel", () => {
+  it.each([
+    ["auto", "Auto"],
+    [30, "30 s"],
+    [60, "1 min"],
+    [75, "1 min 15 s"],
+    [180, "3 min"],
+  ] as const)("reads %s as %s", (choice, label) => {
+    expect(restChoiceLabel(choice)).toBe(label);
+  });
+});
+
 describe("supersetNote", () => {
   // A chin-up (120 s Sets, 90 s rest) with a lateral raise (60 s Sets, 45 s rest)
   const member = (slug: string, logged: number, planned: number) => ({
@@ -473,6 +486,15 @@ describe("supersetNote", () => {
 
   it("gives the longer of the two rests after each round", () => {
     expect(note([0, 3], [0, 3])).toBe("No rest between them, then 90 s rest");
+  });
+
+  it("gives the chosen rest", () => {
+    expect(supersetNote([member("chin-up", 0, 1), member("dumbbell-lateral-raise", 0, 3)], 60)).toBe(
+      "No rest between them, then 60 s rest",
+    );
+    expect(supersetNote([member("chin-up", 1, 1), member("dumbbell-lateral-raise", 1, 3)], 60)).toBe(
+      "Chin-up is done: 60 s rest between Sets",
+    );
   });
 
   it("says when the one with more Sets will rest its own time", () => {

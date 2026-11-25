@@ -74,8 +74,15 @@ Schemas shared by app and API: packages/shared/src/workouts.ts
 - **The rest timer lives in memory on the LogbookProvider** (#95), not in the Logbook or storage: it belongs to the
   Workout, so it follows the user between Exercises and to Today, and a force-quit loses it. Only Log set starts or
   restarts it; Finish, Discard and sign-out end it. Its length and countdown are pure (`rest-timer.ts` in
-  `@fit/engines`): `max(45, secondsPerSet − 30)` to a fixed end time, so backgrounding doesn't skew it. The provider
-  also keeps the screen on (`expo-keep-awake`) while a Workout is in progress.
+  `@fit/engines`): on Auto `max(45, secondsPerSet − 30)`, else the choice, to a fixed end time, so backgrounding doesn't
+  skew it. −15 s and +15 s move that end (`adjustRest`), for the current rest only; −15 s with less than that left ends
+  it. The provider also keeps the screen on (`expo-keep-awake`) while a Workout is in progress.
+- **The rest choice is a phone-only preference** (#178): Auto or 30 s to 3 min in 15 s steps, picked on Today, stored in
+  device storage (`stored-rest-choice.ts`) and held as `restChoice` on the LogbookProvider. Never on the server, in the
+  Logbook or on the Planned Workout (ADR 0003), which is still built at Long on Auto. `restAfterSet`, `pairRestPlan`
+  and `daysWorkout` (`DayChoices.rest`) take it as an input: a Set is timed as its `secondsPerSet` less its Auto rest
+  plus the choice (`secondsWithRest`, `rest-choice.ts`), so a shorter rest fits more of the plan's Sets in the Length.
+  An Assessment always rests as on Auto, and the walk keeps its time and has no rest.
 - **Times follow the phone's 12- or 24-hour setting, not its locale** (#69): `timeLabel` and Android's time dialog both
   read `uses24HourClock` (`format.ts`, from `expo-localization`), and the dialog is 24-hour whatever the phone says
   without it. The iOS pickers follow the setting by themselves. Hermes alone goes by the language: en-GB with a Canadian
@@ -239,7 +246,7 @@ Schemas: packages/shared/src/planned-workouts.ts
 - **Supersets are the phone's, and only to fit the Length** (#96, `supersets.ts`). `daysWorkout` pairs only when the
   Length would cut a Set: one pair at a time in priority order (`canPair`: main Pattern, never one-sided or
   Ballistic) until the Workout fits, then cuts what still doesn't. A pair is timed by `pairSeconds`, Sets ×
-  (the longer `secondsPerSet` + 30) for the rounds they share. "No supersets" (`DayChoices.noSupersets`) goes back to
+  (the longer `secondsPerSet` + 30) for the rounds they share, at the rest choice (#178). "No supersets" (`DayChoices.noSupersets`) goes back to
   cutting. At Start the partner's slug becomes `planned.supersetWith`, the partner's Workout Exercise id both ways,
   dropped at Finish with `planned`, so sync and History are unchanged. Removing one of the pair unpairs the other.
   `restAfterSet` (`rest-timer.ts`) gives no rest while the other is behind, and `pairRestSeconds` after the round.

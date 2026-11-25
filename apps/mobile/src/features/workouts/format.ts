@@ -11,7 +11,7 @@ import {
   type WeightUnit,
   type Workout,
 } from "@fit/shared";
-import { pairRestPlan } from "@fit/engines";
+import { pairRestPlan, type RestChoice } from "@fit/engines";
 import { getCalendars } from "expo-localization";
 import { bandLevelLabels } from "../equipment/loads";
 import { exerciseName, type SetReading } from "./library";
@@ -305,9 +305,17 @@ export const supersetLetter = (index: number) => String.fromCharCode(65 + index)
 // The superset box's banner mid-round (#96). The name is the library's, as it is (#111)
 export const straightToLabel = (name: string) => `No rest: straight to ${name}`;
 
+// A rest choice on Today: "Auto", "45 s", "1 min 15 s"
+export function restChoiceLabel(choice: RestChoice) {
+  if (choice === "auto") return "Auto";
+  const minutes = Math.floor(choice / 60);
+  const seconds = choice % 60;
+  return [minutes && `${minutes} min`, seconds && `${seconds} s`].filter(Boolean).join(" ");
+}
+
 // The superset box's note on its rests, as pairRestPlan gives them (#111)
-export function supersetNote(pair: Parameters<typeof pairRestPlan>[0]) {
-  const { pairSeconds, fewer, done } = pairRestPlan(pair);
+export function supersetNote(pair: Parameters<typeof pairRestPlan>[0], choice?: RestChoice) {
+  const { pairSeconds, fewer, done } = pairRestPlan(pair, choice);
   const pairNote = `No rest between them, then ${pairSeconds} s rest`;
   if (!fewer) return pairNote;
   const name = exerciseName(fewer.slug);
