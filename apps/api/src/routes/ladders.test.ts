@@ -33,6 +33,22 @@ describe("bodyweight and timed ladders at upload (#135)", () => {
     });
   });
 
+  // Spec #176 story 67
+  it("puts a beaten bodyweight or timed target to the lowest Set + 1 rep or + 5 seconds", async () => {
+    const user = await assessedUser(api);
+    await upload(
+      user,
+      at(100, [
+        { slug: "archer-push-up", sets: [repsDone(7), repsDone(6)] },
+        { slug: "hollow-hold", sets: [held(52), held(50)] },
+      ]),
+    );
+
+    const levels = await workingLevels(user);
+    expect(levels.get("archer-push-up")).toMatchObject({ reps: 7 });
+    expect(levels.get("hollow-hold")).toMatchObject({ seconds: 55 });
+  });
+
   // Stories 55, 56: at 15 reps on every Set the next plan gives the harder variant, from its level seeded from
   // Reference Strength, and names the Exercise it takes over from
   it("gives the harder variant at its seeded level once every Set reaches 15 reps", async () => {
@@ -94,7 +110,7 @@ describe("band ladders at upload (#135)", () => {
     });
   });
 
-  // As at the heaviest load (story 34): the reps climb towards 20 instead
+  // As at the heaviest load (story 34), the reps climb instead. Past 10, the target catches up with the 15s done
   it("keeps to the heaviest band the profile has, putting the target up", async () => {
     const user = await assessedUser(api, { equipmentProfile: DUMBBELLS_AND_BANDS });
     await upload(user, at(100, [{ slug: "band-row", sets: [banded(15), banded(15)] }]));
@@ -102,7 +118,7 @@ describe("band ladders at upload (#135)", () => {
 
     expect((await workingLevels(user)).get("band-row")).toMatchObject({
       level: "medium",
-      reps: 11,
+      reps: 15,
       change: { code: "target-up" },
     });
   });
