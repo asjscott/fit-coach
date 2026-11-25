@@ -2,7 +2,8 @@ import type { FastifyPluginAsyncZod } from "fastify-type-provider-zod";
 import { ErrorResponse, Food, SavedFoodInput, SavedFoods } from "@fit/shared";
 import { z } from "zod";
 import { requireAuth, userIdOf } from "../auth";
-import { createSavedFood, deleteSavedFood, listSavedFoods, updateSavedFood } from "../saved-foods";
+import { createSavedFood, deleteSavedFood, updateSavedFood } from "../saved-foods";
+import { savedFoodsAndMeals } from "../saved-foods-and-meals";
 
 const IdParams = z.object({ id: z.string() });
 const BARCODE_TAKEN = { error: "one of your Saved Foods already has that barcode" };
@@ -25,9 +26,9 @@ export const savedFoodRoutes: FastifyPluginAsyncZod = async (app) => {
     },
   );
 
-  // The user's Saved Foods, by name
+  // The user's Saved Foods and Saved Meals, by name
   app.get("/saved-foods", { schema: { response: { 200: SavedFoods } } }, async (req) => ({
-    foods: await listSavedFoods(userIdOf(req)!),
+    foods: await savedFoodsAndMeals(userIdOf(req)!),
   }));
 
   // 200 with the edited Saved Food. Food Entries already logged from it don't change

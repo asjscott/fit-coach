@@ -4,7 +4,8 @@ import { ApiError, noAnswerMessage, useApi } from "@/api";
 import { errorMessage } from "@/utils/error-message";
 
 const TYPING_PAUSE_MS = 400;
-const SEARCH_DOWN = "Food search isn't answering, so only your Saved Foods are listed. Try again in a minute.";
+const SEARCH_DOWN =
+  "Food search isn't answering, so only your Saved Foods and Saved Meals are listed. Try again in a minute.";
 
 export type FoodSearch = {
   // Undefined before the first search, and while the words are too short to search

@@ -1,4 +1,4 @@
-import { portionNutrients } from "@fit/engines";
+import { allowsGrams, portionNutrients } from "@fit/engines";
 import type { Food } from "@fit/shared";
 import { ScrollView, StyleSheet, View } from "react-native";
 import { Chip } from "@/components/chip";
@@ -8,7 +8,7 @@ import { spacing } from "@/theme";
 import { portionLine } from "../food-portion";
 import type { PortionState } from "../hooks/use-portion";
 
-// A portion of a food: grams, or a count of one of its own servings, and what that portion holds (spec #158 stories
+// A portion of a food: grams, unless it can't be logged in them, or a count of one of its own servings, and what that portion holds (spec #158 stories
 // 71 and 72). The portion's state comes from usePortion, so the screen around it can log or save it
 export function FoodPortionPanel({ food, portion }: { food: Food; portion: PortionState }) {
   const { unit, amount, setAmount, choose, grams } = portion;
@@ -25,7 +25,9 @@ export function FoodPortionPanel({ food, portion }: { food: Food; portion: Porti
               onPress={() => choose({ unit: "serving", serving })}
             />
           ))}
-          <Chip label="Grams" selected={unit.unit === "g"} onPress={() => choose({ unit: "g" })} />
+          {allowsGrams(food) ? (
+            <Chip label="Grams" selected={unit.unit === "g"} onPress={() => choose({ unit: "g" })} />
+          ) : null}
         </ScrollView>
       ) : null}
       <View style={styles.amountRow}>
