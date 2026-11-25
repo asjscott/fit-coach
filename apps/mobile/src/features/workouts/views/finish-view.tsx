@@ -1,4 +1,4 @@
-import { finishTimes, LogbookError, summarizeWorkout } from "@fit/engines";
+import { finishTimes, holdsDone, isGuidedWorkout, LogbookError, summarizeWorkout } from "@fit/engines";
 import { router } from "expo-router";
 import { useState } from "react";
 import { StyleSheet, View } from "react-native";
@@ -114,8 +114,14 @@ export default function FinishView() {
         </Stack>
       )}
       <View style={[styles.stats, { borderColor: colors.line }]}>
-        <Stat value={volumeLabel(summary.volumeKg, unit)} unit={unit} label="Volume" size="3xl" />
-        <Stat value={String(summary.sets)} label="Sets" size="3xl" />
+        {isGuidedWorkout(workout) ? (
+          <Stat value={String(holdsDone(workout))} label="Holds" size="3xl" />
+        ) : (
+          <>
+            <Stat value={volumeLabel(summary.volumeKg, unit)} unit={unit} label="Volume" size="3xl" />
+            <Stat value={String(summary.sets)} label="Sets" size="3xl" />
+          </>
+        )}
         <Stat {...timeStat(Math.max(0, summary.durationMs))} label="Time" size="3xl" />
       </View>
       <SectionLabel right={String(summary.exercises)} style={styles.sectionLabel}>

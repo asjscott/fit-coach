@@ -1,12 +1,10 @@
 import type { InProgressWorkout, InProgressWorkoutExercise } from "@fit/shared";
 import { exerciseBySlug } from "./data/exercises";
 import { holdCues, holdState, isHoldPaused, pauseHold, type Hold, type HoldRun } from "./hold-timer";
+import { CHANGE_SECONDS } from "./mobility-workout";
 
 // The guided flow runs a Recovery Workout's holds one after another, each logging its Set (#200). Where it is comes
 // from the logged Sets and the skips of this run of it
-
-// To change position before each hold, and sides within it
-export const CHANGE_SECONDS = 10;
 
 // One Set of a Recovery Exercise: its seconds are per side
 export type GuidedHold = { workoutExerciseId: string; slug: string; seconds: number; sides: 1 | 2 };

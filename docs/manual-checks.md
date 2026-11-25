@@ -220,6 +220,23 @@ On the installed web app on the iPhone, with the silent switch off and the volum
 - [ ] **HT6** With VoiceOver, the clock reads as "Hold, 0:12 left", each change (Hold, Target reached, Top of the range) is announced, and the buttons behind can't be reached. With Reduce Motion on there's no flash.
   - Result: · Notes:
 
+## Guided flow (#200)
+
+On the installed web app on the iPhone, with the silent switch off and the volume up.
+
+- [ ] **GF1** Start a Mobility Workout: the flow opens by itself with 10 s to change position, and shows the hold's name, cues, what's next and how far through, readable from the floor. A one-sided hold says "Switch sides", with 10 s between.
+  - Result: · Notes:
+- [ ] **GF2** It beeps (and vibrates on Android) at the start, in the last 3 s and at the end of each side, and nothing but vibration with Sound off. Music in another app carries on. It goes on by itself, with no rest and no RPE.
+  - Result: · Notes:
+- [ ] **GF3** Pause and Resume keep the time. Skip logs nothing. Lock the phone, or switch apps, mid-hold for a minute: it's paused where it was and nothing is logged. Left alone, the screen stays awake.
+  - Result: · Notes:
+- [ ] **GF4** Walk and mobility: the walk is logged in minutes as before, then the flow opens.
+  - Result: · Notes:
+- [ ] **GF5** After the last hold, Finish shows the time taken and the holds done, and saves. Finish early keeps what's logged; with nothing logged, Save offers to discard.
+  - Result: · Notes:
+- [ ] **GF6** With VoiceOver, the clock reads as "Hold, 0:12 left", each change is announced with the next hold's name, and the buttons behind can't be reached. With Reduce Motion on there's no flash.
+  - Result: · Notes:
+
 ## Supersets (#96)
 
 A Workout pairs Exercises only when it wouldn't otherwise fit its Length. Pairs form where the Patterns go together (push with pull or hinge, squat with core), never with a one-sided Exercise or a carry. On the simulators, Bodyweight only on Short paired them. The sheet then says "Paired into supersets to fit the time" and shows "Superset with …" under each paired Exercise.
