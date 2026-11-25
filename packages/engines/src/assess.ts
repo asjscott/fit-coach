@@ -26,6 +26,22 @@ function topSetOf(sets: Set[]): { topSet: Set; loadLimited: boolean } | null {
   return topSet ? { topSet, loadLimited: false } : null;
 }
 
+type TestedWorkout = { workoutExercises: readonly { slug: string; sets: Set[] }[] };
+
+// The tests of an Assessment Workout that give no measure as they stand, so their Patterns are estimated
+export function unmeasuredTests<E extends TestedWorkout["workoutExercises"][number]>(workout: {
+  workoutExercises: readonly E[];
+}): E[] {
+  return workout.workoutExercises.filter(({ slug, sets }) => testedPatternOf(slug) && !topSetOf(sets));
+}
+
+// Whether an Assessment's Workouts (one, or an old A and B) give a result: any one measured test is enough. The server
+// and the phone both ask this, so Today offers the Assessment again exactly when the server made none
+export const hasAssessmentResult = (workouts: readonly TestedWorkout[]) =>
+  workouts.some(({ workoutExercises }) =>
+    workoutExercises.some(({ slug, sets }) => testedPatternOf(slug) && topSetOf(sets)),
+  );
+
 // The reps a weighted Set would have reached to failure: reps in reserve count, and an unrated Set counts as RPE 9
 const repsToFailure = ({ reps, rpe = TOP_SET_RPE }: { reps: number; rpe?: number }) => reps + (10 - rpe);
 

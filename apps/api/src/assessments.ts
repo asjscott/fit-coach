@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 import {
   assess,
   BLOCK_WEEKS,
+  hasAssessmentResult,
   keptByRetake,
   migrateWorkingLevel,
   workoutsToAssess,
@@ -84,6 +85,8 @@ export async function assessIfComplete(clerkUserId: string, workout: Workout, us
       }
       const [first] = loaded;
       if (!first) return;
+      // Nothing was measured, so there's no result: it stays in History, and Today offers the Assessment again
+      if (!hasAssessmentResult(loaded)) return;
 
       const result = assess(loaded, user.bodyProfile, user.equipmentProfiles);
       const id = randomUUID();

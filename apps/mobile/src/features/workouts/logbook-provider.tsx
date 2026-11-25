@@ -64,6 +64,9 @@ type LogbookContextValue = {
   protocolState: Logbook["protocolState"];
   // For an Assessment Workout: its next test, and whether every test is done
   testProgress: Logbook["testProgress"];
+  // Swaps a pull-up test for the inverted row, or passes over a test with no Set
+  swapTest: Logbook["swapTest"];
+  skipTest: (workoutExerciseId: string) => Promise<void>;
   addWorkoutExercise: (exercise: Pick<Exercise, "slug" | "loadType">) => Promise<void>;
   removeWorkoutExercise: (workoutExerciseId: string) => Promise<void>;
   logSet: (workoutExerciseId: string, values: SetValues) => Promise<void>;
@@ -280,6 +283,16 @@ export function LogbookProvider({ children }: { children: ReactNode }) {
     [logbook, run],
   );
 
+  const swapTest = useCallback(
+    (...args: Parameters<Logbook["swapTest"]>) => run(() => logbook.swapTest(...args)),
+    [logbook, run],
+  );
+
+  const skipTest = useCallback(
+    (workoutExerciseId: string) => run(() => logbook.skipTest(workoutExerciseId)),
+    [logbook, run],
+  );
+
   const startPlannedWorkout = useCallback(
     (plannedWorkout: PlannedWorkoutToStart) => run(() => logbook.startPlannedWorkout(plannedWorkout, new Date())),
     [logbook, run],
@@ -438,6 +451,8 @@ export function LogbookProvider({ children }: { children: ReactNode }) {
         startRecoveryWorkout,
         protocolState: logbook.protocolState,
         testProgress: logbook.testProgress,
+        swapTest,
+        skipTest,
         addWorkoutExercise,
         removeWorkoutExercise,
         logSet,

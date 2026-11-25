@@ -150,6 +150,8 @@ export const InProgressWorkout = z.object({
         ...workoutExerciseFields,
         sets: z.array(Set),
         previousSets: PreviousSets.optional(),
+        // An Assessment Workout's test the user passed over; logging a Set takes it off. Dropped at Finish
+        skipped: z.boolean().optional(),
         planned: PlannedExercise.pick({ sets: true, target: true })
           .extend({
             // The id of the Workout Exercise it's paired with in a superset (#96), both ways

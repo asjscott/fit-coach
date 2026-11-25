@@ -46,7 +46,7 @@ export default function WorkoutView() {
 
 function InProgress({ workout }: { workout: InProgressWorkout }) {
   const { colors } = useTheme();
-  const { discard, testProgress, rest, minimizeRest } = useLogbook();
+  const { discard, testProgress, skipTest, rest, minimizeRest } = useLogbook();
   const primaryEquipment = usePrimaryEquipmentProfile();
   const { showToast } = useToast();
   const leaveWorkout = useLeaveWorkout();
@@ -89,6 +89,13 @@ function InProgress({ workout }: { workout: InProgressWorkout }) {
     extra && nextAfterCurrent ? { ...nextAfterCurrent, as: "secondary" } : nextAfterCurrent;
   // A rest is after an Exercise's Set whichever is current now
   const nextAfterRest = rest && !workout.assessment ? nextAfter(rest.afterId) : undefined;
+  // The next test once this one is skipped too
+  const skip = async (id: string) => {
+    const skipped = workoutExercises.map((we) => (we.id === id ? { ...we, skipped: true } : we));
+    const after = primaryEquipment && testProgress({ ...workout, workoutExercises: skipped }, primaryEquipment);
+    await skipTest(id);
+    if (after?.nextTestId) choose(after.nextTestId);
+  };
   const groups = supersetGroups(workoutExercises);
   const pairs = groups.filter((group) => group.length === 2);
 
@@ -146,6 +153,7 @@ function InProgress({ workout }: { workout: InProgressWorkout }) {
                   position={i}
                   count={workoutExercises.length}
                   next={next}
+                  onSkipTest={() => skip(workoutExercise.id)}
                 />
               </View>
             ) : (

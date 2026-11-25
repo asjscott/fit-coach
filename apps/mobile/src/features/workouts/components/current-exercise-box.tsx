@@ -1,4 +1,11 @@
-import { exerciseLoadsByEquipmentKg, isRatedTest, takesAnotherSet, takesNoMoreSets } from "@fit/engines";
+import {
+  exerciseLoadsByEquipmentKg,
+  isRatedTest,
+  isSkippedTest,
+  takesAnotherSet,
+  takesNoMoreSets,
+  testSwap,
+} from "@fit/engines";
 import { RPE_SCALE, type InProgressWorkoutExercise, type LoadType, type SetValues } from "@fit/shared";
 import { useMemo, useState, type ReactNode } from "react";
 import { StyleSheet, View } from "react-native";
@@ -10,7 +17,7 @@ import { SectionLabel } from "@/components/section-label";
 import { HStack, Stack } from "@/components/stack";
 import { Text } from "@/components/text";
 import { useToast } from "@/contexts/toast-context";
-import { usePrimaryEquipmentProfile, useWeightUnit } from "@/features/user/current-user-provider";
+import { useCurrentUser, usePrimaryEquipmentProfile, useWeightUnit } from "@/features/user/current-user-provider";
 import { fonts, radii, spacing, useTheme } from "@/theme";
 import { errorMessage } from "@/utils/error-message";
 import { dumbbellBuildLabel, type BuildLabel } from "../dumbbell-build";
@@ -30,6 +37,8 @@ export type CurrentExerciseBoxProps = {
   position: number;
   count: number;
   next?: NextAction;
+  // Passes over an Assessment Workout's test with no Set, moving on to the next
+  onSkipTest?: () => Promise<void>;
 };
 
 // What moves on from an Exercise. "main" is the main button, with Log extra set under it to open the steppers, and
@@ -42,7 +51,7 @@ export type NextAction = { label: string; onPress: () => void } & (
 // The Workout Exercise being logged: its name, target, Previous Sets, the Sets so far (each with a ⋯ to edit or delete it) and
 // steppers for the next Set, which starts from the previous one. A test that's done,
 // or the walk once logged, takes no more Sets
-export function CurrentExerciseBox({ workoutExercise, position, count, next }: CurrentExerciseBoxProps) {
+export function CurrentExerciseBox({ workoutExercise, position, count, next, onSkipTest }: CurrentExerciseBoxProps) {
   return (
     <ExerciseBox>
       <HStack spacing={2} align="start">
@@ -55,7 +64,64 @@ export function CurrentExerciseBox({ workoutExercise, position, count, next }: C
         <WorkoutExerciseMenu workoutExercise={workoutExercise} />
       </HStack>
       <ExerciseLogging workoutExercise={workoutExercise} next={next} />
+      {onSkipTest ? <TestWayOut workoutExercise={workoutExercise} onSkip={onSkipTest} /> : null}
     </ExerciseBox>
+  );
+}
+
+// For an Assessment Workout's test with no Set: swapping a pull-up for the inverted row when it's offered, and skipping
+// the test, which is then estimated
+function TestWayOut({
+  workoutExercise,
+  onSkip,
+}: Pick<CurrentExerciseBoxProps, "workoutExercise"> & { onSkip: () => Promise<void> }) {
+  const { workout, swapTest } = useLogbook();
+  const primaryEquipment = usePrimaryEquipmentProfile();
+  const injuries = useCurrentUser().user?.profile.injuries ?? [];
+  const { showToast } = useToast();
+  const [busy, setBusy] = useState(false);
+  if (!workout?.assessment || !primaryEquipment || workoutExercise.sets.length > 0) return null;
+  const swap = testSwap(workoutExercise, primaryEquipment, injuries);
+
+  const act = async (action: () => Promise<void>) => {
+    setBusy(true);
+    try {
+      await action();
+    } catch (err) {
+      showToast(errorMessage(err), { error: err });
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <Stack spacing={2} style={styles.entry}>
+      {swap ? (
+        <LoadingButton
+          label={`Swap to ${swap.name.toLowerCase()}`}
+          size="md"
+          action="secondary"
+          disabled={busy}
+          onPress={() => act(() => swapTest(workoutExercise.id, primaryEquipment, injuries))}
+          fullWidth
+        />
+      ) : null}
+      {isSkippedTest(workoutExercise) ? (
+        <Text size="sm" color="muted">
+          Skipped: it&apos;ll be estimated unless you log a Set.
+        </Text>
+      ) : (
+        <LoadingButton
+          label="Skip test"
+          size="md"
+          variant="link"
+          action="default"
+          disabled={busy}
+          onPress={() => act(onSkip)}
+          fullWidth
+        />
+      )}
+    </Stack>
   );
 }
 

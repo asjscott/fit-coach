@@ -1,4 +1,4 @@
-import { TestedPattern, type Exercise, type InjuryTag, type Pattern } from "@fit/shared";
+import { TestedPattern, type Exercise, type InjuryTag, type Pattern, type Set } from "@fit/shared";
 import { exerciseBySlug } from "./data/exercises";
 import { isAvailable, isSafeFor, type ProfileWithLoads } from "./equipment";
 
@@ -52,6 +52,20 @@ export const assessmentTests = (tests: ChosenTests) => ({
   exercises: ASSESSMENT_PATTERNS.flatMap((pattern) => tests[pattern] ?? []),
   untested: ASSESSMENT_PATTERNS.filter((pattern) => !tests[pattern]),
 });
+
+// A user who can't do a pull-up measures pull with this instead
+const PULL_UP_SWAP = "inverted-row";
+
+// The test a pull-up test with no Set logged can be swapped for: the inverted row, when it's available and safe
+export function testSwap(
+  { slug, sets }: { slug: string; sets: readonly Set[] },
+  profile: ProfileWithLoads,
+  injuries: InjuryTag[],
+): Exercise | undefined {
+  if (slug !== "pull-up" || sets.length > 0) return undefined;
+  const swap = requireExercise(PULL_UP_SWAP);
+  return isAvailable(swap, profile) && isSafeFor(swap, injuries) ? swap : undefined;
+}
 
 // Whether any Pattern has a test to do: one is enough, as the others are estimated
 export const canAssess = (tests: ChosenTests) => assessmentTests(tests).exercises.length > 0;
