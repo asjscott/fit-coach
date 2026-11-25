@@ -65,7 +65,7 @@ These were made while building and stay: whole-Workout upload instead of per-Set
 
 ## Order
 
-**M6 Progression → M7 Nutrition → M8 Daily loop → M12 Progress → M10 Activities → M13 Release-lite.**
+**M6 Progression → M7 Nutrition → #188 (ranges, Nutrition History, Saved Meals) → M8 Daily loop → M12 Progress → M10 Activities → M13 Release-lite.**
 
 M9 Rewards is cut down to PR detection (M6) and a Weekly Streak (M8). M11 Meal planner is cut. The numbers are kept from the PDF so old references still point somewhere.
 
@@ -143,16 +143,26 @@ As settled for this milestone. Spec #176 later changed what a Miss is and how fa
 
 **Done when:** two weeks of real eating logged on the phones' Release builds, mostly by barcode, Saved Foods and copy; targets look right against the user's own numbers.
 
+## Before M8: ranges, Nutrition History and Saved Meals (#188)
+
+**Goal:** a ring says what's good enough, a week can be looked back on, and a meal cooked often is logged in one step.
+
+- **Ranges:** kcal ±5% and protein 90–120% of target. Their rings are orange below, green in range, and over it start a red second lap that says how far over ("250 over"). The Coach's summary and Food Ideas use the ranges.
+- **Each day keeps its Daily Targets,** so a later Weigh-in or Goal doesn't rewrite the past.
+- **Nutrition History:** a week of kcal or protein, a bar per day against its range, with the daily average.
+- **Saved Meals:** a name, ingredients and a number of servings, logged as one Food Entry. This saves meals and doesn't plan them, so M11 stays cut.
+
+**Done when:** it has passed its manual checks on the phones' Release builds.
+
 ## M8 Daily loop
 
 **Goal:** the app reaches out at the right time with something useful. See [ADR 0006](adr/0006-scheduled-jobs-through-github-actions.md).
 
 - **Web push.** VAPID keys on the server, a subscription saved per device. iOS only delivers it to the installed PWA (iOS 16.4+).
 - **Scheduled jobs.** A GitHub Actions workflow runs hourly and POSTs to `/jobs/run` with a secret. That wakes the Render instance, which, for each user, runs whatever is due in that user's timezone and records that it ran, so a late or repeated call never sends twice. Agenda is dropped.
-- **Evening summary, due at 6 pm so it arrives by 7, templated:** "Push day done ✅ · 1,840 / 2,300 kcal · 120 g protein · Tomorrow: Legs, Standard", or "Tomorrow: Rest Day · next up Legs" when the Rest Day rule says so, with tomorrow's kcal and protein targets. It says "tomorrow" again ([ADR 0008](adr/0008-a-few-invited-users-and-tomorrow.md) reverses that part of [0004](adr/0004-spec-77-replaces-the-plans-m5.md)).
-- **Sunday weekly review**, in the app and announced by push: Workouts done against planned and the Weekly Streak; the Weekly Budget met per Muscle; PRs and Exercises that progressed or dropped; average kcal and protein against target; the change since last week's Weigh-in; the Readiness trend from Check-ins.
+- **Evening summary, due at 6 pm so it arrives by 7, templated:** "Push day done ✅ · 1,840 / 2,300 kcal · 120 g protein · Tomorrow: Legs, Standard", or "Tomorrow: Rest Day · next up Legs" when the Rest Day rule says so, with tomorrow's kcal and protein targets. It reads kcal and protein against their ranges (#188). It says "tomorrow" again ([ADR 0008](adr/0008-a-few-invited-users-and-tomorrow.md) reverses that part of [0004](adr/0004-spec-77-replaces-the-plans-m5.md)).
+- **Sunday weekly review**, in the app and announced by push: Workouts done against planned and the Weekly Streak; the Weekly Budget met per Muscle; PRs and Exercises that progressed or dropped; average kcal and protein against their ranges; the change since last week's Weigh-in; the Readiness trend from Check-ins.
 - **Weekly Streak.** A week counts when the user finishes at least `daysPerWeek − 1` Workouts, Recovery Workouts included. No freezes. Weeks run Monday to Sunday, as the Week Ledger does.
-- **Over the calorie target.** Once the day's kcal pass the target, the kcal ring starts a second lap in a new red, filling by how far over it is, and the middle says "250 over" in place of "0 left".
 - The PDF's event bus is dropped unless the spec finds a need. An LLM sentence in the summary is optional, through M7's interface.
 
 **Done when:** two weeks of evening summaries and two Sunday reviews arrive on the phone, on time to within about an hour, with no duplicates.

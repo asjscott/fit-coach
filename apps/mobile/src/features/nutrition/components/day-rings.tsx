@@ -28,7 +28,15 @@ export function DayRings({
       {rings.map((ring) => {
         const content = (
           <>
-            <Ring done={ring.progress} target={1} centre={ring.centre} size={size} stroke={size >= 72 ? 7 : 6} />
+            <Ring
+              done={ring.progress}
+              target={1}
+              centre={ring.centre}
+              color={ring.color}
+              lap={ring.lap}
+              size={size}
+              stroke={size >= 72 ? 7 : 6}
+            />
             <Text size="xs" color="muted" centered>
               {ring.caption}
             </Text>

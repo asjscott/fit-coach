@@ -203,7 +203,7 @@ How much the user moves in daily life, their strength Workouts included but neve
 _Avoid_: Activity (for this), lifestyle, exercise level
 
 **Daily Targets**:
-The calories, protein, fat, carbs, fibre and water the Coach sets the user for each day, the same every day, from their latest Weigh-in, Activity Level and Goal. Fibre is the user's to change; the others follow the rules.
+The calories, protein, fat, carbs, fibre and water the Coach sets the user for each day, the same every day, from their latest Weigh-in, Activity Level and Goal. Fibre is the user's to change; the others follow the rules. Calories and protein are each a range around their target, 5% either side for calories and 90–120% for protein, and a day is below, in range or over each.
 _Avoid_: Macros, budget (the Weekly Budget is for Sets), goals
 
 **Weigh-in**:

@@ -21,6 +21,7 @@ import { waterRoutes } from "./routes/water";
 import { HealthResponse } from "@fit/shared";
 import { registerAuth } from "./auth";
 import { ensureCheckInIndexes } from "./check-ins";
+import { ensureDailyTargetsIndexes } from "./daily-targets";
 import { ensureFoodEntryIndexes } from "./food-entries";
 import { realFoodSources, type FoodSources } from "./food-sources";
 import { pingDb } from "./db";
@@ -90,6 +91,7 @@ export async function buildApp({
   await setUp("create food entry indexes", ensureFoodEntryIndexes);
   await setUp("create saved food indexes", ensureSavedFoodIndexes);
   await setUp("create saved meal indexes", ensureSavedMealIndexes);
+  await setUp("create daily targets indexes", ensureDailyTargetsIndexes);
   await setUp("create water indexes", ensureWaterIndexes);
   await setUp("migrate users", migrateUsers);
   await setUp("migrate working levels", migrateWorkingLevels);

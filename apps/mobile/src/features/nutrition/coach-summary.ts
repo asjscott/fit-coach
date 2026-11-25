@@ -1,10 +1,11 @@
+import { type NutritionRange, nutritionRanges, rangeState } from "@fit/engines";
 import type { Day, FoodIdea, Meal } from "@fit/shared";
 import { wholeNumber } from "./format";
 
 export type CoachSummary = {
-  // What's left of the day's kcal and protein, or that they're met
+  // What's left of the day's kcal and protein to be in range, or that they're in range or over
   headline: string;
-  // How the Food Ideas would fill what's left; null once a target is met
+  // How the Food Ideas would fill what's left; null once protein is in range or the kcal are over
   line: string | null;
 };
 
@@ -19,23 +20,41 @@ const AT_MEAL: Record<Meal, string> = {
   snacks: "as a snack",
 };
 
-// The Coach's words under Today's rings and on the Ideas half (spec #158 stories 33 to 35 and 39). It speaks only of
-// kcal and protein, never fibre or water, which stay goals rather than shortfalls. What's left is rounded as the rings
-// show it, so a ring at 0 left reads as met here too
+// "160–310 kcal left to be in range": from the bottom of the range to its top
+const leftToTop = (amount: number, { min, max }: NutritionRange) => {
+  const shown = Math.round(amount);
+  return `${wholeNumber(min - shown)}–${wholeNumber(max - shown)}`;
+};
+
+// The Coach's words under Today's rings and on the Ideas half (spec #158 stories 33 to 35 and 39, #188 story 10). It
+// speaks only of kcal and protein, never fibre or water, which stay goals rather than shortfalls, and reads the same
+// states as the rings
 export function coachSummary({ targets, totals, ideas, ideaMeal }: Day): CoachSummary {
-  const kcalLeft = Math.max(0, Math.round(targets.kcal - totals.kcal));
-  const proteinLeft = Math.max(0, Math.round(targets.proteinG - totals.proteinG));
+  const ranges = nutritionRanges(targets);
+  const kcal = rangeState(totals.kcal, ranges.kcal);
+  const protein = rangeState(totals.proteinG, ranges.proteinG);
+  const kcalLeft = `${leftToTop(totals.kcal, ranges.kcal)} kcal`;
+  const proteinLeft = `${leftToTop(totals.proteinG, ranges.proteinG)} g of protein`;
+  const kcalDone = kcal.state === "in" ? "Calories in range" : `${wholeNumber(kcal.by)} kcal over`;
+  const proteinOver = `${wholeNumber(protein.by)} g of protein over`;
 
-  if (!kcalLeft && !proteinLeft) return { headline: "Calorie and protein targets met.", line: null };
-  if (!kcalLeft)
-    return { headline: `Calorie target met, with ${wholeNumber(proteinLeft)} g of protein left.`, line: null };
-  if (!proteinLeft) return { headline: `Protein target met, with ${wholeNumber(kcalLeft)} kcal left.`, line: null };
+  if (protein.state !== "below") {
+    if (kcal.state === "below") {
+      const proteinDone = protein.state === "in" ? "Protein in range" : proteinOver;
+      return { headline: `${proteinDone}, with ${kcalLeft} left to be in range.`, line: null };
+    }
+    if (kcal.state === "in" && protein.state === "in")
+      return { headline: "Calories and protein in range.", line: null };
+    return { headline: `${kcalDone}, ${protein.state === "in" ? "protein in range" : proteinOver}.`, line: null };
+  }
 
-  const headline = `${wholeNumber(kcalLeft)} kcal and ${wholeNumber(proteinLeft)} g of protein left.`;
-  if (!ideas.length) return { headline, line: "None of the Food Ideas fits in the kcal left." };
+  const headline = `${kcal.state === "below" ? `${kcalLeft} and` : `${kcalDone}, with`} ${proteinLeft} left to be in range.`;
+  if (kcal.state === "over") return { headline, line: null };
+  if (!ideas.length) return { headline, line: "None of the Food Ideas fits under the top of the kcal range." };
 
   const names = ideas.map((idea, i) => (i ? idea.name.charAt(0).toLowerCase() + idea.name.slice(1) : idea.name));
   const covered = ideas.reduce((sum, idea) => sum + idea.nutrients.proteinG, 0);
-  const share = covered >= proteinLeft ? "all" : `${wholeNumber(covered)} g`;
+  const share =
+    rangeState(totals.proteinG + covered, ranges.proteinG).state === "below" ? `${wholeNumber(covered)} g` : "all";
   return { headline, line: `${names.join(" and ")} ${AT_MEAL[ideaMeal]} would cover ${share} of the protein.` };
 }
