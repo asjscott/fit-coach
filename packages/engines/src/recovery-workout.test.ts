@@ -28,7 +28,7 @@ describe("recoveryWorkoutFor", () => {
   it("replaces several without giving one twice", () => {
     const workout = recoveryWorkoutFor({ equipmentProfile: NO_EQUIPMENT, injuries: ["knee"] });
     const slugs = workout.map(({ slug }) => slug);
-    expect(slugs).toEqual(["walk", "lying-hamstring-stretch", "open-book", "lying-spinal-twist", "figure-four"]);
+    expect(slugs).toEqual(["walk", "figure-four", "open-book", "lying-spinal-twist", "seated-forward-fold"]);
     expect(new Set(slugs).size).toBe(5);
   });
 
