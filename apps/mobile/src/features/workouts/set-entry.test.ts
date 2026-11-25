@@ -3,16 +3,16 @@ import { builtInEquipment, exerciseLoadsByEquipmentKg, type StepDirection } from
 import { toKg } from "@fit/shared";
 import {
   draftValues,
+  fieldStepper,
   FIELD_STEPPERS,
   loadStep,
   loadStepLabel,
   loadStepper,
   rpeMissing,
-  secondsField,
-  secondsStepLabel,
   setDraft,
   stepValue,
 } from "./set-entry";
+import { setReading } from "./library";
 
 describe("stepValue", () => {
   // Stands in for the next load: 10 a step, so it can't be mistaken for any other rule
@@ -55,18 +55,30 @@ describe("stepValue", () => {
     expect(stepValue(FIELD_STEPPERS.seconds, "44.2", 1)).toBe("49");
   });
 
-  // #145: a 20-minute walk steps by the minute, a short hold by 5 s
-  it("steps a timed Set of a minute or more to the next or previous whole minute", () => {
-    expect(stepValue(FIELD_STEPPERS.seconds, "1200", 1)).toBe("1260");
-    expect(stepValue(FIELD_STEPPERS.seconds, "1200", -1)).toBe("1140");
-    expect(stepValue(FIELD_STEPPERS.seconds, "90", 1)).toBe("120");
-    expect(stepValue(FIELD_STEPPERS.seconds, "90", -1)).toBe("60");
-    expect(stepValue(FIELD_STEPPERS.seconds, "60", 1)).toBe("120");
+  // #177: user story 13
+  it("steps seconds by 5 at every length", () => {
+    expect(["55", "60", "65", "70", "1200"].map((text) => stepValue(FIELD_STEPPERS.seconds, text, 1))).toEqual([
+      "60",
+      "65",
+      "70",
+      "75",
+      "1205",
+    ]);
+    expect(["90", "65", "60"].map((text) => stepValue(FIELD_STEPPERS.seconds, text, -1))).toEqual(["85", "60", "55"]);
   });
 
-  it("steps a timed Set under a minute by 5 s, into and out of minutes", () => {
-    expect(stepValue(FIELD_STEPPERS.seconds, "55", 1)).toBe("60");
-    expect(stepValue(FIELD_STEPPERS.seconds, "60", -1)).toBe("55");
+  // #145: the walk steps by the minute, and by 5 s under one
+  it("steps the walk of a minute or more to the next or previous whole minute", () => {
+    expect(stepValue(FIELD_STEPPERS.minutes, "1200", 1)).toBe("1260");
+    expect(stepValue(FIELD_STEPPERS.minutes, "1200", -1)).toBe("1140");
+    expect(stepValue(FIELD_STEPPERS.minutes, "90", 1)).toBe("120");
+    expect(stepValue(FIELD_STEPPERS.minutes, "90", -1)).toBe("60");
+    expect(stepValue(FIELD_STEPPERS.minutes, "60", 1)).toBe("120");
+  });
+
+  it("steps the walk under a minute by 5 s, into and out of minutes", () => {
+    expect(stepValue(FIELD_STEPPERS.minutes, "55", 1)).toBe("60");
+    expect(stepValue(FIELD_STEPPERS.minutes, "60", -1)).toBe("55");
   });
 
   it("starts again from nothing when the field isn't a number", () => {
@@ -145,42 +157,46 @@ describe("loadStepLabel", () => {
   });
 });
 
-describe("secondsStepLabel", () => {
-  it("names a step of a timed Set of a minute or more as a minute", () => {
-    expect(secondsStepLabel("1200", 1)).toBe("Plus 1 minute");
-    expect(secondsStepLabel("1200", -1)).toBe("Minus 1 minute");
+// #177: user stories 13 to 15
+describe("a timed Set's stepper", () => {
+  it("names a hold's step as 5 seconds at every length", () => {
+    expect(FIELD_STEPPERS.seconds.stepLabel("45", 1)).toBe("Plus 5 seconds");
+    expect(FIELD_STEPPERS.seconds.stepLabel("90", 1)).toBe("Plus 5 seconds");
+    expect(FIELD_STEPPERS.seconds.stepLabel("90", -1)).toBe("Minus 5 seconds");
   });
 
-  it("names a step of a short hold as 5 seconds, including down from a minute", () => {
-    expect(secondsStepLabel("45", 1)).toBe("Plus 5 seconds");
-    expect(secondsStepLabel("60", -1)).toBe("Minus 5 seconds");
-    expect(secondsStepLabel("", 1)).toBe("Plus 5 seconds");
-  });
-});
-
-// #145: the stepper reads as the target and the logged Set do
-describe("secondsField", () => {
-  it("shows a timed Set of a minute or more in minutes, as the target and logged Set read", () => {
-    expect(secondsField("1200")).toEqual({ value: "20", unit: "min" });
-    expect(secondsField("90")).toEqual({ value: "1 min 30", unit: "s" });
+  it("shows and names a hold in seconds at every length", () => {
+    expect(FIELD_STEPPERS.seconds.shown("90")).toEqual({ value: "90", unit: "s", name: "seconds" });
   });
 
-  it("shows a short hold in seconds", () => {
-    expect(secondsField("45")).toEqual({ value: "45", unit: "s" });
+  it("names the walk's step as a minute, or 5 seconds under one, including down from a minute", () => {
+    expect(FIELD_STEPPERS.minutes.stepLabel("1200", 1)).toBe("Plus 1 minute");
+    expect(FIELD_STEPPERS.minutes.stepLabel("1200", -1)).toBe("Minus 1 minute");
+    expect(FIELD_STEPPERS.minutes.stepLabel("45", 1)).toBe("Plus 5 seconds");
+    expect(FIELD_STEPPERS.minutes.stepLabel("60", -1)).toBe("Minus 5 seconds");
+    expect(FIELD_STEPPERS.minutes.stepLabel("", 1)).toBe("Plus 5 seconds");
   });
 
-  it("leaves an empty or half-typed field as it is", () => {
-    expect(secondsField("")).toEqual({ value: "", unit: "s" });
-    expect(secondsField("12.")).toEqual({ value: "12.", unit: "s" });
+  it("shows the walk in minutes from a minute, and in seconds while it's typed", () => {
+    expect(FIELD_STEPPERS.minutes.shown("1200", false)).toEqual({ value: "20", unit: "min", name: "minutes" });
+    expect(FIELD_STEPPERS.minutes.shown("1200", true)).toEqual({ value: "1200", unit: "s", name: "seconds" });
+    expect(FIELD_STEPPERS.minutes.shown("90", false)).toEqual({ value: "1 min 30", unit: "s", name: "seconds" });
+    expect(FIELD_STEPPERS.minutes.shown("45", false)).toEqual({ value: "45", unit: "s", name: "seconds" });
+  });
+
+  it("leaves the walk's empty or half-typed field as it is", () => {
+    expect(FIELD_STEPPERS.minutes.shown("", false).value).toBe("");
+    expect(FIELD_STEPPERS.minutes.shown("12.", false).value).toBe("12.");
+  });
+
+  it("is the minutes one for the walk only", () => {
+    expect(fieldStepper("seconds", setReading("walk"))).toBe(FIELD_STEPPERS.minutes);
+    expect(fieldStepper("seconds", setReading("plank"))).toBe(FIELD_STEPPERS.seconds);
+    expect(fieldStepper("reps", setReading("plank"))).toBe(FIELD_STEPPERS.reps);
   });
 });
 
 describe("what each field's stepper shows and says", () => {
-  it("names a timed Set's value in minutes from a minute, and in seconds while it's typed", () => {
-    expect(FIELD_STEPPERS.seconds.shown("1200", false)).toEqual({ value: "20", unit: "min", name: "minutes" });
-    expect(FIELD_STEPPERS.seconds.shown("1200", true)).toEqual({ value: "1200", unit: "s", name: "seconds" });
-  });
-
   // #105: a Jump's dose is contacts
   it("says contacts for a Jump's reps, and reps otherwise", () => {
     expect(FIELD_STEPPERS.contacts.shown("6", false)).toEqual({ value: "6", unit: "contacts", name: "contacts" });

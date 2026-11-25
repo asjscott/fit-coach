@@ -30,11 +30,12 @@ import {
   workoutTimesLabel,
   workoutWhenLabel,
 } from "./format";
-import type { SetReading } from "./library";
+import { setReading, type SetReading } from "./library";
 
-// How a one-sided Exercise's Sets read, and a Jump's
-const oneSided: SetReading = { unilateral: true, jump: false };
-const jump: SetReading = { unilateral: false, jump: true };
+// How a one-sided Exercise's Sets read, a Jump's and the walk's
+const oneSided: SetReading = { unilateral: true, jump: false, inMinutes: false };
+const jump: SetReading = { unilateral: false, jump: true, inMinutes: false };
+const walk: SetReading = { unilateral: false, jump: false, inMinutes: true };
 
 const phone = vi.hoisted(() => ({ uses24hourClock: false as boolean | null }));
 vi.mock("expo-localization", () => ({ getCalendars: () => [phone] }));
@@ -158,10 +159,18 @@ describe("setsSummary", () => {
     expect(setsSummary([hold(45)], "kg")).toBe("45 s");
   });
 
-  it("gives timed Sets of a minute or more in minutes, each in full when it has seconds over (#109)", () => {
+  // #177: in seconds whatever the length, minutes only for the walk
+  it("lists long holds in seconds", () => {
     const hold = (seconds: number): Set => ({ kind: "timed", seconds, loggedAt });
-    expect(setsSummary([hold(1200)], "kg")).toBe("20 min");
-    expect(setsSummary([hold(90), hold(75)], "kg")).toBe("1 min 30 s, 1 min 15 s");
+    expect(setsSummary([hold(90), hold(75)], "kg")).toBe("90, 75 s");
+    expect(previousSetsLabel([hold(90), hold(60)], "kg")).toBe("Last: 90, 60 s");
+  });
+
+  it("gives the walk's Sets in minutes, each in full when it has seconds over (#109)", () => {
+    const walked = (seconds: number): Set => ({ kind: "timed", seconds, loggedAt });
+    expect(setsSummary([walked(1200)], "kg", walk)).toBe("20 min");
+    expect(setsSummary([walked(90), walked(75)], "kg", walk)).toBe("1 min 30 s, 1 min 15 s");
+    expect(previousSetsLabel([walked(1200)], "kg", walk)).toBe("Last: 20 min");
   });
 
   it("is empty with no Sets", () => {
@@ -240,12 +249,19 @@ describe("setTargetLabel", () => {
     expect(setTargetLabel(target, "kg")).toBe(label);
   });
 
-  it("reads a timed target of a minute or more in minutes, as the walk's 20 minutes", () => {
-    expect(setTargetLabel({ unit: "seconds", seconds: 1200 }, "kg")).toBe("20 min");
-    expect(setTargetLabel({ unit: "seconds", seconds: 60 }, "kg")).toBe("1 min");
-    expect(setTargetLabel({ unit: "seconds", seconds: 90 }, "kg")).toBe("1 min 30 s");
-    expect(setTargetLabel({ unit: "seconds", seconds: 59 }, "kg")).toBe("59 s");
-    expect(plannedSetsLabel({ sets: 1, target: { unit: "seconds", seconds: 1200 } }, "kg")).toBe("1 set · 20 min");
+  it("reads a timed target in seconds at every length (#177)", () => {
+    expect(setTargetLabel({ unit: "seconds", seconds: 60 }, "kg")).toBe("60 s");
+    expect(setTargetLabel({ unit: "seconds", seconds: 90 }, "kg")).toBe("90 s");
+    expect(plannedSetsLabel({ sets: 3, target: { unit: "seconds", seconds: 90 } }, "kg", oneSided)).toBe(
+      "3 sets · 90 s per side",
+    );
+  });
+
+  it("reads the walk's target in minutes", () => {
+    expect(setTargetLabel({ unit: "seconds", seconds: 1200 }, "kg", walk)).toBe("20 min");
+    expect(plannedSetsLabel({ sets: 1, target: { unit: "seconds", seconds: 1200 } }, "kg", walk)).toBe(
+      "1 set · 20 min",
+    );
   });
 
   it("rounds a load to 0.5 of the user's unit, so a profile's summed loads show no floating-point noise", () => {
@@ -434,9 +450,19 @@ describe("describeSet", () => {
     expect(describeSet({ kind: "timed", seconds: 45, loggedAt }, "kg")).toBe("45 s");
   });
 
-  it("reads a timed Set of a minute or more in minutes, as its target does (#109)", () => {
-    expect(describeSet({ kind: "timed", seconds: 1200, loggedAt }, "kg")).toBe("20 min");
-    expect(describeSet({ kind: "timed", seconds: 90, loggedAt }, "kg")).toBe("1 min 30 s");
+  it("reads a timed Set in seconds at every length, and the walk's in minutes (#177)", () => {
+    expect(describeSet({ kind: "timed", seconds: 90, loggedAt }, "kg")).toBe("90 s");
+    expect(describeSet({ kind: "timed", seconds: 1200, loggedAt }, "kg", walk)).toBe("20 min");
+    expect(describeSet({ kind: "timed", seconds: 90, loggedAt }, "kg", walk)).toBe("1 min 30 s");
+  });
+});
+
+// #177: the Exercise decides, not the length
+describe("setReading", () => {
+  it("reads only the one-Set walk in minutes", () => {
+    expect(setReading("walk").inMinutes).toBe(true);
+    expect(setReading("plank").inMinutes).toBe(false);
+    expect(setReading("not-in-the-library").inMinutes).toBe(false);
   });
 });
 
