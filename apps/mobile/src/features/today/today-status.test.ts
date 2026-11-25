@@ -1,5 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import {
+  mobilityHoldLine,
+  mobilityTotalLine,
   asksActivityLevel,
   checkInLighterRow,
   showsCheckIn,
@@ -250,5 +252,24 @@ describe("asksActivityLevel", () => {
 
   it("waits until the phone knows whether the question was skipped", () => {
     expect(asksActivityLevel({ activityLevel: undefined, skipped: undefined })).toBe(false);
+  });
+});
+
+describe("a Mobility Workout's list", () => {
+  const hold = (slug: string, sets: number, seconds: number) => ({
+    slug,
+    sets,
+    target: { unit: "seconds" as const, seconds },
+  });
+
+  it("gives each hold's time, its sides and changes included", () => {
+    expect(mobilityHoldLine(hold("pigeon", 1, 45), "45 s per side")).toBe("1 min 50 s · 45 s per side");
+    expect(mobilityHoldLine(hold("cat-cow", 1, 45), "45 s")).toBe("55 s · 45 s");
+    expect(mobilityHoldLine(hold("foam-roll-quads", 2, 50), "50 s")).toBe("2 min · 2 sets · 50 s");
+  });
+
+  it("gives the total", () => {
+    expect(mobilityTotalLine([hold("pigeon", 1, 45), hold("cat-cow", 1, 45)])).toBe("2 holds · About 3 min");
+    expect(mobilityTotalLine([hold("pigeon", 1, 45)])).toBe("1 hold · About 2 min");
   });
 });

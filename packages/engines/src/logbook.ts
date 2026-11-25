@@ -35,7 +35,7 @@ import {
   type ProfileWithLoads,
   type StepDirection,
 } from "./equipment";
-import { isRecoveryWorkout, recoveryWorkoutFor, trainingWorkouts } from "./recovery-workout";
+import { isRecoveryWorkout, recoveryWorkoutFor, trainingWorkouts, type RecoveryExercise } from "./recovery-workout";
 import { previousSets } from "./training-summaries";
 
 // Strings by key: SQLite on the phone, localStorage on web, a Map in tests
@@ -513,6 +513,9 @@ export function createLogbook({
     // links to no plan, so the Planned Workout stays current and is offered again. A hold the user can't do is replaced
     startRecoveryWorkout: (options: Parameters<typeof recoveryWorkoutFor>[0], now: Date) =>
       startWithTargets(recoveryWorkoutFor(options), now),
+
+    // Starts a Mobility Workout (mobility-workout.ts) the same way, with the holds the user was shown
+    startMobilityWorkout: (holds: readonly RecoveryExercise[], now: Date) => startWithTargets(holds, now),
 
     removeWorkoutExercise: (workoutExerciseId: string) =>
       serially(async () => {

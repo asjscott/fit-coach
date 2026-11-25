@@ -22,14 +22,13 @@ import { spacing, useTheme } from "@/theme";
 import {
   checkInLighterRow,
   LIGHTER_AFTER_CHECK_IN,
-  RECOVERY_INSTEAD,
   SUPERSETS_TO_FIT,
   supersetWithLabel,
   todayPlanLine,
 } from "../today-status";
 import { progressionChangeLine } from "../plan-reasons";
 import { CheckInRatings } from "./check-in-card";
-import { TodayCardLink } from "./today-card";
+import { RecoveryLinks } from "./recovery-links";
 import { useWeightUnit } from "@/features/user/current-user-provider";
 
 type SheetCheckIn = {
@@ -69,8 +68,9 @@ type PlannedWorkoutSheetProps = {
   // Today's check-in and what it did to the Workout, null before the user checks in
   checkIn: SheetCheckIn | null;
   onStart: () => void;
-  // The Recovery Workout, on offer every day in place of this one
-  onStartRecovery: () => void;
+  // The Recovery Workouts, on offer every day in place of this one
+  onMobility: () => void;
+  onWalkAndMobility: () => void;
 };
 
 // The Day's Workout in full, with the choices that shape it
@@ -92,7 +92,8 @@ export function PlannedWorkoutSheet({
   supersets,
   checkIn,
   onStart,
-  onStartRecovery,
+  onMobility,
+  onWalkAndMobility,
 }: PlannedWorkoutSheetProps) {
   const unit = useWeightUnit();
   const { colors } = useTheme();
@@ -254,7 +255,12 @@ export function PlannedWorkoutSheet({
             onPress={startOnceClosed(onStart)}
           />
           <View style={styles.recovery}>
-            <TodayCardLink label={RECOVERY_INSTEAD} color="text" size="sm" onPress={startOnceClosed(onStartRecovery)} />
+            <RecoveryLinks
+              color="text"
+              size="sm"
+              onMobility={startOnceClosed(onMobility)}
+              onWalkAndMobility={startOnceClosed(onWalkAndMobility)}
+            />
           </View>
         </View>
       </ActionsheetContent>
@@ -267,6 +273,6 @@ const styles = StyleSheet.create({
   content: { gap: spacing[3], paddingBottom: spacing[3] },
   // Outside the scroll, so Start is in reach however long the list is
   start: { width: "100%", paddingTop: spacing[3] },
-  recovery: { alignItems: "center", paddingTop: spacing[3] },
+  recovery: { alignItems: "center", gap: spacing[3], paddingTop: spacing[3] },
   exercise: { paddingVertical: spacing[2], gap: 2, borderTopWidth: StyleSheet.hairlineWidth },
 });

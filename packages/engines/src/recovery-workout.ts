@@ -3,7 +3,7 @@ import { EXERCISES, exerciseBySlug } from "./data/exercises";
 import { isAvailable, isSafeFor, type ProfileWithLoads } from "./equipment";
 import { sharedPrimaryMuscles } from "./alternative-exercises";
 
-type RecoveryExercise = Pick<PlannedExercise, "slug" | "sets" | "target">;
+export type RecoveryExercise = Pick<PlannedExercise, "slug" | "sets" | "target">;
 
 // The Recovery Workout (GLOSSARY.md): about 30 minutes, whatever the Length. The walk as one 20-minute Set, then each
 // hold for 2 × 45 seconds. Every Exercise is a Recovery Exercise, from the library built into the app, so it starts

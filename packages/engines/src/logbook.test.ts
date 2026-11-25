@@ -1453,6 +1453,24 @@ describe("Logbook: Planned Workouts", () => {
     expect(logbook.nextSetDraft(workout.workoutExercises[0])).toEqual({ kind: "timed", seconds: 1200 });
   });
 
+  it("starts a Mobility Workout with the holds shown, with targets and linked to no plan", async () => {
+    const { logbook } = setup(memoryStorage(), offline);
+    const workout = await logbook.startMobilityWorkout(
+      [
+        { slug: "pigeon", sets: 1, target: { unit: "seconds", seconds: 45 } },
+        { slug: "cat-cow", sets: 2, target: { unit: "seconds", seconds: 45 } },
+      ],
+      at("09:00"),
+    );
+
+    expect(workout.plannedWorkoutId).toBeUndefined();
+    expect(workout.workoutExercises.map(({ slug, loadType, planned }) => [slug, loadType, planned])).toEqual([
+      ["pigeon", "timed", { sets: 1, target: { unit: "seconds", seconds: 45 } }],
+      ["cat-cow", "timed", { sets: 2, target: { unit: "seconds", seconds: 45 } }],
+    ]);
+    expect(logbook.nextSetDraft(workout.workoutExercises[0])).toEqual({ kind: "timed", seconds: 45 });
+  });
+
   it("starts a Recovery Workout with a hold the user's injuries rule out replaced", async () => {
     const { logbook } = setup();
     const options = { equipmentProfile: NO_EQUIPMENT, injuries: ["hip" as const] };
@@ -1982,6 +2000,18 @@ describe("the Planned Workout on the phone", () => {
       ]);
       expect(await logbook.pending()).toEqual([workout]);
       expect(await logbook.plannedWorkout()).toEqual({ plannedWorkout: squatPlan(FIRST), stale: false });
+    });
+
+    it("keeps the plan current after a Mobility Workout", async () => {
+      const { logbook } = await offlineWithPlan();
+      const { workoutExercises } = await logbook.startMobilityWorkout(
+        [{ slug: "pigeon", sets: 1, target: { unit: "seconds", seconds: 45 } }],
+        at("09:00"),
+      );
+      await logbook.logSet(workoutExercises[0].id, { kind: "timed", seconds: 45 }, at("09:02"));
+      await logbook.finish({ startedAt: at("09:00"), endedAt: at("09:10"), now: at("09:10") });
+
+      expect(await logbook.plannedWorkout()).toMatchObject({ plannedWorkout: { id: FIRST }, stale: false });
     });
 
     it("leaves the plan current once it's uploaded", async () => {

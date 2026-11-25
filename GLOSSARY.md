@@ -133,8 +133,12 @@ The most the user wants a Workout to take, 5 minutes of warm-up included: Short 
 _Avoid_: Mode, session type
 
 **Recovery Workout**:
-A walk or mobility Workout the user chooses in place of the Day's Workout, for one day, and what the Coach plans when the 130% cap leaves nothing else to add. Unlike a Rest Day, it's something they do. It credits no Sets. A hold the user's injuries or equipment rule out is replaced by one like it.
+A Mobility Workout or a walk with mobility holds ("Walk and mobility"), chosen by the user in place of the Day's Workout, for one day. The one with the walk is also what the Coach plans when the 130% cap leaves nothing else to add. Unlike a Rest Day, it's something they do. It credits no Sets. A hold the user's injuries or equipment rule out is replaced by one like it.
 _Avoid_: Recovery day, recovery session
+
+**Mobility Workout**:
+A Recovery Workout with no walk: 10, 20 or 30 minutes of holds the app picks, leaning to the Muscles recent training left most tired and varying from the last one. The user can limit it to a focus: Full body, Hips and legs, or Back and shoulders. "Mobility" on screen.
+_Avoid_: Mobility session, stretching, stretch routine
 
 **Block**:
 A run of weeks of training, started by an Assessment, with a set length and a deload week. A newer Assessment starts a new one; without one, the next starts the week after the deload.
