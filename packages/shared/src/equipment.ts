@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { dumbbellEnds } from "./dumbbell-ends";
 import type { WeightUnit } from "./units";
 
 export const PRESETS: { name: string; tags: EquipmentTag[] }[] = [
@@ -136,23 +137,32 @@ export type BuiltInEquipment = z.infer<typeof BuiltInEquipment>;
 
 const kg = z.number().positive().max(200);
 
-// More than a home has, and few enough that the loads they make are quick to work out
+// As many as a home has. What holds the working out of their loads is dumbbellEnds, as a few odd sizes can make more
+// loads than many plates of round ones
 export const MAX_DUMBBELL_BARS = 20;
-export const MAX_DUMBBELL_PLATES = 20;
+export const MAX_DUMBBELL_PLATES = 40;
 export const MAX_DUMBBELL_PLATE_SIZES = 8;
+
+export const TOO_MANY_DUMBBELL_LOADS =
+  "These sizes make too many loads to work out. Round them to the nearest 0.25, or leave some out";
 
 export const DumbbellLoads = z.discriminatedUnion("kind", [
   z.object({ kind: z.literal("adjustable"), minKg: kg, maxKg: kg, stepKg: kg }),
   z.object({ kind: z.literal("fixed"), weightsKg: z.array(kg).min(1) }),
   // Bars of one weight, collars included, and how many of each size of plate there are between them all
-  z.object({
-    kind: z.literal("bar_and_plates"),
-    barKg: kg,
-    bars: z.number().int().min(1).max(MAX_DUMBBELL_BARS),
-    plates: z
-      .array(z.object({ kg, count: z.number().int().min(1).max(MAX_DUMBBELL_PLATES) }))
-      .max(MAX_DUMBBELL_PLATE_SIZES),
-  }),
+  z
+    .object({
+      kind: z.literal("bar_and_plates"),
+      barKg: kg,
+      bars: z.number().int().min(1).max(MAX_DUMBBELL_BARS),
+      plates: z
+        .array(z.object({ kg, count: z.number().int().min(1).max(MAX_DUMBBELL_PLATES) }))
+        .max(MAX_DUMBBELL_PLATE_SIZES),
+    })
+    .refine((dumbbells) => dumbbellEnds(dumbbells, 1) !== null, {
+      path: ["plates"],
+      message: TOO_MANY_DUMBBELL_LOADS,
+    }),
 ]);
 export type BarAndPlates = Extract<z.infer<typeof DumbbellLoads>, { kind: "bar_and_plates" }>;
 

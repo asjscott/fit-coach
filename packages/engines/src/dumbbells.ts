@@ -1,108 +1,125 @@
-import { fromKg, toKg, WeightUnit, type BarAndPlates, type Exercise } from "@fit/shared";
+import { dumbbellEnds, DUMBBELL_PARTS, toKg, type BarAndPlates, type DumbbellEnds, type Exercise } from "@fit/shared";
 
 // How to load one dumbbell: the plates on each end, the heavier end first, each end's heaviest plate first
 export type DumbbellBuild = { kg: number; endsKg: [number[], number[]] };
 
-// The furthest apart a dumbbell's two ends can be and still be lifted comfortably (#181)
-const MAX_END_DIFFERENCE_KG = 1.5;
-// The heaviest dumbbell worth listing, as the heaviest barbell is
-const MAX_DUMBBELL_KG = 100;
+// No way to load the ends so
+const NONE = 0xffff;
 
-// Sums are whole numbers of these, so that sizes typed to the hundredth add up exactly
-const PARTS = 1000;
-const inParts = (kg: number, unit: WeightUnit) => Math.round(fromKg(kg, unit) * PARTS);
-const isWholeParts = (kg: number, unit: WeightUnit) =>
-  Math.abs(fromKg(kg, unit) * PARTS - inParts(kg, unit)) < 1e-6 * PARTS;
+// Two ends by their places among `weights`, the heavier first, as swapping them is the same load
+const pairIndex = (heavy: number, light: number) => (heavy * (heavy + 1)) / 2 + light;
+const indexOf = (a: number, b: number) => (a >= b ? pairIndex(a, b) : pairIndex(b, a));
 
-// One size of plate, in parts
-type Size = { parts: number; count: number };
+// The place of each weight with one plate fewer, or −1
+function placesWithout(parts: number, weights: readonly number[]): Int32Array {
+  const places = new Map(weights.map((weight, place) => [weight, place]));
+  return Int32Array.from(weights, (weight) => places.get(weight - parts) ?? -1);
+}
 
-// A way to load the two ends with the sizes so far, as a chain of what each size adds
-type Split = { plates: number; added?: { before: Split; parts: number; heavy: number; light: number } };
+// A layer before any size, then one after each, and each size's placesWithout
+type Fewest = { layers: Uint16Array[]; withouts: Int32Array[] };
 
-// The load's parts and how far apart its ends are → the fewest plates that do it
-type Splits = Map<number, Map<number, Split>>;
-
-// Every split of the plates, biggest size first. The heavier end is always first, as swapping the ends is the same
-// split. A split left further apart than the remaining plates could even out is dropped
-function splitsOf(sizes: readonly Size[], maxDifference: number, maxParts: number): Splits {
-  let splits: Splits = new Map([[0, new Map([[0, { plates: 0 }]])]]);
-  let remaining = sizes.reduce((sum, { parts, count }) => sum + parts * count, 0);
-  for (const { parts, count } of sizes) {
-    remaining -= parts * count;
-    const next: Splits = new Map();
-    for (const [sum, byDifference] of splits) {
-      for (const [difference, before] of byDifference) {
-        for (let plates = 0; plates <= count && sum + plates * parts <= maxParts; plates++) {
-          for (let heavy = 0; heavy <= plates; heavy++) {
-            const light = plates - heavy;
-            const apart = Math.abs(difference + (heavy - light) * parts);
-            if (apart > remaining + maxDifference) continue;
-            const total = sum + plates * parts;
-            const onTotal = next.get(total) ?? next.set(total, new Map()).get(total)!;
-            const fewest = onTotal.get(apart)?.plates ?? Infinity;
-            if (before.plates + plates >= fewest) continue;
-            const added = plates ? { before, parts, heavy, light } : before.added;
-            onTotal.set(apart, { plates: before.plates + plates, added });
+// The fewest plates that make each pair of ends: before any size, then with each size too, biggest first. One plate at
+// a time, heaviest pair first, so that a pass adds each plate once. Pairs further apart than the plates left could even
+// out are skipped, so never end up in a build
+function fewestPlates({ sizes, weights, maxDifference, maxPlatesParts }: DumbbellEnds): Fewest {
+  let fewest = new Uint16Array(pairIndex(weights.length, 0)).fill(NONE);
+  fewest[0] = 0;
+  const layers = [fewest];
+  let left = sizes.reduce((sum, { parts, count }) => sum + parts * count, 0);
+  let added = 0;
+  const withouts = sizes.map(({ parts }) => placesWithout(parts, weights));
+  for (const [size, { parts, count }] of sizes.entries()) {
+    const without = withouts[size]!;
+    fewest = fewest.slice();
+    for (let plate = 0; plate < count; plate++) {
+      left -= parts;
+      added += parts;
+      const most = Math.min(added, maxPlatesParts);
+      for (let heavy = weights.length - 1; heavy >= 0; heavy--) {
+        const heavyParts = weights[heavy]!;
+        const heavyWithout = without[heavy]!;
+        const base = pairIndex(heavy, 0);
+        for (let light = heavy; light >= 0; light--) {
+          const lightParts = weights[light]!;
+          if (heavyParts + lightParts > most) continue;
+          if (heavyParts - lightParts > left + maxDifference) break;
+          let best = fewest[base + light]!;
+          if (heavyWithout >= 0) {
+            const from = fewest[indexOf(heavyWithout, light)]! + 1;
+            if (from < best) best = from;
           }
+          const lightWithout = without[light]!;
+          if (lightWithout >= 0) {
+            const from = fewest[base + lightWithout]! + 1;
+            if (from < best) best = from;
+          }
+          fewest[base + light] = best;
         }
       }
     }
-    splits = next;
+    layers.push(fewest);
   }
-  return splits;
+  return { layers, withouts };
 }
 
-// The plates on each end of a split, replaying what each size added in the order it was added
-function endsOf(split: Split): [number[], number[]] {
-  const steps: NonNullable<Split["added"]>[] = [];
-  for (let step = split.added; step; step = step.before.added) steps.unshift(step);
-  let ends: [number[], number[]] = [[], []];
-  for (const { parts, heavy, light } of steps) {
-    ends[0].push(...Array<number>(heavy).fill(parts));
-    ends[1].push(...Array<number>(light).fill(parts));
-    ends = heavierFirst(ends);
+// The plates on each end of a pair made with its fewest plates, found by taking each size off again, smallest first.
+// Of ways with as many plates, the one with the fewest of the smallest
+function endsOf(heavy: number, light: number, { sizes }: DumbbellEnds, { layers, withouts }: Fewest) {
+  const ends: [number[], number[]] = [[], []];
+  let first = heavy;
+  let second = light;
+  for (let size = sizes.length - 1; size >= 0; size--) {
+    const { parts, count } = sizes[size]!;
+    const without = withouts[size]!;
+    const before = layers[size]!;
+    const plates = layers[size + 1]![indexOf(first, second)]!;
+    let taken: { plates: number; first: number; second: number; onFirst: number } | undefined;
+    for (let onFirst = 0, a = first; onFirst <= (taken?.plates ?? count) && a >= 0; onFirst++, a = without[a]!) {
+      const most = Math.min(count, taken ? taken.plates - 1 : count);
+      for (let onSecond = 0, b = second; onFirst + onSecond <= most && b >= 0; onSecond++, b = without[b]!) {
+        const off = onFirst + onSecond;
+        if (before[indexOf(a, b)] !== plates - off) continue;
+        taken = { plates: off, first: a, second: b, onFirst };
+        break;
+      }
+    }
+    if (!taken) throw new Error("No plates give this load");
+    ends[0].unshift(...Array<number>(taken.onFirst).fill(parts));
+    ends[1].unshift(...Array<number>(taken.plates - taken.onFirst).fill(parts));
+    first = taken.first;
+    second = taken.second;
   }
-  return ends;
-}
-
-const sumOf = (plates: readonly number[]) => plates.reduce((sum, plate) => sum + plate, 0);
-
-// Ends of the same weight keep their order
-const heavierFirst = ([a, b]: [number[], number[]]): [number[], number[]] => (sumOf(b) > sumOf(a) ? [b, a] : [a, b]);
-
-// Sizes entered more than once counted together, in parts, biggest first. For an Exercise that takes two dumbbells,
-// half of each count, as both dumbbells match
-function sizesFor({ plates }: BarAndPlates, taken: 1 | 2, unit: WeightUnit): Size[] {
-  const counts = new Map<number, number>();
-  for (const { kg, count } of plates) {
-    const parts = inParts(kg, unit);
-    counts.set(parts, (counts.get(parts) ?? 0) + count);
-  }
-  return [...counts]
-    .map(([parts, count]) => ({ parts, count: Math.floor(count / taken) }))
-    .filter(({ parts, count }) => parts > 0 && count > 0)
-    .sort((a, b) => b.parts - a.parts);
+  // Of two ends that weigh the same, the one with the heavier plate first
+  const differs = ends[0].findIndex((plate, i) => plate !== ends[1][i]);
+  const swap = heavy === light && differs >= 0 && ends[1][differs]! > ends[0][differs]!;
+  return swap ? ([ends[1], ends[0]] as const) : ends;
 }
 
 function buildsOf(dumbbells: BarAndPlates, taken: 1 | 2): DumbbellBuild[] {
-  const { barKg, plates } = dumbbells;
-  const sized = [barKg, ...plates.map(({ kg }) => kg)];
-  // The unit the sizes are in, as for a barbell; a mix of units is summed in kg
-  const unit = WeightUnit.options.find((unit) => sized.every((kg) => isWholeParts(kg, unit))) ?? "kg";
-  const bar = inParts(barKg, unit);
-  const maxDifference = Math.floor(fromKg(MAX_END_DIFFERENCE_KG, unit) * PARTS);
-  const maxParts = Math.max(0, inParts(MAX_DUMBBELL_KG, unit) - bar);
-  const inKg = (parts: number) => toKg(parts / PARTS, unit);
-
-  return [...splitsOf(sizesFor(dumbbells, taken, unit), maxDifference, maxParts)]
+  const ends = dumbbellEnds(dumbbells, taken);
+  // Dumbbells the schema refuses
+  if (!ends) return [];
+  const { unit, barParts, weights, maxDifference, maxPlatesParts } = ends;
+  const fewest = fewestPlates(ends);
+  const made = fewest.layers.at(-1)!;
+  // The most even pair of ends for each load: the first found, as for one load a lighter heavy end is more even
+  const mostEven = new Map<number, [number, number]>();
+  weights.forEach((heavyParts, heavy) => {
+    for (let light = heavy; light >= 0; light--) {
+      const lightParts = weights[light]!;
+      const total = heavyParts + lightParts;
+      if (heavyParts - lightParts > maxDifference) break;
+      if (total > maxPlatesParts || made[pairIndex(heavy, light)] === NONE || mostEven.has(total)) continue;
+      mostEven.set(total, [heavy, light]);
+    }
+  });
+  const inKg = (parts: number) => toKg(parts / DUMBBELL_PARTS, unit);
+  return [...mostEven]
     .sort(([a], [b]) => a - b)
-    .flatMap(([sum, byDifference]) => {
-      const mostEven = Math.min(...byDifference.keys());
-      const split = byDifference.get(mostEven);
-      if (!split || mostEven > maxDifference) return [];
-      const [heavyEnd, lightEnd] = endsOf(split);
-      return [{ kg: inKg(bar + sum), endsKg: [heavyEnd.map(inKg), lightEnd.map(inKg)] }];
+    .map(([total, [heavy, light]]) => {
+      const [heavyEnd, lightEnd] = endsOf(heavy, light, ends, fewest);
+      return { kg: inKg(barParts + total), endsKg: [heavyEnd.map(inKg), lightEnd.map(inKg)] };
     });
 }
 

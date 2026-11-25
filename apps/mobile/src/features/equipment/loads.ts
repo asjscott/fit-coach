@@ -2,12 +2,14 @@ import {
   BAND_TAGS,
   BandLevel,
   DEFAULT_CABLE_STEP,
+  dumbbellEnds,
   fromKg,
   inUnitToStep,
   MAX_DUMBBELL_BARS,
   MAX_DUMBBELL_PLATE_SIZES,
   MAX_DUMBBELL_PLATES,
   toKg,
+  TOO_MANY_DUMBBELL_LOADS,
   type EquipmentProfile,
   type EquipmentTag,
   type WeightUnit,
@@ -94,52 +96,66 @@ const optionalCount = (max: number) =>
 const weightChoices = z.array(z.string()).optional();
 const bandChoices = z.object({ levels: z.array(BandLevel).optional() }).optional();
 
+type PlateRow = { size?: number | null; count?: number | null };
+
+// Whether the plates make more loads than the profile takes
+function hasTooManyLoads(bar: number | null | undefined, plates: PlateRow[], unit: WeightUnit): boolean {
+  const rows = plates.flatMap(({ size, count }) => (size && count ? [{ kg: toKg(size, unit), count }] : []));
+  return !!bar && !dumbbellEnds({ barKg: toKg(bar, unit), plates: rows }, 1);
+}
+
 // Everything is optional: anything left blank is just not saved
-export const LoadsForm = z.object({
-  dumbbells: z
-    .object({
-      kind: z.enum(["adjustable", "fixed", "bar_and_plates"]).optional(),
-      min: optionalWeight,
-      max: optionalWeight,
-      step: optionalWeight,
-      weights: weightChoices,
-      bar: optionalWeight,
-      bars: optionalCount(MAX_DUMBBELL_BARS),
-      // A row for each size of plate the user adds
-      plates: z
-        .array(z.object({ size: optionalWeight, count: optionalCount(MAX_DUMBBELL_PLATES) }))
-        .max(MAX_DUMBBELL_PLATE_SIZES)
-        .optional(),
-    })
-    .superRefine((d, ctx) => {
-      if (d.kind === "bar_and_plates") {
-        for (const key of ["bar", "bars"] as const) {
+export const loadsForm = (unit: WeightUnit) =>
+  z.object({
+    dumbbells: z
+      .object({
+        kind: z.enum(["adjustable", "fixed", "bar_and_plates"]).optional(),
+        min: optionalWeight,
+        max: optionalWeight,
+        step: optionalWeight,
+        weights: weightChoices,
+        bar: optionalWeight,
+        bars: optionalCount(MAX_DUMBBELL_BARS),
+        // A row for each size of plate the user adds
+        plates: z
+          .array(z.object({ size: optionalWeight, count: optionalCount(MAX_DUMBBELL_PLATES) }))
+          .max(MAX_DUMBBELL_PLATE_SIZES)
+          .optional(),
+      })
+      .superRefine((d, ctx) => {
+        if (d.kind === "bar_and_plates") {
+          for (const key of ["bar", "bars"] as const) {
+            if (d[key] == null) ctx.addIssue({ code: "custom", path: [key], message: "Required" });
+          }
+          d.plates?.forEach((plate, i) => {
+            for (const key of ["size", "count"] as const) {
+              if (plate[key] == null) ctx.addIssue({ code: "custom", path: ["plates", i, key], message: "Required" });
+            }
+          });
+          // Said under the last plate, as they make too many together
+          if (d.plates && hasTooManyLoads(d.bar, d.plates, unit)) {
+            const path = ["plates", d.plates.length - 1, "size"];
+            ctx.addIssue({ code: "custom", path, message: TOO_MANY_DUMBBELL_LOADS });
+          }
+        }
+        if (d.kind !== "adjustable") return;
+        for (const key of ["min", "max", "step"] as const) {
           if (d[key] == null) ctx.addIssue({ code: "custom", path: [key], message: "Required" });
         }
-        d.plates?.forEach((plate, i) => {
-          for (const key of ["size", "count"] as const) {
-            if (plate[key] == null) ctx.addIssue({ code: "custom", path: ["plates", i, key], message: "Required" });
-          }
-        });
-      }
-      if (d.kind !== "adjustable") return;
-      for (const key of ["min", "max", "step"] as const) {
-        if (d[key] == null) ctx.addIssue({ code: "custom", path: [key], message: "Required" });
-      }
-      if (d.min != null && d.max != null && d.min >= d.max) {
-        ctx.addIssue({ code: "custom", path: ["max"], message: "Must be more than the lightest" });
-      }
-    })
-    .optional(),
-  kettlebells: z.object({ weights: weightChoices }).optional(),
-  barbell: z.object({ bar: z.string().optional(), plates: weightChoices }).optional(),
-  loop_bands: bandChoices,
-  mini_bands: bandChoices,
-  tube_bands: bandChoices,
-  // The Load Step of a cable or machine, which lists no loads
-  cable_machine: z.object({ step: optionalWeight }).optional(),
-});
-export type LoadsForm = z.infer<typeof LoadsForm>;
+        if (d.min != null && d.max != null && d.min >= d.max) {
+          ctx.addIssue({ code: "custom", path: ["max"], message: "Must be more than the lightest" });
+        }
+      })
+      .optional(),
+    kettlebells: z.object({ weights: weightChoices }).optional(),
+    barbell: z.object({ bar: z.string().optional(), plates: weightChoices }).optional(),
+    loop_bands: bandChoices,
+    mini_bands: bandChoices,
+    tube_bands: bandChoices,
+    // The Load Step of a cable or machine, which lists no loads
+    cable_machine: z.object({ step: optionalWeight }).optional(),
+  });
+export type LoadsForm = z.infer<ReturnType<typeof loadsForm>>;
 
 // A weight in the form as kg, exactly (toKg), and back. Back is to the nearest 0.25, which shows a load entered in
 // pounds as entered and keeps a 1.25 kg plate
