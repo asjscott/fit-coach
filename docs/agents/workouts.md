@@ -311,7 +311,8 @@ Schemas: packages/shared/src/planned-workouts.ts
   offers "Next exercise" rather than a Set 2 (`takesAnotherSet`). Recovery Exercises have no Pattern and no strength ratio, so no Working Level. Every one
   but the walk has an `area` and `holdSeconds` (per side, #197). `recoveryWorkoutFor` replaces a hold ruled out by
   injuries or equipment, for the phone's start and the planner's fallback alike. A Mobility Workout (#198) has no walk:
-  `mobilityWorkout` (`mobility-workout.ts`) picks its holds, `startMobilityWorkout` starts them with targets, and
+  `mobilityWorkout` (`mobility-workout.ts`) picks its holds, `alternativeHolds`, `swapHold` and
+  `removeHold` change them before it starts (#199), `startMobilityWorkout` starts them with targets, and
   `recoveryWorkoutKind` tells it from Walk and mobility by its Exercises, for History. Its length, focus and last
   Exercises are on the phone only (`stored-mobility.ts`). `recovery`, `area` and the rest need
   `seed:exercises` re-run, as `ballistic` did.

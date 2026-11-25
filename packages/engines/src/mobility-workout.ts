@@ -4,6 +4,7 @@ import { exerciseBySlug } from "./data/exercises";
 import type { ProfileWithLoads } from "./equipment";
 import { muscleFatigue, type FatigueWorkout } from "./fatigue";
 import {
+  byLikeness,
   isRecoveryWorkout,
   possibleHolds,
   type LoggedWorkoutExercise,
@@ -111,6 +112,38 @@ export function mobilityWorkout({
   }
   return [...chosen.values()];
 }
+
+// What a hold can be swapped for before starting, most like it first. Empty when there's nothing else the user can do
+export function alternativeHolds({
+  slug,
+  holds,
+  injuries,
+  equipmentProfile,
+}: {
+  slug: string;
+  holds: readonly RecoveryExercise[];
+  injuries: readonly InjuryTag[];
+  equipmentProfile: ProfileWithLoads;
+}): string[] {
+  const hold = exerciseBySlug(slug);
+  if (!hold) return [];
+  const listed = new Set([slug, ...holds.map((listedHold) => listedHold.slug)]);
+  return possibleHolds(equipmentProfile, injuries)
+    .filter((exercise) => !listed.has(exercise.slug))
+    .sort(byLikeness(hold))
+    .map((exercise) => exercise.slug);
+}
+
+// The new hold takes the old one's place and number of Sets, for its own hold time
+export function swapHold(holds: readonly RecoveryExercise[], slug: string, toSlug: string): RecoveryExercise[] {
+  const to = exerciseBySlug(toSlug);
+  if (to?.holdSeconds === undefined) return [...holds];
+  return holds.map((hold) => (hold.slug === slug ? { ...planHold(to), sets: hold.sets } : hold));
+}
+
+// The last hold stays, as a Workout needs one
+export const removeHold = (holds: readonly RecoveryExercise[], slug: string): RecoveryExercise[] =>
+  holds.length > 1 ? holds.filter((hold) => hold.slug !== slug) : [...holds];
 
 // Which Recovery Workout a logged Workout is, by the Exercises it has Sets of, or null for training. A walk logged by
 // itself is neither, so it has no name of its own
