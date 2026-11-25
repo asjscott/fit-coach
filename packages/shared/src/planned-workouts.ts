@@ -81,6 +81,8 @@ export const PlannedWorkout = z.object({
   plannedExercises: z.array(PlannedExercise).min(1),
   // A cue for the whole Workout, for the user's Goal
   cue: z.string().optional(),
+  // Built for the deload week, whose targets are one number (#183). Absent counts as not, as on a plan stored before it
+  deloadWeek: z.boolean().optional(),
   // In the order the phone shows them; a plan stored before reasons has none, and shows no line
   reasons: z.array(PlanReason).optional(),
 });

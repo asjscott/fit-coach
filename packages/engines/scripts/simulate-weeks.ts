@@ -72,7 +72,7 @@ function workoutDates(week: number, days: number) {
   return Array.from({ length: days }, (_, day) => new Date(monday + day * gap * 86_400_000 + 23 * 3_600_000));
 }
 
-// The Assessment's B, on the first simulated Monday, so the four weeks are the Block's first four and none deloads
+// The Assessment's Workout, on the first simulated Monday, so the four weeks are the Block's first four and none deloads
 const ASSESSED_AT = "2026-11-02T12:00:00.000Z";
 
 // A lifter whose reps grow: every Set reaches the target the plan gives, so the rules move each Working Level on. A
@@ -101,7 +101,7 @@ export function simulate({ goal, days, length, lifter, profile, jumps = false }:
   for (let week = 0; week < WEEKS; week++) {
     const thisWeek = [];
     for (const now of workoutDates(week, days)) {
-      const deloadWeek = weekOfBlock({ bStartedAt: ASSESSED_AT }, now, TIME_ZONE)?.deload ?? false;
+      const deloadWeek = weekOfBlock({ lastStartedAt: ASSESSED_AT }, now, TIME_ZONE)?.deload ?? false;
       const plan = planWorkout({
         workouts: workouts.slice(-14),
         now,

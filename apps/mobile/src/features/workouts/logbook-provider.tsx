@@ -1,11 +1,14 @@
 import {
+  adjustRest,
   createLogbook,
-  extendRest,
+  REST_ADJUSTMENT_SECONDS,
   restAfterSet,
+  restStep,
   type FinishResult,
   type Logbook,
   type PlannedWorkoutCopy,
   type Rest,
+  type RestChoice,
   type UnseenPrs,
   type WorkoutTimes,
 } from "@fit/engines";
@@ -24,9 +27,19 @@ import { useKeepAwake } from "expo-keep-awake";
 import { createContext, use, useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import { AppState, Vibration } from "react-native";
 import { useApi } from "@/api";
+import { usePrimaryEquipmentProfile } from "@/features/user/current-user-provider";
 import { deviceStorage } from "./device-storage";
 import { finishCelebration } from "./finish-celebration";
 import { useSyncTriggers } from "./hooks/use-sync-triggers";
+import { playRestBeep, unlockRestSound } from "./rest-sound";
+import { createStoredRestChoice } from "./stored-rest-choice";
+import { createStoredRestSound } from "./stored-rest-sound";
+
+const storedRestChoice = createStoredRestChoice(deviceStorage);
+const storedRestSound = createStoredRestSound(deviceStorage);
+
+// A rest as it's shown: after which Workout Exercise's Set, and filling the screen or minimised to its bar (#179)
+export type CurrentRest = Rest & { afterId: string; expanded: boolean };
 
 type LogbookContextValue = {
   // null when no Workout is in progress
@@ -36,7 +49,7 @@ type LogbookContextValue = {
   start: () => Promise<void>;
   // Starts a Manual Workout logged afterwards, for an earlier day (#129)
   startPast: (pastStart: Date) => Promise<void>;
-  // Starts Assessment Workout A or B with its tests already added
+  // Starts the Assessment Workout with its tests already added
   startAssessment: (options: AssessmentOptions) => Promise<void>;
   // The latest Planned Workout on the phone, read from it, and whether it's known to be out of date
   plannedWorkoutCopy: PlannedWorkoutCopy;
@@ -52,15 +65,30 @@ type LogbookContextValue = {
   protocolState: Logbook["protocolState"];
   // For an Assessment Workout: its next test, and whether every test is done
   testProgress: Logbook["testProgress"];
+  // Swaps a pull-up test for the inverted row, or passes over a test with no Set
+  swapTest: Logbook["swapTest"];
+  skipTest: Logbook["skipTest"];
   addWorkoutExercise: (exercise: Pick<Exercise, "slug" | "loadType">) => Promise<void>;
   removeWorkoutExercise: (workoutExerciseId: string) => Promise<void>;
   logSet: (workoutExerciseId: string, values: SetValues) => Promise<void>;
   editSet: (workoutExerciseId: string, setIndex: number, values: SetValues) => Promise<void>;
   deleteSet: (workoutExerciseId: string, setIndex: number) => Promise<void>;
   // The rest after the last Set logged, or null: every Log set starts or restarts it, and Finish or Discard ends it
-  rest: Rest | null;
+  rest: CurrentRest | null;
   extendRest: () => void;
+  // Ends the rest when less than the 15 s it takes off is left
+  shortenRest: () => void;
   skipRest: () => void;
+  expandRest: () => void;
+  minimizeRest: () => void;
+  // True for a moment as a rest ends, for the screen to flash
+  restFlashing: boolean;
+  // Whether a rest beeps as it ends, remembered on the phone
+  restSoundOn: boolean;
+  setRestSoundOn: (on: boolean) => void;
+  // How long the rests are, chosen on Today and remembered on the phone (#178)
+  restChoice: RestChoice;
+  chooseRest: (choice: RestChoice) => void;
   // The values a new Set starts with: a test's suggested load, else the last Set's, or null for the first
   nextSetDraft: Logbook["nextSetDraft"];
   // Ends the Workout with these times, resolving as soon as it is a Pending Workout, then
@@ -98,8 +126,19 @@ export type FinishOutcome =
   | { status: "pending"; workoutId: string; uploaded: Promise<boolean>; prs: Promise<Pr[]> }
   | { status: "nothing-to-save" };
 
-// A rest that ended this long ago, while the app was in the background, ends without vibrating on return
-const LATE_REST_END_MS = 2000;
+// How often a rest under way is looked at. A timeout to its end would stop while the phone sleeps
+const REST_STEP_MS = 100;
+
+const REST_FLASH_MS = 1200;
+
+// Not every platform can vibrate, nor for a given time
+function vibrate(end: boolean) {
+  try {
+    Vibration.vibrate(end ? 600 : 200);
+  } catch {
+    // The rest still beeps and flashes
+  }
+}
 
 // Adding an Exercise waits for its Previous Sets, so a weak signal gives up after this long and
 // falls back to Pending Workouts
@@ -111,6 +150,7 @@ const LogbookContext = createContext<LogbookContextValue | null>(null);
 // in-progress Workout with every screen
 export function LogbookProvider({ children }: { children: ReactNode }) {
   const api = useApi();
+  const primaryEquipment = usePrimaryEquipmentProfile();
   const [logbook] = useState<Logbook>(() =>
     createLogbook({
       storage: deviceStorage,
@@ -152,7 +192,14 @@ export function LogbookProvider({ children }: { children: ReactNode }) {
   // Workouts whose upload Finish is waiting on, to celebrate their PRs itself
   const celebrating = useRef(new Set<string>());
   // Held in memory only, as it belongs to the Workout, not an Exercise: a force-quit loses it
-  const [rest, setRest] = useState<Rest | null>(null);
+  const [rest, setRest] = useState<CurrentRest | null>(null);
+  const [restFlashing, setRestFlashing] = useState(false);
+  // null until it's read from the phone or chosen
+  const [chosenRestSound, setChosenRestSound] = useState<boolean | null>(null);
+  const restSoundOn = chosenRestSound ?? true;
+  // null until it's read from the phone or chosen
+  const [chosenRest, setChosenRest] = useState<RestChoice | null>(null);
+  const restChoice = chosenRest ?? "auto";
   // Counted, as a sync and a finish can overlap
   const [syncsUnderWay, setSyncsUnderWay] = useState(0);
 
@@ -207,6 +254,27 @@ export function LogbookProvider({ children }: { children: ReactNode }) {
     sync();
   }, [logbook, refreshPending, sync]);
 
+  useEffect(() => {
+    storedRestChoice.read().then(
+      (stored) => setChosenRest((current) => current ?? stored),
+      () => {},
+    );
+    storedRestSound.read().then(
+      (stored) => setChosenRestSound((current) => current ?? stored),
+      () => {},
+    );
+  }, []);
+
+  const chooseRest = useCallback((choice: RestChoice) => {
+    setChosenRest(choice);
+    storedRestChoice.keep(choice).catch(() => {});
+  }, []);
+
+  const setRestSoundOn = useCallback((on: boolean) => {
+    setChosenRestSound(on);
+    storedRestSound.keep(on).catch(() => {});
+  }, []);
+
   useSyncTriggers(sync);
 
   const start = useCallback(() => run(() => logbook.start(new Date())), [logbook, run]);
@@ -215,6 +283,23 @@ export function LogbookProvider({ children }: { children: ReactNode }) {
   const startAssessment = useCallback(
     (options: AssessmentOptions) => run(() => logbook.startAssessment(options, new Date())),
     [logbook, run],
+  );
+
+  const swapTest = useCallback(
+    (...args: Parameters<Logbook["swapTest"]>) => run(() => logbook.swapTest(...args)),
+    [logbook, run],
+  );
+
+  const skipTest = useCallback(
+    async (workoutExerciseId: string) => {
+      const skipping = logbook.skipTest(workoutExerciseId);
+      await run(() => skipping);
+      const skipped = await skipping;
+      // With no test left, there's nothing to rest for
+      if (primaryEquipment && logbook.testProgress(skipped, primaryEquipment).allDone) setRest(null);
+      return skipped;
+    },
+    [logbook, run, primaryEquipment],
   );
 
   const startPlannedWorkout = useCallback(
@@ -230,32 +315,54 @@ export function LogbookProvider({ children }: { children: ReactNode }) {
   );
 
   // Starts the rest once the Set is stored, restarting one under way. Between the two Exercises of a superset there's
-  // none, so one under way ends
+  // none, so one under way ends. The sound is unlocked before anything waits, as it must come from the tap
   const logSet = useCallback(
     async (workoutExerciseId: string, values: SetValues) => {
+      unlockRestSound();
       const now = new Date();
       await run(() => logbook.logSet(workoutExerciseId, values, now));
       const logged = await logbook.inProgress();
-      setRest(logged && restAfterSet(logged, workoutExerciseId, now));
+      const started = logged && restAfterSet(logged, workoutExerciseId, now, restChoice, primaryEquipment);
+      setRest(started && { ...started, afterId: workoutExerciseId, expanded: true });
     },
-    [logbook, run],
+    [logbook, run, restChoice, primaryEquipment],
   );
 
-  // One vibration at the end, unless it ended while the app was in the background (that alert waits for M8)
+  // Beeps and vibrates in the last seconds and at the end, unless it ended while the app was in the background (that
+  // alert waits for M8)
+  const restEndsAt = rest?.endsAt;
   useEffect(() => {
-    if (!rest) return;
-    const timer = setTimeout(
-      () => {
-        if (Date.now() - rest.endsAt < LATE_REST_END_MS) Vibration.vibrate();
+    if (restEndsAt === undefined) return;
+    let before = new Date();
+    const timer = setInterval(() => {
+      const now = new Date();
+      const { ended, alerts } = restStep({ endsAt: restEndsAt }, before, now);
+      before = now;
+      if (alerts) {
+        vibrate(ended);
+        if (restSoundOn) playRestBeep(ended);
+      }
+      if (ended) {
         setRest(null);
-      },
-      Math.max(0, rest.endsAt - Date.now()),
-    );
-    return () => clearTimeout(timer);
-  }, [rest]);
+        setRestFlashing(alerts);
+      }
+    }, REST_STEP_MS);
+    return () => clearInterval(timer);
+  }, [restEndsAt, restSoundOn]);
 
-  const extendCurrentRest = useCallback(() => setRest((current) => current && extendRest(current)), []);
+  useEffect(() => {
+    if (!restFlashing) return;
+    const timer = setTimeout(() => setRestFlashing(false), REST_FLASH_MS);
+    return () => clearTimeout(timer);
+  }, [restFlashing]);
+
+  const moveRestEnd = (seconds: number) => setRest((current) => current && adjustRest(current, seconds, new Date()));
+  const extendRest = () => moveRestEnd(REST_ADJUSTMENT_SECONDS);
+  const shortenRest = () => moveRestEnd(-REST_ADJUSTMENT_SECONDS);
   const skipRest = useCallback(() => setRest(null), []);
+  const showRest = (expanded: boolean) => setRest((current) => current && { ...current, expanded });
+  const expandRest = () => showRest(true);
+  const minimizeRest = () => showRest(false);
 
   const removeWorkoutExercise = useCallback(
     (workoutExerciseId: string) => run(() => logbook.removeWorkoutExercise(workoutExerciseId)),
@@ -353,14 +460,24 @@ export function LogbookProvider({ children }: { children: ReactNode }) {
         startRecoveryWorkout,
         protocolState: logbook.protocolState,
         testProgress: logbook.testProgress,
+        swapTest,
+        skipTest,
         addWorkoutExercise,
         removeWorkoutExercise,
         logSet,
         editSet,
         deleteSet,
         rest,
-        extendRest: extendCurrentRest,
+        extendRest,
+        shortenRest,
         skipRest,
+        expandRest,
+        minimizeRest,
+        restFlashing,
+        restSoundOn,
+        setRestSoundOn,
+        restChoice,
+        chooseRest,
         nextSetDraft: logbook.nextSetDraft,
         finish,
         finishAtLastSet,

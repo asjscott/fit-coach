@@ -54,14 +54,20 @@ export function hasTestResult({ slug, sets }: Pick<InProgressWorkoutExercise, "s
   return sets.some(isTopSet);
 }
 
-// An Assessment Workout is followed in order: the next test is the first that still takes Sets
+// A skipped test with no Set since: Finish leaves it out, so it's estimated
+export const isSkippedTest = ({ skipped, sets }: Pick<InProgressWorkoutExercise, "skipped" | "sets">) =>
+  !!skipped && sets.length === 0;
+
+// An Assessment Workout is followed in order: the next test is the first that still takes Sets and isn't skipped
 export type TestProgress = { nextTestId: string | undefined; allDone: boolean };
 
 export function testProgress(
   { workoutExercises, bodyProfile }: Pick<InProgressWorkout, "workoutExercises" | "bodyProfile">,
   equipmentProfile: ProfileWithLoads,
 ): TestProgress {
-  const next = workoutExercises.find((we) => !takesNoMoreSets(protocolState(we, equipmentProfile, bodyProfile)));
+  const next = workoutExercises.find(
+    (we) => !isSkippedTest(we) && !takesNoMoreSets(protocolState(we, equipmentProfile, bodyProfile)),
+  );
   return { nextTestId: next?.id, allDone: workoutExercises.length > 0 && !next };
 }
 

@@ -2,8 +2,14 @@ import {
   BAND_TAGS,
   BandLevel,
   DEFAULT_CABLE_STEP,
+  dumbbellEnds,
   fromKg,
+  inUnitToStep,
+  MAX_DUMBBELL_BARS,
+  MAX_DUMBBELL_PLATE_SIZES,
+  MAX_DUMBBELL_PLATES,
   toKg,
+  TOO_MANY_DUMBBELL_LOADS,
   type EquipmentProfile,
   type EquipmentTag,
   type WeightUnit,
@@ -78,43 +84,84 @@ const optionalWeight = z
   .max(200, "Must be 200 or less")
   .nullish();
 
+const optionalCount = (max: number) =>
+  z
+    .number({ error: "Enter a number" })
+    .int("Must be a whole number")
+    .min(1, "Must be 1 or more")
+    .max(max, `Must be ${max} or less`)
+    .nullish();
+
 // Dropdown and chip values are strings; they become numbers when saved
 const weightChoices = z.array(z.string()).optional();
 const bandChoices = z.object({ levels: z.array(BandLevel).optional() }).optional();
 
+type PlateRow = { size?: number | null; count?: number | null };
+
+// Whether the plates make more loads than the profile takes
+function hasTooManyLoads(bar: number | null | undefined, plates: PlateRow[], unit: WeightUnit): boolean {
+  const rows = plates.flatMap(({ size, count }) => (size && count ? [{ kg: toKg(size, unit), count }] : []));
+  return !!bar && !dumbbellEnds({ barKg: toKg(bar, unit), plates: rows }, 1);
+}
+
 // Everything is optional: anything left blank is just not saved
-export const LoadsForm = z.object({
-  dumbbells: z
-    .object({
-      kind: z.enum(["adjustable", "fixed"]).optional(),
-      min: optionalWeight,
-      max: optionalWeight,
-      step: optionalWeight,
-      weights: weightChoices,
-    })
-    .superRefine((d, ctx) => {
-      if (d.kind !== "adjustable") return;
-      for (const key of ["min", "max", "step"] as const) {
-        if (d[key] == null) ctx.addIssue({ code: "custom", path: [key], message: "Required" });
-      }
-      if (d.min != null && d.max != null && d.min >= d.max) {
-        ctx.addIssue({ code: "custom", path: ["max"], message: "Must be more than the lightest" });
-      }
-    })
-    .optional(),
-  kettlebells: z.object({ weights: weightChoices }).optional(),
-  barbell: z.object({ bar: z.string().optional(), plates: weightChoices }).optional(),
-  loop_bands: bandChoices,
-  mini_bands: bandChoices,
-  tube_bands: bandChoices,
-  // The Load Step of a cable or machine, which lists no loads
-  cable_machine: z.object({ step: optionalWeight }).optional(),
-});
-export type LoadsForm = z.infer<typeof LoadsForm>;
+export const loadsForm = (unit: WeightUnit) =>
+  z.object({
+    dumbbells: z
+      .object({
+        kind: z.enum(["adjustable", "fixed", "bar_and_plates"]).optional(),
+        min: optionalWeight,
+        max: optionalWeight,
+        step: optionalWeight,
+        weights: weightChoices,
+        bar: optionalWeight,
+        bars: optionalCount(MAX_DUMBBELL_BARS),
+        // A row for each size of plate the user adds
+        plates: z
+          .array(z.object({ size: optionalWeight, count: optionalCount(MAX_DUMBBELL_PLATES) }))
+          .max(MAX_DUMBBELL_PLATE_SIZES)
+          .optional(),
+      })
+      .superRefine((d, ctx) => {
+        if (d.kind === "bar_and_plates") {
+          for (const key of ["bar", "bars"] as const) {
+            if (d[key] == null) ctx.addIssue({ code: "custom", path: [key], message: "Required" });
+          }
+          d.plates?.forEach((plate, i) => {
+            for (const key of ["size", "count"] as const) {
+              if (plate[key] == null) ctx.addIssue({ code: "custom", path: ["plates", i, key], message: "Required" });
+            }
+          });
+          // Said under the last plate, as they make too many together
+          if (d.plates && hasTooManyLoads(d.bar, d.plates, unit)) {
+            const path = ["plates", d.plates.length - 1, "size"];
+            ctx.addIssue({ code: "custom", path, message: TOO_MANY_DUMBBELL_LOADS });
+          }
+        }
+        if (d.kind !== "adjustable") return;
+        for (const key of ["min", "max", "step"] as const) {
+          if (d[key] == null) ctx.addIssue({ code: "custom", path: [key], message: "Required" });
+        }
+        if (d.min != null && d.max != null && d.min >= d.max) {
+          ctx.addIssue({ code: "custom", path: ["max"], message: "Must be more than the lightest" });
+        }
+      })
+      .optional(),
+    kettlebells: z.object({ weights: weightChoices }).optional(),
+    barbell: z.object({ bar: z.string().optional(), plates: weightChoices }).optional(),
+    loop_bands: bandChoices,
+    mini_bands: bandChoices,
+    tube_bands: bandChoices,
+    // The Load Step of a cable or machine, which lists no loads
+    cable_machine: z.object({ step: optionalWeight }).optional(),
+  });
+export type LoadsForm = z.infer<ReturnType<typeof loadsForm>>;
 
 // A weight in the form as kg, exactly (toKg), and back. Back is to the nearest 0.25, which shows a load entered in
 // pounds as entered and keeps a 1.25 kg plate
 const formWeight = (kg: number, unit: WeightUnit) => Math.round(fromKg(kg, unit) * 4) / 4;
+// The size of a bar or plate of bar-and-plates dumbbells, which can be any size: to the hundredth
+export const sizeInUnit = (kg: number, unit: WeightUnit) => inUnitToStep(kg, unit, 0.01);
 const toKgs = (values: string[] | undefined, unit: WeightUnit) =>
   (values ?? []).map((value) => toKg(Number(value), unit)).sort((a, b) => a - b);
 const toStrings = (values: number[] | undefined, unit: WeightUnit) => values?.map((kg) => String(formWeight(kg, unit)));
@@ -144,6 +191,16 @@ export function toLoads(form: LoadsForm, tags: EquipmentTag[], unit: WeightUnit)
   if (has("dumbbells") && dumbbells?.kind === "fixed" && dumbbells.weights?.length) {
     loads.dumbbells = { kind: "fixed", weightsKg: toKgs(dumbbells.weights, unit) };
   }
+  if (has("dumbbells") && dumbbells?.kind === "bar_and_plates" && dumbbells.bar != null && dumbbells.bars != null) {
+    loads.dumbbells = {
+      kind: "bar_and_plates",
+      barKg: toKg(dumbbells.bar, unit),
+      bars: dumbbells.bars,
+      plates: (dumbbells.plates ?? []).flatMap(({ size, count }) =>
+        size != null && count != null ? [{ kg: toKg(size, unit), count }] : [],
+      ),
+    };
+  }
   if (has("kettlebells") && kettlebells?.weights?.length) {
     loads.kettlebells = { weightsKg: toKgs(kettlebells.weights, unit) };
   }
@@ -162,19 +219,35 @@ export function toLoads(form: LoadsForm, tags: EquipmentTag[], unit: WeightUnit)
   return loads;
 }
 
+function toDumbbellsForm(
+  dumbbells: NonNullable<EquipmentProfile["loads"]["dumbbells"]>,
+  unit: WeightUnit,
+): LoadsForm["dumbbells"] {
+  switch (dumbbells.kind) {
+    case "adjustable":
+      return {
+        kind: "adjustable",
+        min: formWeight(dumbbells.minKg, unit),
+        max: formWeight(dumbbells.maxKg, unit),
+        step: formWeight(dumbbells.stepKg, unit),
+      };
+    case "fixed":
+      return { kind: "fixed", weights: toStrings(dumbbells.weightsKg, unit) };
+    case "bar_and_plates":
+      return {
+        kind: "bar_and_plates",
+        bar: sizeInUnit(dumbbells.barKg, unit),
+        bars: dumbbells.bars,
+        plates: dumbbells.plates.map(({ kg, count }) => ({ size: sizeInUnit(kg, unit), count })),
+      };
+  }
+}
+
 // The profile's loads in kg -> form answers in the user's unit, for prefilling when editing
 export function toLoadsForm(loads: EquipmentProfile["loads"] = {}, unit: WeightUnit): LoadsForm {
   const { dumbbells, kettlebells, barbell } = loads;
   return {
-    dumbbells:
-      dumbbells?.kind === "adjustable"
-        ? {
-            kind: "adjustable",
-            min: formWeight(dumbbells.minKg, unit),
-            max: formWeight(dumbbells.maxKg, unit),
-            step: formWeight(dumbbells.stepKg, unit),
-          }
-        : dumbbells && { kind: "fixed", weights: toStrings(dumbbells.weightsKg, unit) },
+    dumbbells: dumbbells && toDumbbellsForm(dumbbells, unit),
     kettlebells: kettlebells && { weights: toStrings(kettlebells.weightsKg, unit) },
     barbell: barbell && { bar: String(formWeight(barbell.barKg, unit)), plates: toStrings(barbell.platesKg, unit) },
     loop_bands: loads.loop_bands,

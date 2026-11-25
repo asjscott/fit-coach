@@ -9,9 +9,9 @@ import { HStack } from "@/components/stack";
 import { Text } from "@/components/text";
 import { fonts, radii, spacing, useTheme } from "@/theme";
 import { describeSet, plannedSetsLabel, straightToLabel, supersetNote } from "../format";
-import { exerciseName, setReading } from "../library";
-import { ExerciseBox, ExerciseLogging } from "./current-exercise-box";
-import { RestTimer } from "./rest-timer";
+import { exerciseName, targetReading } from "../library";
+import { useLogbook } from "../logbook-provider";
+import { ExerciseBox, ExerciseLogging, type NextAction } from "./current-exercise-box";
 import { WorkoutExerciseMenu } from "./workout-exercise-menu";
 import { useWeightUnit } from "@/features/user/current-user-provider";
 
@@ -24,21 +24,24 @@ export type SupersetBoxProps = {
   currentId: string;
   // Makes one of the pair the current Workout Exercise
   onChoose: (id: string) => void;
+  // Offered once both have all their Sets
+  next?: NextAction;
 };
 
 // A superset being logged (#96), stacked: one box holds both Exercises, A1 above A2. The one whose turn it is is open
 // with its steppers, the other shrinks to its name, its Sets so far and "Up next". Logging a Set opens the other,
 // with no rest between them, and the rest after the pair's second Set is the longer of the two. Once the one with fewer
 // Sets is done, the other rests its own time, as the note says
-export function SupersetBox({ pair, letter, currentId, onChoose }: SupersetBoxProps) {
+export function SupersetBox({ pair, letter, currentId, onChoose, next }: SupersetBoxProps) {
   const unit = useWeightUnit();
+  const { workout, restChoice } = useLogbook();
   const { colors } = useTheme();
   const [first, second] = pair;
   const loggedSets = first.sets.length + second.sets.length;
   // Chosen by hand, until the next Set is logged
   const [picked, setPicked] = useState<{ id: string; loggedSets: number } | null>(null);
   const turn = supersetTurn(pair);
-  const openId = picked?.loggedSets === loggedSets ? picked.id : (turn?.id ?? currentId);
+  const openId = !turn ? currentId : picked?.loggedSets === loggedSets ? picked.id : turn.id;
   const openMember = pair.find(({ id }) => id === openId);
   const rounds = Math.max(...pair.map(({ planned }) => planned?.sets ?? 0));
   const round = Math.min(Math.min(...pair.map(({ sets }) => sets.length)) + 1, rounds);
@@ -50,12 +53,12 @@ export function SupersetBox({ pair, letter, currentId, onChoose }: SupersetBoxPr
     <ExerciseBox>
       <SectionLabel color="accent">{`Superset ${letter} · Round ${round} of ${rounds}`}</SectionLabel>
       <Text size="sm" color="muted" style={styles.note}>
-        {supersetNote(pair)}
+        {supersetNote(pair, restChoice)}
       </Text>
       {pair.map((workoutExercise, i) => {
         const open = workoutExercise.id === openId;
         const { id, slug, sets, planned } = workoutExercise;
-        const reading = setReading(slug);
+        const reading = targetReading(slug, workout?.deloadWeek);
         const done = !!planned && sets.length >= planned.sets;
         const setsSoFar = sets.map((set) => describeSet(set, unit, reading)).join(", ");
         const summary = done
@@ -98,7 +101,16 @@ export function SupersetBox({ pair, letter, currentId, onChoose }: SupersetBoxPr
               </Pressable>
               <WorkoutExerciseMenu workoutExercise={workoutExercise} />
             </HStack>
-            {open ? <ExerciseLogging key={id} workoutExercise={workoutExercise} hideTarget /> : null}
+            {open ? (
+              <ExerciseLogging
+                key={id}
+                workoutExercise={workoutExercise}
+                next={next}
+                hideTarget
+                // Keeps the Exercise of the pair's last Set open, to rate it
+                onLog={() => onChoose(id)}
+              />
+            ) : null}
           </View>
         );
       })}
@@ -110,7 +122,6 @@ export function SupersetBox({ pair, letter, currentId, onChoose }: SupersetBoxPr
           </AlertText>
         </Alert>
       ) : null}
-      <RestTimer />
     </ExerciseBox>
   );
 }

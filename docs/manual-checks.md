@@ -8,7 +8,7 @@ Result codes: **✅ pass** · **❌ fail** · **⚠️ works but feels off** · 
 
 ## What's left
 
-- **Run on the phone now:** R1, U1, U2, LS2, PR1. Each is a part no run has covered yet.
+- **Run on the phone now:** R1, U1, U2, LS2, PR1, RS1–RS7. Each is a part no run has covered yet.
 - **M7, on the phones:** WI4, WI6, F4, FL6, SC3, SC4, TC4, FI6, TB2, NA1. Session 5 passed the rest of M7 on the simulators and phones; these are the parts not yet seen, and the offline checks again after #170–#174.
 - **Run when you next train:** P9 and S1, a full Workout with a timer, resting as the timer says. Both can be one session.
 - **🕒 Due later, while you use the app:** C5 (the day after a check-in), P16 (a Monday), J2 (after a week with jumps on), P17 (after a few weeks), DL1 and DL2 (the 5th week of a Block: the week starting 4 Mondays after the Monday of the week Assessment B was done).
@@ -178,6 +178,28 @@ Result codes: **✅ pass** · **❌ fail** · **⚠️ works but feels off** · 
 - [ ] **P9** The estimated time is honest: run a full Standard Workout with a timer. The 5-minute warm-up is a spec assumption "unless it proves wrong on a phone".
   - Result: · Notes:
 
+## Rest screen (#179)
+
+On the installed web app on the iPhone, with the silent switch off and the volume up.
+
+- [ ] **RS1** Log a Set and put the phone down a few steps away: the countdown reads from across the room, in light and dark, and shows the next Set and its target.
+  - Result: · Notes:
+- [ ] **RS2** Keep music playing in another app and rest to the end: it beeps at 3, 2, 1 and 0, loud enough to notice, and the music carries on.
+  - Result: · Notes:
+- [ ] **RS3** The phone vibrates at 3, 2, 1 and 0 where it can (Android; Safari on the iPhone can't). Where it can't, the rest works the same otherwise.
+  - Result: · Notes:
+- [ ] **RS4** At 0 the screen flashes twice and the logging screen is back, with the next Set's steppers ready. With Reduce Motion on (Settings → Accessibility → Motion), there's no flash.
+  - Result: · Notes:
+- [ ] **RS5** Turn Sound off during a rest: the rest ends silently. Close and reopen the app: the next rest still has it off. Turn it on mid-rest: it beeps again.
+  - Result: · Notes:
+- [ ] **RS6** Lock the phone, or switch apps, for part of a rest: on return the time left is right. Stay away past its end: it's closed, with no beep, vibration or flash. The next rest still beeps.
+  - Result: · Notes:
+- [ ] **RS7** With VoiceOver, the countdown reads as "Rest, 1:05 left", and the buttons behind the rest screen can't be reached.
+  - Result: · Notes:
+
+- [ ] **RS8** Log an Exercise's last planned Set: the rest screen has the rating, Next exercise and Log extra set, all in sight without scrolling. Next exercise opens the next Exercise with the rest as a bar (#180).
+  - Result: · Notes:
+
 ## Supersets (#96)
 
 A Workout pairs Exercises only when it wouldn't otherwise fit its Length. Pairs form where the Patterns go together (push with pull or hinge, squat with core), never with a one-sided Exercise or a carry. On the simulators, Bodyweight only on Short paired them. The sheet then says "Paired into supersets to fit the time" and shows "Superset with …" under each paired Exercise.
@@ -207,6 +229,11 @@ A Workout pairs Exercises only when it wouldn't otherwise fit its Length. Pairs 
 - [ ] **LS2** On a home Equipment Profile with a cable machine selected, the weights stage shows "Cable and machine step (lb)" next to the other equipment, and the step saved there moves the cable targets and stepper.
   - Result: · Notes:
 
+## Bar-and-plates dumbbells (#181)
+
+- [ ] **BP1** In Edit profile, at home with dumbbells, choose **Bar and plates** and enter a 4 lb bar × 2, 3 lb × 4 and 5 lb × 4, adding and removing a row on the way. Profile's Equipment reads "Dumbbells (2 × 4 lb bars, 4 × 3 lb and 4 × 5 lb plates)", editing again shows it back, and a goblet squat's stepper goes 12, 13, 14.
+  - Result: · Notes:
+
 ## PRs (#130)
 
 - [ ] **PR1** Beat an Exercise's best with signal and Save workout. While the "Workout saved. New PR: …" toast is up (about 10 s), tap **See workout**: it opens the Workout in History with "New PR · …" under that Exercise.
@@ -226,11 +253,11 @@ A Workout pairs Exercises only when it wouldn't otherwise fit its Length. Pairs 
 
 ## Deload week and the retest (#137)
 
-🕒 In the 5th week of a Block: the week starting 4 Mondays after the Monday of the week the Assessment's B was done.
+🕒 In the 5th week of a Block: the week starting 4 Mondays after the Monday of the week the Assessment was done.
 
-- [ ] **DL1** In the deload week, open the Next Workout sheet on Today: the Exercises and Sets are as usual, weighted targets about 10% lighter (on a real dumbbell, plate or stack step), and bodyweight, band and timed targets about 70% of last week's (never under 5 reps or 15 s unless they were already). Below the plan, a "Retake the Assessment" section explains that only the Exercises it tests, and any not done this Block, get new levels, with Start assessment A. The wording reads well and doesn't feel pushy.
+- [ ] **DL1** In the deload week, open the Next Workout sheet on Today: the Exercises and Sets are as usual, weighted targets about 10% lighter (on a real dumbbell, plate or stack step), and bodyweight, band and timed targets about 70% of last week's (never under 5 reps or 15 s unless they were already). Below the plan, a "Retake the Assessment" section explains that only the Exercises it tests, and any not done this Block, get new levels, with Start assessment. The wording reads well and doesn't feel pushy.
   - Result: · Notes:
-- [ ] **DL2** Dismiss the retest with the ×: it stays gone for the rest of the week. On the Monday after, the plan is back to the usual loads and there's no retest. Or, instead, take A and B in the deload week: the Results open as usual, and next week an Exercise you trained this Block but the Assessment didn't test keeps the target it had reached.
+- [ ] **DL2** Dismiss the retest with the ×: it stays gone for the rest of the week. On the Monday after, the plan is back to the usual loads and there's no retest. Or, instead, take it in the deload week: the Results open as usual, and next week an Exercise you trained this Block but the Assessment didn't test keeps the target it had reached.
   - Result: · Notes:
 
 ## M7: Weigh-ins, food and water (#161–#168)

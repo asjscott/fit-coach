@@ -39,6 +39,7 @@ export default function ProfileView() {
   const { signOut } = useAuth();
   const { user } = useCurrentUser();
   const equipment = usePrimaryEquipmentProfile();
+  const unit = useWeightUnit();
   const logbook = useLogbook();
   const assessment = useStartAssessment();
   const tests = useChosenTests();
@@ -84,7 +85,7 @@ export default function ProfileView() {
           <Row label="Goal" value={profile.goal && goalLabel(profile.goal)} />
           <Row label="Days per week" value={profile.daysPerWeek} />
           <Row label="Workout Length" value={workoutLengthLabel(usualWorkoutLength(profile))} />
-          <Row label="Equipment" value={equipmentSummary(equipment)} />
+          <Row label="Equipment" value={equipmentSummary(equipment, unit)} />
           <Row
             label="Injuries"
             value={profile.injuries?.length ? profile.injuries.map(injuryLabel).join(", ") : "None"}
@@ -119,8 +120,8 @@ export default function ProfileView() {
               label="Retake assessment"
               action="secondary"
               icon="dumbbell"
-              loading={assessment.starting === "A"}
-              onPress={() => assessment.start("A")}
+              loading={assessment.starting}
+              onPress={assessment.start}
             />
           )}
         </Section>

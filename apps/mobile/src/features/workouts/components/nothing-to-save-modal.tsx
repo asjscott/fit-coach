@@ -12,7 +12,7 @@ export function NothingToSaveModal({
   onClose: () => void;
   onDiscarded: () => void;
 }) {
-  const { discard } = useLogbook();
+  const { workout, discard } = useLogbook();
   const { showToast } = useToast();
 
   const handleDiscard = async () => {
@@ -29,7 +29,11 @@ export function NothingToSaveModal({
     <ConfirmModal
       isOpen={isOpen}
       title="Nothing to save"
-      message="This Workout has no Sets, so it won't be saved. Discard it?"
+      message={
+        workout?.assessment === "single"
+          ? "This Assessment Workout has no Sets, so it won't be saved and there won't be a result. Discard it?"
+          : "This Workout has no Sets, so it won't be saved. Discard it?"
+      }
       cancelLabel="Keep logging"
       confirmLabel="Discard"
       onCancel={onClose}

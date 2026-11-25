@@ -92,6 +92,10 @@ _Avoid_: Session, planned session, program
 The Workout on offer today: the Planned Workout on the Workout Length and equipment chosen for it, cut to fit, with its estimated time and any Exercise with no alternative left out. Choices stay on the phone, last for one Workout and never change the Planned Workout.
 _Avoid_: Today's session, adjusted plan
 
+**Rest Choice**:
+How long the user wants the rests between Sets, chosen on Today and kept on the phone: Auto, each Exercise's own rest, or one length from 30 seconds to 3 minutes for every Exercise. It decides how many of the plan's Sets fit the Workout Length, but never changes the Planned Workout. An Assessment Workout always rests on Auto.
+_Avoid_: Rest setting, rest preference, rest timer (for the choice)
+
 **Weekly Budget**:
 How many credited Sets each of the budgeted Muscles should get in a week, set by the user's Goal and days per week. Workout Length decides how much of it is delivered, not the budget itself. Eight Muscles are budgeted for every Goal, and calves too for athletic and build_muscle; other Muscles aren't budgeted. The Coach plans a Muscle up to a cap of about 130% of its budget, counted from the Week Ledger and the Sets already planned: it adds no Exercise, a Jump included, that would take one of its primary Muscles over it, while secondary credit counts towards a Muscle's total but never keeps an Exercise out.
 _Avoid_: Weekly target, quota, weekly volume
@@ -139,15 +143,15 @@ _Avoid_: Off day, recovery day
 ### Assessment
 
 **Assessment Workout**:
-One of the two Workouts the Coach prescribes to measure the user's starting strength: A tests squat, hinge and core, B tests push and pull.
+The Workout the Coach prescribes to measure the user's starting strength: it tests squat, push, hinge, pull and core, in that order. Before, there were two: A (squat, hinge and core) and B (push and pull). An old A and B still make one Assessment; an A alone makes none. It can be finished with tests undone, as long as one was measured; with none, it stays in History and makes no Assessment.
 _Avoid_: Test session, baseline session, test workout
 
 **Assessment**:
-The results of one completed pair of Assessment Workouts: for each tested Pattern, the Exercise used, its top Set, the maximum estimated from it and the Reference Strength that follows. A test is load-limited when the heaviest load available couldn't reach RPE 9, so its maximum is only a lower bound. A bodyweight or timed test is one Set of as many reps or seconds as the user can do. A Pattern is untested when no test was safe for the user's injuries or its weighted test stopped short of RPE 9; its Reference Strength is then estimated from the other Patterns. The newest Assessment is the one that counts.
+The results of one Assessment Workout, or of an old A and B: for each tested Pattern, the Exercise used, its top Set, the maximum estimated from it and the Reference Strength that follows. A test is load-limited when the heaviest load available couldn't reach RPE 9, so its maximum is only a lower bound. A bodyweight or timed test is one Set of as many reps or seconds as the user can do. A Pattern is untested when no test was safe for the user's injuries, its test was left undone or its weighted test stopped short of RPE 9; its Reference Strength is then estimated from the other Patterns, or from typical values when none was measured in kg. The newest Assessment is the one that counts.
 _Avoid_: Baseline, test results, fitness test
 
 **Working Level**:
-What the Coach will prescribe next for one Exercise for this user: a load and a target reps within a rep range for a weighted Exercise (8–12 by default, 6–10 for a barbell lift, a fixed 8 for a Ballistic Exercise, and no range for a carry), a band level and reps within 10–15 for a band Exercise, reps up to 15 for a bodyweight one, seconds for a timed one. Each records the Workout that last moved it and the run of Misses it is on. An Assessment sets the first one, at the bottom of the range; a bodyweight one above 15 reps, or a timed one above 60 seconds, starts on the harder variant.
+What the Coach will prescribe next for one Exercise for this user: a load and a target reps within a rep range for a weighted Exercise (8–12 by default, 6–10 for a barbell lift, a fixed 8 for a Ballistic Exercise, and no range for a carry), a band level and reps within 10–15 for a band Exercise, reps up to 15 for a bodyweight one, seconds for a timed one. The target is an aim inside the range, not a limit: when every Set reaches it, the next is the lowest Set + 1 rep, or + 5 seconds, up to the top (20 reps once they're climbing past the range). Each records the Workout that last moved it and the run of Misses it is on. An Assessment sets the first one, at the bottom of the range; a bodyweight one above 15 reps, or a timed one above 60 seconds, starts on the harder variant.
 _Avoid_: Exercise state, starting load, current weight
 
 **Reference Strength**:
@@ -160,8 +164,16 @@ _Avoid_: Strength score, base e1RM
 The move from one load to the next an Equipment Profile has for one kind of equipment, such as from the 25 lb to the 30 lb dumbbells, or a set step for cable and machine. Progression moves a weighted Exercise up or down one Load Step at a time.
 _Avoid_: Increment, jump, plate step
 
+**Range**:
+The reps or seconds that are valid for a target, shown with it: "8–12", or "15+" with no top. It stretches to take in a target outside it. A fixed dose, such as a carry's or the deload week's, has none and reads as one number.
+_Avoid_: Rep window, bracket
+
+**Aim**:
+The target inside its Range that the Coach asks for today: "8–12 · aim for 9". A Set anywhere in the Range is valid; beating the Aim raises the next one.
+_Avoid_: Goal (for this), limit
+
 **Miss**:
-A Workout in which an Exercise's Sets average more than 2 reps, or 10 seconds, short of their target. Two in a row, counted over the Workouts that include that Exercise, drop it a Load Step, or lower a bodyweight or timed target. A skipped Workout isn't one, and nothing in a deload week is, though a deload week doesn't break the run either.
+A Workout in which an Exercise's Sets average more than 2 reps, or 10 seconds, short of their target and, where there's a rep range, under its bottom: Sets inside the range are valid, so never a Miss. Bodyweight and timed Exercises have no range, so only the shortfall counts. Two in a row, counted over the Workouts that include that Exercise, drop it a Load Step, or lower a bodyweight or timed target. A skipped Workout isn't one, and nothing in a deload week is, though a deload week doesn't break the run either.
 _Avoid_: Failure, failed set, stall
 
 **PR**:

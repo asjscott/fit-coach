@@ -22,18 +22,21 @@ import {
   noAlternativeLabel,
   plannedSetsLabel,
   setTargetLabel,
+  upNextLabel,
   straightToLabel,
   supersetLetter,
+  restChoiceLabel,
   supersetNote,
   workoutExerciseSummary,
   workoutTimesLabel,
   workoutWhenLabel,
 } from "./format";
-import type { SetReading } from "./library";
+import { setReading, targetReading, type SetReading } from "./library";
 
-// How a one-sided Exercise's Sets read, and a Jump's
-const oneSided: SetReading = { unilateral: true, jump: false };
-const jump: SetReading = { unilateral: false, jump: true };
+// How a one-sided Exercise's Sets read, a Jump's and the walk's
+const oneSided: SetReading = { unilateral: true, jump: false, inMinutes: false };
+const jump: SetReading = { unilateral: false, jump: true, inMinutes: false };
+const walk: SetReading = { unilateral: false, jump: false, inMinutes: true };
 
 const phone = vi.hoisted(() => ({ uses24hourClock: false as boolean | null }));
 vi.mock("expo-localization", () => ({ getCalendars: () => [phone] }));
@@ -157,10 +160,18 @@ describe("setsSummary", () => {
     expect(setsSummary([hold(45)], "kg")).toBe("45 s");
   });
 
-  it("gives timed Sets of a minute or more in minutes, each in full when it has seconds over (#109)", () => {
+  // #177: in seconds whatever the length, minutes only for the walk
+  it("lists long holds in seconds", () => {
     const hold = (seconds: number): Set => ({ kind: "timed", seconds, loggedAt });
-    expect(setsSummary([hold(1200)], "kg")).toBe("20 min");
-    expect(setsSummary([hold(90), hold(75)], "kg")).toBe("1 min 30 s, 1 min 15 s");
+    expect(setsSummary([hold(90), hold(75)], "kg")).toBe("90, 75 s");
+    expect(previousSetsLabel([hold(90), hold(60)], "kg")).toBe("Last: 90, 60 s");
+  });
+
+  it("gives the walk's Sets in minutes, each in full when it has seconds over (#109)", () => {
+    const walked = (seconds: number): Set => ({ kind: "timed", seconds, loggedAt });
+    expect(setsSummary([walked(1200)], "kg", walk)).toBe("20 min");
+    expect(setsSummary([walked(90), walked(75)], "kg", walk)).toBe("1 min 30 s, 1 min 15 s");
+    expect(previousSetsLabel([walked(1200)], "kg", walk)).toBe("Last: 20 min");
   });
 
   it("is empty with no Sets", () => {
@@ -239,17 +250,70 @@ describe("setTargetLabel", () => {
     expect(setTargetLabel(target, "kg")).toBe(label);
   });
 
-  it("reads a timed target of a minute or more in minutes, as the walk's 20 minutes", () => {
-    expect(setTargetLabel({ unit: "seconds", seconds: 1200 }, "kg")).toBe("20 min");
-    expect(setTargetLabel({ unit: "seconds", seconds: 60 }, "kg")).toBe("1 min");
-    expect(setTargetLabel({ unit: "seconds", seconds: 90 }, "kg")).toBe("1 min 30 s");
-    expect(setTargetLabel({ unit: "seconds", seconds: 59 }, "kg")).toBe("59 s");
-    expect(plannedSetsLabel({ sets: 1, target: { unit: "seconds", seconds: 1200 } }, "kg")).toBe("1 set · 20 min");
+  it("reads a timed target in seconds at every length (#177)", () => {
+    expect(setTargetLabel({ unit: "seconds", seconds: 60 }, "kg")).toBe("60 s");
+    expect(setTargetLabel({ unit: "seconds", seconds: 90 }, "kg")).toBe("90 s");
+    expect(plannedSetsLabel({ sets: 3, target: { unit: "seconds", seconds: 90 } }, "kg", oneSided)).toBe(
+      "3 sets · 90 s per side",
+    );
   });
 
-  it("rounds a load to 0.5 of the user's unit, so a profile's summed loads show no floating-point noise", () => {
-    expect(setTargetLabel({ unit: "kg", kg: 6.25, reps: 8 }, "kg")).toBe("6.5 kg × 8");
-    expect(setTargetLabel({ unit: "kg", kg: 2.5 + 0.1 + 0.2, reps: 8 }, "kg")).toBe("3 kg × 8");
+  it("reads the walk's target in minutes", () => {
+    expect(setTargetLabel({ unit: "seconds", seconds: 1200 }, "kg", walk)).toBe("20 min");
+    expect(plannedSetsLabel({ sets: 1, target: { unit: "seconds", seconds: 1200 } }, "kg", walk)).toBe(
+      "1 set · 20 min",
+    );
+  });
+
+  it("names a load as it's sized, with no floating-point noise of a profile's summed loads", () => {
+    expect(setTargetLabel({ unit: "kg", kg: 6.25, reps: 8 }, "kg")).toBe("6.25 kg × 8");
+    expect(setTargetLabel({ unit: "kg", kg: 2.5 + 0.1 + 0.2, reps: 8 }, "kg")).toBe("2.8 kg × 8");
+  });
+});
+
+// Stories 62–66 (#183)
+describe("setTargetLabel with its Exercise's range", () => {
+  it.each([
+    ["a weighted target", "goblet-squat", { unit: "kg", kg: 20, reps: 9 }, "20 kg × 8–12 · aim for 9"],
+    ["one past the range", "goblet-squat", { unit: "kg", kg: 20, reps: 14 }, "20 kg × 8–20 · aim for 14"],
+    ["one short of the range", "goblet-squat", { unit: "kg", kg: 20, reps: 6 }, "20 kg × 6–12 · aim for 6"],
+    ["a band target", "band-row", { unit: "band", level: "medium", reps: 12 }, "Medium band × 10–15 · aim for 12"],
+    ["a bodyweight target", "push-up", { unit: "reps", reps: 10 }, "10–15 reps"],
+    ["a bodyweight target at the top", "push-up", { unit: "reps", reps: 15 }, "15+ reps"],
+    ["a timed target", "plank", { unit: "seconds", seconds: 40 }, "40–60 s"],
+    ["a timed target at the top", "plank", { unit: "seconds", seconds: 60 }, "60+ s"],
+    [
+      "a one-sided target",
+      "one-arm-dumbbell-row",
+      { unit: "kg", kg: 20, reps: 9 },
+      "20 kg × 8–12 per side · aim for 9",
+    ],
+    ["a one-sided timed target", "side-plank", { unit: "seconds", seconds: 40 }, "40–60 s per side"],
+    ["a Ballistic Exercise", "kettlebell-swing", { unit: "kg", kg: 16, reps: 8 }, "16 kg × 8"],
+    ["a Jump", "box-jump", { unit: "reps", reps: 5 }, "5 contacts"],
+    ["a carry", "farmers-carry", { unit: "kg", kg: 20, reps: 8 }, "20 kg × 8"],
+    ["a Recovery Exercise", "cat-cow", { unit: "seconds", seconds: 45 }, "45 s"],
+    ["an Exercise this app version doesn't know", "not-in-library", { unit: "reps", reps: 10 }, "10 reps"],
+  ] as const)("reads %s", (_name, slug, target, label) => {
+    expect(setTargetLabel(target, "kg", targetReading(slug, undefined))).toBe(label);
+  });
+
+  it("reads a load in pounds", () => {
+    const target = { unit: "kg", kg: 9.0718474, reps: 9 } as const;
+    expect(setTargetLabel(target, "lb", targetReading("goblet-squat", false))).toBe("20 lb × 8–12 · aim for 9");
+  });
+
+  it("reads one number in the deload week", () => {
+    const reading = targetReading("one-arm-dumbbell-row", true);
+    expect(setTargetLabel({ unit: "kg", kg: 12, reps: 8 }, "kg", reading)).toBe("12 kg × 8 per side");
+    expect(setTargetLabel({ unit: "seconds", seconds: 40 }, "kg", targetReading("plank", true))).toBe("40 s");
+  });
+
+  it("is what Today and the logging screen's rows show after the Sets", () => {
+    const planned = { sets: 3, target: { unit: "kg", kg: 20, reps: 9 } } as const;
+    const reading = targetReading("goblet-squat", undefined);
+    expect(plannedSetsLabel(planned, "kg", reading)).toBe("3 sets · 20 kg × 8–12 · aim for 9");
+    expect(workoutExerciseSummary([], "kg", undefined, planned, reading)).toBe("3 sets · 20 kg × 8–12 · aim for 9");
   });
 });
 
@@ -433,9 +497,19 @@ describe("describeSet", () => {
     expect(describeSet({ kind: "timed", seconds: 45, loggedAt }, "kg")).toBe("45 s");
   });
 
-  it("reads a timed Set of a minute or more in minutes, as its target does (#109)", () => {
-    expect(describeSet({ kind: "timed", seconds: 1200, loggedAt }, "kg")).toBe("20 min");
-    expect(describeSet({ kind: "timed", seconds: 90, loggedAt }, "kg")).toBe("1 min 30 s");
+  it("reads a timed Set in seconds at every length, and the walk's in minutes (#177)", () => {
+    expect(describeSet({ kind: "timed", seconds: 90, loggedAt }, "kg")).toBe("90 s");
+    expect(describeSet({ kind: "timed", seconds: 1200, loggedAt }, "kg", walk)).toBe("20 min");
+    expect(describeSet({ kind: "timed", seconds: 90, loggedAt }, "kg", walk)).toBe("1 min 30 s");
+  });
+});
+
+// #177: the Exercise decides, not the length
+describe("setReading", () => {
+  it("reads only the one-Set walk in minutes", () => {
+    expect(setReading("walk").inMinutes).toBe(true);
+    expect(setReading("plank").inMinutes).toBe(false);
+    expect(setReading("not-in-the-library").inMinutes).toBe(false);
   });
 });
 
@@ -461,6 +535,18 @@ describe("straightToLabel", () => {
   });
 });
 
+describe("restChoiceLabel", () => {
+  it.each([
+    ["auto", "Auto"],
+    [30, "30 s"],
+    [60, "1 min"],
+    [75, "1 min 15 s"],
+    [180, "3 min"],
+  ] as const)("reads %s as %s", (choice, label) => {
+    expect(restChoiceLabel(choice)).toBe(label);
+  });
+});
+
 describe("supersetNote", () => {
   // A chin-up (120 s Sets, 90 s rest) with a lateral raise (60 s Sets, 45 s rest)
   const member = (slug: string, logged: number, planned: number) => ({
@@ -473,6 +559,15 @@ describe("supersetNote", () => {
 
   it("gives the longer of the two rests after each round", () => {
     expect(note([0, 3], [0, 3])).toBe("No rest between them, then 90 s rest");
+  });
+
+  it("gives the chosen rest", () => {
+    expect(supersetNote([member("chin-up", 0, 1), member("dumbbell-lateral-raise", 0, 3)], 60)).toBe(
+      "No rest between them, then 60 s rest",
+    );
+    expect(supersetNote([member("chin-up", 1, 1), member("dumbbell-lateral-raise", 1, 3)], 60)).toBe(
+      "Chin-up is done: 60 s rest between Sets",
+    );
   });
 
   it("says when the one with more Sets will rest its own time", () => {
@@ -504,9 +599,9 @@ describe("loads in the user's unit", () => {
     ]);
   });
 
-  it("rounds a load to 0.5 of the user's unit", () => {
+  it("shows a load sized in the user's unit as it is, and rounds one in the other to 0.5", () => {
     expect(loadLabel(20, "lb")).toBe("44 lb");
-    expect(loadLabel(16.25, "kg")).toBe("16.5 kg");
+    expect(loadLabel(16.25, "kg")).toBe("16.25 kg");
   });
 
   it("says the weight once in a Sets summary and Previous Sets when every Set used it", () => {
@@ -593,5 +688,18 @@ describe("prsHeadline", () => {
         { slug: "plank", measure: "seconds", best: 50, previous: 45 },
       ]),
     ).toBe("2 new PRs: Goblet squat, Plank");
+  });
+});
+
+describe("upNextLabel", () => {
+  it("says which Set comes next and its target", () => {
+    const reading = targetReading("goblet-squat", undefined);
+    expect(upNextLabel({ setNumber: 2, plannedSets: 3 }, { unit: "kg", kg: 20, reps: 9 }, "kg", reading)).toBe(
+      "Set 2 of 3 · 20 kg × 8–12 · aim for 9",
+    );
+  });
+
+  it("is only the Set with no plan", () => {
+    expect(upNextLabel({ setNumber: 3 }, undefined, "kg")).toBe("Set 3");
   });
 });

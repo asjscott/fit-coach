@@ -79,7 +79,7 @@ export type PlanWorkoutInput = {
 
 // What the planner decides; the API gives it an id and a status when it saves it. heldBack is the tired Muscles
 // whose Exercises the recovery filter left out of the plan
-export type WorkoutPlan = Pick<PlannedWorkout, "weekStart" | "plannedExercises" | "cue"> &
+export type WorkoutPlan = Pick<PlannedWorkout, "weekStart" | "plannedExercises" | "cue" | "deloadWeek"> &
   Required<Pick<PlannedWorkout, "reasons">> & { heldBack: Muscle[] };
 
 // A Set's target from a stored Working Level, or null when it can't be prescribed on this equipment
@@ -537,6 +537,7 @@ export function planWorkout(input: PlanWorkoutInput): WorkoutPlan {
     weekStart: monday,
     plannedExercises: withAlternatives(selected, alternatives),
     ...(goal === "athletic" && { cue: ATHLETIC_CUE }),
+    ...(input.deloadWeek && { deloadWeek: true }),
     heldBack: held,
     reasons: planReasons({
       heldBack: held,

@@ -25,5 +25,9 @@ export function inUnitToStep(kg: number, unit: WeightUnit, step: number) {
   return Math.round(fromKg(kg, unit) * stepsPerUnit) / stepsPerUnit;
 }
 
-// A load as the user sees it: in their unit, to the nearest 0.5. 25 lb is stored as 11.3398... kg and shows as 25
-export const loadInUnit = (kg: number, unit: WeightUnit) => inUnitToStep(kg, unit, 0.5);
+// A load as the user sees it: one sized in their unit as it is, so 25 lb, stored as 11.3398... kg, shows as 25 and 5.75
+// as 5.75 (#176); one sized in the other, to the nearest 0.5, so a 20 kg kettlebell shows as 44 lb
+export function loadInUnit(kg: number, unit: WeightUnit) {
+  const exact = inUnitToStep(kg, unit, 0.001);
+  return Math.abs(fromKg(kg, unit) - exact) < 1e-6 ? exact : inUnitToStep(kg, unit, 0.5);
+}

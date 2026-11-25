@@ -1,5 +1,12 @@
-import { ASSESSMENT_PATTERNS, pendingB, withPending, workingLevelSections } from "@fit/engines";
-import type { AssessmentTest, TestedPattern, WeightUnit, WorkingLevel } from "@fit/shared";
+import {
+  ASSESSMENT_PATTERNS,
+  estimatedFrom,
+  pendingAssessment,
+  referencePatternOf,
+  withPending,
+  workingLevelSections,
+} from "@fit/engines";
+import type { AssessmentTest, Pattern, TestedPattern, WeightUnit, WorkingLevel } from "@fit/shared";
 import { StyleSheet, View } from "react-native";
 import { LoadingButton } from "@/components/loading-button";
 import { Loading } from "@/components/loading";
@@ -16,10 +23,10 @@ import { SyncingNote } from "../components/syncing-note";
 import { useLatestAssessment } from "../hooks/use-latest-assessment";
 import { workingLevelLabel } from "../working-level-label";
 
-// In the order the tests were done: A's, then B's
-const PATTERN_ORDER = [...ASSESSMENT_PATTERNS.A, ...ASSESSMENT_PATTERNS.B];
-
-const ESTIMATED = "Estimated from your other results";
+const ESTIMATED_CAPTIONS = {
+  "other-results": "Estimated from your other results",
+  "typical-values": "Estimated from typical values",
+};
 
 // What a bodyweight or timed test's one Set measured
 const ONE_SET_CAPTIONS = { bodyweight: "Rep maximum", timed: "Held" } as const;
@@ -34,14 +41,14 @@ function maximumLabel({ topSet, maximum, loadLimited }: AssessmentTest, unit: We
     : { value: weight, caption: "Estimated maximum" };
 }
 
-// "Results once synced" while a B is Pending, since the server works out the Assessment once it has both
+// "Results once synced" while an Assessment Workout is Pending, since the server works out the Assessment
 export default function AssessmentResultsView() {
   const { latest, error, refresh } = useLatestAssessment();
   const { pending } = useLogbook();
   const primary = usePrimaryEquipmentProfile();
   const injuries = useCurrentUser().user?.profile.injuries;
 
-  if (pendingB(withPending(pending, null))) {
+  if (pendingAssessment(withPending(pending, null))) {
     return (
       <Screen edges={["bottom"]}>
         <SyncingNote />
@@ -61,21 +68,23 @@ export default function AssessmentResultsView() {
   if (latest === null) {
     return (
       <Screen edges={["bottom"]}>
-        <Text color="muted">Results show once both Assessment Workouts have reached the server.</Text>
+        <Text color="muted">Results show once your Assessment Workout has reached the server.</Text>
       </Screen>
     );
   }
 
   const { patterns } = latest.assessment;
+  const estimatedCaption = (pattern: Pattern) =>
+    ESTIMATED_CAPTIONS[estimatedFrom(referencePatternOf(pattern), patterns)];
   const sections = primary ? workingLevelSections(latest.workingLevels, primary, patterns, injuries ?? []) : [];
   return (
     <Screen scroll="screen" edges={["bottom"]}>
       <SectionLabel style={styles.sectionLabel}>Tests</SectionLabel>
-      {PATTERN_ORDER.map((pattern) => {
+      {ASSESSMENT_PATTERNS.map((pattern) => {
         const result = patterns[pattern];
         if (!result) return null;
         return result.estimated ? (
-          <EstimatedRow key={pattern} pattern={pattern} />
+          <EstimatedRow key={pattern} pattern={pattern} caption={estimatedCaption(pattern)} />
         ) : (
           <TestRow key={pattern} test={result} />
         );
@@ -92,7 +101,7 @@ export default function AssessmentResultsView() {
               </SectionLabel>
               {section.estimated ? (
                 <Text size="sm" color="muted" style={styles.sectionLabel}>
-                  {ESTIMATED}
+                  {estimatedCaption(section.pattern)}
                 </Text>
               ) : null}
               {section.workingLevels.map((level) => (
@@ -118,8 +127,8 @@ function WorkingLevelRow({ level }: { level: WorkingLevel }) {
   );
 }
 
-// "Push", "Not tested" and "Estimated from your other results"
-function EstimatedRow({ pattern }: { pattern: TestedPattern }) {
+// "Push", "Not tested" and what it's estimated from
+function EstimatedRow({ pattern, caption }: { pattern: TestedPattern; caption: string }) {
   const { colors } = useTheme();
   return (
     <View style={[styles.row, { borderTopColor: colors.line }]}>
@@ -131,7 +140,7 @@ function EstimatedRow({ pattern }: { pattern: TestedPattern }) {
       </View>
       <View style={styles.maximum}>
         <Text size="xs" color="muted">
-          {ESTIMATED}
+          {caption}
         </Text>
       </View>
     </View>

@@ -1,9 +1,28 @@
-import { EQUIPMENT_LABELS, type EquipmentProfile } from "@fit/shared";
+import { EQUIPMENT_LABELS, type BarAndPlates, type EquipmentProfile, type WeightUnit } from "@fit/shared";
+import { inWords } from "../../utils/in-words";
+import { sizeInUnit } from "./loads";
 
 // One line for the user's equipment on Profile; a gym has every tag, so listing them says nothing
-export function equipmentSummary(profile: EquipmentProfile | undefined): string {
+export function equipmentSummary(profile: EquipmentProfile | undefined, unit: WeightUnit): string {
   if (!profile) return "Not set";
   if (profile.location === "gym") return "Full gym";
   if (profile.tags.length === 0) return "No equipment";
-  return profile.tags.map((tag) => EQUIPMENT_LABELS[tag]).join(", ");
+  const { dumbbells } = profile.loads;
+  return profile.tags
+    .map((tag) =>
+      tag === "dumbbells" && dumbbells?.kind === "bar_and_plates"
+        ? `${EQUIPMENT_LABELS[tag]} (${barAndPlatesSummary(dumbbells, unit)})`
+        : EQUIPMENT_LABELS[tag],
+    )
+    .join(", ");
+}
+
+// "2 × 4 lb bars, 4 × 3 lb and 4 × 5 lb plates"
+function barAndPlatesSummary({ bars, barKg, plates }: BarAndPlates, unit: WeightUnit): string {
+  const sized = (count: number, kg: number) => `${count} × ${sizeInUnit(kg, unit)} ${unit}`;
+  const barsPart = `${sized(bars, barKg)} ${bars === 1 ? "bar" : "bars"}`;
+  const sizes = [...plates].sort((a, b) => a.kg - b.kg).map(({ kg, count }) => sized(count, kg));
+  if (!sizes.length) return barsPart;
+  const total = plates.reduce((sum, { count }) => sum + count, 0);
+  return `${barsPart}, ${inWords(sizes)} ${total === 1 ? "plate" : "plates"}`;
 }

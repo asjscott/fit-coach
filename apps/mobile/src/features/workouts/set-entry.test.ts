@@ -1,53 +1,29 @@
 import { describe, expect, it } from "vitest";
-import { builtInEquipment, exerciseLoadsByEquipmentKg, type StepDirection } from "@fit/engines";
-import { toKg } from "@fit/shared";
+import { builtInEquipment, exerciseLoadsByEquipmentKg, type LoadsByEquipment, type StepDirection } from "@fit/engines";
+import { toKg, type WeightUnit } from "@fit/shared";
 import {
   draftValues,
+  fieldStepper,
   FIELD_STEPPERS,
-  loadStep,
+  createLoadSteps,
+  loadReading,
   loadStepLabel,
-  loadStepper,
   rpeMissing,
-  secondsField,
-  secondsStepLabel,
   setDraft,
   stepValue,
 } from "./set-entry";
+import { setReading } from "./library";
 
 describe("stepValue", () => {
-  // Stands in for the next load: 10 a step, so it can't be mistaken for any other rule
-  const byTen = loadStepper((load: number, direction: StepDirection) => load + 10 * direction, true, "kg");
-
   it("steps reps by 1 and seconds by 5", () => {
     expect(stepValue(FIELD_STEPPERS.reps, "8", 1)).toBe("9");
     expect(stepValue(FIELD_STEPPERS.seconds, "45", -1)).toBe("40");
   });
 
-  it("steps a load to the next load it's given", () => {
-    expect(stepValue(byTen, "16", 1)).toBe("26");
-    expect(stepValue(byTen, "16", -1)).toBe("6");
-  });
-
-  it("steps an empty field up from nothing", () => {
-    expect(stepValue(byTen, "", 1)).toBe("10");
+  it("steps an empty field up from nothing, and never below zero", () => {
     expect(stepValue(FIELD_STEPPERS.reps, " ", 1)).toBe("1");
-  });
-
-  it("never goes below zero", () => {
-    expect(stepValue(byTen, "1", -1)).toBe("0");
     expect(stepValue(FIELD_STEPPERS.reps, "", -1)).toBe("0");
     expect(stepValue(FIELD_STEPPERS.seconds, "3", -1)).toBe("0");
-  });
-
-  it("keeps a typed half load, read with a decimal comma or point", () => {
-    expect(stepValue(byTen, "16.5", 1)).toBe("26.5");
-    expect(stepValue(byTen, "16,5", -1)).toBe("6.5");
-  });
-
-  // User story 19: display rounds to 0.5 of the user's unit
-  it("rounds a typed load to the nearest 0.5 before stepping", () => {
-    expect(stepValue(byTen, "16.2", 1)).toBe("26");
-    expect(stepValue(byTen, "16.3", 1)).toBe("26.5");
   });
 
   it("rounds typed reps and seconds to whole numbers", () => {
@@ -55,27 +31,84 @@ describe("stepValue", () => {
     expect(stepValue(FIELD_STEPPERS.seconds, "44.2", 1)).toBe("49");
   });
 
-  // #145: a 20-minute walk steps by the minute, a short hold by 5 s
-  it("steps a timed Set of a minute or more to the next or previous whole minute", () => {
-    expect(stepValue(FIELD_STEPPERS.seconds, "1200", 1)).toBe("1260");
-    expect(stepValue(FIELD_STEPPERS.seconds, "1200", -1)).toBe("1140");
-    expect(stepValue(FIELD_STEPPERS.seconds, "90", 1)).toBe("120");
-    expect(stepValue(FIELD_STEPPERS.seconds, "90", -1)).toBe("60");
-    expect(stepValue(FIELD_STEPPERS.seconds, "60", 1)).toBe("120");
+  // #177: user story 13
+  it("steps seconds by 5 at every length", () => {
+    expect(["55", "60", "65", "70", "1200"].map((text) => stepValue(FIELD_STEPPERS.seconds, text, 1))).toEqual([
+      "60",
+      "65",
+      "70",
+      "75",
+      "1205",
+    ]);
+    expect(["90", "65", "60"].map((text) => stepValue(FIELD_STEPPERS.seconds, text, -1))).toEqual(["85", "60", "55"]);
   });
 
-  it("steps a timed Set under a minute by 5 s, into and out of minutes", () => {
-    expect(stepValue(FIELD_STEPPERS.seconds, "55", 1)).toBe("60");
-    expect(stepValue(FIELD_STEPPERS.seconds, "60", -1)).toBe("55");
+  // #145: the walk steps by the minute, and by 5 s under one
+  it("steps the walk of a minute or more to the next or previous whole minute", () => {
+    expect(stepValue(FIELD_STEPPERS.minutes, "1200", 1)).toBe("1260");
+    expect(stepValue(FIELD_STEPPERS.minutes, "1200", -1)).toBe("1140");
+    expect(stepValue(FIELD_STEPPERS.minutes, "90", 1)).toBe("120");
+    expect(stepValue(FIELD_STEPPERS.minutes, "90", -1)).toBe("60");
+    expect(stepValue(FIELD_STEPPERS.minutes, "60", 1)).toBe("120");
+  });
+
+  it("steps the walk under a minute by 5 s, into and out of minutes", () => {
+    expect(stepValue(FIELD_STEPPERS.minutes, "55", 1)).toBe("60");
+    expect(stepValue(FIELD_STEPPERS.minutes, "60", -1)).toBe("55");
   });
 
   it("starts again from nothing when the field isn't a number", () => {
-    expect(stepValue(byTen, "abc", 1)).toBe("10");
+    expect(stepValue(FIELD_STEPPERS.reps, "abc", 1)).toBe("1");
   });
 });
 
 // User story 18: the load stepper works in the user's unit
-describe("loadStep", () => {
+describe("createLoadSteps", () => {
+  // Steps from a typed load, as the user reads it
+  const loadStep = (loads: LoadsByEquipment, unit: WeightUnit) => (load: number, direction: StepDirection) =>
+    Number(createLoadSteps(loads, unit).step({ text: String(load) }, direction).text);
+
+  it("steps an empty field up from nothing to the lightest load", () => {
+    expect(createLoadSteps([[10, 12.5]], "kg").step({ text: "" }, 1)).toEqual({ text: "10", kg: 10 });
+    expect(createLoadSteps([[10, 12.5]], "kg").step({ text: "abc" }, 1)).toEqual({ text: "10", kg: 10 });
+  });
+
+  it("reads a typed decimal comma", () => {
+    expect(createLoadSteps([[16, 16.5, 20]], "kg").step({ text: "16,5" }, 1).text).toBe("20");
+  });
+
+  // Story 47 of #176: a 5 lb bar with 0.375 and 0.75 lb plates
+  it("selects every load with a fraction and gives its exact kg", () => {
+    const loads = [5, 5.75, 6, 6.5].map((lb) => toKg(lb, "lb"));
+    const steps = createLoadSteps([loads], "lb");
+    const reached = [];
+    let entry: { text: string; kg?: number } = { text: "5" };
+    for (let i = 0; i < 3; i++) reached.push((entry = steps.step(entry, 1)));
+    expect(reached).toEqual([
+      { text: "5.75", kg: loads[1] },
+      { text: "6", kg: loads[2] },
+      { text: "6.5", kg: loads[3] },
+    ]);
+    expect(steps.step(entry, -1)).toEqual({ text: "6", kg: loads[2] });
+  });
+
+  it("selects every load of plates sized in the other unit, to the hundredth where two would read the same", () => {
+    // 6.94 and 7.17 lb, both 7 to the nearest 0.5
+    const steps = createLoadSteps([[3, 3.15, 3.25, 5]], "lb");
+    expect(steps.step({ text: "6.5", kg: 3 }, 1)).toEqual({ text: "6.94", kg: 3.15 });
+    expect(steps.step({ text: "6.94", kg: 3.15 }, 1)).toEqual({ text: "7.17", kg: 3.25 });
+    expect(steps.step({ text: "7.17", kg: 3.25 }, 1)).toEqual({ text: "11", kg: 5 });
+  });
+
+  it("keeps a typed load past the heaviest", () => {
+    expect(createLoadSteps([[10]], "lb").step({ text: "30" }, 1)).toEqual({ text: "30" });
+  });
+
+  it("rounds a typed load to the nearest 0.5 before stepping when the loads aren't known", () => {
+    expect(loadStep([], "kg")(16.2, 1)).toBe(18);
+    expect(loadStep([], "kg")(1, -1)).toBe(0);
+  });
+
   it("steps to the next load the equipment has, as the user sees it", () => {
     const dumbbells = [toKg(20, "lb"), toKg(25, "lb"), toKg(30, "lb")];
     expect(loadStep([dumbbells], "lb")(25, 1)).toBe(30);
@@ -145,42 +178,46 @@ describe("loadStepLabel", () => {
   });
 });
 
-describe("secondsStepLabel", () => {
-  it("names a step of a timed Set of a minute or more as a minute", () => {
-    expect(secondsStepLabel("1200", 1)).toBe("Plus 1 minute");
-    expect(secondsStepLabel("1200", -1)).toBe("Minus 1 minute");
+// #177: user stories 13 to 15
+describe("a timed Set's stepper", () => {
+  it("names a hold's step as 5 seconds at every length", () => {
+    expect(FIELD_STEPPERS.seconds.stepLabel("45", 1)).toBe("Plus 5 seconds");
+    expect(FIELD_STEPPERS.seconds.stepLabel("90", 1)).toBe("Plus 5 seconds");
+    expect(FIELD_STEPPERS.seconds.stepLabel("90", -1)).toBe("Minus 5 seconds");
   });
 
-  it("names a step of a short hold as 5 seconds, including down from a minute", () => {
-    expect(secondsStepLabel("45", 1)).toBe("Plus 5 seconds");
-    expect(secondsStepLabel("60", -1)).toBe("Minus 5 seconds");
-    expect(secondsStepLabel("", 1)).toBe("Plus 5 seconds");
-  });
-});
-
-// #145: the stepper reads as the target and the logged Set do
-describe("secondsField", () => {
-  it("shows a timed Set of a minute or more in minutes, as the target and logged Set read", () => {
-    expect(secondsField("1200")).toEqual({ value: "20", unit: "min" });
-    expect(secondsField("90")).toEqual({ value: "1 min 30", unit: "s" });
+  it("shows and names a hold in seconds at every length", () => {
+    expect(FIELD_STEPPERS.seconds.shown("90")).toEqual({ value: "90", unit: "s", name: "seconds" });
   });
 
-  it("shows a short hold in seconds", () => {
-    expect(secondsField("45")).toEqual({ value: "45", unit: "s" });
+  it("names the walk's step as a minute, or 5 seconds under one, including down from a minute", () => {
+    expect(FIELD_STEPPERS.minutes.stepLabel("1200", 1)).toBe("Plus 1 minute");
+    expect(FIELD_STEPPERS.minutes.stepLabel("1200", -1)).toBe("Minus 1 minute");
+    expect(FIELD_STEPPERS.minutes.stepLabel("45", 1)).toBe("Plus 5 seconds");
+    expect(FIELD_STEPPERS.minutes.stepLabel("60", -1)).toBe("Minus 5 seconds");
+    expect(FIELD_STEPPERS.minutes.stepLabel("", 1)).toBe("Plus 5 seconds");
   });
 
-  it("leaves an empty or half-typed field as it is", () => {
-    expect(secondsField("")).toEqual({ value: "", unit: "s" });
-    expect(secondsField("12.")).toEqual({ value: "12.", unit: "s" });
+  it("shows the walk in minutes from a minute, and in seconds while it's typed", () => {
+    expect(FIELD_STEPPERS.minutes.shown("1200", false)).toEqual({ value: "20", unit: "min", name: "minutes" });
+    expect(FIELD_STEPPERS.minutes.shown("1200", true)).toEqual({ value: "1200", unit: "s", name: "seconds" });
+    expect(FIELD_STEPPERS.minutes.shown("90", false)).toEqual({ value: "1 min 30", unit: "s", name: "seconds" });
+    expect(FIELD_STEPPERS.minutes.shown("45", false)).toEqual({ value: "45", unit: "s", name: "seconds" });
+  });
+
+  it("leaves the walk's empty or half-typed field as it is", () => {
+    expect(FIELD_STEPPERS.minutes.shown("", false).value).toBe("");
+    expect(FIELD_STEPPERS.minutes.shown("12.", false).value).toBe("12.");
+  });
+
+  it("is the minutes one for the walk only", () => {
+    expect(fieldStepper("seconds", setReading("walk"))).toBe(FIELD_STEPPERS.minutes);
+    expect(fieldStepper("seconds", setReading("plank"))).toBe(FIELD_STEPPERS.seconds);
+    expect(fieldStepper("reps", setReading("plank"))).toBe(FIELD_STEPPERS.reps);
   });
 });
 
 describe("what each field's stepper shows and says", () => {
-  it("names a timed Set's value in minutes from a minute, and in seconds while it's typed", () => {
-    expect(FIELD_STEPPERS.seconds.shown("1200", false)).toEqual({ value: "20", unit: "min", name: "minutes" });
-    expect(FIELD_STEPPERS.seconds.shown("1200", true)).toEqual({ value: "1200", unit: "s", name: "seconds" });
-  });
-
   // #105: a Jump's dose is contacts
   it("says contacts for a Jump's reps, and reps otherwise", () => {
     expect(FIELD_STEPPERS.contacts.shown("6", false)).toEqual({ value: "6", unit: "contacts", name: "contacts" });
@@ -189,7 +226,7 @@ describe("what each field's stepper shows and says", () => {
   });
 
   it("names a load by the user's unit and types it with a decimal point", () => {
-    const pounds = loadStepper(loadStep([], "lb"), false, "lb");
+    const pounds = loadReading(createLoadSteps([], "lb"));
     expect(pounds.shown("25", false)).toEqual({ value: "25", unit: "lb", name: "lb" });
     expect(pounds.stepLabel("25", 1)).toBe("Plus 5 lb");
     expect(pounds.keyboardType).toBe("decimal-pad");
@@ -197,21 +234,33 @@ describe("what each field's stepper shows and says", () => {
 });
 
 describe("a Set draft", () => {
+  const inKg = createLoadSteps([], "kg");
+  const inLb = createLoadSteps([], "lb");
+
   it("starts from the previous Set's values", () => {
-    expect(setDraft("external", { kind: "external", kg: 16.5, reps: 8 }, "kg")).toEqual({ load: "16.5", reps: "8" });
-    expect(setDraft("timed", { kind: "timed", seconds: 45 }, "kg")).toEqual({ seconds: "45" });
+    expect(setDraft("external", { kind: "external", kg: 16.5, reps: 8 }, inKg)).toEqual({
+      load: "16.5",
+      reps: "8",
+      kg: 16.5,
+    });
+    expect(setDraft("timed", { kind: "timed", seconds: 45 }, inKg)).toEqual({ seconds: "45" });
   });
 
   // User story 19: 25 lb never shows as 24.9
   it("shows a previous load in the user's unit, as it was entered", () => {
-    expect(setDraft("external", { kind: "external", kg: toKg(25, "lb"), reps: 8 }, "lb")).toEqual({
+    expect(setDraft("external", { kind: "external", kg: toKg(25, "lb"), reps: 8 }, inLb)).toMatchObject({
       load: "25",
       reps: "8",
     });
   });
 
   it("starts empty with no previous Set", () => {
-    expect(setDraft("bodyweight", null, "lb")).toEqual({ reps: "" });
+    expect(setDraft("bodyweight", null, inLb)).toEqual({ reps: "" });
+  });
+
+  it.each([toKg(5.75, "lb"), toKg(3.25, "lb"), 12])("logs the exact load it was filled with: %d kg", (kg) => {
+    const values = { kind: "external" as const, kg, reps: 8 };
+    expect(draftValues("external", setDraft("external", values, inLb), "lb")).toEqual({ values });
   });
 
   it("becomes the Set's values, reading a decimal comma", () => {

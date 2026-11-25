@@ -1,4 +1,4 @@
-import { EXERCISES, pickerRows } from "@fit/engines";
+import { EXERCISES, NO_EQUIPMENT, pickerRows } from "@fit/engines";
 import type { Exercise } from "@fit/shared";
 import { router } from "expo-router";
 import { useState } from "react";
@@ -24,8 +24,8 @@ export default function ExercisePickerView() {
   const [adding, setAdding] = useState(false);
 
   // No primary profile counts as no equipment
-  const tags = usePrimaryEquipmentProfile()?.tags ?? [];
-  const rows = pickerRows(EXERCISES, { tags, injuries: user?.profile.injuries ?? [], search: query });
+  const equipmentProfile = usePrimaryEquipmentProfile() ?? NO_EQUIPMENT;
+  const rows = pickerRows(EXERCISES, { equipmentProfile, injuries: user?.profile.injuries ?? [], search: query });
 
   const handlePick = async (exercise: Exercise) => {
     if (adding) return;
@@ -66,7 +66,7 @@ export default function ExercisePickerView() {
             accessibilityHint={flagged ? "Flagged for your injuries" : undefined}
             name={exercise.name}
             unavailable={!available}
-            detail={available ? undefined : `Needs: ${neededEquipment(exercise, tags)}`}
+            detail={available ? undefined : `Needs: ${neededEquipment(exercise, equipmentProfile)}`}
             marker={
               flagged ? (
                 <Badge action="warning">

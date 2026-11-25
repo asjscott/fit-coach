@@ -33,13 +33,13 @@ export type AssessmentEstimate = z.infer<typeof AssessmentEstimate>;
 export const AssessmentPattern = z.discriminatedUnion("estimated", [AssessmentTest, AssessmentEstimate]);
 export type AssessmentPattern = z.infer<typeof AssessmentPattern>;
 
-// The results of one pair of Assessment Workouts (GLOSSARY.md), a snapshot: deleting either Workout leaves it be
+// The results of one Assessment Workout, or an old A and B (GLOSSARY.md), a snapshot: deleting a Workout leaves it be
 export const Assessment = z.object({
   id: z.uuid(),
-  aWorkoutId: z.uuid(),
-  bWorkoutId: z.uuid(),
-  // When B started: the newest Assessment is the one whose B started last, whenever the server worked it out
-  bStartedAt: z.iso.datetime(),
+  // The Workouts it came from, in the order they started
+  workoutIds: z.array(z.uuid()).min(1),
+  // When the last of them started: the newest Assessment is the one with the latest, whenever the server worked it out
+  lastStartedAt: z.iso.datetime(),
   createdAt: z.iso.datetime(),
   // The profile's weight when the Assessment was worked out
   bodyWeightKg: z.number().positive(),
@@ -49,7 +49,7 @@ export const Assessment = z.object({
 export type Assessment = z.infer<typeof Assessment>;
 
 // The Workout that last moved a Working Level, by id and when it started: only a Workout that started later moves it
-// again, so a retried, late or past upload never moves it twice or backwards. An Assessment's B sets the first one
+// again, so a retried, late or past upload never moves it twice or backwards. An Assessment's last Workout sets the first one
 export const WorkingLevelMover = z.object({ workoutId: z.uuid(), startedAt: z.iso.datetime() });
 export type WorkingLevelMover = z.infer<typeof WorkingLevelMover>;
 

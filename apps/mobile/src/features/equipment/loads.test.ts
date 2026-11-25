@@ -1,6 +1,6 @@
 import { toKg } from "@fit/shared";
 import { describe, expect, it } from "vitest";
-import { LoadsForm, loadOptions, toLoads, toLoadsForm } from "./loads";
+import { loadsForm, loadOptions, toLoads, toLoadsForm } from "./loads";
 
 const tags = ["dumbbells", "kettlebells", "barbell", "plates"] as const;
 
@@ -30,6 +30,78 @@ describe("an Equipment Profile's loads in the user's unit", () => {
       minKg: toKg(5, "lb"),
       maxKg: toKg(50, "lb"),
       stepKg: toKg(2.5, "lb"),
+    });
+  });
+
+  // Stories 38 to 40 of #176
+  describe("bar-and-plates dumbbells", () => {
+    const form = {
+      dumbbells: {
+        kind: "bar_and_plates" as const,
+        bar: 4,
+        bars: 2,
+        plates: [
+          { size: 3, count: 4 },
+          { size: 2.2, count: 2 },
+        ],
+      },
+    };
+
+    it("are stored as the exact kg of any sizes entered in pounds", () => {
+      expect(toLoads(form, ["dumbbells"], "lb").dumbbells).toEqual({
+        kind: "bar_and_plates",
+        barKg: toKg(4, "lb"),
+        bars: 2,
+        plates: [
+          { kg: toKg(3, "lb"), count: 4 },
+          { kg: toKg(2.2, "lb"), count: 2 },
+        ],
+      });
+    });
+
+    it("are shown back as entered", () => {
+      expect(toLoadsForm(toLoads(form, ["dumbbells"], "lb"), "lb")).toMatchObject(form);
+      expect(toLoadsForm(toLoads(form, ["dumbbells"], "kg"), "kg")).toMatchObject(form);
+    });
+
+    it("can be bars with no plates", () => {
+      const barOnly = { dumbbells: { kind: "bar_and_plates" as const, bar: 4, bars: 1 } };
+      expect(loadsForm("lb").safeParse(barOnly).success).toBe(true);
+      expect(toLoads(barOnly, ["dumbbells"], "kg").dumbbells).toMatchObject({ barKg: 4, bars: 1, plates: [] });
+    });
+
+    const problemPaths = (dumbbells: object) =>
+      loadsForm("lb")
+        .safeParse({ dumbbells: { ...form.dumbbells, ...dumbbells } })
+        .error?.issues.map(({ path }) => path.join("."));
+
+    it("need the bar's weight, how many bars, and every plate's size and count", () => {
+      expect(problemPaths({})).toBeUndefined();
+      expect(problemPaths({ bar: null, bars: null })).toEqual(["dumbbells.bar", "dumbbells.bars"]);
+      expect(problemPaths({ plates: [{ size: null, count: null }] })).toEqual([
+        "dumbbells.plates.0.size",
+        "dumbbells.plates.0.count",
+      ]);
+    });
+
+    it("need at least one bar, and whole numbers of bars and plates", () => {
+      expect(problemPaths({ bars: 0 })).toEqual(["dumbbells.bars"]);
+      expect(problemPaths({ bars: 1.5 })).toEqual(["dumbbells.bars"]);
+      expect(problemPaths({ plates: [{ size: 3, count: 2.5 }] })).toEqual(["dumbbells.plates.0.count"]);
+    });
+
+    it("say why when odd sizes make too many loads, and take them rounded to a quarter", () => {
+      const eightSizes = (...sizes: number[]) => ({ plates: sizes.map((size) => ({ size, count: 20 })) });
+      expect(problemPaths(eightSizes(1.01, 1.13, 1.27, 1.39, 1.51, 1.63, 1.79, 1.97))).toEqual([
+        "dumbbells.plates.7.size",
+      ]);
+      expect(problemPaths(eightSizes(0.25, 0.5, 0.75, 1, 1.25, 1.5, 1.75, 2))).toBeUndefined();
+    });
+
+    // A row left half filled can't block the form once another kind is chosen
+    it("need nothing once another kind is chosen", () => {
+      const blank = { bar: null, plates: [{ size: null, count: null }] };
+      expect(problemPaths({ kind: "fixed", ...blank })).toBeUndefined();
     });
   });
 
@@ -74,6 +146,6 @@ describe("an Equipment Profile's loads in the user's unit", () => {
 
   // #154: a number field stores an emptied field as null
   it("leaves an emptied load blank, so it isn't saved", () => {
-    expect(LoadsForm.safeParse({ cable_machine: { step: null } }).success).toBe(true);
+    expect(loadsForm("lb").safeParse({ cable_machine: { step: null } }).success).toBe(true);
   });
 });

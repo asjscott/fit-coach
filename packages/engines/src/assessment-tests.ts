@@ -1,19 +1,10 @@
-import {
-  AssessmentPart,
-  TestedPattern,
-  type EquipmentProfile,
-  type Exercise,
-  type InjuryTag,
-  type Pattern,
-} from "@fit/shared";
+import { TestedPattern, type Exercise, type InjuryTag, type Pattern, type Set } from "@fit/shared";
 import { exerciseBySlug } from "./data/exercises";
-import { isAvailable, isSafeFor } from "./equipment";
+import { isAvailable, isSafeFor, type ProfileWithLoads } from "./equipment";
 
-// The Patterns each Assessment Workout tests, in the order its tests are done
-export const ASSESSMENT_PATTERNS: Record<AssessmentPart, TestedPattern[]> = {
-  A: ["squat", "hinge", "core"],
-  B: ["push", "pull"],
-};
+// The Patterns the Assessment Workout tests, in the order its tests are done: each follows one for the other half of
+// the body
+export const ASSESSMENT_PATTERNS: TestedPattern[] = ["squat", "push", "hinge", "pull", "core"];
 
 // Each Pattern's candidate tests, best first: two-sided weighted lifts, then the rest, ending with the one needing
 // the least equipment: nothing at all, but a bar or a table for pull. Band Exercises are never tests
@@ -45,7 +36,7 @@ export type ChosenTests = Record<TestedPattern, Exercise | null>;
 
 // One test Exercise per tested Pattern from the Equipment Profile: the first on its list that's available and safe,
 // or null when none is
-export function chooseTests(equipmentProfile: Pick<EquipmentProfile, "tags">, injuries: InjuryTag[]): ChosenTests {
+export function chooseTests(equipmentProfile: ProfileWithLoads, injuries: InjuryTag[]): ChosenTests {
   const choose = (pattern: TestedPattern) =>
     CANDIDATE_TESTS[pattern]
       .map(requireExercise)
@@ -53,15 +44,25 @@ export function chooseTests(equipmentProfile: Pick<EquipmentProfile, "tags">, in
   return Object.fromEntries(TestedPattern.options.map((pattern) => [pattern, choose(pattern)])) as ChosenTests;
 }
 
-// Assessment Workout A or B's tests in order, and its Patterns with no test, which the Assessment estimates
-export function partTests(tests: ChosenTests, part: AssessmentPart) {
-  const patterns = ASSESSMENT_PATTERNS[part];
-  return {
-    exercises: patterns.flatMap((pattern) => tests[pattern] ?? []),
-    untested: patterns.filter((pattern) => !tests[pattern]),
-  };
+// The Assessment Workout's tests in order, and the Patterns with no test, which the Assessment estimates
+export const assessmentTests = (tests: ChosenTests) => ({
+  exercises: ASSESSMENT_PATTERNS.flatMap((pattern) => tests[pattern] ?? []),
+  untested: ASSESSMENT_PATTERNS.filter((pattern) => !tests[pattern]),
+});
+
+// A user who can't do a pull-up measures pull with this instead
+const PULL_UP_SWAP = "inverted-row";
+
+// The test a pull-up test with no Set logged can be swapped for: the inverted row, when it's available and safe
+export function testSwap(
+  { slug, sets }: { slug: string; sets: readonly Set[] },
+  profile: ProfileWithLoads,
+  injuries: InjuryTag[],
+): Exercise | undefined {
+  if (slug !== "pull-up" || sets.length > 0) return undefined;
+  const swap = requireExercise(PULL_UP_SWAP);
+  return isAvailable(swap, profile) && isSafeFor(swap, injuries) ? swap : undefined;
 }
 
-// Whether both Assessment Workouts have a test to do: with none for A or for B there would never be an Assessment
-export const canAssess = (tests: ChosenTests) =>
-  AssessmentPart.options.every((part) => partTests(tests, part).exercises.length > 0);
+// Whether any Pattern has a test to do: one is enough, as the others are estimated
+export const canAssess = (tests: ChosenTests) => assessmentTests(tests).exercises.length > 0;

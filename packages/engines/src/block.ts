@@ -10,16 +10,16 @@ export type BlockWeek = { week: number; deload: boolean };
 const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
 
 // The week of the Block, worked out from the latest Assessment rather than stored, or null before the first. A Block
-// starts on the Monday of the week the Assessment's B Workout started, in the user's timezone, so its weeks are the
+// starts on the Monday of the week the Assessment's last Workout started, in the user's timezone, so its weeks are the
 // Week Ledger's. A newer Assessment starts a new Block from its own week; with none, the next Block starts the Monday
 // after the deload week
 export function weekOfBlock(
-  assessment: Pick<Assessment, "bStartedAt"> | null,
+  assessment: Pick<Assessment, "lastStartedAt"> | null,
   now: Date,
   timeZone: string,
 ): BlockWeek | null {
   if (!assessment) return null;
-  const start = mondayOf(new Date(assessment.bStartedAt), timeZone);
+  const start = mondayOf(new Date(assessment.lastStartedAt), timeZone);
   // Both Mondays are UTC midnights, so they're whole weeks apart. A clock behind the Assessment's week reads week 1
   const weeks = Math.max(0, Math.round((Date.parse(mondayOf(now, timeZone)) - Date.parse(start)) / WEEK_MS));
   const week = (weeks % BLOCK_WEEKS) + 1;
@@ -31,20 +31,20 @@ type RetakeWorkout = Pick<Workout, "startedAt" | "assessment"> & {
 };
 
 // The Exercises whose Working Levels a retake keeps (#137, story 71): those with Sets logged in the last Block, the
-// BLOCK_WEEKS weeks up to the retake's A, that the retake didn't test. Every other level takes the retake's. An
+// BLOCK_WEEKS weeks up to the retake's first Workout, that the retake didn't test. Every other level takes the retake's. An
 // Assessment Workout's Sets set levels rather than train them, so they don't count
 export function keptByRetake({
   workouts,
   assessment,
-  aStartedAt,
+  firstStartedAt,
   timeZone,
 }: {
   workouts: readonly RetakeWorkout[];
   assessment: Pick<Assessment, "patterns">;
-  aStartedAt: string;
+  firstStartedAt: string;
   timeZone: string;
 }): Set<string> {
-  let blockStart = mondayOf(new Date(aStartedAt), timeZone);
+  let blockStart = mondayOf(new Date(firstStartedAt), timeZone);
   for (let week = 1; week < BLOCK_WEEKS; week++) blockStart = mondayBefore(blockStart);
   const tested = new Set(
     Object.values(assessment.patterns).flatMap((pattern) => (pattern.estimated ? [] : [pattern.slug])),
@@ -53,7 +53,7 @@ export function keptByRetake({
     .filter(
       ({ startedAt, assessment: part }) =>
         !part &&
-        Date.parse(startedAt) < Date.parse(aStartedAt) &&
+        Date.parse(startedAt) < Date.parse(firstStartedAt) &&
         mondayOf(new Date(startedAt), timeZone) >= blockStart,
     )
     .flatMap(({ workoutExercises }) => workoutExercises.filter(({ sets }) => sets.length).map(({ slug }) => slug));

@@ -46,7 +46,7 @@ export function planIsDue(
   );
 }
 
-type PlanContent = Pick<PlannedWorkout, "weekStart" | "plannedExercises" | "cue">;
+type PlanContent = Pick<PlannedWorkout, "weekStart" | "plannedExercises" | "cue" | "deloadWeek">;
 
 // JSON with every object's keys sorted, so a stored plan read back with its fields in another order is no change
 const canonical = (value: unknown): string =>
@@ -58,5 +58,5 @@ const canonical = (value: unknown): string =>
 
 // Whether a rebuild gave the plan already stored, which then stays, with its id
 export const isSamePlan = (stored: PlanContent, rebuilt: PlanContent) =>
-  canonical([stored.weekStart, stored.plannedExercises, stored.cue ?? null]) ===
-  canonical([rebuilt.weekStart, rebuilt.plannedExercises, rebuilt.cue ?? null]);
+  canonical([stored.weekStart, stored.plannedExercises, stored.cue ?? null, !!stored.deloadWeek]) ===
+  canonical([rebuilt.weekStart, rebuilt.plannedExercises, rebuilt.cue ?? null, !!rebuilt.deloadWeek]);

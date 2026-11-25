@@ -1,5 +1,5 @@
-import { isAvailable } from "@fit/engines";
-import { Pattern, type EquipmentTag, type Exercise } from "@fit/shared";
+import { isAvailable, type ProfileWithLoads } from "@fit/engines";
+import { Pattern, type Exercise } from "@fit/shared";
 import { patternLabels, RECOVERY_LABEL } from "./labels";
 
 export type LibraryRow = {
@@ -15,9 +15,9 @@ export type LibrarySection = { title: string; data: LibraryRow[] };
 // supports is listed
 export function librarySections(
   exercises: Exercise[],
-  { tags, showAll }: { tags: EquipmentTag[]; showAll: boolean },
+  { equipmentProfile, showAll }: { equipmentProfile: ProfileWithLoads; showAll: boolean },
 ): { sections: LibrarySection[]; availableCount: number; total: number } {
-  const rows = exercises.map((exercise) => ({ exercise, available: isAvailable(exercise, { tags }) }));
+  const rows = exercises.map((exercise) => ({ exercise, available: isAvailable(exercise, equipmentProfile) }));
   const shown = showAll ? rows : rows.filter((row) => row.available);
   const sections = [
     ...Pattern.options.map((pattern) => ({

@@ -93,6 +93,8 @@ M9 Rewards is cut down to PR detection (M6) and a Weekly Streak (M8). M11 Meal p
 
 ### Progression ([ADR 0007](adr/0007-progression-and-deload.md))
 
+As settled for this milestone. Spec #176 later changed what a Miss is and how far the target goes up, here and under "Settled before the spec": ADR 0007 has the rules now.
+
 - **Working Level becomes a load and a target reps** within a rep range: 8–12 by default, 6–10 for barbell lifts, 10–15 for band-only Exercises. `GLOSSARY.md`'s Working Level changes with it.
 - **Double progression.** When every Set reaches the top of the range, the next Workout goes up one Load Step, to the reps Epley predicts at the new load, but only if that's at least the bottom of the range; until then reps keep climbing towards 20, as at a load ceiling. A step on light dumbbells or kettlebells can be 14–50% ([research](research/progression-and-deload.md)). Otherwise, when every Set reaches the target, the target goes up 1 rep.
 - **Optional RPE on the last Set of each Exercise.** An RPE of 10 holds both the load and the target where they are.
