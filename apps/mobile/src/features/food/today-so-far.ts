@@ -1,5 +1,5 @@
 import type { FoodEntry, Meal, Portion } from "@fit/shared";
-import { oneDecimal, wholeNumber } from "../nutrition/format";
+import { oneDecimal, portionAmount, wholeNumber } from "../nutrition/format";
 
 // The day stepper's words for a day so many days before today
 export const dayStepLabel = (daysBefore: number) =>
@@ -16,6 +16,6 @@ export function mealLine(entries: FoodEntry[]) {
 
 // "80 g", "1 large" or "2 × 1 large": a Food Entry's portion as it was chosen
 export function entryPortion({ grams, serving }: Portion) {
-  if (!serving) return `${oneDecimal(grams)} g`;
-  return serving.count === 1 ? serving.label : `${oneDecimal(serving.count)} × ${serving.label}`;
+  if (!serving) return `${grams < 1 ? portionAmount(grams) : oneDecimal(grams)} g`;
+  return serving.count === 1 ? serving.label : `${portionAmount(serving.count)} × ${serving.label}`;
 }

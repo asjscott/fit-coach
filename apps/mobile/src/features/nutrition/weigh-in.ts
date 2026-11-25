@@ -22,7 +22,7 @@ export function showsWeighInReminder({
 }
 
 // A local date at noon on the phone, so formatting it shows its own calendar day wherever the phone is
-const onPhone = (date: string) => new Date(`${date}T12:00:00`);
+export const onPhone = (date: string) => new Date(`${date}T12:00:00`);
 
 // When a Weigh-in was taken, in the phone's language: "Mon 16 Nov"
 export const weighInDateLabel = (date: string) =>

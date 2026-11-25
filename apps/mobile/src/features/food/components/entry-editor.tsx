@@ -1,3 +1,4 @@
+import { ingredientsAtPortion } from "@fit/engines";
 import type { FoodEntry, FoodEntryChange } from "@fit/shared";
 import { useState } from "react";
 import { StyleSheet, View } from "react-native";
@@ -6,9 +7,11 @@ import { LoadingButton } from "@/components/loading-button";
 import { spacing } from "@/theme";
 import { usePortion } from "../hooks/use-portion";
 import { FoodPortionPanel } from "./food-portion-panel";
+import { IngredientLines } from "./ingredient-lines";
 import { MealChips } from "./meal-chips";
 
-// A logged Food Entry, open to change its portion or meal, or to delete it (spec #158 story 55)
+// A logged Food Entry, open to change its portion or meal, or to delete it (spec #158 story 55). One of a Saved Meal
+// shows its ingredients at the portion chosen (spec #188 story 41)
 export function EntryEditor({
   entry,
   onChange,
@@ -33,6 +36,9 @@ export function EntryEditor({
   return (
     <View style={styles.editor}>
       <FoodPortionPanel food={entry.food} portion={portion} />
+      {portion.grams && entry.food.savedMeal ? (
+        <IngredientLines ingredients={ingredientsAtPortion(entry.food, portion.grams)} />
+      ) : null}
       <MealChips meal={meal} onChange={setMeal} />
       <View style={styles.buttons}>
         <LoadingButton

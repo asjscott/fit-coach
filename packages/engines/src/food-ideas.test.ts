@@ -27,8 +27,10 @@ const LIST = [
   idea("peanuts", "vegan", 190, 7.6, ["nuts"]),
 ];
 
-const ids = (diet: Diet, kcalLeft = 1000, proteinLeft = 50) =>
-  foodIdeas(diet, kcalLeft, proteinLeft, LIST).map((i) => i.id);
+// Ranges of 1,900 to 2,100 kcal and 144 to 192 g of protein
+const TARGETS = { kcal: 2000, proteinG: 160 };
+const ids = (diet: Diet, eaten: { kcal?: number; proteinG?: number } = {}) =>
+  foodIdeas(diet, TARGETS, { kcal: 0, proteinG: 0, ...eaten }, LIST).map((i) => i.id);
 
 describe("foodIdeas", () => {
   // Spec #158 story 34 and "Diet and Food Ideas" steps 1 and 4: the Diet's kinds, most protein per kcal first
@@ -42,10 +44,7 @@ describe("foodIdeas", () => {
   });
 
   it("never offers meat to a pescatarian, or fish to a vegetarian", () => {
-    expect(foodIdeas({ kind: "pescatarian", avoid: ["gluten"] }, 1000, 50, LIST).map((i) => i.kind)).toEqual([
-      "fish",
-      "vegetarian",
-    ]);
+    expect(ids({ kind: "pescatarian", avoid: ["gluten"] })).toEqual(["tuna", "cottage"]);
     expect(ids({ kind: "vegetarian", avoid: ["gluten", "dairy"] })).toEqual(["tofu", "lentils"]);
   });
 
@@ -61,31 +60,36 @@ describe("foodIdeas", () => {
 
   it("offers nuts only to a user who doesn't avoid them", () => {
     // With seitan ruled out, peanuts (190 kcal) are the only vegan idea that fits in 199 kcal
-    expect(ids({ kind: "vegan", avoid: ["gluten"] }, 199)).toEqual(["peanuts"]);
-    expect(ids({ kind: "vegan", avoid: ["gluten", "nuts"] }, 199)).toEqual([]);
+    expect(ids({ kind: "vegan", avoid: ["gluten"] }, { kcal: 1901 })).toEqual(["peanuts"]);
+    expect(ids({ kind: "vegan", avoid: ["gluten", "nuts"] }, { kcal: 1901 })).toEqual([]);
   });
 
-  // Story 60: no idea bigger than the kcal left
+  // Spec #188 story 12: up to the top of the kcal range (2,100) and never past it, even with both added
   it.each([
-    [140, ["tuna", "seitan"]],
-    [139, ["seitan", "yogurt"]],
-    [119, ["ham"]],
-    [99, []],
-  ] as const)("with %i kcal left, offers only ideas that fit: %j", (kcalLeft, expected) => {
-    expect(ids({ kind: "any", avoid: [] }, kcalLeft)).toEqual(expected);
+    [1840, ["tuna", "seitan"]],
+    [1841, ["tuna", "ham"]],
+    [1960, ["tuna"]],
+    [1961, ["seitan"]],
+    [2000, ["ham"]],
+    [2000.4, ["ham"]],
+    [2000.5, []],
+    [2100, []],
+    [2500, []],
+  ] as const)("with %d kcal eaten, offers only ideas that fit: %j", (kcal, expected) => {
+    expect(ids({ kind: "any", avoid: [] }, { kcal })).toEqual(expected);
   });
 
-  // Story 59: none once the protein target is met
-  it.each([0, -12])("offers none with %i g of protein left", (proteinLeft) => {
-    expect(ids({ kind: "any", avoid: [] }, 1000, proteinLeft)).toEqual([]);
+  // Spec #188 story 11: protein is met from the bottom of its range (144 g)
+  it.each([143.5, 144, 160, 250])("offers none with %d g of protein eaten", (proteinG) => {
+    expect(ids({ kind: "any", avoid: [] }, { proteinG })).toEqual([]);
   });
 
-  it("offers ideas while any protein is left", () => {
-    expect(ids({ kind: "any", avoid: [] }, 1000, 1)).toHaveLength(2);
+  it("offers ideas while protein is below its range", () => {
+    expect(ids({ kind: "any", avoid: [] }, { proteinG: 143.4 })).toHaveLength(2);
   });
 
   it("chooses from the Coach's own list by default", () => {
-    const chosen = foodIdeas({ kind: "vegan", avoid: [] }, 2000, 100);
+    const chosen = foodIdeas({ kind: "vegan", avoid: [] }, TARGETS, { kcal: 0, proteinG: 0 });
 
     expect(chosen).toHaveLength(2);
     expect(chosen.every((i) => FOOD_IDEAS.includes(i) && i.kind === "vegan")).toBe(true);

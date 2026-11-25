@@ -13,6 +13,7 @@ import {
 import { z } from "zod";
 import { requireAuth, userIdOf } from "../auth";
 import { badRequest } from "../bad-request";
+import { keepTodaysTargets } from "../daily-targets";
 import { requireLoggableDate } from "../loggable-date";
 import {
   addFoodEntry,
@@ -28,11 +29,19 @@ import { findUser } from "../users";
 const DayParams = z.object({ date: z.union([z.literal("today"), LocalDate]) });
 const EntryParams = z.object({ id: z.string() });
 
-const NO_SUCH_SERVING = "The food has no serving by that name";
+const NO_SUCH_PORTION = "The food can't be logged by that portion";
 
 // The date a Food Entry write is for, as requireLoggableDate takes it
 const loggableDate = async (clerkUserId: string, date: string) =>
   requireLoggableDate(date, (await findUser(clerkUserId))?.timeZone, "A Food Entry");
+
+// The date food is logged to, keeping today's Daily Targets as it's logged. That never touches a past day's, so a late
+// log needs no check. Kept before the food, so a failure leaves nothing logged for a retry to double
+async function dateToLogTo(clerkUserId: string, date: string) {
+  const localDate = await loggableDate(clerkUserId, date);
+  await keepTodaysTargets(clerkUserId);
+  return localDate;
+}
 
 // The signed-in user's Food Entries. Logging needs a connection: the phone keeps no queue of these
 export const foodEntryRoutes: FastifyPluginAsyncZod = async (app) => {
@@ -51,9 +60,9 @@ export const foodEntryRoutes: FastifyPluginAsyncZod = async (app) => {
     { schema: { params: DayParams, body: FoodEntryAdd, response: { 200: FoodEntry, 201: FoodEntry } } },
     async (req, reply) => {
       const clerkUserId = userIdOf(req)!;
-      const date = await loggableDate(clerkUserId, req.params.date);
+      const date = await dateToLogTo(clerkUserId, req.params.date);
       const added = await addFoodEntry(clerkUserId, date, req.body);
-      if (!added) throw badRequest(NO_SUCH_SERVING);
+      if (!added) throw badRequest(NO_SUCH_PORTION);
       return reply.code(added.created ? 201 : 200).send(added.entry);
     },
   );
@@ -72,7 +81,7 @@ export const foodEntryRoutes: FastifyPluginAsyncZod = async (app) => {
     },
     async (req, reply) => {
       const clerkUserId = userIdOf(req)!;
-      const date = await loggableDate(clerkUserId, req.params.date);
+      const date = await dateToLogTo(clerkUserId, req.params.date);
       const { entries, created } = await copyMealFromDayBefore(clerkUserId, date, req.params.meal, req.body?.requestId);
       return reply.code(created ? 201 : 200).send({ entries });
     },
@@ -88,7 +97,7 @@ export const foodEntryRoutes: FastifyPluginAsyncZod = async (app) => {
       if (!entry) return reply.code(404).send({ error: "no such food entry" });
       await loggableDate(clerkUserId, entry.date);
       const changed = await changeFoodEntry(clerkUserId, entry, req.body);
-      if (!changed) throw badRequest(NO_SUCH_SERVING);
+      if (!changed) throw badRequest(NO_SUCH_PORTION);
       return changed;
     },
   );

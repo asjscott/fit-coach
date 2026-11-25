@@ -4,6 +4,7 @@ import { EquipmentProfileInput, ErrorResponse, User, UserUpdate } from "@fit/sha
 import { z } from "zod";
 import { requireAuth, userIdOf } from "../auth";
 import { badRequest } from "../bad-request";
+import { keepTodaysTargets } from "../daily-targets";
 import { currentOrRebuiltPlannedWorkout } from "../planned-workouts";
 import { createEquipmentProfile, createUser, findUser, toUser, updateEquipmentProfile, updateUser } from "../users";
 import { keepFirstWeighIn, weighInSummary } from "../weigh-ins";
@@ -14,9 +15,11 @@ type UserDoc = NonNullable<Awaited<ReturnType<typeof findUser>>>;
 export const userResponse = async (user: UserDoc) =>
   toUser(user, await weighInSummary(user.clerkUserId, user.timeZone ?? "UTC"));
 
-// A change that onboards the user makes their onboarding weight their first Weigh-in
+// A change that onboards the user makes their onboarding weight their first Weigh-in. Today's Daily Targets
+// follow it straight away
 async function changedUserResponse(user: UserDoc) {
   await keepFirstWeighIn(user);
+  await keepTodaysTargets(user.clerkUserId);
   return userResponse(user);
 }
 

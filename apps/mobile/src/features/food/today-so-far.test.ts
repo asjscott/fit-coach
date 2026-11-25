@@ -1,6 +1,6 @@
 import type { FoodEntry } from "@fit/shared";
 import { describe, expect, it } from "vitest";
-import { portionChoice } from "./food-portion";
+import { amountOf, portionChoice } from "./food-portion";
 import { dayStepLabel, entryPortion, mealLine, mealName } from "./today-so-far";
 
 const entry = (kcal: number, portion: FoodEntry["portion"] = { grams: 100 }): FoodEntry => ({
@@ -56,19 +56,31 @@ describe("entryPortion", () => {
     expect(entryPortion({ grams: 100, serving: { label: "1 large", count: 2 } })).toBe("2 × 1 large");
     expect(entryPortion({ grams: 60, serving: { label: "1 slice", count: 1.5 } })).toBe("1.5 × 1 slice");
   });
+
+  // An ingredient's share of a portion of a Saved Meal
+  it("keeps a small portion's amount, never 0", () => {
+    const cloves = (count: number) => entryPortion({ grams: 5 * count, serving: { label: "1 clove", count } });
+    expect(cloves(0.25)).toBe("0.25 × 1 clove");
+    expect(cloves(2 / 3)).toBe("0.67 × 1 clove");
+    expect(cloves(0.04)).toBe("0.04 × 1 clove");
+    expect(cloves(0.0012)).toBe("0.0012 × 1 clove");
+    expect(entryPortion({ grams: 0.25 })).toBe("0.25 g");
+    expect(entryPortion({ grams: 0.004 })).toBe("0.004 g");
+    expect(entryPortion({ grams: 133.333 })).toBe("133.3 g");
+  });
 });
 
 describe("portionChoice", () => {
   it("sends grams, or the serving's label and how many", () => {
-    expect(portionChoice({ unit: "g" }, "80")).toEqual({ grams: 80 });
-    expect(portionChoice({ unit: "serving", serving: { label: "1 slice", grams: 40 } }, "1,5")).toEqual({
+    expect(portionChoice({ unit: "g" }, amountOf("80"))).toEqual({ grams: 80 });
+    expect(portionChoice({ unit: "serving", serving: { label: "1 slice", grams: 40 } }, amountOf("1,5"))).toEqual({
       serving: "1 slice",
       count: 1.5,
     });
   });
 
   it("has nothing to send until the amount is a number above 0", () => {
-    expect(portionChoice({ unit: "g" }, "")).toBeNull();
-    expect(portionChoice({ unit: "serving", serving: { label: "1 slice", grams: 40 } }, "0")).toBeNull();
+    expect(portionChoice({ unit: "g" }, amountOf(""))).toBeNull();
+    expect(portionChoice({ unit: "serving", serving: { label: "1 slice", grams: 40 } }, amountOf("0"))).toBeNull();
   });
 });

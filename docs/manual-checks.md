@@ -10,6 +10,9 @@ Result codes: **✅ pass** · **❌ fail** · **⚠️ works but feels off** · 
 
 - **Run on the phone now:** R1, U1, U2, LS2, PR1, RS1–RS7. Each is a part no run has covered yet.
 - **M7, on the phones:** WI4, WI6, F4, FL6, SC3, SC4, TC4, FI6, TB2, NA1. Session 5 passed the rest of M7 on the simulators and phones; these are the parts not yet seen, and the offline checks again after #170–#174.
+- **Ranges (#189), on the phones:** RR1–RR3.
+- **Nutrition History (#191), on the phones:** NH1–NH4.
+- **Saved Meals (#192–#194), on the phones:** SM1–SM3.
 - **Run when you next train:** P9 and S1, a full Workout with a timer, resting as the timer says. Both can be one session.
 - **🕒 Due later, while you use the app:** C5 (the day after a check-in), P16 (a Monday), J2 (after a week with jumps on), P17 (after a few weeks), DL1 and DL2 (the 5th week of a Block: the week starting 4 Mondays after the Monday of the week Assessment B was done).
 - **On hold:** E1–E3 need Sentry set up on production.
@@ -293,11 +296,37 @@ Run each offline check (WI6, F4, FL6, TC4) twice: once with airplane mode on bef
   - iOS: Result: · Android: Result: · Notes:
 - [ ] **SC4** Scan the same product again: it's found straight away as your Saved Food, without Create food. Search its name: it comes first, marked "Saved food", above the USDA results.
   - iOS: Result: · Android: Result: · Notes:
+- [ ] **SM1** On the Ideas half, tap "New saved meal", name it and set 2 servings. Scan a packaged food, choose a portion and Add ingredient; scan one nothing has, make it with Create food, and add that too. kcal and protein per serving show and follow each change, and a saved meal is never offered as an ingredient. Save: it opens to log, with servings and no Grams. Add 0.5: the day has one food with its name, and tapping it shows the ingredients at that portion. On Android, the system back leaves the editor for the Food tab. In airplane mode, Save says saving needs a connection and everything stays as typed (#192).
+  - iOS: Result: · Android: Result: · Notes:
+- [ ] **SM2** On a past day, open a meal holding a food and a Saved Meal and tap "Save as meal": New saved meal opens with the food and the Saved Meal's own ingredients, at the portions logged. Change one, remove another, name it, set the servings and Save: the same day shows again, its meal unchanged, and the new Saved Meal is found by search. A meal with nothing logged doesn't offer it (#193).
+  - iOS: Result: · Android: Result: · Notes:
+- [ ] **SM3** Edit a Saved Meal to give it a cooked weight: logging it now offers Grams beside servings. Log 350 g: the day has that share of it, and the Food Entry opens to its ingredients at 350 g. Change the entry to 1 serving and back to grams. Clear the cooked weight: only servings are offered, and the day logged stays as it was. A weight over 100,000 g is refused, saying so (#194).
+  - iOS: Result: · Android: Result: · Notes:
 - [ ] **TC4** In airplane mode, Tell says telling the Coach needs a connection, stops loading at once, and the words stay in the box (#173). Back online, Tell works.
   - iOS: Result: · Android: Result: · Notes:
 - [ ] **FI6** After 21:00, the idea buttons read "+ Snacks", and a Recent or Saved Food chosen on the Ideas half has Snacks picked for it.
   - iOS: Result: · Android: Result: · Notes:
 - [ ] **TB2** From Profile's "Exercise library", tap an Exercise: its detail opens. Back (the header's arrow, and on the iPhone a swipe from the left edge; on Android the system back) returns to the library, and again to Profile.
+  - iOS: Result: · Android: Result: · Notes:
+
+## Ranges and rings (#189)
+
+- [ ] **RR1** On the Food tab, log food until kcal and protein pass through each state, in light and in dark: below, the ring is orange with what's left to the bottom of its range; in range, full and green with the amount and "in range"; over, a red second lap you can tell from the green under it, with how far over. Today's rings show the same, and the Coach's summary agrees with both.
+  - iOS: Result: · Android: Result: · Notes:
+- [ ] **RR2** Log far too much (over twice a target): the red lap is full and goes no further. Fibre, water and the Workout rings stay orange.
+  - iOS: Result: · Android: Result: · Notes:
+- [ ] **RR3** With VoiceOver or TalkBack on, each kcal and protein ring says its state in words: left to be in range, in range, or over the range.
+  - iOS: Result: · Android: Result: · Notes:
+
+## Nutrition History (#191)
+
+- [ ] **NH1** Tap the Food tab's kcal ring, then go back and tap protein: Nutrition History opens on each. Today's rings still open the Food tab itself. Back (the header's arrow, the iPhone's swipe, Android's system back) returns to the day.
+  - iOS: Result: · Android: Result: · Notes:
+- [ ] **NH2** In light and in dark, this week and one with days below, in range and over: the bars are orange, green and red as those days' rings are, the band and the dotted average are clear behind and over them, and no number overlaps another. Change your Goal: from today the band steps, and the days before keep theirs. Days with nothing logged (or only water) are empty slots, and the average leaves them and today out.
+  - iOS: Result: · Android: Result: · Notes:
+- [ ] **NH3** The arrows go back to the week of your first Food Entry and stop, and forward no later than this week. Tap each bar and an empty slot: its amount, range and state show below. Leave this week open in the background overnight and come back: today has moved on, and after a Sunday it's the new week, with the old one an arrow back.
+  - iOS: Result: · Android: Result: · Notes:
+- [ ] **NH4** With VoiceOver or TalkBack on, each day says its name, amount, range and state, or that nothing is logged. In airplane mode, opening it says it needs a connection; back online, Try again loads it.
   - iOS: Result: · Android: Result: · Notes:
 
 ## When the server isn't answering (#170, #174)
