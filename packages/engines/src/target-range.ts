@@ -9,9 +9,8 @@ export type TargetRange = { min: number; max?: number };
 const ladderRange = (target: number, top: number): TargetRange =>
   target < top ? { min: target, max: top } : { min: target };
 
-// The range shown with a target (#183), worked out on the phone rather than stored on the plan: the Exercise's rep
-// range, stretched down to a target short of it or up to 20 for one climbing past it, or a ladder from the target to
-// its top. null for a fixed dose, shown as one number: a Ballistic Exercise (Jumps too), a carry and a Recovery Exercise
+// The range shown with a target (#183), stretched to take in a target outside it, as it must never contradict the aim.
+// null for a fixed dose, shown as one number
 export function targetRange(
   exercise: Pick<Exercise, "patterns" | "equipmentOptions" | "ballistic" | "recovery">,
   target: SetTarget,

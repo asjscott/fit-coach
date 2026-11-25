@@ -5,6 +5,7 @@ export * from "./check-in";
 export * from "./exercises";
 export * from "./food";
 export * from "./food-entry";
+export * from "./dumbbell-ends";
 export * from "./equipment";
 export * from "./error-reporting";
 export * from "./health";

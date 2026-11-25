@@ -1,4 +1,3 @@
-import { supersetGroups, supersetTurn, type PlannedProgress } from "@fit/engines";
 import { useState } from "react";
 
 // Which Workout Exercise is current: the one expanded for logging on the In-progress Workout
@@ -22,16 +21,6 @@ export function currentWorkoutExercise({ ids, seenIds, chosenId, nextId }: Selec
   if (added.length) return added[added.length - 1] ?? null;
   if (chosenId !== null && ids.includes(chosenId)) return chosenId;
   return nextId ?? ids[ids.length - 1] ?? null;
-}
-
-// The next Exercise of a Workout started from a plan still short of its target Sets: in order after `afterId`, wrapping
-// round to any skipped, or the first. A superset is one step, which opens on whoever's turn it is (#180)
-export function nextPlannedExercise(workoutExercises: readonly PlannedProgress[], afterId?: string) {
-  const groups = supersetGroups(workoutExercises);
-  const start = groups.findIndex((group) => group.some(({ id }) => id === afterId)) + 1;
-  return [...groups.slice(start), ...groups.slice(0, start)]
-    .map((group) => supersetTurn(group.filter(({ planned }) => planned)))
-    .find((turn) => turn)?.id;
 }
 
 const sameIds = (a: readonly string[], b: readonly string[]) =>

@@ -28,11 +28,17 @@ describe("loadInUnit", () => {
     }
   });
 
-  it("rounds to 0.5 of the user's unit", () => {
+  it("shows a load sized in the user's unit as it is", () => {
+    expect(loadInUnit(toKg(5.75, "lb"), "lb")).toBe(5.75);
+    expect(loadInUnit(16.25, "kg")).toBe(16.25);
+    expect(loadInUnit(16.8, "kg")).toBe(16.8);
+    expect(loadInUnit(0.1 + 0.2, "kg")).toBe(0.3);
+  });
+
+  it("rounds one sized in the other unit to 0.5", () => {
     expect(loadInUnit(20, "lb")).toBe(44); // 44.09 lb
     expect(loadInUnit(12.5, "lb")).toBe(27.5); // 27.56 lb
-    expect(loadInUnit(16.8, "kg")).toBe(17);
-    expect(loadInUnit(16.25, "kg")).toBe(16.5);
+    expect(loadInUnit(toKg(37, "lb"), "kg")).toBe(17); // 16.78 kg
     expect(loadInUnit(22.5, "kg")).toBe(22.5);
   });
 });

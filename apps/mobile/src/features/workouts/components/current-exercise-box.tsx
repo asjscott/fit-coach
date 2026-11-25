@@ -25,10 +25,18 @@ import { plannedSetsLabel, previousSetsLabel } from "../format";
 import { exerciseName, targetReading, type SetReading } from "../library";
 import { useLogbook } from "../logbook-provider";
 import { protocolNote } from "../protocol-note";
-import { draftValues, loadStep, rpeMissing, setDraft, SET_FIELDS, type SetDraft } from "../set-entry";
+import {
+  createLoadSteps,
+  draftValues,
+  rpeMissing,
+  setDraft,
+  SET_FIELDS,
+  type LoadSteps,
+  type SetDraft,
+} from "../set-entry";
 import { LastSetRpe } from "./last-set-rpe";
 import { SetRow } from "./set-row";
-import { SetStepper, type LoadSteps } from "./set-stepper";
+import { SetStepper } from "./set-stepper";
 import { WorkoutExerciseMenu } from "./workout-exercise-menu";
 
 export type CurrentExerciseBoxProps = {
@@ -41,9 +49,8 @@ export type CurrentExerciseBoxProps = {
   onSkipTest?: () => Promise<void>;
 };
 
-// What moves on from an Exercise. "main" is the main button, with Log extra set under it to open the steppers, and
-// "secondary" is under Log set. "test" is an Assessment Workout's Next test, only once the test takes no more Sets.
-// After the walk's one Set either is the only button
+// What moves on from an Exercise: "main" comes with Log extra set, "secondary" goes under Log set, and "test" is an
+// Assessment Workout's Next test, once the test takes no more Sets
 export type NextAction = { label: string; onPress: () => void } & (
   { as: "test" | "secondary" } | { as: "main"; onLogExtra: () => void }
 );
@@ -160,12 +167,10 @@ export function ExerciseLogging({
   // A test that's done, or the walk once its one Set is logged (#109)
   const done = (!!protocol && takesNoMoreSets(protocol)) || !takesAnotherSet(workoutExercise);
   const asksRpe = !!workout && isRatedTest(workout, loadType);
-  const loadsByEquipmentKg = exerciseLoadsByEquipmentKg(slug, primaryEquipment);
-  const loadSteps: LoadSteps = {
-    step: loadStep(loadsByEquipmentKg, unit),
-    loadsKnown: loadsByEquipmentKg.length > 0,
-    unit,
-  };
+  const loadSteps = useMemo(
+    () => createLoadSteps(exerciseLoadsByEquipmentKg(slug, primaryEquipment), unit),
+    [slug, primaryEquipment, unit],
+  );
   const buildLabel = useMemo(() => dumbbellBuildLabel(slug, primaryEquipment, unit), [slug, primaryEquipment, unit]);
 
   return (
@@ -346,7 +351,7 @@ function SetEntry({
   children,
 }: SetEntryProps) {
   const { showToast } = useToast();
-  const [draft, setDraftState] = useState<SetDraft>(() => setDraft(loadType, initial, loadSteps.unit));
+  const [draft, setDraftState] = useState<SetDraft>(() => setDraft(loadType, initial, loadSteps));
   const [rpe, setRpe] = useState<number | undefined>(initial?.rpe);
   const [saving, setSaving] = useState(false);
 
@@ -367,7 +372,7 @@ function SetEntry({
     }
   };
 
-  const build = draft.load === undefined ? undefined : buildLabel(draft.load);
+  const build = draft.load === undefined ? undefined : buildLabel(draft.load, draft.kg);
 
   return (
     <Stack spacing={3} style={styles.entry}>
@@ -376,10 +381,15 @@ function SetEntry({
       </Text>
       {SET_FIELDS[loadType].map((field) => {
         const value = draft[field] ?? "";
-        const onChange = (text: string) => setDraftState((prev) => ({ ...prev, [field]: text }));
         return field === "load" ? (
           <Stack key={field} spacing={1}>
-            <SetStepper field={field} value={value} onChange={onChange} {...loadSteps} />
+            <SetStepper
+              field={field}
+              value={value}
+              kg={draft.kg}
+              steps={loadSteps}
+              onChange={(load, kg) => setDraftState((prev) => ({ ...prev, load, kg }))}
+            />
             {build ? (
               <Text size="sm" color="muted" centered>
                 {build}
@@ -387,7 +397,13 @@ function SetEntry({
             ) : null}
           </Stack>
         ) : (
-          <SetStepper key={field} field={field} value={value} onChange={onChange} reading={reading} />
+          <SetStepper
+            key={field}
+            field={field}
+            value={value}
+            onChange={(text) => setDraftState((prev) => ({ ...prev, [field]: text }))}
+            reading={reading}
+          />
         );
       })}
       {asksRpe ? (

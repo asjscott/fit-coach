@@ -1,4 +1,5 @@
 import { EQUIPMENT_LABELS, type BarAndPlates, type EquipmentProfile, type WeightUnit } from "@fit/shared";
+import { inWords } from "../../utils/in-words";
 import { sizeInUnit } from "./loads";
 
 // One line for the user's equipment on Profile; a gym has every tag, so listing them says nothing
@@ -22,7 +23,6 @@ function barAndPlatesSummary({ bars, barKg, plates }: BarAndPlates, unit: Weight
   const barsPart = `${sized(bars, barKg)} ${bars === 1 ? "bar" : "bars"}`;
   const sizes = [...plates].sort((a, b) => a.kg - b.kg).map(({ kg, count }) => sized(count, kg));
   if (!sizes.length) return barsPart;
-  const list = sizes.length === 1 ? sizes[0] : `${sizes.slice(0, -1).join(", ")} and ${sizes.at(-1)}`;
   const total = plates.reduce((sum, { count }) => sum + count, 0);
-  return `${barsPart}, ${list} ${total === 1 ? "plate" : "plates"}`;
+  return `${barsPart}, ${inWords(sizes)} ${total === 1 ? "plate" : "plates"}`;
 }

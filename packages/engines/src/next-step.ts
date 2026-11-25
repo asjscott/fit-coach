@@ -1,14 +1,22 @@
-import { supersetPartner, type PlannedProgress } from "@fit/engines";
 import type { InProgressWorkout } from "@fit/shared";
-import { nextPlannedExercise } from "./current-workout-exercise";
+import { supersetGroups, supersetPartner, supersetTurn, type PlannedProgress } from "./supersets";
+
+// The next Exercise of a Workout started from a plan still short of its target Sets: in order after `afterId`, wrapping
+// round to any skipped, or the first. A superset is one step, which opens on whoever's turn it is (#180)
+export function nextPlannedExercise(workoutExercises: readonly PlannedProgress[], afterId?: string) {
+  const groups = supersetGroups(workoutExercises);
+  const start = groups.findIndex((group) => group.some(({ id }) => id === afterId)) + 1;
+  return [...groups.slice(start), ...groups.slice(0, start)]
+    .map((group) => supersetTurn(group.filter(({ planned }) => planned)))
+    .find((turn) => turn)?.id;
+}
 
 // What moves on from an Exercise (#180): the next one, or Finish once every planned Set is done. As the main button it
 // comes with "Log extra set"; otherwise it's secondary, and logging the Exercise's next Set stays the main thing
 export type NextStep = ({ to: "exercise"; id: string } | { to: "finish" }) & { main: boolean };
 
-// The step offered after the Sets an Exercise has, or null for none. A planned one offers it once it, and its superset,
-// have all their Sets. One with no plan offers it after any Set: in a Manual Workout to the Exercise after it, else to
-// the plan's. An Assessment Workout has its own Next test
+// The step offered after the Sets an Exercise has, or null: once it and its superset have theirs, or with no plan, any.
+// An Assessment Workout has its own Next test
 export function nextStep(
   {
     workoutExercises,

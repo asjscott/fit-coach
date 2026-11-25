@@ -1,6 +1,7 @@
-import { loadInUnit, toKg, type EquipmentProfile } from "@fit/shared";
+import { DumbbellLoads, loadInUnit, TOO_MANY_DUMBBELL_LOADS, toKg, type EquipmentProfile } from "@fit/shared";
 import { describe, expect, it } from "vitest";
 import { exerciseBySlug } from "./data/exercises";
+import { dumbbellBuilds } from "./dumbbells";
 import { dumbbellBuild, exerciseLoadsKg, isAvailable, nextLoadKg, type ProfileWithLoads } from "./equipment";
 
 const lb = (pounds: number) => toKg(pounds, "lb");
@@ -94,10 +95,54 @@ describe("the loads of bar-and-plates dumbbells", () => {
     expect(next("dumbbell-floor-press", 12)).toBe(14);
   });
 
-  it("works out the most plates a profile can hold", () => {
-    const sizes = Object.fromEntries([1.25, 2.5, 3, 5, 7.5, 10, 15, 25].map((size) => [size, 20]));
-    const loads = loadsLb("goblet-squat", barAndPlates({ bar: 5, bars: 2, plates: sizes }));
-    expect(loads.slice(0, 4)).toEqual([5, 6.5, 7.5, 8]);
+  it("works out the most plates of any size to the quarter a profile can hold", () => {
+    const sizes = Object.fromEntries([0.25, 0.5, 0.75, 1, 1.25, 1.5, 1.75, 2].map((size) => [size, 40]));
+    const profile = barAndPlates({ bar: 5, bars: 2, plates: sizes });
+    expect(DumbbellLoads.safeParse(profile.loads.dumbbells).success).toBe(true);
+    const loads = exerciseLoadsKg("goblet-squat", profile);
+    expect(loads[1]).toBeCloseTo(lb(5.25), 9);
+    // Every quarter of a pound up to 100 kg
+    expect(loads).toHaveLength(862);
+  });
+
+  it("works out 24 plates of one odd size", () => {
+    const loads = exerciseLoadsKg("goblet-squat", barAndPlates({ bar: 4, bars: 2, plates: { 3.17: 24 } }));
+    expect(loads).toHaveLength(25);
+    expect(loads.at(-1)).toBeCloseTo(lb(80.08), 9);
+  });
+
+  it("works out plates in both units", () => {
+    const inBoth: ProfileWithLoads = {
+      tags: ["dumbbells"],
+      loads: {
+        dumbbells: {
+          kind: "bar_and_plates",
+          barKg: 2,
+          bars: 2,
+          plates: [1.25, 2.5, 5, lb(2.5), lb(5), lb(10)].map((kg) => ({ kg, count: 4 })),
+        },
+      },
+    };
+    expect(DumbbellLoads.safeParse(inBoth.loads.dumbbells).success).toBe(true);
+    expect(exerciseLoadsKg("goblet-squat", inBoth)).toContain(7);
+  });
+
+  // Not by time, which varies by machine: these would take minutes or run out of memory if they were tried
+  it.each([
+    ["to the hundredth", [1.01, 1.13, 1.27, 1.39, 1.51, 1.63, 1.79, 1.97]],
+    ["to the gram", [1.001, 1.103, 1.207, 1.311, 2.223, 3.331, 4.447, 5.557]],
+  ])("refuses 8 sizes %s × 20", (_, sizes) => {
+    const dumbbells = {
+      kind: "bar_and_plates" as const,
+      barKg: 2,
+      bars: 2,
+      plates: sizes.map((kg) => ({ kg, count: 20 })),
+    };
+    expect(DumbbellLoads.safeParse(dumbbells).error?.issues[0]).toMatchObject({
+      path: ["plates"],
+      message: TOO_MANY_DUMBBELL_LOADS,
+    });
+    expect(dumbbellBuilds(dumbbells)).toEqual([]);
   });
 });
 

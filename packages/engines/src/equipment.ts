@@ -85,10 +85,16 @@ export function matchesBuiltIn(profile: Pick<EquipmentProfile, "tags">, choice: 
 // What says how an Exercise can be done: its ways of doing it, and how many dumbbells those with dumbbells take
 export type ExerciseEquipment = Pick<Exercise, "equipmentOptions" | "dumbbells">;
 
-// Each way the profile can do the Exercise. The dumbbells may be one bar, which can't do a two-dumbbell Exercise (#181)
-export function ownedOptions(exercise: ExerciseEquipment, profile: ProfileWithLoads): EquipmentTag[][] {
+// What the profile has for the Exercise. The dumbbells may be one bar, which can't do a two-dumbbell Exercise (#181)
+export function ownedFor(exercise: Pick<Exercise, "dumbbells">, profile: ProfileWithLoads): Set<EquipmentTag> {
   const owned = expandTags(profile.tags);
   if (hasTooFewDumbbells(exercise, profile)) owned.delete("dumbbells");
+  return owned;
+}
+
+// Each way the profile can do the Exercise
+export function ownedOptions(exercise: ExerciseEquipment, profile: ProfileWithLoads): EquipmentTag[][] {
+  const owned = ownedFor(exercise, profile);
   return exercise.equipmentOptions.filter((option) => option.every((tag) => owned.has(tag)));
 }
 
@@ -109,7 +115,7 @@ const MAX_BARBELL_KG = 300;
 const QUARTERS = 4;
 // How far apart two loads can be and still be the same load, in kg or the user's unit alike: loads entered in pounds
 // are stored as their exact kg, which sums of them can miss by a rounding error
-const SAME_LOAD_TOLERANCE = 1e-6;
+export const SAME_LOAD_TOLERANCE = 1e-6;
 
 const inQuarters = (kg: number, unit: WeightUnit) => fromKg(kg, unit) * QUARTERS;
 const isWholeQuarters = (kg: number, unit: WeightUnit) =>

@@ -1,4 +1,11 @@
-import { isSkippedTest, REST_ADJUSTMENT_SECONDS, restSecondsLeft, takesNoMoreSets, TEST_REPS } from "@fit/engines";
+import {
+  isSkippedTest,
+  REST_ADJUSTMENT_SECONDS,
+  restSecondsLeft,
+  takesNoMoreSets,
+  TEST_REPS,
+  upNext,
+} from "@fit/engines";
 import type { InProgressWorkout, InProgressWorkoutExercise, SetTarget } from "@fit/shared";
 import { useEffect } from "react";
 import { Keyboard, Modal, ScrollView, StyleSheet, useWindowDimensions, View } from "react-native";
@@ -18,15 +25,13 @@ import { exerciseName, setReading, targetReading } from "../library";
 import { useLogbook, type CurrentRest } from "../logbook-provider";
 import { protocolNote } from "../protocol-note";
 import { hasRestSound, unlockRestSound } from "../rest-sound";
-import { upNext } from "../up-next";
 import { NextButtons, type NextAction } from "./current-exercise-box";
 import { LastSetRpe } from "./last-set-rpe";
 
 type RestScreenProps = { workout: InProgressWorkout; next?: NextAction };
 
-// The rest filling the screen (#179): a countdown to read across the room, the Set coming next and large buttons. It
-// minimises to the bar (RestTimer), and goes at zero, leaving the logging screen it's over ready for the next Set. `next`
-// moves on from the Exercise it follows, carrying the rest on as the bar (#180)
+// Over the logging screen, so it's ready for the next Set when this goes at zero (#179). `next` moves on from the
+// Exercise the rest follows (#180)
 export function RestScreen({ workout, next }: RestScreenProps) {
   const { rest, minimizeRest } = useLogbook();
   const { colors } = useTheme();

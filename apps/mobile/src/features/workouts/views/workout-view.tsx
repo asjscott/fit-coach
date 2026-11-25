@@ -1,4 +1,4 @@
-import { setCount, supersetGroups, workoutVolume } from "@fit/engines";
+import { nextPlannedExercise, nextStep, setCount, supersetGroups, workoutVolume } from "@fit/engines";
 import type { InProgressWorkout } from "@fit/shared";
 import { Stack as NavStack, router } from "expo-router";
 import { useState } from "react";
@@ -23,13 +23,12 @@ import { RestScreen } from "../components/rest-screen";
 import { RestTimer } from "../components/rest-timer";
 import { SupersetBox } from "../components/superset-box";
 import { WorkoutExerciseRow } from "../components/workout-exercise-row";
-import { nextPlannedExercise, useCurrentWorkoutExercise } from "../current-workout-exercise";
+import { useCurrentWorkoutExercise } from "../current-workout-exercise";
 import { elapsedClockLabel, relativeDateLabel, supersetLetter, timeLabel, volumeLabel } from "../format";
 import { useHasEnded } from "../hooks/use-has-ended";
 import { useLeaveWorkout } from "../hooks/use-leave-workout";
 import { useStartWorkout } from "../hooks/use-open-workout";
 import { useLogbook } from "../logbook-provider";
-import { nextStep } from "../next-step";
 
 // The In-progress Workout, laid out for logging between sets: Elapsed, Sets and Volume at the top, the current
 // Workout Exercise open in a box and the others collapsed to rows, Add exercise, and Finish alone at the bottom, under a minimised rest.
@@ -91,10 +90,9 @@ function InProgress({ workout }: { workout: InProgressWorkout }) {
   const nextAfterRest = rest && !workout.assessment ? nextAfter(rest.afterId) : undefined;
   // The next test once this one is skipped too
   const skip = async (id: string) => {
-    const skipped = workoutExercises.map((we) => (we.id === id ? { ...we, skipped: true } : we));
-    const after = primaryEquipment && testProgress({ ...workout, workoutExercises: skipped }, primaryEquipment);
-    await skipTest(id);
-    if (after?.nextTestId) choose(after.nextTestId);
+    const skipped = await skipTest(id);
+    const { nextTestId } = primaryEquipment ? testProgress(skipped, primaryEquipment) : {};
+    if (nextTestId) choose(nextTestId);
   };
   const groups = supersetGroups(workoutExercises);
   const pairs = groups.filter((group) => group.length === 2);

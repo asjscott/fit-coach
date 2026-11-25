@@ -26,6 +26,44 @@ describe("startRest", () => {
   });
 });
 
+describe("restAfterSet in an Assessment", () => {
+  const now = at("2026-11-09T10:00:00Z");
+  const profile = {
+    tags: ["dumbbells" as const],
+    loads: { dumbbells: { kind: "fixed" as const, weightsKg: [10, 20] } },
+  };
+  const squat = (kg: number, reps: number, rpe: number) => ({
+    id: "squat",
+    slug: "goblet-squat",
+    loadType: "external" as const,
+    sets: [{ kind: "external" as const, kg, reps, rpe, loggedAt: "2026-11-09T09:59:00Z" }],
+  });
+  const plank = (seconds?: number) => ({
+    id: "plank",
+    slug: "plank",
+    loadType: "timed" as const,
+    sets: seconds ? [{ kind: "timed" as const, seconds, loggedAt: "2026-11-09T10:00:00Z" }] : [],
+  });
+  type Test = ReturnType<typeof squat | typeof plank> & { skipped?: boolean };
+  const restAfter = (id: string, ...workoutExercises: Test[]) =>
+    restAfterSet({ assessment: "single", workoutExercises }, id, now, "auto", profile);
+
+  it("is none once every test is done, at RPE 9, limited by the equipment or held", () => {
+    expect(restAfter("plank", squat(20, 5, 9), plank(60))).toBeNull();
+    expect(restAfter("squat", squat(20, 15, 7), plank(60))).toBeNull();
+  });
+
+  it("is none once the others are skipped", () => {
+    expect(restAfter("squat", squat(20, 5, 9), { ...plank(), skipped: true })).toBeNull();
+  });
+
+  it("is as usual while a test is left, or the test takes more Sets", () => {
+    expect(restAfter("squat", squat(20, 5, 9), plank())).not.toBeNull();
+    expect(restAfter("squat", squat(10, 5, 7), plank(60))).not.toBeNull();
+    expect(restAfter("squat", squat(10, 15, 7), plank(60))).not.toBeNull();
+  });
+});
+
 describe("restAfterSet", () => {
   const now = at("2026-11-09T10:00:00Z");
   const set: Set = { kind: "external", kg: 20, reps: 8, loggedAt: now.toISOString() };

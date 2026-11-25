@@ -1,6 +1,12 @@
 import type { AssessmentMarker } from "@fit/shared";
 import { describe, expect, it } from "vitest";
-import { assessmentOffer, offerKey, pendingAssessment, type AssessmentOfferInput } from "./assessment-offer";
+import {
+  assessmentOffer,
+  completesAssessment,
+  offerKey,
+  pendingAssessment,
+  type AssessmentOfferInput,
+} from "./assessment-offer";
 import { chooseTests } from "./assessment-tests";
 
 const loggedAt = "2026-10-20T09:10:00.000Z";
@@ -34,7 +40,7 @@ const offer = (
     historyLoaded: true,
     latestAssessment,
     now: new Date("2026-10-23T09:00:00Z"),
-    tests: chooseTests({ tags: ["dumbbells"] }, []),
+    tests: chooseTests({ tags: ["dumbbells"], loads: {} }, []),
     dismissed: null,
     timeZone: "UTC",
     ...more,
@@ -68,12 +74,12 @@ describe("assessmentOffer", () => {
 
   it("names the Patterns it can't test, which the Assessment estimates", () => {
     // Every push on the list, push-up included, is flagged for a wrist injury
-    const tests = chooseTests({ tags: ["table"] }, ["wrist"]);
+    const tests = chooseTests({ tags: ["table"], loads: {} }, ["wrist"]);
     expect(offer([], null, { tests })).toEqual({ kind: "start", untested: ["push"] });
   });
 
   it("is unavailable only when no Pattern has a test", () => {
-    const { core } = chooseTests({ tags: [] }, []);
+    const { core } = chooseTests({ tags: [], loads: {} }, []);
     expect(offer([], null, { tests: { ...NO_TESTS, core } })).toEqual({
       kind: "start",
       untested: ["squat", "push", "hinge", "pull"],
@@ -210,5 +216,30 @@ describe("pendingAssessment", () => {
   it("is none for an A alone, or once it has synced", () => {
     expect(pendingAssessment([workout("a1", "20", "A", true)])).toBeUndefined();
     expect(pendingAssessment([workout("s1", "22", "single")])).toBeUndefined();
+  });
+});
+
+describe("completesAssessment", () => {
+  const startedAt = "2026-11-09T10:00:00.000Z";
+  const plank = (...seconds: number[]) => [
+    {
+      slug: "plank",
+      loadType: "timed" as const,
+      sets: seconds.map((each) => ({ kind: "timed" as const, seconds: each, loggedAt: "2026-11-09T10:00:00.000Z" })),
+    },
+  ];
+
+  it("is a single one that measured a test", () => {
+    expect(completesAssessment({ startedAt, assessment: "single", workoutExercises: plank(60) })).toBe(true);
+    expect(completesAssessment({ startedAt, assessment: "single", workoutExercises: plank() })).toBe(false);
+  });
+
+  it("is an old B, whose A may have the result, and not an A", () => {
+    expect(completesAssessment({ startedAt, assessment: "B", workoutExercises: plank() })).toBe(true);
+    expect(completesAssessment({ startedAt, assessment: "A", workoutExercises: plank(60) })).toBe(false);
+  });
+
+  it("isn't any other Workout", () => {
+    expect(completesAssessment({ startedAt, workoutExercises: plank(60) })).toBe(false);
   });
 });

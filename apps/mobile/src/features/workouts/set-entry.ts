@@ -1,10 +1,16 @@
-import { stepperLoad, UNKNOWN_LOADS_STEP_KG, type LoadsByEquipment, type StepDirection } from "@fit/engines";
-import { loadInUnit, toKg, type LoadType, type SetValues, type WeightUnit } from "@fit/shared";
+import {
+  SAME_LOAD_TOLERANCE,
+  stepperLoad,
+  UNKNOWN_LOADS_STEP_KG,
+  type LoadsByEquipment,
+  type StepDirection,
+} from "@fit/engines";
+import { inUnitToStep, loadInUnit, toKg, type LoadType, type SetValues, type WeightUnit } from "@fit/shared";
 import { leadParts, minutesParts } from "./format";
 import type { SetReading } from "./library";
 
 // Entering a Set's values with −/+ steppers: what each step adds, and turning typed text into the values the
-// Logbook checks. A load is typed and stepped in the user's unit, and becomes its exact kg only once logged (#126)
+// Logbook checks. A load is typed in the user's unit, and becomes its exact kg only once logged (#126)
 
 export type SetField = "load" | "reps" | "seconds";
 
@@ -15,19 +21,20 @@ export const SET_FIELDS: Record<LoadType, SetField[]> = {
   timed: ["seconds"],
 };
 
-// What's typed in each field; a load in the user's unit
-export type SetDraft = Partial<Record<SetField, string>>;
+// What's typed in each field; a load in the user's unit, with its exact kg while it's as filled or stepped to, as its
+// text may be rounded
+export type SetDraft = Partial<Record<SetField, string>> & { kg?: number };
 
 // A field's name as the user reads it: a load is named by its unit
 export const fieldLabel = (field: SetField, unit: WeightUnit) => (field === "load" ? unit : field);
 
-// The fields filled from `from` (the previous Set, or the Set being edited), or empty. A load shows as the user sees
-// it everywhere else: in their unit, to the nearest 0.5
-export function setDraft(loadType: LoadType, from: SetValues | null, unit: WeightUnit): SetDraft {
-  const values: Partial<Record<SetField, number>> = from
-    ? { load: "kg" in from ? loadInUnit(from.kg, unit) : undefined, ...from }
-    : {};
-  return Object.fromEntries(SET_FIELDS[loadType].map((field) => [field, String(values[field] ?? "")]));
+// The fields filled from `from` (the previous Set, or the Set being edited), or empty. A load reads as its stepper
+// names it
+export function setDraft(loadType: LoadType, from: SetValues | null, { name }: Pick<LoadSteps, "name">): SetDraft {
+  const kg = from && "kg" in from ? from.kg : undefined;
+  const values: Partial<Record<SetField, string | number>> = { ...from, load: kg === undefined ? undefined : name(kg) };
+  const fields = Object.fromEntries(SET_FIELDS[loadType].map((field) => [field, String(values[field] ?? "")]));
+  return kg === undefined ? fields : { ...fields, kg };
 }
 
 // The draft as a Set's values, or what's missing. Typed numbers pass as they are, a load as its exact kg: the Logbook
@@ -42,7 +49,9 @@ export function draftValues(
   if (numbers.some(([, value]) => !Number.isFinite(value))) {
     return { error: `Enter ${fields.map((field) => fieldLabel(field, unit)).join(" and ")}` };
   }
-  const values = numbers.map(([field, value]) => (field === "load" ? ["kg", toKg(value, unit)] : [field, value]));
+  const values = numbers.map(([field, value]) =>
+    field === "load" ? ["kg", draft.kg ?? toKg(value, unit)] : [field, value],
+  );
   return { values: { kind: loadType, ...Object.fromEntries(values) } as SetValues };
 }
 
@@ -69,7 +78,7 @@ function minutesStepLabel(text: string, direction: StepDirection): string {
   return `${direction === 1 ? "Plus" : "Minus"} ${byMinute ? "1 minute" : `${STEPS.seconds} seconds`}`;
 }
 
-// A load has no fixed step: it goes to the next load the equipment has (loadStep). Seconds step by 5 at every
+// A load has no fixed step: it goes to the next load the equipment has (createLoadSteps). Seconds step by 5 at every
 // length (#177), except the walk's (minutesStep)
 const STEPS: Record<Exclude<SetField, "load">, number> = { reps: 1, seconds: 5 };
 
@@ -85,17 +94,56 @@ function minutesStep(seconds: number, direction: StepDirection): number {
 // The step when the equipment's loads aren't known (#58), a round number in each unit
 const UNKNOWN_LOADS_STEP: Record<WeightUnit, number> = { kg: UNKNOWN_LOADS_STEP_KG, lb: 5 };
 
-// From a load in the user's unit to the next lighter or heavier one, in the same unit
-export type LoadStep = (load: number, direction: StepDirection) => number;
+// A load field's text, in the user's unit, and its exact kg unless it was typed
+export type LoadEntry = { text: string; kg?: number };
 
-// Steps through the loads of each kind of equipment (kg, as loadsByEquipmentKg gives them) as the user sees them, so
-// a load whose kg is a hair off the one shown never sticks. A step stays on the kind the load is on (#149), so a lb
-// gym's dumbbells step 25 to 30 lb past a 26.5 lb kettlebell. By 5 lb or 2 kg when the loads aren't known
-export function loadStep(loadsByEquipmentKg: LoadsByEquipment, unit: WeightUnit): LoadStep {
-  const loadsByEquipment = loadsByEquipmentKg.map((loadsKg) =>
-    [...new Set(loadsKg.map((kg) => loadInUnit(kg, unit)))].sort((a, b) => a - b),
-  );
-  return (load, direction) => stepperLoad(load, direction, loadsByEquipment, UNKNOWN_LOADS_STEP[unit]);
+// How an Exercise's loads are named and stepped through
+export type LoadSteps = {
+  // A load in the user's unit
+  name: (kg: number) => string;
+  // To the next lighter or heavier load
+  step: (from: LoadEntry, direction: StepDirection) => LoadEntry;
+  // Else a load steps by 5 lb or 2 kg, and screen readers say so
+  loadsKnown: boolean;
+  unit: WeightUnit;
+};
+
+// The names of one kind of equipment's loads: as the user sees a load everywhere else, but to the hundredth where that
+// would give two the same name
+function namesOf(loadsKg: readonly number[], unit: WeightUnit): (readonly [kg: number, name: string])[] {
+  const shown = loadsKg.map((kg) => loadInUnit(kg, unit));
+  const counts = new Map<number, number>();
+  for (const load of shown) counts.set(load, (counts.get(load) ?? 0) + 1);
+  return loadsKg.map((kg, i) => {
+    const load = shown[i]!;
+    return [kg, String(counts.get(load) === 1 ? load : inUnitToStep(kg, unit, 0.01))] as const;
+  });
+}
+
+const sameLoad = (a: number, b: number) => Math.abs(a - b) <= SAME_LOAD_TOLERANCE;
+
+// Steps through the exact loads of each kind of equipment (as loadsByEquipmentKg gives them). A typed load that reads as
+// one of them steps from it, so a load whose kg is a hair off the one shown never sticks. A step stays on the kind the
+// load is on (#149), so a lb gym's dumbbells step 25 to 30 lb past a 26.5 lb kettlebell. By 5 lb or 2 kg when the loads
+// aren't known
+export function createLoadSteps(loadsByEquipmentKg: LoadsByEquipment, unit: WeightUnit): LoadSteps {
+  const names = loadsByEquipmentKg.flatMap((loadsKg) => namesOf(loadsKg, unit));
+  const loadsKnown = names.length > 0;
+  const name = (kg: number) => names.find(([load]) => sameLoad(load, kg))?.[1] ?? String(loadInUnit(kg, unit));
+  const kgOf = (typed: number) => names.find(([, text]) => Number(text) === typed)?.[0] ?? toKg(typed, unit);
+
+  const step = ({ text, kg }: LoadEntry, direction: StepDirection): LoadEntry => {
+    const typed = parseField(text);
+    const load = Number.isFinite(typed) ? typed : 0;
+    if (!loadsKnown) {
+      return { text: String(stepperLoad(roundTo(load, 0.5), direction, [], UNKNOWN_LOADS_STEP[unit])) };
+    }
+    const from = kg ?? kgOf(load);
+    const next = stepperLoad(from, direction, loadsByEquipmentKg, 0);
+    // Past the lightest or heaviest, what's typed stays
+    return next === from ? { text: String(load), kg } : { text: name(next), kg: next };
+  };
+  return { name, step, loadsKnown, unit };
 }
 
 // For screen readers: with the equipment's loads known, a tap's size changes from load to load, so it isn't named
@@ -104,17 +152,21 @@ export function loadStepLabel(direction: StepDirection, loadsKnown: boolean, uni
   return `${direction === 1 ? "Plus" : "Minus"} ${UNKNOWN_LOADS_STEP[unit]} ${unit}`;
 }
 
-// How a field's stepper reads and steps, one entry per field so the stepper doesn't branch on it. A load's depends on
-// the equipment and the user's unit (loadStepper); a Jump's reps are its contacts (#105)
-export type FieldStepper = {
+// How a field reads in its stepper, one entry per field so the stepper doesn't branch on it. A load's depends on the
+// equipment and the user's unit (loadReading); a Jump's reps are its contacts (#105)
+export type FieldReading = {
   // The value drawn, the unit beside it, and the value's name for screen readers; as typed while typing
   shown: (text: string, typing: boolean) => { value: string; unit: string; name: string };
   // For screen readers, what one step adds or takes away
   stepLabel: (text: string, direction: StepDirection) => string;
+  keyboardType: "decimal-pad" | "number-pad";
+};
+
+// And how a field that isn't a load steps
+export type FieldStepper = FieldReading & {
   // The smallest amount it steps from, as it's shown
   resolution: number;
   next: (from: number, direction: StepDirection) => number;
-  keyboardType: "decimal-pad" | "number-pad";
 };
 
 const asTyped = (unit: string) => (text: string) => ({ value: text, unit, name: unit });
@@ -161,12 +213,9 @@ export function fieldStepper(field: Exclude<SetField, "load">, reading: SetReadi
   return reading.inMinutes ? FIELD_STEPPERS.minutes : FIELD_STEPPERS.seconds;
 }
 
-// A load to 0.5 of the user's unit, as it's shown, to the next load `step` gives
-export const loadStepper = (step: LoadStep, loadsKnown: boolean, unit: WeightUnit): FieldStepper => ({
+export const loadReading = ({ loadsKnown, unit }: Pick<LoadSteps, "loadsKnown" | "unit">): FieldReading => ({
   shown: asTyped(unit),
   stepLabel: (_, direction) => loadStepLabel(direction, loadsKnown, unit),
-  resolution: 0.5,
-  next: step,
   keyboardType: "decimal-pad",
 });
 

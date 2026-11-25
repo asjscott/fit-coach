@@ -1,6 +1,6 @@
 import type { AssessmentMarker, AssessmentPattern, EquipmentProfile, Set, WorkingLevel, Workout } from "@fit/shared";
 import { describe, expect, it } from "vitest";
-import { assess, hasAssessmentResult, unmeasuredTests } from "./assess";
+import { assess, estimatedFrom, hasAssessmentResult, unmeasuredTests } from "./assess";
 
 const loggedAt = "2026-10-24T09:00:00.000Z";
 const rated = (kg: number, rpe: number, reps = 5): Set => ({ kind: "external", kg, reps, rpe, loggedAt });
@@ -454,5 +454,21 @@ describe("finishing early", () => {
       { slug: "plank", sets: [held(60)] },
     ]);
     expect(unmeasuredTests({ workoutExercises }).map(({ slug }) => slug)).toEqual(["dumbbell-floor-press", "pull-up"]);
+  });
+});
+
+describe("estimatedFrom", () => {
+  const measured = { estimated: false };
+
+  it("is the other results with any Pattern measured in kg", () => {
+    expect(estimatedFrom("hinge", { squat: measured, core: { estimated: true } })).toBe("other-results");
+  });
+
+  it("is typical values with only the plank measured, as its seconds say nothing in kg", () => {
+    expect(estimatedFrom("hinge", { squat: { estimated: true }, core: measured })).toBe("typical-values");
+  });
+
+  it("is typical values for core, whatever else was measured", () => {
+    expect(estimatedFrom("core", { squat: measured, push: measured })).toBe("typical-values");
   });
 });

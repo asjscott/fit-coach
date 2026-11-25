@@ -67,6 +67,16 @@ const ESTIMATE_SHARE = 0.8;
 // Core's estimate when the plank wasn't tested: plank seconds don't follow from strength in kg
 const ESTIMATED_PLANK_SECONDS = 30;
 
+// What an untested Pattern's estimate follows from: the user's other results, or typical values when none was measured
+// in kg, as core's always does
+export const estimatedFrom = (
+  pattern: TestedPattern,
+  patterns: Partial<Record<TestedPattern, Pick<AssessmentPattern, "estimated">>>,
+): "other-results" | "typical-values" =>
+  pattern !== "core" && KG_PATTERNS.some((tested) => patterns[tested]?.estimated === false)
+    ? "other-results"
+    : "typical-values";
+
 // An untested Pattern's Reference Strength. Each tested kg Pattern says how strong the user is next to the typical
 // Reference Strength for their weight and gender; the untested Pattern gets its typical value at the average of those
 // shares (the typical value itself when none was tested), less ESTIMATE_SHARE. A load-limited test counts at its floor
