@@ -194,6 +194,10 @@ _Avoid_: Meal log, food log item, intake
 A food that belongs to the user, made by them from a label when no source had it, and found again by its name or barcode. The foods they logged lately are Recent, not Saved Foods.
 _Avoid_: Favourite, custom food, my foods
 
+**Saved Meal**:
+Something the user makes again and again: a name, its ingredients, each a food and a portion kept as they were when added, and how many servings they make. It's listed with the Saved Foods and logged by servings as one Food Entry, which opens to the ingredients. Another Saved Meal can't be an ingredient. A meal, alone, is Breakfast, Lunch, Dinner or Snacks.
+_Avoid_: Recipe, meal (for this), custom meal
+
 **Activity Level**:
 How much the user moves in daily life, their strength Workouts included but never their Activities: sedentary, lightly active, active or very active.
 _Avoid_: Activity (for this), lifestyle, exercise level

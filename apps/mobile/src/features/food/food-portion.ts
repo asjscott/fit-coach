@@ -5,7 +5,7 @@ import { oneDecimal, wholeNumber } from "../nutrition/format";
 export type PortionUnit = { unit: "g" } | { unit: "serving"; serving: Serving };
 
 // The amount typed, read with a decimal point or comma. Null until it's a number above 0
-function amountOf(typed: string): number | null {
+export function amountOf(typed: string): number | null {
   const text = typed.trim().replace(",", ".");
   const value = /^\d*\.?\d+$/.test(text) ? Number(text) : NaN;
   return value > 0 ? value : null;

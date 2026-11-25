@@ -21,16 +21,15 @@ import { FoodResult } from "../components/food-result";
 import { MealsCard } from "../components/meals-card";
 import { RecentAndSavedList } from "../components/recent-and-saved-list";
 import { SavedFoodEditor } from "../components/saved-food-editor";
+import { SavedMealEditor } from "../components/saved-meal-editor";
 import { ScanButton } from "../components/scan-button";
 import { WaterGlasses } from "../components/water-glasses";
 import { useFoodEntries } from "../hooks/use-food-entries";
 import { useFoodSearch } from "../hooks/use-food-search";
 import { useRecentAndSaved } from "../hooks/use-recent-and-saved";
 import { useSavedFoods } from "../hooks/use-saved-foods";
-import { copyLabel } from "../recent-and-saved";
+import { copyLabel, foodKey } from "../recent-and-saved";
 import { dayStepLabel } from "../today-so-far";
-
-const keyOf = (food: Food) => `${food.source}:${food.id}`;
 
 // Create food (with the barcode scanned, when it came from a scan), or a Saved Food being edited
 // Create food from a scan keeps the barcode, and from a search starts with the words as its name
@@ -83,6 +82,8 @@ export default function FoodView() {
   const [found, setFound] = useState<Food | null>(null);
   const [lookingUp, setLookingUp] = useState(false);
   const [editing, setEditing] = useState<Editing | null>(null);
+  // A new Saved Meal, or the one being edited, which takes the whole screen
+  const [editingMeal, setEditingMeal] = useState<{ food?: Food } | null>(null);
   // The Recent or Saved Food open to log on the Ideas and recent half
   const [chosen, setChosen] = useState<string | null>(null);
 
@@ -116,10 +117,45 @@ export default function FoodView() {
     return ok;
   };
 
+  const edit = (food: Food) => (food.source === "meal" ? setEditingMeal({ food }) : setEditing({ food }));
+
   const savedFoodChanged = () => {
     setSearchVersion((v) => v + 1);
     refreshRecent();
   };
+
+  const saved = (food: Food) => {
+    setEditing(null);
+    setEditingMeal(null);
+    savedFoodChanged();
+    // A Saved Food fixed from Ideas and recent stays open there to log
+    if (half === "ideas") setChosen(foodKey(food));
+    // A food just made or fixed opens to log it: in the search it came from, or on its own after a scan
+    else if (searching) {
+      setFound(null);
+      setOpenKey(foodKey(food));
+    } else setFound(food);
+  };
+  const deleted = () => {
+    setEditing(null);
+    setEditingMeal(null);
+    savedFoodChanged();
+    setFound(null);
+    setChosen(null);
+  };
+
+  if (editingMeal) {
+    return (
+      <SavedMealEditor
+        food={editingMeal.food}
+        choices={recent.choices}
+        onSaved={saved}
+        onDeleted={deleted}
+        onSavedFood={savedFoodChanged}
+        onClose={() => setEditingMeal(null)}
+      />
+    );
+  }
 
   return (
     <Screen scroll="screen" edges={["bottom"]}>
@@ -150,7 +186,8 @@ export default function FoodView() {
               // The meal tapped, or the one for the time of day, as Food Ideas go into
               meal={addingTo ?? day?.ideaMeal ?? null}
               onLog={log}
-              onEdit={(food) => setEditing({ food })}
+              onEdit={edit}
+              onNewMeal={() => setEditingMeal({})}
             />
           </>
         ) : (
@@ -184,7 +221,11 @@ export default function FoodView() {
             {found ? (
               <View>
                 <Text size="sm" weight="semiBold" color="muted">
-                  {found.source === "saved" ? "From your Saved Foods" : "Scanned"}
+                  {found.source === "saved"
+                    ? "From your Saved Foods"
+                    : found.source === "meal"
+                      ? "From your Saved Meals"
+                      : "Scanned"}
                 </Text>
                 <FoodResult
                   food={found}
@@ -192,7 +233,7 @@ export default function FoodView() {
                   onToggle={() => setFound(null)}
                   meal={addingTo}
                   onLog={log}
-                  onEdit={(food) => setEditing({ food })}
+                  onEdit={edit}
                 />
               </View>
             ) : null}
@@ -206,13 +247,13 @@ export default function FoodView() {
                 {isSearching ? <Spinner /> : null}
                 {foods?.map((food) => (
                   <FoodResult
-                    key={keyOf(food)}
+                    key={foodKey(food)}
                     food={food}
-                    open={openKey === keyOf(food)}
-                    onToggle={() => setOpenKey((key) => (key === keyOf(food) ? null : keyOf(food)))}
+                    open={openKey === foodKey(food)}
+                    onToggle={() => setOpenKey((key) => (key === foodKey(food) ? null : foodKey(food)))}
                     meal={addingTo}
                     onLog={log}
-                    onEdit={(food) => setEditing({ food })}
+                    onEdit={edit}
                   />
                 ))}
                 {foods && !foods.length && !isSearching && !error ? (
@@ -259,23 +300,8 @@ export default function FoodView() {
           barcode={"barcode" in editing ? editing.barcode : undefined}
           name={"name" in editing ? editing.name : undefined}
           onClose={() => setEditing(null)}
-          onSaved={(food) => {
-            setEditing(null);
-            savedFoodChanged();
-            // A Saved Food fixed from Ideas and recent stays open there to log
-            if (half === "ideas") setChosen(keyOf(food));
-            // A food just made or fixed opens to log it: in the search it came from, or on its own after a scan
-            else if (searching) {
-              setFound(null);
-              setOpenKey(keyOf(food));
-            } else setFound(food);
-          }}
-          onDeleted={() => {
-            setEditing(null);
-            savedFoodChanged();
-            setFound(null);
-            setChosen(null);
-          }}
+          onSaved={saved}
+          onDeleted={deleted}
         />
       ) : null}
     </Screen>

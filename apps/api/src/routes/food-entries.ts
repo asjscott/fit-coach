@@ -28,7 +28,7 @@ import { findUser } from "../users";
 const DayParams = z.object({ date: z.union([z.literal("today"), LocalDate]) });
 const EntryParams = z.object({ id: z.string() });
 
-const NO_SUCH_SERVING = "The food has no serving by that name";
+const NO_SUCH_PORTION = "The food can't be logged by that portion";
 
 // The date a Food Entry write is for, as requireLoggableDate takes it
 const loggableDate = async (clerkUserId: string, date: string) =>
@@ -53,7 +53,7 @@ export const foodEntryRoutes: FastifyPluginAsyncZod = async (app) => {
       const clerkUserId = userIdOf(req)!;
       const date = await loggableDate(clerkUserId, req.params.date);
       const added = await addFoodEntry(clerkUserId, date, req.body);
-      if (!added) throw badRequest(NO_SUCH_SERVING);
+      if (!added) throw badRequest(NO_SUCH_PORTION);
       return reply.code(added.created ? 201 : 200).send(added.entry);
     },
   );
@@ -88,7 +88,7 @@ export const foodEntryRoutes: FastifyPluginAsyncZod = async (app) => {
       if (!entry) return reply.code(404).send({ error: "no such food entry" });
       await loggableDate(clerkUserId, entry.date);
       const changed = await changeFoodEntry(clerkUserId, entry, req.body);
-      if (!changed) throw badRequest(NO_SUCH_SERVING);
+      if (!changed) throw badRequest(NO_SUCH_PORTION);
       return changed;
     },
   );
