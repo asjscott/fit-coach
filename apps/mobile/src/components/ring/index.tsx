@@ -12,11 +12,14 @@ export type RingProps = {
   stroke?: number;
   // Words for the middle in place of the count, such as the kcal left, drawn smaller so they fit
   centre?: string;
+  color?: "accent" | "success" | "danger";
+  // How full a second lap in danger is, 0 to 1, drawn over the first once the target is passed
+  lap?: number;
 };
 
-// Progress towards a target as an accent arc on a hairline-coloured track, with the count in the middle.
+// Progress towards a target as an arc, accent unless told otherwise, on a hairline-coloured track, with the count in the middle.
 // Decorative: the text beside it says the same in words
-export function Ring({ done, target, size = 44, stroke = 6, centre }: RingProps) {
+export function Ring({ done, target, size = 44, stroke = 6, centre, color = "accent", lap = 0 }: RingProps) {
   const { colors } = useTheme();
   const radius = (size - stroke) / 2;
   const circumference = 2 * Math.PI * radius;
@@ -36,13 +39,29 @@ export function Ring({ done, target, size = 44, stroke = 6, centre }: RingProps)
             cx={size / 2}
             cy={size / 2}
             r={radius}
-            stroke={colors.accent}
+            stroke={colors[color]}
             strokeWidth={stroke}
             fill="none"
             strokeLinecap="round"
             strokeDasharray={`${progress * circumference} ${circumference}`}
           />
         ) : null}
+        {lap > 0
+          ? // The first, wider arc leaves a gap round the lap, so it stands out from the one under it without its colour
+            [colors.bg, colors.danger].map((arcColor, i) => (
+              <Circle
+                key={arcColor}
+                cx={size / 2}
+                cy={size / 2}
+                r={radius}
+                stroke={arcColor}
+                strokeWidth={i ? stroke : stroke + 4}
+                fill="none"
+                strokeLinecap="round"
+                strokeDasharray={`${Math.min(lap, 1) * circumference} ${circumference}`}
+              />
+            ))
+          : null}
       </Svg>
       <Text weight="bold" style={{ fontSize }}>
         {centre ?? done}

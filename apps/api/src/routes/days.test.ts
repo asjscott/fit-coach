@@ -312,14 +312,14 @@ describe("GET /days/:date Food Ideas", () => {
     }
   });
 
-  // Story 59: none once the protein target (160 g) is met
-  it("offers none once the protein target is met", async () => {
+  // Spec #188 story 11: none from the bottom of the protein range (144 to 192 g)
+  it("offers none once protein is in range", async () => {
     const user = await api.signIn();
     const date = (await today(user)).date;
     await user.post(`/days/${date}/food-entries`, {
       meal: "lunch",
       food: eaten("protein", { proteinG: 100 }),
-      portion: { grams: 159 },
+      portion: { grams: 143 },
     });
     expect((await today(user)).ideas).toHaveLength(2);
 
@@ -332,8 +332,8 @@ describe("GET /days/:date Food Ideas", () => {
     expect((await today(user)).ideas).toEqual([]);
   });
 
-  // Story 60: never an idea bigger than the kcal left. 2,650 kcal less 2,500 leaves 150, then 2,600 leaves 50
-  it("offers only ideas that fit in the kcal left", async () => {
+  // Spec #188 story 12: never past the top of the kcal range (2,520 to 2,780). 2,600 leaves 180, then 2,750 leaves 30
+  it("offers only ideas that fit under the top of the kcal range", async () => {
     const user = await api.signIn();
     const date = (await today(user)).date;
     const log = (grams: number) =>
@@ -343,12 +343,12 @@ describe("GET /days/:date Food Ideas", () => {
         portion: { grams },
       });
 
-    await log(500);
+    await log(520);
     const { ideas } = await today(user);
     expect(ideas.length).toBeGreaterThan(0);
-    expect(ideas.filter((idea) => idea.nutrients.kcal > 150)).toEqual([]);
+    expect(ideas.filter((idea) => idea.nutrients.kcal > 180)).toEqual([]);
 
-    await log(20);
+    await log(30);
     expect((await today(user)).ideas).toEqual([]);
   });
 

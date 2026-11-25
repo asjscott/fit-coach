@@ -2,6 +2,7 @@ import type { Day } from "@fit/shared";
 import { describe, expect, it } from "vitest";
 import { dayRings } from "./day-rings";
 
+// Ranges of 2,520 to 2,780 kcal and 144 to 192 g of protein
 const day = (eaten: Partial<Day["totals"]> = {}, waterMl = 0): Day => ({
   date: "2026-11-18",
   targets: { kcal: 2650, proteinG: 160, fatG: 64, carbsG: 359, fibreG: 106, waterMl: 2750 },
@@ -13,35 +14,80 @@ const day = (eaten: Partial<Day["totals"]> = {}, waterMl = 0): Day => ({
 });
 
 describe("dayRings", () => {
-  // Spec #158 story 32: kcal and protein count down what's left; fibre and water count up to their targets
-  it("shows the targets with nothing eaten: all of the kcal and protein left, no fibre or water yet", () => {
+  // Spec #188 story 3: kcal and protein count down to the bottom of their ranges; fibre and water count up
+  it("shows what's left to be in range with nothing eaten, and no fibre or water yet", () => {
+    const accent = { progress: 0, color: "accent", lap: 0 };
     expect(dayRings(day())).toEqual([
-      { key: "kcal", centre: "2,650", caption: "kcal left", progress: 0, label: "2,650 kcal left of 2,650" },
-      { key: "protein", centre: "160", caption: "g protein left", progress: 0, label: "160 g protein left of 160" },
-      { key: "fibre", centre: "0", caption: "of 106 g fibre", progress: 0, label: "0 of 106 g fibre" },
-      { key: "water", centre: "0", caption: "of 2.75 L", progress: 0, label: "0 of 2.75 L water" },
+      {
+        key: "kcal",
+        centre: "2,520",
+        caption: "kcal left",
+        label: "2,520 kcal left to be in range, 2,520 to 2,780",
+        ...accent,
+      },
+      {
+        key: "protein",
+        centre: "144",
+        caption: "g protein left",
+        label: "144 g protein left to be in range, 144 to 192",
+        ...accent,
+      },
+      { key: "fibre", centre: "0", caption: "of 106 g fibre", label: "0 of 106 g fibre", ...accent },
+      { key: "water", centre: "0", caption: "of 2.75 L", label: "0 of 2.75 L water", ...accent },
     ]);
   });
 
-  it("counts down what's eaten and fills each ring by how far it is to its target", () => {
-    const [kcal, protein, fibre, water] = dayRings(day({ kcal: 1325, proteinG: 40, fibreG: 53 }, 1000));
+  it("below a range, fills towards its bottom", () => {
+    const [kcal, protein] = dayRings(day({ kcal: 1260, proteinG: 36 }));
 
-    expect(kcal).toMatchObject({ centre: "1,325", progress: 0.5 });
-    expect(protein).toMatchObject({ centre: "120", progress: 0.25 });
-    expect(fibre).toMatchObject({ centre: "53", progress: 0.5 });
+    expect(kcal).toMatchObject({ centre: "1,260", progress: 0.5, color: "accent", lap: 0 });
+    expect(protein).toMatchObject({ centre: "108", progress: 0.25, color: "accent", lap: 0 });
+  });
+
+  // Story 4: both ends of a range are in it, from amounts rounded as shown
+  it.each([
+    [{ kcal: 2520, proteinG: 144 }, "2,520", "144"],
+    [{ kcal: 2519.5, proteinG: 143.5 }, "2,520", "144"],
+    [{ kcal: 2780, proteinG: 192 }, "2,780", "192"],
+    [{ kcal: 2780.4, proteinG: 192.4 }, "2,780", "192"],
+  ])("in range with %j, is full and green with the amount", (eaten, kcalShown, proteinShown) => {
+    const [kcal, protein] = dayRings(day(eaten));
+
+    expect(kcal).toMatchObject({ centre: kcalShown, caption: "kcal in range", progress: 1, color: "success", lap: 0 });
+    expect(kcal.label).toBe(`${kcalShown} kcal, in range, 2,520 to 2,780`);
+    expect(protein).toMatchObject({ centre: proteinShown, caption: "g protein in range", color: "success", lap: 0 });
+  });
+
+  it("is below again a whole kcal or gram under the range", () => {
+    const [kcal, protein] = dayRings(day({ kcal: 2519.4, proteinG: 143 }));
+
+    expect([kcal.centre, kcal.caption, kcal.color]).toEqual(["1", "kcal left", "accent"]);
+    expect([protein.centre, protein.caption, protein.color]).toEqual(["1", "g protein left", "accent"]);
+  });
+
+  // Story 5: 3,030 is 250 past 2,780. The lap runs the 2,520 kcal from there to 5,300, and from 192 to 320 g
+  it("over a range, starts a second lap and says how far over", () => {
+    const [kcal, protein] = dayRings(day({ kcal: 3030, proteinG: 224 }));
+
+    expect(kcal).toMatchObject({ centre: "250", caption: "kcal over", progress: 1, lap: 250 / 2520 });
+    expect(kcal.label).toBe("250 kcal over the range, 2,520 to 2,780");
+    expect(protein).toMatchObject({ centre: "32", caption: "g protein over", progress: 1, lap: 0.25 });
+  });
+
+  // Story 6
+  it.each([5300, 9000])("fills the only second lap at twice the target, with %i kcal", (kcal) => {
+    expect(dayRings(day({ kcal }))[0].lap).toBe(1);
+  });
+
+  it("leaves fibre and water as they were, full in accent once met", () => {
+    const [, , fibre, water] = dayRings(day({ fibreG: 53.4 }, 1000));
+    expect(fibre).toMatchObject({ centre: "53", progress: 53.4 / 106 });
     expect(water).toMatchObject({ centre: "1", caption: "of 2.75 L", progress: 1000 / 2750 });
-  });
 
-  it("stops at none left and a full ring once a target is passed", () => {
-    const [kcal, protein] = dayRings(day({ kcal: 2800, proteinG: 170 }));
-
-    expect(kcal).toMatchObject({ centre: "0", progress: 1 });
-    expect(protein).toMatchObject({ centre: "0", progress: 1 });
-  });
-
-  it("rounds what's eaten to whole kcal and grams", () => {
-    const [kcal, protein, fibre] = dayRings(day({ kcal: 100.4, proteinG: 10.6, fibreG: 2.5 }));
-
-    expect([kcal.centre, protein.centre, fibre.centre]).toEqual(["2,550", "149", "3"]);
+    const met = dayRings(day({ fibreG: 200 }, 5000)).slice(2);
+    expect(met).toMatchObject([
+      { centre: "200", progress: 1, color: "accent", lap: 0 },
+      { centre: "5", progress: 1, color: "accent", lap: 0 },
+    ]);
   });
 });

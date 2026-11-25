@@ -23,7 +23,7 @@ export async function findDay(clerkUserId: string, date: string): Promise<Day | 
     meals,
     totals,
     waterMl: await findWater(clerkUserId, localDate),
-    ideas: foodIdeas(dietOf(user.profile), targets.kcal - totals.kcal, targets.proteinG - totals.proteinG),
+    ideas: foodIdeas(dietOf(user.profile), targets, totals),
     ideaMeal: mealForTimeOfDay(now, timeZone),
   };
 }
