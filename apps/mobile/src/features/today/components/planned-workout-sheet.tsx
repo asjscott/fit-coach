@@ -17,7 +17,7 @@ import { HStack } from "@/components/stack";
 import { Text } from "@/components/text";
 import { dayLengthOptions } from "@/features/user/components/form/fields/user-workout-length-field";
 import { builtInEquipmentLabels, noAlternativeLabel, plannedSetsLabel } from "@/features/workouts/format";
-import { exerciseName, setReading } from "@/features/workouts/library";
+import { exerciseName, targetReading } from "@/features/workouts/library";
 import { spacing, useTheme } from "@/theme";
 import {
   checkInLighterRow,
@@ -55,6 +55,8 @@ type PlannedWorkoutSheetProps = {
   // Why the Coach planned it, worded, in the order to show
   reasons: string[];
   plannedExercises: DayExercise[];
+  // Built for the deload week, so its targets are one number
+  deloadWeek?: boolean;
   estimatedSeconds: number;
   dropped: string[];
   workoutLength: DayLength;
@@ -78,6 +80,7 @@ export function PlannedWorkoutSheet({
   cue,
   reasons,
   plannedExercises,
+  deloadWeek,
   estimatedSeconds,
   dropped,
   workoutLength,
@@ -202,7 +205,7 @@ export function PlannedWorkoutSheet({
                 <View key={slug} style={[styles.exercise, { borderTopColor: colors.line }]}>
                   <Text>{exerciseName(slug)}</Text>
                   <Text size="sm" color="muted">
-                    {plannedSetsLabel({ sets, target }, unit, setReading(slug))}
+                    {plannedSetsLabel({ sets, target }, unit, targetReading(slug, deloadWeek))}
                   </Text>
                   {progressionChangeLine(change, slug) ? (
                     <Text size="sm" color="muted">

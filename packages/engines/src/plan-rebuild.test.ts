@@ -116,11 +116,12 @@ describe("isSamePlan", () => {
     expect(isSamePlan(stored, plan)).toBe(true);
   });
 
-  it.each<[string, Partial<typeof plan>]>([
+  it.each<[string, Partial<Parameters<typeof isSamePlan>[0]>]>([
     ["another week", { weekStart: "2026-11-09" }],
     ["other Sets", { plannedExercises: [{ ...plan.plannedExercises[0]!, sets: 4 }, plan.plannedExercises[1]!] }],
     ["another order", { plannedExercises: [...plan.plannedExercises].reverse() }],
     ["no cue", { cue: undefined }],
+    ["the deload week", { deloadWeek: true }],
   ])("isn't the same with %s", (_name, change) => {
     expect(isSamePlan(plan, { ...plan, ...change })).toBe(false);
   });

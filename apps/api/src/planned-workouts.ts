@@ -71,8 +71,8 @@ async function rebuildPlannedWorkout(clerkUserId: string, user: OnboardedUser) {
   });
 
   // The Muscles held back are stored as the recovering reason
-  const { weekStart, plannedExercises, cue, reasons } = built;
-  const plan = { weekStart, plannedExercises, ...(cue && { cue }) };
+  const { weekStart, plannedExercises, cue, deloadWeek, reasons } = built;
+  const plan = { weekStart, plannedExercises, ...(cue && { cue }), ...(deloadWeek && { deloadWeek }) };
   const builtFrom = planInputsKey(inputs);
   await client.withSession((session) =>
     session.withTransaction(async () => {
@@ -150,8 +150,18 @@ function toPlannedWorkout({
   createdAt,
   plannedExercises,
   cue,
+  deloadWeek,
   reasons,
 }: WithId<PlannedWorkoutDoc>) {
   const createdAtIso = createdAt.toISOString();
-  return PlannedWorkout.parse({ id, status, weekStart, createdAt: createdAtIso, plannedExercises, cue, reasons });
+  return PlannedWorkout.parse({
+    id,
+    status,
+    weekStart,
+    createdAt: createdAtIso,
+    plannedExercises,
+    cue,
+    deloadWeek,
+    reasons,
+  });
 }

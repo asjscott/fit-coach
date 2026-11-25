@@ -147,7 +147,7 @@ The results of one completed pair of Assessment Workouts: for each tested Patter
 _Avoid_: Baseline, test results, fitness test
 
 **Working Level**:
-What the Coach will prescribe next for one Exercise for this user: a load and a target reps within a rep range for a weighted Exercise (8–12 by default, 6–10 for a barbell lift, a fixed 8 for a Ballistic Exercise, and no range for a carry), a band level and reps within 10–15 for a band Exercise, reps up to 15 for a bodyweight one, seconds for a timed one. Each records the Workout that last moved it and the run of Misses it is on. An Assessment sets the first one, at the bottom of the range; a bodyweight one above 15 reps, or a timed one above 60 seconds, starts on the harder variant.
+What the Coach will prescribe next for one Exercise for this user: a load and a target reps within a rep range for a weighted Exercise (8–12 by default, 6–10 for a barbell lift, a fixed 8 for a Ballistic Exercise, and no range for a carry), a band level and reps within 10–15 for a band Exercise, reps up to 15 for a bodyweight one, seconds for a timed one. The target is an aim inside the range, not a limit: when every Set reaches it, the next is the lowest Set + 1 rep, or + 5 seconds, up to the top (20 reps once they're climbing past the range). Each records the Workout that last moved it and the run of Misses it is on. An Assessment sets the first one, at the bottom of the range; a bodyweight one above 15 reps, or a timed one above 60 seconds, starts on the harder variant.
 _Avoid_: Exercise state, starting load, current weight
 
 **Reference Strength**:
@@ -161,7 +161,7 @@ The move from one load to the next an Equipment Profile has for one kind of equi
 _Avoid_: Increment, jump, plate step
 
 **Miss**:
-A Workout in which an Exercise's Sets average more than 2 reps, or 10 seconds, short of their target. Two in a row, counted over the Workouts that include that Exercise, drop it a Load Step, or lower a bodyweight or timed target. A skipped Workout isn't one, and nothing in a deload week is, though a deload week doesn't break the run either.
+A Workout in which an Exercise's Sets average more than 2 reps, or 10 seconds, short of their target and, where there's a rep range, under its bottom: Sets inside the range are valid, so never a Miss. Bodyweight and timed Exercises have no range, so only the shortfall counts. Two in a row, counted over the Workouts that include that Exercise, drop it a Load Step, or lower a bodyweight or timed target. A skipped Workout isn't one, and nothing in a deload week is, though a deload week doesn't break the run either.
 _Avoid_: Failure, failed set, stall
 
 **PR**:

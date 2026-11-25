@@ -1,5 +1,7 @@
 import type { Exercise, InProgressWorkoutExercise, Pattern } from "@fit/shared";
 import { exerciseBySlug } from "./data/exercises";
+import { takesOneSet } from "./recovery-workout";
+import { secondsWithRest, type RestChoice } from "./rest-choice";
 import { TYPICAL_SECONDS_PER_SET } from "./workout-length";
 
 // Supersets (#96): two Exercises done in turn, a Set of one then a Set of the other with no rest between, and a rest
@@ -42,15 +44,19 @@ export function canPair(a: string, b: string) {
 
 export const secondsPerSetOf = (slug: string) => exerciseBySlug(slug)?.secondsPerSet ?? TYPICAL_SECONDS_PER_SET;
 
+// An Exercise's Set with the chosen rest in it (#178). The walk has no rest, so its time stays as it is
+export const secondsOfSet = (slug: string, rest?: RestChoice) =>
+  takesOneSet(slug) ? secondsPerSetOf(slug) : secondsWithRest(secondsPerSetOf(slug), rest);
+
 // The pair's time: Sets × (the longer Set + 30 s) for the rounds they share, and any Sets one has over the other at
 // its own pace
-export function pairSeconds(a: { slug: string; sets: number }, b: { slug: string; sets: number }) {
+export function pairSeconds(a: { slug: string; sets: number }, b: { slug: string; sets: number }, rest?: RestChoice) {
   const rounds = Math.min(a.sets, b.sets);
-  const longer = Math.max(secondsPerSetOf(a.slug), secondsPerSetOf(b.slug));
+  const longer = Math.max(secondsOfSet(a.slug, rest), secondsOfSet(b.slug, rest));
   return (
     rounds * (longer + CHANGEOVER_SECONDS) +
-    (a.sets - rounds) * secondsPerSetOf(a.slug) +
-    (b.sets - rounds) * secondsPerSetOf(b.slug)
+    (a.sets - rounds) * secondsOfSet(a.slug, rest) +
+    (b.sets - rounds) * secondsOfSet(b.slug, rest)
   );
 }
 

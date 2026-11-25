@@ -47,8 +47,9 @@ Schemas shared by app and API: packages/shared/src/workouts.ts
   Profile's loads for the Exercise (`exerciseLoadsByEquipmentKg`, one list per kind of equipment, staying on the kind
   the load is on: see below) as the user sees them, so a load a hair off the one shown never sticks, staying put past
   the lightest or heaviest, and by 5 lb or 2 kg when the loads aren't known. `set-entry.ts` also parses the typed text,
-  steps reps (1) and seconds (5), and names the load step for screen readers (`loadStepLabel`: "Next heavier weight", or
-  "Plus 5 lb" when the loads aren't known).
+  steps reps (1) and seconds (5, at every length, #177), and names the load step for screen readers (`loadStepLabel`: "Next heavier weight", or
+  "Plus 5 lb" when the loads aren't known). Timed Sets read and step in seconds; only the one-Set walk (`takesOneSet`)
+  uses minutes, through `SetReading.inMinutes`, so pass `setReading(slug)` wherever its Sets or target are shown.
 - **One Load Step is the next load the profile has** (#127). `availableLoadsKg` (`packages/engines/src/equipment.ts`)
   lists them: dumbbells, kettlebells, the bar plus plate pairs (summed in the unit the plates are sized in, so pound
   plates make exact pound loads) and a cable stack from `loads.cable_machine.stepKg`; `loadsByEquipmentKg` gives the
@@ -79,8 +80,15 @@ Schemas shared by app and API: packages/shared/src/workouts.ts
 - **The rest timer lives in memory on the LogbookProvider** (#95), not in the Logbook or storage: it belongs to the
   Workout, so it follows the user between Exercises and to Today, and a force-quit loses it. Only Log set starts or
   restarts it; Finish, Discard and sign-out end it. Its length and countdown are pure (`rest-timer.ts` in
-  `@fit/engines`): `max(45, secondsPerSet − 30)` to a fixed end time, so backgrounding doesn't skew it. The provider
-  also keeps the screen on (`expo-keep-awake`) while a Workout is in progress.
+  `@fit/engines`): on Auto `max(45, secondsPerSet − 30)`, else the choice, to a fixed end time, so backgrounding doesn't
+  skew it. −15 s and +15 s move that end (`adjustRest`), for the current rest only; −15 s with less than that left ends
+  it. The provider also keeps the screen on (`expo-keep-awake`) while a Workout is in progress.
+- **The rest choice is a phone-only preference** (#178): Auto or 30 s to 3 min in 15 s steps, picked on Today, stored in
+  device storage (`stored-rest-choice.ts`) and held as `restChoice` on the LogbookProvider. Never on the server, in the
+  Logbook or on the Planned Workout (ADR 0003), which is still built at Long on Auto. `restAfterSet`, `pairRestPlan`
+  and `daysWorkout` (`DayChoices.rest`) take it as an input: a Set is timed as its `secondsPerSet` less its Auto rest
+  plus the choice (`secondsWithRest`, `rest-choice.ts`), so a shorter rest fits more of the plan's Sets in the Length.
+  An Assessment always rests as on Auto, and the walk keeps its time and has no rest.
 - **Times follow the phone's 12- or 24-hour setting, not its locale** (#69): `timeLabel` and Android's time dialog both
   read `uses24HourClock` (`format.ts`, from `expo-localization`), and the dialog is 24-hour whatever the phone says
   without it. The iOS pickers follow the setting by themselves. Hermes alone goes by the language: en-GB with a Canadian
@@ -151,13 +159,13 @@ Schemas: packages/shared/src/assessments.ts; Set.rpe and Workout.assessment in w
   arrives late pairs with the first B it's the latest A for. A pair is assessed once, so a retried upload recomputes
   nothing.
 - **Pairing runs in one transaction** (so MongoDB must be a replica set, as Atlas is and `dev:local` makes it): the
-  Assessment and its Working Levels are stored together or not at all. Unique indexes on `aWorkoutId` and
-  `bWorkoutId` make an upload racing another retry the transaction and find the pair taken.
+  Assessment and its Working Levels are stored together or not at all. A unique index on `workoutIds`,
+  with an entry for each Workout, makes an upload racing another retry the transaction and find the pair taken.
 - **POST /workouts pairs on the 200 retry too, and a pairing failure fails the upload (500)** though the Workout is
   stored: the phone keeps it Pending, and the retry works the Assessment out.
 - **POST /workouts is refused (403) before onboarding**, so pairing always has the weight and gender `assess` needs.
   The app never offers logging before then: `(app)/_layout.tsx` sends a user who isn't onboarded to onboarding.
-- **"Newest" is by the B's `startedAt` (`Assessment.bStartedAt`), not server time.** Every Assessment is stored, but
+- **"Newest" is by the last Workout's `startedAt` (`Assessment.lastStartedAt`), not server time.** Every Assessment is stored, but
   only the newest sets the Working Levels (a retake keeps the last Block's progress, #137); `GET /assessments/latest`
   and Today's retake check use the same order.
 - **The Assessment is a snapshot**: deleting its Workouts from History leaves it and the Results link.
@@ -173,7 +181,9 @@ Schemas: packages/shared/src/assessments.ts; Set.rpe and Workout.assessment in w
   outgrown, as is a timed seed above 60 seconds at 60 (`TIMED_TOP_SECONDS`), and the planner gives an outgrown Exercise's place to its `progression` when it can (`withoutOutgrown`).
 - **Levels stored before #131 are converted at startup** (`migrateWorkingLevels` in `apps/api/src/assessments.ts`,
   rule in `migrateWorkingLevel`): any level without `misses`. It's idempotent, and makes the user's current plan due.
-- **Stored Assessments without a field the schema later required** (`referenceStrength`, `maximum`, `bStartedAt`)
+- **Assessments stored before #185** (`aWorkoutId`, `bWorkoutId`, `bStartedAt`) are converted at startup too
+  (`migrateAssessments`), which drops their old indexes and so runs before `ensureAssessmentIndexes`.
+- **Stored Assessments without a field the schema later required** (`referenceStrength`, `maximum`, `lastStartedAt`)
   fail to parse in `findLatestAssessment`: dev data only, so drop the collection.
 
 ## Planned Workouts (spec #77)
@@ -229,6 +239,9 @@ Schemas: packages/shared/src/planned-workouts.ts
 - **Starting takes a snapshot.** Exercises are copied in with `planned: {sets, target}`, dropped at Finish, so a rebuild
   can't touch a Workout under way. Discarding it shows the copy again. No Sets are logged at Start. `nextSetDraft` goes
   test load, then last Set, then target.
+- **Targets read as a range and an aim** (#183): `setTargetLabel` with `targetReading(slug, deloadWeek)`, whose range is
+  `targetRange` (target-range.ts), worked out on the phone and not stored. `deloadWeek` is on the Planned Workout, set
+  by the server, and copied to the In-progress Workout at Start; with it, targets are one number.
 - **A Workout started from a plan opens on its first Exercise short of its target** (`nextPlannedExercise`), not the
   last one as a Manual Workout does.
 - **`plannedWorkoutId` survives any edit**, and a finished Workout marks its plan finished only if it's still current.
@@ -244,7 +257,7 @@ Schemas: packages/shared/src/planned-workouts.ts
 - **Supersets are the phone's, and only to fit the Length** (#96, `supersets.ts`). `daysWorkout` pairs only when the
   Length would cut a Set: one pair at a time in priority order (`canPair`: main Pattern, never one-sided or
   Ballistic) until the Workout fits, then cuts what still doesn't. A pair is timed by `pairSeconds`, Sets ×
-  (the longer `secondsPerSet` + 30) for the rounds they share. "No supersets" (`DayChoices.noSupersets`) goes back to
+  (the longer `secondsPerSet` + 30) for the rounds they share, at the rest choice (#178). "No supersets" (`DayChoices.noSupersets`) goes back to
   cutting. At Start the partner's slug becomes `planned.supersetWith`, the partner's Workout Exercise id both ways,
   dropped at Finish with `planned`, so sync and History are unchanged. Removing one of the pair unpairs the other.
   `restAfterSet` (`rest-timer.ts`) gives no rest while the other is behind, and `pairRestSeconds` after the round.
@@ -312,12 +325,16 @@ Schema: ProgressionChange (packages/shared/src/progression.ts), on WorkingLevel.
   absent = 0; every judged Workout adds 1, a step up or new base resets it); it handles RPE 10 itself so the Workout
   still counts. It still Misses. A carry (kg level with no `repRange`) moves only to a different logged load
   (`new-base`, reps kept), whatever the RPE, and never Misses.
-- **Ladders** (#135: `bodyweightLadder`, `timedLadder`, `bandLadder`, last in `RULES`): +1 rep to 15, +5 seconds to
-  60, then `outgrown` (the planner gives the `progression` variant, whose level is seeded like any other). A band
-  level climbs 10–15 reps, then steps to the next band the primary profile lists (`ownedBandLevels`) at 10, and at the
-  heaviest climbs to 20 then is outgrown. A band Set's logged kg is ignored: the level's band is assumed.
+- **Beating the target** (#184, ADR 0007): a target inside the range is an aim, so when every judged Set reaches it the
+  next is the lowest judged Set + 1 rep (+ 5 seconds), capped at the top of the range or ladder. A weighted or band
+  target already at the top or past it is capped at 20 instead (`beatenTarget`).
+- **Ladders** (#135: `bodyweightLadder`, `timedLadder`, `bandLadder`, last in `RULES`): the lowest Set + 1 rep to 15,
+  or plus 5 seconds to 60, then `outgrown` (the planner gives the `progression` variant, whose level is seeded like any
+  other). A band level climbs 10–15 reps, then steps to the next band the primary profile lists (`ownedBandLevels`) at
+  10, and at the heaviest climbs to 20 then is outgrown. A band Set's logged kg is ignored: the level's band is assumed.
 - **Misses** (#134, `missesBringItDown`, before the #136 rules): judged Sets averaging more than 2 reps (10
-  seconds) short of target add to the level's `misses` and hold it; the second in a row drops a weighted level one
+  seconds) short of target, and under the bottom of the range for a weighted or band level, add to the level's
+  `misses` and hold it; the second in a row drops a weighted level one
   Load Step to the bottom of the range (`load-down`), or the target 2 reps when that step is over 12% lighter or there
   isn't one (`target-down`), and a bodyweight or band target 2 reps or a timed one 10 seconds, never to an easier
   variant. `moved()` sets `misses` to 0 unless the rule passes it, so any other move ends the run; UNMOVED keeps it
@@ -343,7 +360,7 @@ Schema: ProgressionChange (packages/shared/src/progression.ts), on WorkingLevel.
 - **Today**: `assessmentOffer` gives `{ kind: "retake", deloadWeek }` in the deload week (keyed by the week's Monday, so
   a dismissal lasts the week); `AssessmentSection` shows "Retake the Assessment" with Start assessment A.
 - **The retake** (`assessIfPaired`): when the user had an Assessment before, `keptByRetake` (block.ts) names the
-  Exercises it didn't test that have Sets logged in non-Assessment Workouts in the `BLOCK_WEEKS` weeks up to its A.
+  Exercises it didn't test that have Sets logged in non-Assessment Workouts in the `BLOCK_WEEKS` weeks up to its first Workout.
   Their stored levels stay; every other level is replaced by the new Assessment's, or goes.
 
 ## PRs (#130)

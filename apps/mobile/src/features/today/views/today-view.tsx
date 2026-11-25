@@ -14,7 +14,7 @@ import { useLatestAssessment } from "@/features/assessment/hooks/use-latest-asse
 import { useCurrentUser, useTimeZone, useWeightUnit } from "@/features/user/current-user-provider";
 import { ForgottenWorkoutModal } from "@/features/workouts/components/forgotten-workout-modal";
 import { PastWorkoutSheet } from "@/features/workouts/components/past-workout-sheet";
-import { elapsedLabel, estimatedTimeLabel } from "@/features/workouts/format";
+import { elapsedLabel, estimatedTimeLabel, restChoiceLabel } from "@/features/workouts/format";
 import { useHistory } from "@/features/workouts/history-provider";
 import {
   useResumeWorkout,
@@ -37,6 +37,7 @@ import { AssessmentCard, AssessmentSection } from "../components/assessment-sect
 import { LastWorkoutSection } from "../components/last-workout-section";
 import { PlannedWorkoutSheet } from "../components/planned-workout-sheet";
 import { PrNote } from "../components/pr-note";
+import { RestChoiceSheet } from "../components/rest-choice-sheet";
 import { ThisWeekSection } from "../components/this-week-section";
 import { TodayCard, TodayCardLink } from "../components/today-card";
 import { CheckInCard } from "../components/check-in-card";
@@ -89,6 +90,7 @@ export default function TodayView() {
   const { dismissed, dismiss } = useDismissedOffer();
   const tests = useChosenTests();
   const [sheetIsOpen, setSheetIsOpen] = useState(false);
+  const [restSheetIsOpen, setRestSheetIsOpen] = useState(false);
   const prNote = usePrNote();
   const { day, refresh: refreshDay } = useDay();
   const activityPrompt = useActivityLevelPrompt();
@@ -278,6 +280,16 @@ export default function TodayView() {
           <TodayCardLink label={LOG_PAST} color="onAccent" size="sm" onPress={() => setPastSheetIsOpen(true)} />
         </TodayCard>
       ) : null}
+      {card === "loading" || card === "resume" ? null : (
+        <View style={{ marginTop: spacing[3] }}>
+          <TodayCardLink
+            label={`Rest between Sets: ${restChoiceLabel(logbook.restChoice)}`}
+            color="muted"
+            size="sm"
+            onPress={() => setRestSheetIsOpen(true)}
+          />
+        </View>
+      )}
       {showsCheckIn({ card, hasDaysWorkout: !!today, checkIn: checkInState }) ? (
         <View style={{ marginTop: spacing[3] }}>
           <CheckInCard onCheckIn={keepCheckIn} />
@@ -312,6 +324,12 @@ export default function TodayView() {
           </View>
         </View>
       )}
+      <RestChoiceSheet
+        isOpen={restSheetIsOpen}
+        onClose={() => setRestSheetIsOpen(false)}
+        choice={logbook.restChoice}
+        onChoose={logbook.chooseRest}
+      />
       <PastWorkoutSheet isOpen={pastSheetIsOpen} onClose={() => setPastSheetIsOpen(false)} onPick={handleStartPast} />
       {offer && !leadingOffer ? (
         <View style={{ marginTop: spacing[5] }}>
@@ -331,6 +349,7 @@ export default function TodayView() {
           cue={plannedWorkout?.cue}
           reasons={reasonLines}
           plannedExercises={today.plannedExercises}
+          deloadWeek={today.deloadWeek}
           estimatedSeconds={today.estimatedSeconds}
           dropped={today.dropped}
           workoutLength={today.workoutLength}

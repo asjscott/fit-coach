@@ -66,9 +66,8 @@ const setByB = { movedBy: { workoutId: B_ID, startedAt: "2026-10-22T09:00:00.000
 describe("assess", () => {
   it("records the pair, when its B started and the body weight used", () => {
     expect(assess(a, b, profile, [home]).assessment).toMatchObject({
-      aWorkoutId: A_ID,
-      bWorkoutId: B_ID,
-      bStartedAt: "2026-10-22T09:00:00.000Z",
+      workoutIds: [A_ID, B_ID],
+      lastStartedAt: "2026-10-22T09:00:00.000Z",
       bodyWeightKg: 80,
     });
   });
