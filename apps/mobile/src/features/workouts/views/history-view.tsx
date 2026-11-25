@@ -11,7 +11,7 @@ import { Spinner } from "@/components/spinner";
 import { Text } from "@/components/text";
 import { useCurrentUser, useWeightUnit } from "@/features/user/current-user-provider";
 import { spacing, useTheme } from "@/theme";
-import { durationLabel, relativeDateLabel, setsLabel, volumeLabel, weekLabel } from "../format";
+import { durationLabel, recoveryWorkoutLabel, relativeDateLabel, setsLabel, volumeLabel, weekLabel } from "../format";
 import { useHistory } from "../history-provider";
 import { useRefreshHistory } from "../hooks/use-refresh-history";
 import { exerciseName } from "../library";
@@ -104,6 +104,7 @@ function WorkoutRow({ workout, now }: { workout: Row; now: Date }) {
   const unit = useWeightUnit();
   const { colors } = useTheme();
   const summary = summarizeWorkout(workout);
+  const recoveryLabel = recoveryWorkoutLabel(workout);
   return (
     <Pressable
       accessibilityRole="button"
@@ -116,6 +117,7 @@ function WorkoutRow({ workout, now }: { workout: Row; now: Date }) {
     >
       <View style={{ flex: 1, gap: 2 }}>
         <Text weight="semiBold">{relativeDateLabel(workout.startedAt, now)}</Text>
+        {recoveryLabel ? <Text size="sm">{recoveryLabel}</Text> : null}
         <Text size="sm" color="muted" numberOfLines={1}>
           {exerciseNames(workout)}
         </Text>

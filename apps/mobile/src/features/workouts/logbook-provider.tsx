@@ -12,6 +12,7 @@ import {
   type HoldRun,
   type Logbook,
   type PlannedWorkoutCopy,
+  type RecoveryExercise,
   type Rest,
   type RestChoice,
   type UnseenPrs,
@@ -72,6 +73,8 @@ type LogbookContextValue = {
   startPlannedWorkout: (plannedWorkout: PlannedWorkoutToStart) => Promise<void>;
   // Starts the Recovery Workout, linked to no plan, so the Planned Workout stays on offer
   startRecoveryWorkout: () => Promise<void>;
+  // Starts a Mobility Workout with these holds, linked to no plan either
+  startMobilityWorkout: (holds: readonly RecoveryExercise[]) => Promise<void>;
   // For a test Exercise of an Assessment Workout: the suggested next load, or done
   protocolState: Logbook["protocolState"];
   // For an Assessment Workout: its next test, and whether every test is done
@@ -340,6 +343,11 @@ export function LogbookProvider({ children }: { children: ReactNode }) {
     [logbook, run, primaryEquipment, injuries],
   );
 
+  const startMobilityWorkout = useCallback(
+    (holds: readonly RecoveryExercise[]) => run(() => logbook.startMobilityWorkout(holds, new Date())),
+    [logbook, run],
+  );
+
   const addWorkoutExercise = useCallback(
     (exercise: Pick<Exercise, "slug" | "loadType">) => run(() => logbook.addWorkoutExercise(exercise)),
     [logbook, run],
@@ -531,6 +539,7 @@ export function LogbookProvider({ children }: { children: ReactNode }) {
         startAssessment,
         startPlannedWorkout,
         startRecoveryWorkout,
+        startMobilityWorkout,
         protocolState: logbook.protocolState,
         testProgress: logbook.testProgress,
         swapTest,

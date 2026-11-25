@@ -41,6 +41,11 @@ export function useStartRecoveryWorkout() {
   return { startRecoveryWorkout: startWorkout };
 }
 
+export function useStartMobilityWorkout() {
+  const { startWorkout, starting } = useStarting(useLogbook().startMobilityWorkout);
+  return { startMobilityWorkout: startWorkout, startingMobility: starting };
+}
+
 // Resuming opens the In-progress Workout, unless it was forgotten: then `forgotten` asks for the
 // ForgottenWorkoutModal, which must be dealt with before carrying on
 export function useResumeWorkout() {

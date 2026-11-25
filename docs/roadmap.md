@@ -65,7 +65,7 @@ These were made while building and stay: whole-Workout upload instead of per-Set
 
 ## Order
 
-**M6 Progression → M7 Nutrition → #188 (ranges, Nutrition History, Saved Meals) → M8 Daily loop → M12 Progress → M10 Activities → M13 Release-lite.**
+**M6 Progression → M7 Nutrition → #188 (ranges, Nutrition History, Saved Meals) → #195 (Mobility Workouts and a hold timer) → M8 Daily loop → M12 Progress → M10 Activities → M13 Release-lite.**
 
 M9 Rewards is cut down to PR detection (M6) and a Weekly Streak (M8). M11 Meal planner is cut. The numbers are kept from the PDF so old references still point somewhere.
 
@@ -151,6 +151,15 @@ As settled for this milestone. Spec #176 later changed what a Miss is and how fa
 - **Each day keeps its Daily Targets,** so a later Weigh-in or Goal doesn't rewrite the past.
 - **Nutrition History:** a week of kcal or protein, a bar per day against its range, with the daily average.
 - **Saved Meals:** a name, ingredients and a number of servings, logged as one Food Entry. They're never planned ahead, so M11 stays cut.
+
+**Done when:** it has passed its manual checks on the phones' Release builds.
+
+## Before M8: Mobility Workouts and a hold timer (#195)
+
+**Goal:** resting never has to mean walking, and the app times every hold.
+
+- **Mobility Workout:** 10, 20 or 30 minutes of holds picked for tired Muscles, offered every day beside Walk and mobility, with 27 new Recovery Exercises.
+- **Hold timer:** full-screen, for every timed strength Exercise, and as a guided flow through a Recovery Workout's holds.
 
 **Done when:** it has passed its manual checks on the phones' Release builds.
 

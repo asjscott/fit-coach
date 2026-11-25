@@ -234,7 +234,14 @@ A Workout pairs Exercises only when it wouldn't otherwise fit its Length. Pairs 
 
 ## Recovery Workout (#97)
 
-- [ ] **R1** On a real Rest Day, Today shows the "Rest today." card with a "Recovery workout instead" link, which opens the Recovery Workout (a 20-minute walk, then four stretches). The Workout itself has passed from a training day's sheet; only the card hasn't been seen.
+- [ ] **R1** On a real Rest Day, Today shows the "Rest today." card with a "Mobility" link and a "Walk and mobility" link under it. "Walk and mobility" opens the Recovery Workout (a 20-minute walk, then four stretches). The Workout itself has passed from a training day's sheet; only the card hasn't been seen.
+  - Result: · Notes:
+
+- [ ] **R2** Mobility, from Today and from the plan's sheet: 20 min and Full body are chosen at first; changing either changes the list, and each hold's time and the total show. Start opens a Workout of those holds, and afterwards the same plan is on offer. Opened again, the length and focus are as last chosen and the holds mostly differ.
+  - Result: · Notes:
+- [ ] **R3** The day after hard leg training, Mobility starts with holds for the legs. In airplane mode, after closing the app, it still opens and starts.
+  - Result: · Notes:
+- [ ] **R4** History shows "Mobility · N min" (the time it took) and "Walk and mobility", and neither counts in This Week.
   - Result: · Notes:
 
 ## Units (#126, #148)

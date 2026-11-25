@@ -11,7 +11,7 @@ import {
   type WeightUnit,
   type Workout,
 } from "@fit/shared";
-import { pairRestPlan, type RestChoice } from "@fit/engines";
+import { pairRestPlan, recoveryWorkoutKind, type RestChoice } from "@fit/engines";
 import { getCalendars } from "expo-localization";
 import { bandLevelLabels } from "../equipment/loads";
 import { exerciseName, type SetReading, type TargetReading } from "./library";
@@ -65,6 +65,15 @@ export const estimatedTimeLabel = (seconds: number) => `About ${Math.round(secon
 
 export const durationLabel = ({ startedAt, endedAt }: WorkoutTimes) =>
   statLabel(timeStat(Date.parse(endedAt) - Date.parse(startedAt)));
+
+export const WALK_AND_MOBILITY = "Walk and mobility";
+
+// Which Recovery Workout one in History was, "Mobility · 20 min" by the time it took, or null for any other Workout
+export function recoveryWorkoutLabel(workout: WorkoutTimes & Pick<Workout, "workoutExercises">) {
+  const kind = recoveryWorkoutKind(workout);
+  if (kind === "mobility") return `Mobility · ${durationLabel(workout)}`;
+  return kind && WALK_AND_MOBILITY;
+}
 
 // How long an In-progress Workout has run, in whole minutes; 0 if the phone's clock has moved back
 export const elapsedLabel = (ms: number) => statLabel(minutesStat(Math.max(0, Math.floor(ms / 60_000))));

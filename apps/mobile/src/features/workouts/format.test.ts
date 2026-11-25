@@ -21,6 +21,7 @@ import {
   weekdayLabel,
   noAlternativeLabel,
   plannedSetsLabel,
+  recoveryWorkoutLabel,
   setTargetLabel,
   upNextLabel,
   straightToLabel,
@@ -125,6 +126,28 @@ describe("durationLabel", () => {
     const startedAt = "2026-10-23T09:00:00.000Z";
     expect(durationLabel({ startedAt, endedAt: "2026-10-25T10:00:00.000Z" })).toBe("49 h");
     expect(durationLabel({ startedAt, endedAt: "2026-10-25T10:07:00.000Z" })).toBe("49 h 7 min");
+  });
+});
+
+describe("recoveryWorkoutLabel", () => {
+  const label = (...slugs: string[]) =>
+    recoveryWorkoutLabel({
+      startedAt: "2026-11-24T09:00:00.000Z",
+      endedAt: "2026-11-24T09:20:20.000Z",
+      workoutExercises: slugs.map((slug) => ({
+        slug,
+        loadType: "timed" as const,
+        sets: [{ kind: "timed" as const, seconds: 45, loggedAt: "2026-11-24T09:10:00.000Z" }],
+      })),
+    });
+
+  it("names the Mobility Workout by the time it took, and the one with the walk", () => {
+    expect(label("pigeon", "cat-cow")).toBe("Mobility · 20 min");
+    expect(label("walk", "cat-cow")).toBe("Walk and mobility");
+  });
+
+  it("names no other Workout", () => {
+    expect(label("plank", "cat-cow")).toBeNull();
   });
 });
 
