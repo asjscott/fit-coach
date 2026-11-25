@@ -146,13 +146,13 @@ Schemas: packages/shared/src/assessments.ts; Set.rpe and Workout.assessment in w
   arrives late pairs with the first B it's the latest A for. A pair is assessed once, so a retried upload recomputes
   nothing.
 - **Pairing runs in one transaction** (so MongoDB must be a replica set, as Atlas is and `dev:local` makes it): the
-  Assessment and its Working Levels are stored together or not at all. Unique indexes on `aWorkoutId` and
-  `bWorkoutId` make an upload racing another retry the transaction and find the pair taken.
+  Assessment and its Working Levels are stored together or not at all. A unique index on `workoutIds`,
+  with an entry for each Workout, makes an upload racing another retry the transaction and find the pair taken.
 - **POST /workouts pairs on the 200 retry too, and a pairing failure fails the upload (500)** though the Workout is
   stored: the phone keeps it Pending, and the retry works the Assessment out.
 - **POST /workouts is refused (403) before onboarding**, so pairing always has the weight and gender `assess` needs.
   The app never offers logging before then: `(app)/_layout.tsx` sends a user who isn't onboarded to onboarding.
-- **"Newest" is by the B's `startedAt` (`Assessment.bStartedAt`), not server time.** Every Assessment is stored, but
+- **"Newest" is by the last Workout's `startedAt` (`Assessment.lastStartedAt`), not server time.** Every Assessment is stored, but
   only the newest sets the Working Levels (a retake keeps the last Block's progress, #137); `GET /assessments/latest`
   and Today's retake check use the same order.
 - **The Assessment is a snapshot**: deleting its Workouts from History leaves it and the Results link.
@@ -168,7 +168,9 @@ Schemas: packages/shared/src/assessments.ts; Set.rpe and Workout.assessment in w
   outgrown, as is a timed seed above 60 seconds at 60 (`TIMED_TOP_SECONDS`), and the planner gives an outgrown Exercise's place to its `progression` when it can (`withoutOutgrown`).
 - **Levels stored before #131 are converted at startup** (`migrateWorkingLevels` in `apps/api/src/assessments.ts`,
   rule in `migrateWorkingLevel`): any level without `misses`. It's idempotent, and makes the user's current plan due.
-- **Stored Assessments without a field the schema later required** (`referenceStrength`, `maximum`, `bStartedAt`)
+- **Assessments stored before #185** (`aWorkoutId`, `bWorkoutId`, `bStartedAt`) are converted at startup too
+  (`migrateAssessments`), which drops their old indexes and so runs before `ensureAssessmentIndexes`.
+- **Stored Assessments without a field the schema later required** (`referenceStrength`, `maximum`, `lastStartedAt`)
   fail to parse in `findLatestAssessment`: dev data only, so drop the collection.
 
 ## Planned Workouts (spec #77)
@@ -338,7 +340,7 @@ Schema: ProgressionChange (packages/shared/src/progression.ts), on WorkingLevel.
 - **Today**: `assessmentOffer` gives `{ kind: "retake", deloadWeek }` in the deload week (keyed by the week's Monday, so
   a dismissal lasts the week); `AssessmentSection` shows "Retake the Assessment" with Start assessment A.
 - **The retake** (`assessIfPaired`): when the user had an Assessment before, `keptByRetake` (block.ts) names the
-  Exercises it didn't test that have Sets logged in non-Assessment Workouts in the `BLOCK_WEEKS` weeks up to its A.
+  Exercises it didn't test that have Sets logged in non-Assessment Workouts in the `BLOCK_WEEKS` weeks up to its first Workout.
   Their stored levels stay; every other level is replaced by the new Assessment's, or goes.
 
 ## PRs (#130)

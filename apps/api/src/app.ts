@@ -1,7 +1,7 @@
 import cors from "@fastify/cors";
 import Fastify from "fastify";
 import { serializerCompiler, validatorCompiler } from "fastify-type-provider-zod";
-import { ensureAssessmentIndexes, migrateWorkingLevels } from "./assessments";
+import { ensureAssessmentIndexes, migrateAssessments, migrateWorkingLevels } from "./assessments";
 import { assessmentRoutes } from "./routes/assessments";
 import { checkInRoutes } from "./routes/check-ins";
 import { dayRoutes } from "./routes/days";
@@ -79,6 +79,8 @@ export async function buildApp({
 
   await setUp("create user indexes", ensureUserIndexes);
   await setUp("create workout indexes", ensureWorkoutIndexes);
+  // Before the indexes, which need every Assessment migrated
+  await setUp("migrate assessments", migrateAssessments);
   await setUp("create assessment indexes", ensureAssessmentIndexes);
   await setUp("create planned workout indexes", ensurePlannedWorkoutIndexes);
   await setUp("create check-in indexes", ensureCheckInIndexes);
