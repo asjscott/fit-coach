@@ -301,7 +301,10 @@ Schemas: packages/shared/src/planned-workouts.ts
   offer. The walk is one Set (#109, `takesOneSet`): `restAfterSet` gives no rest after it, and the logging screen
   offers "Next exercise" rather than a Set 2 (`takesAnotherSet`). Recovery Exercises have no Pattern and no strength ratio, so no Working Level. Every one
   but the walk has an `area` and `holdSeconds` (per side, #197). `recoveryWorkoutFor` replaces a hold ruled out by
-  injuries or equipment, for the phone's start and the planner's fallback alike. `recovery`, `area` and the rest need
+  injuries or equipment, for the phone's start and the planner's fallback alike. A Mobility Workout (#198) has no walk:
+  `mobilityWorkout` (`mobility-workout.ts`) picks its holds, `startMobilityWorkout` starts them with targets, and
+  `recoveryWorkoutKind` tells it from Walk and mobility by its Exercises, for History. Its length, focus and last
+  Exercises are on the phone only (`stored-mobility.ts`). `recovery`, `area` and the rest need
   `seed:exercises` re-run, as `ballistic` did.
 - **Jumps come only from the jump rule** (#105, `jumps.ts`): athletic, `UserProfile.includeJumps` on, the squat tested
   rather than estimated, and no knee or ankle injury (`avoidWith`). `possibleExercises` leaves them out, so the score

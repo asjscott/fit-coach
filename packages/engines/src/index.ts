@@ -28,6 +28,7 @@ export { isJump, JUMP_SETS, JUMP_WORKOUTS_PER_WEEK, JUMPS_PER_WORKOUT } from "./
 export * from "./local-dates";
 export * from "./logbook";
 export { nextPlannedExercise, nextStep, type NextStep } from "./next-step";
+export * from "./mobility-workout";
 export * from "./nutrition-history";
 export * from "./nutrition-ranges";
 export * from "./picker";

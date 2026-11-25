@@ -78,6 +78,18 @@ describe("POST /workouts", () => {
     expect(await currentPlan(user)).toEqual(plan);
   });
 
+  it("keeps the same Planned Workout after a Mobility Workout, which has no walk", async () => {
+    const { user, plan } = await assessedUser();
+
+    const mobility = workout(2, [
+      { slug: "pigeon", sets: [held(45)] },
+      { slug: "cat-cow", sets: [held(45), held(45)] },
+    ]);
+    expect((await user.post("/workouts", mobility)).statusCode).toBe(201);
+
+    expect(await currentPlan(user)).toEqual(plan);
+  });
+
   // #152: a Workout lasts at most 6 hours
   it("refuses a Workout that lasts more than 6 hours", async () => {
     const user = await api.signIn();
