@@ -1,4 +1,5 @@
 import type { Assessment, TestedPattern, Workout } from "@fit/shared";
+import { hasAssessmentResult } from "./assess";
 import { latestAssessmentWorkout } from "./assessment-pairing";
 import { assessmentTests, canAssess, type ChosenTests } from "./assessment-tests";
 import { weekOfBlock } from "./block";
@@ -17,7 +18,7 @@ export type AssessmentOffer =
 // What a dismissed offer is remembered by: the whole offer, so one that changes comes back
 export const offerKey = (offer: AssessmentOffer) => JSON.stringify(offer);
 
-type OfferWorkout = Pick<Workout, "id" | "startedAt" | "assessment"> & { isPending: boolean };
+type OfferWorkout = Pick<Workout, "id" | "startedAt" | "assessment" | "workoutExercises"> & { isPending: boolean };
 
 export type AssessmentOfferInput = {
   // History with the Pending Workouts
@@ -34,11 +35,21 @@ export type AssessmentOfferInput = {
   timeZone: string;
 };
 
+// The Workouts an Assessment would be made from, completed by this one: a single one, or an old B with the A before it
+const assessedWith = (workout: OfferWorkout, workouts: OfferWorkout[]) =>
+  workout.assessment === "single"
+    ? [workout]
+    : [latestAssessmentWorkout(workouts, "A", workout.startedAt), workout].filter((w) => w !== undefined);
+
 // The newest Workout that completes an Assessment, a single one or an old B, while it's still on the phone, so its
-// Assessment can't be worked out yet
+// Assessment can't be worked out yet. One that measured nothing completes none, but a B whose A isn't loaded may
 export function pendingAssessment(workouts: OfferWorkout[]): OfferWorkout | undefined {
   const [newest] = workouts
-    .filter(({ assessment }) => assessment === "single" || assessment === "B")
+    .filter((workout) => {
+      if (workout.assessment !== "single" && workout.assessment !== "B") return false;
+      const together = assessedWith(workout, workouts);
+      return hasAssessmentResult(together) || (workout.assessment === "B" && together.length === 1);
+    })
     .sort((x, y) => Date.parse(y.startedAt) - Date.parse(x.startedAt));
   return newest?.isPending ? newest : undefined;
 }
@@ -70,11 +81,13 @@ function currentOffer({
     return { kind: "retake", deloadWeek: mondayOf(now, timeZone), untested };
   }
   if (latest) return { kind: "results", assessmentId: latest.id };
-  // It's done but the phone hasn't got its Assessment yet. An A with no B doesn't count, nor a B with no A
-  const isDone = workouts.some(
-    ({ assessment, startedAt }) =>
-      assessment === "single" || (assessment === "B" && latestAssessmentWorkout(workouts, "A", startedAt)),
-  );
+  // It's done but the phone hasn't got its Assessment yet. An A with no B doesn't count, nor a B with no A,
+  // nor one that measured nothing, which makes none
+  const isDone = workouts.some((workout) => {
+    if (workout.assessment !== "single" && workout.assessment !== "B") return false;
+    const together = assessedWith(workout, workouts);
+    return (workout.assessment === "single" || together.length === 2) && hasAssessmentResult(together);
+  });
   if (isDone) return null;
   return canAssess(tests) ? { kind: "start", untested } : { kind: "unavailable" };
 }

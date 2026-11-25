@@ -1,6 +1,7 @@
 import { ChoiceModal, type Choice } from "@/components/choice-modal";
 import { useToast } from "@/contexts/toast-context";
 import { useLogbook } from "../logbook-provider";
+import { unfinishedTestsNote } from "../unfinished-tests";
 import { toastWhenUploaded } from "../upload-toast";
 
 // A Workout left more than 3 hours after its last Set was probably forgotten. The user
@@ -10,6 +11,8 @@ export function ForgottenWorkoutModal({ isOpen, onDone }: { isOpen: boolean; onD
   const { showToast } = useToast();
 
   const hasSets = workout?.workoutExercises.some((we) => we.sets.length > 0) ?? false;
+
+  const unfinished = workout && unfinishedTestsNote(workout);
 
   const handleDiscard = async () => {
     try {
@@ -23,7 +26,7 @@ export function ForgottenWorkoutModal({ isOpen, onDone }: { isOpen: boolean; onD
   const handleFinish = async () => {
     try {
       const outcome = await finishAtLastSet();
-      if (outcome.status === "pending") toastWhenUploaded(showToast, outcome);
+      if (outcome.status === "pending") toastWhenUploaded(showToast, outcome, workout ?? undefined);
       else await discard();
       onDone();
     } catch (err) {
@@ -40,7 +43,7 @@ export function ForgottenWorkoutModal({ isOpen, onDone }: { isOpen: boolean; onD
       title="Forgot to finish?"
       message={
         hasSets
-          ? "Your Workout has been open for more than 3 hours since the last Set. Finish it at the last Set, or discard it."
+          ? `Your Workout has been open for more than 3 hours since the last Set. Finish it at the last Set, or discard it.${unfinished ? ` ${unfinished.message}` : ""}`
           : "Your Workout has been open for more than 3 hours with no Sets. Discard it to carry on."
       }
       choices={choices}

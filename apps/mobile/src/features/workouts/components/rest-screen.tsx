@@ -1,4 +1,4 @@
-import { REST_ADJUSTMENT_SECONDS, restSecondsLeft, takesNoMoreSets, TEST_REPS } from "@fit/engines";
+import { isSkippedTest, REST_ADJUSTMENT_SECONDS, restSecondsLeft, takesNoMoreSets, TEST_REPS } from "@fit/engines";
 import type { InProgressWorkout, InProgressWorkoutExercise, SetTarget } from "@fit/shared";
 import { useEffect } from "react";
 import { Keyboard, Modal, ScrollView, StyleSheet, useWindowDimensions, View } from "react-native";
@@ -131,7 +131,7 @@ function Next({ workout, afterId }: { workout: InProgressWorkout; afterId: strin
     workout.assessment
       ? (test) => {
           const protocol = protocolOf(test);
-          return !protocol || !takesNoMoreSets(protocol);
+          return !isSkippedTest(test) && (!protocol || !takesNoMoreSets(protocol));
         }
       : undefined,
   );

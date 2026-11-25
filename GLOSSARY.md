@@ -139,11 +139,11 @@ _Avoid_: Off day, recovery day
 ### Assessment
 
 **Assessment Workout**:
-The Workout the Coach prescribes to measure the user's starting strength: it tests squat, push, hinge, pull and core, in that order. Before, there were two: A (squat, hinge and core) and B (push and pull). An old A and B still make one Assessment; an A alone makes none.
+The Workout the Coach prescribes to measure the user's starting strength: it tests squat, push, hinge, pull and core, in that order. Before, there were two: A (squat, hinge and core) and B (push and pull). An old A and B still make one Assessment; an A alone makes none. It can be finished with tests undone, as long as one was measured; with none, it stays in History and makes no Assessment.
 _Avoid_: Test session, baseline session, test workout
 
 **Assessment**:
-The results of one Assessment Workout, or of an old A and B: for each tested Pattern, the Exercise used, its top Set, the maximum estimated from it and the Reference Strength that follows. A test is load-limited when the heaviest load available couldn't reach RPE 9, so its maximum is only a lower bound. A bodyweight or timed test is one Set of as many reps or seconds as the user can do. A Pattern is untested when no test was safe for the user's injuries or its weighted test stopped short of RPE 9; its Reference Strength is then estimated from the other Patterns. The newest Assessment is the one that counts.
+The results of one Assessment Workout, or of an old A and B: for each tested Pattern, the Exercise used, its top Set, the maximum estimated from it and the Reference Strength that follows. A test is load-limited when the heaviest load available couldn't reach RPE 9, so its maximum is only a lower bound. A bodyweight or timed test is one Set of as many reps or seconds as the user can do. A Pattern is untested when no test was safe for the user's injuries, its test was left undone or its weighted test stopped short of RPE 9; its Reference Strength is then estimated from the other Patterns, or from typical values when none was measured in kg. The newest Assessment is the one that counts.
 _Avoid_: Baseline, test results, fitness test
 
 **Working Level**:

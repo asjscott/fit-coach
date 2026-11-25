@@ -1,6 +1,6 @@
-import { PRESETS, type EquipmentTag, type Pattern } from "@fit/shared";
+import { PRESETS, type EquipmentTag, type InjuryTag, type Pattern } from "@fit/shared";
 import { describe, expect, it } from "vitest";
-import { assessmentTests, canAssess, chooseTests, referencePatternOf } from "./assessment-tests";
+import { assessmentTests, canAssess, chooseTests, referencePatternOf, testSwap } from "./assessment-tests";
 import { EXERCISES } from "./data/exercises";
 
 const preset = (name: string) => {
@@ -137,6 +137,32 @@ describe("canAssess", () => {
 
   it("is false when no Pattern has one", () => {
     expect(canAssess(none)).toBe(false);
+  });
+});
+
+// Spec #176 story 8
+describe("testSwap", () => {
+  const pullUp = { slug: "pull-up", sets: [] };
+  const swapped = (test: Parameters<typeof testSwap>[0], tags: EquipmentTag[], injuries: InjuryTag[] = []) =>
+    testSwap(test, { tags, loads: {} }, injuries)?.slug;
+
+  it("swaps a pull-up with no Set logged for the inverted row", () => {
+    expect(swapped(pullUp, ["pull_up_bar"])).toBe("inverted-row");
+    expect(swapped(pullUp, ["rings", "table"], ["wrist"])).toBe("inverted-row");
+  });
+
+  it("offers none once the pull-up has a Set", () => {
+    const sets = [{ kind: "bodyweight" as const, reps: 1, loggedAt: "2026-10-24T09:00:00.000Z" }];
+    expect(swapped({ ...pullUp, sets }, ["pull_up_bar"])).toBeUndefined();
+  });
+
+  it("offers none when the inverted row isn't available", () => {
+    expect(swapped(pullUp, ["rings"])).toBeUndefined();
+  });
+
+  it("offers none for the other tests", () => {
+    expect(swapped({ slug: "one-arm-dumbbell-row", sets: [] }, ["pull_up_bar", "dumbbells"])).toBeUndefined();
+    expect(swapped({ slug: "inverted-row", sets: [] }, ["pull_up_bar"])).toBeUndefined();
   });
 });
 

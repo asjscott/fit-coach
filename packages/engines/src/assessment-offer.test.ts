@@ -3,10 +3,21 @@ import { describe, expect, it } from "vitest";
 import { assessmentOffer, offerKey, pendingAssessment, type AssessmentOfferInput } from "./assessment-offer";
 import { chooseTests } from "./assessment-tests";
 
-const workout = (id: string, day: string, assessment?: AssessmentMarker, isPending = false) => ({
+const loggedAt = "2026-10-20T09:10:00.000Z";
+// Its plank was held, unless it measured nothing: a squat short of RPE 9
+const workout = (id: string, day: string, assessment?: AssessmentMarker, isPending = false, measured = true) => ({
   id,
   startedAt: `2026-10-${day}T09:00:00.000Z`,
   isPending,
+  workoutExercises: [
+    measured
+      ? { slug: "plank", loadType: "timed" as const, sets: [{ kind: "timed" as const, seconds: 60, loggedAt }] }
+      : {
+          slug: "goblet-squat",
+          loadType: "external" as const,
+          sets: [{ kind: "external" as const, kg: 10, reps: 5, rpe: 7, loggedAt }],
+        },
+  ],
   ...(assessment && { assessment }),
 });
 const NO_TESTS = { squat: null, push: null, hinge: null, pull: null, core: null };
@@ -91,6 +102,33 @@ describe("assessmentOffer", () => {
   it("offers nothing while a synced one's Assessment hasn't reached the phone", () => {
     expect(offer([workout("s1", "22", "single")], null)).toBeNull();
     expect(offer([workout("b1", "22", "B"), workout("a1", "20", "A")], null)).toBeNull();
+  });
+
+  // Spec #176 story 7
+  it("offers it again after one that measured nothing, synced or still Pending", () => {
+    expect(offer([workout("s1", "22", "single", false, false)], null)).toMatchObject({ kind: "start" });
+    expect(offer([workout("s1", "22", "single", true, false)], null)).toMatchObject({ kind: "start" });
+  });
+
+  it("offers it again after an old A and B that measured nothing between them", () => {
+    const pair = (aMeasured: boolean, isPending: boolean) => [
+      workout("b1", "22", "B", isPending, false),
+      workout("a1", "20", "A", false, aMeasured),
+    ];
+    expect(offer(pair(false, false), null)).toMatchObject({ kind: "start" });
+    expect(offer(pair(false, true), null)).toMatchObject({ kind: "start" });
+    expect(offer(pair(true, false), null)).toBeNull();
+    expect(offer(pair(true, true), null)).toMatchObject({ kind: "syncing" });
+  });
+
+  it("keeps linking to the Results after a retake that measured nothing", () => {
+    const workouts = [workout("s2", "22", "single", true, false), workout("s1", "12", "single")];
+    expect(offer(workouts, assessment("x1", "12"))).toMatchObject({ kind: "results" });
+  });
+
+  it("says a measured one is syncing under a newer one that measured nothing", () => {
+    const workouts = [workout("s2", "22", "single", true, false), workout("s1", "21", "single", true)];
+    expect(offer(workouts, null)).toEqual({ kind: "syncing", workoutId: "s1" });
   });
 
   it("links to the Results once the Assessment is on the server", () => {

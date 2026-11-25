@@ -19,6 +19,7 @@ import {
   finishTimes,
   LogbookError,
   type DeviceStorage,
+  type Logbook,
   type PlannedWorkoutSource,
   type PreviousSetsSource,
 } from "./logbook";
@@ -1238,6 +1239,99 @@ describe("Logbook: Assessment Workouts", () => {
       const logged = await logbook.logSet(plank.id, { kind: "timed", seconds: 75 }, at("09:20"));
       expect(logged.sets).toEqual([{ kind: "timed", seconds: 75, loggedAt: "2026-10-24T09:20:00.000Z" }]);
       expect(logbook.protocolState(workout, logged, bodyweightOnly)).toEqual({ status: "done" });
+    });
+  });
+
+  // Spec #176 story 8
+  describe("a pull-up test", () => {
+    const bar: EquipmentProfile = { ...dumbbellsOnly, tags: ["pull_up_bar"], loads: {} };
+    const pullOf = (workout: Awaited<ReturnType<Logbook["startAssessment"]>>) => workout.workoutExercises[3];
+
+    it("is swapped for the inverted row in its place, with that Exercise's Previous Sets", async () => {
+      const previous = {
+        startedAt: "2026-10-01T09:00:00.000Z",
+        endedAt: "2026-10-01T10:00:00.000Z",
+        sets: [{ kind: "bodyweight" as const, reps: 9, loggedAt: "2026-10-01T09:10:00.000Z" }],
+      };
+      const { logbook } = setup(memoryStorage(), fakePreviousSets({ "inverted-row": previous }));
+      const workout = await logbook.startAssessment({ equipmentProfile: bar, ...user }, at("09:00"));
+      const pull = pullOf(workout);
+      expect(pull.slug).toBe("pull-up");
+
+      await logbook.swapTest(pull.id, bar, []);
+
+      const swapped = (await logbook.inProgress())!.workoutExercises;
+      expect(swapped.map(({ slug }) => slug)).toEqual([
+        "bodyweight-squat",
+        "push-up",
+        "single-leg-glute-bridge",
+        "inverted-row",
+        "plank",
+      ]);
+      expect(swapped[3]).toEqual({
+        id: pull.id,
+        slug: "inverted-row",
+        loadType: "bodyweight",
+        sets: [],
+        previousSets: previous,
+      });
+    });
+
+    it("swaps with no signal", async () => {
+      const { logbook } = setup(memoryStorage(), offline);
+      const workout = await logbook.startAssessment({ equipmentProfile: bar, ...user }, at("09:00"));
+      await logbook.swapTest(pullOf(workout).id, bar, []);
+      expect((await logbook.inProgress())!.workoutExercises[3].slug).toBe("inverted-row");
+    });
+
+    it("refuses a swap that isn't offered, or once it has a Set", async () => {
+      const { logbook } = setup();
+      const workout = await logbook.startAssessment({ equipmentProfile: bar, ...user }, at("09:00"));
+      const pull = pullOf(workout);
+      await expect(logbook.swapTest(pull.id, { ...bar, tags: ["rings"] }, [])).rejects.toThrow(LogbookError);
+      await logbook.logSet(pull.id, { kind: "bodyweight", reps: 2 }, at("09:05"));
+      await expect(logbook.swapTest(pull.id, bar, [])).rejects.toThrow(LogbookError);
+      expect((await logbook.inProgress())!.workoutExercises[3].slug).toBe("pull-up");
+    });
+
+    it("is skipped, so the next test follows it and it doesn't hold up finishing", async () => {
+      const { logbook, uploader } = setup();
+      const workout = await logbook.startAssessment({ equipmentProfile: bar, ...user }, at("09:00"));
+      const [squat, push, hinge, pull, plank] = workout.workoutExercises;
+      for (const { id } of [squat, push, hinge]) {
+        await logbook.logSet(id, { kind: "bodyweight", reps: 10 }, at("09:05"));
+      }
+      const progress = async () => logbook.testProgress((await logbook.inProgress())!, bar);
+      expect(await progress()).toEqual({ nextTestId: pull.id, allDone: false });
+
+      await logbook.skipTest(pull.id);
+      expect(await progress()).toEqual({ nextTestId: plank.id, allDone: false });
+
+      await logbook.logSet(plank.id, { kind: "timed", seconds: 60 }, at("09:20"));
+      expect(await progress()).toEqual({ nextTestId: undefined, allDone: true });
+      await logbook.finish({ startedAt: at("09:00"), endedAt: at("09:30"), now: at("09:30") });
+      await logbook.sync();
+      expect(uploader.uploaded[0].workoutExercises.map(({ slug }) => slug)).not.toContain("pull-up");
+    });
+
+    it("can still be done once skipped, and deleting that Set opens it again", async () => {
+      const { logbook } = setup();
+      const workout = await logbook.startAssessment({ equipmentProfile: bar, ...user }, at("09:00"));
+      const { id } = pullOf(workout);
+      await logbook.skipTest(id);
+      await logbook.logSet(id, { kind: "bodyweight", reps: 2 }, at("09:05"));
+      await expect(logbook.skipTest(id)).rejects.toThrow(LogbookError);
+      await logbook.deleteSet(id, 0);
+      expect(pullOf((await logbook.inProgress())!).skipped).toBeUndefined();
+    });
+
+    it("can be swapped once skipped", async () => {
+      const { logbook } = setup();
+      const workout = await logbook.startAssessment({ equipmentProfile: bar, ...user }, at("09:00"));
+      const { id } = pullOf(workout);
+      await logbook.skipTest(id);
+      await logbook.swapTest(id, bar, []);
+      expect(pullOf((await logbook.inProgress())!).skipped).toBeUndefined();
     });
   });
 

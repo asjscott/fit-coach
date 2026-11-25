@@ -45,7 +45,7 @@ export default function WorkoutView() {
 
 function InProgress({ workout }: { workout: InProgressWorkout }) {
   const { colors } = useTheme();
-  const { discard, testProgress } = useLogbook();
+  const { discard, testProgress, skipTest } = useLogbook();
   const primaryEquipment = usePrimaryEquipmentProfile();
   const { showToast } = useToast();
   const leaveWorkout = useLeaveWorkout();
@@ -61,6 +61,13 @@ function InProgress({ workout }: { workout: InProgressWorkout }) {
   // planned Exercise
   const nextId = tests ? tests.nextTestId : nextPlanned;
   const next = nextId ? { label: tests ? "Next test" : "Next exercise", onPress: () => choose(nextId) } : undefined;
+  // The next test once this one is skipped too
+  const skip = async (id: string) => {
+    const skipped = workoutExercises.map((we) => (we.id === id ? { ...we, skipped: true } : we));
+    const after = primaryEquipment && testProgress({ ...workout, workoutExercises: skipped }, primaryEquipment);
+    await skipTest(id);
+    if (after?.nextTestId) choose(after.nextTestId);
+  };
   const groups = supersetGroups(workoutExercises);
   const pairs = groups.filter((group) => group.length === 2);
 
@@ -118,6 +125,7 @@ function InProgress({ workout }: { workout: InProgressWorkout }) {
                   position={i}
                   count={workoutExercises.length}
                   next={next}
+                  onSkipTest={() => skip(workoutExercise.id)}
                 />
               </View>
             ) : (

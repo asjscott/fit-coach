@@ -1,3 +1,4 @@
+import { isSkippedTest } from "@fit/engines";
 import type { InProgressWorkoutExercise } from "@fit/shared";
 import { StyleSheet, View } from "react-native";
 import { Icon } from "@/components/icons";
@@ -27,7 +28,9 @@ export function WorkoutExerciseRow({ workoutExercise, position, onPress }: Worko
   const name = exerciseName(workoutExercise.slug);
   const { sets, previousSets, planned } = workoutExercise;
   const reading = targetReading(workoutExercise.slug, workout?.deloadWeek);
-  const summary = workoutExerciseSummary(sets, unit, previousSets?.sets, planned, reading);
+  const summary = isSkippedTest(workoutExercise)
+    ? "Skipped"
+    : workoutExerciseSummary(sets, unit, previousSets?.sets, planned, reading);
   const done = sets.length > 0;
 
   return (

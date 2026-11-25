@@ -168,6 +168,13 @@ Schemas: packages/shared/src/assessments.ts; Set.rpe and Workout.assessment in w
 - **Load-limited means different things in the two places.** The Logbook ends a test only when a Set past 12 reps
   short of RPE 9 was at the heaviest load the Equipment Profile has (or the loads aren't known); `assess` has no loads,
   so any last Set past 12 reps without a top Set is load-limited.
+- **Finishing early** (#187): `hasAssessmentResult` and `unmeasuredTests` (`assess.ts`) say what counts as measured, by
+  `assess`'s own top Set rule, for everyone: the server makes no Assessment when nothing was, Today offers it again
+  (`assessmentOffer`, `pendingAssessment`), the toast says only "Workout saved", and Finish warns
+  (`features/workouts/unfinished-tests.ts`). An old A or B finishes with no warning.
+- **A pull-up test with no Set** can be swapped for the inverted row (`testSwap`, `Logbook.swapTest`), keeping its place
+  and id. Any test with no Set can be skipped (`Logbook.skipTest`): `skipped` on the In-progress Workout Exercise, which
+  `testProgress` passes over and logging a Set takes off.
 - **An old A with no B** stays in History and counts for nothing: Today offers the single Assessment to a user without
   an Assessment, whatever As they have.
 - **Pairing** (old A and B only): a B pairs with the latest A that started before it, unless that A is already in an
