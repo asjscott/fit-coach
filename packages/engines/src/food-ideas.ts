@@ -14,8 +14,8 @@ const KINDS: Record<DietKind, FoodIdeaKind[]> = {
 // How many Food Ideas the Coach offers at once
 const OFFERED = 2;
 
-// The Food Ideas to fill what's left of the day: none once protein is in range, otherwise up to two the Diet allows, the
-// most protein per kcal first, that even together stay under the top of the kcal range (spec #188 stories 11 and 12)
+// The Food Ideas to fill what's left of the day: none once protein is in range, otherwise up to two the Diet allows,
+// the most protein per kcal first, that together stay under the top of the kcal range (spec #188 stories 11 and 12)
 export function foodIdeas(
   diet: Diet,
   targets: Pick<DailyTargets, "kcal" | "proteinG">,

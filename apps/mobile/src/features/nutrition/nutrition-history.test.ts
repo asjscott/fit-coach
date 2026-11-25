@@ -1,6 +1,6 @@
 import type { NutritionWeek } from "@fit/shared";
 import { describe, expect, it } from "vitest";
-import { historyChart, historyWeekLabel } from "./nutrition-history";
+import { nutritionHistoryChart, nutritionHistoryWeekLabel } from "./nutrition-history";
 
 // Ranges of 2,520 to 2,780 kcal and 144 to 192 g of protein
 const targets = { kcal: 2650, proteinG: 160 };
@@ -17,25 +17,26 @@ const week = (logged: ([number, number] | null)[], today = "2026-11-25"): Nutrit
   })),
 });
 
-const labels = (w: NutritionWeek, measure: "kcal" | "protein") => historyChart(w, measure).bars.map((bar) => bar.label);
+const labels = (w: NutritionWeek, measure: "kcal" | "protein") =>
+  nutritionHistoryChart(w, measure).bars.map((bar) => bar.label);
 
-describe("historyChart bars", () => {
+describe("nutritionHistoryChart bars", () => {
   // Spec #188 story 24: the ring's colours, red when the ring would have its red lap
   it("take the colour of their ring", () => {
-    const { bars } = historyChart(week([[2519, 0], [2520, 0], [2780, 0], [2781, 0], null]), "kcal");
+    const { bars } = nutritionHistoryChart(week([[2519, 0], [2520, 0], [2780, 0], [2781, 0], null]), "kcal");
 
     expect(bars.map((bar) => bar.color)).toEqual(["accent", "success", "success", "danger", null, null, null]);
   });
 
   it("are as tall as their amount, on an axis from 0 that fits the tallest", () => {
-    const { bars, ticks } = historyChart(week([[1500, 0], [3000, 0], [0, 0], null]), "kcal");
+    const { bars, ticks } = nutritionHistoryChart(week([[1500, 0], [3000, 0], [0, 0], null]), "kcal");
 
     expect(ticks.map((tick) => tick.label)).toEqual(["0", "1,000", "2,000", "3,000"]);
     expect(bars.map((bar) => bar.height)).toEqual([0.5, 1, 0, 0, 0, 0, 0]);
   });
 
   it("fit a week far over its range", () => {
-    const { bars, ticks } = historyChart(week([[8100, 0]]), "kcal");
+    const { bars, ticks } = nutritionHistoryChart(week([[8100, 0]]), "kcal");
 
     expect(ticks.at(-1)).toEqual({ label: "10,000", at: 1 });
     expect(bars[0].height).toBeCloseTo(0.81);
@@ -87,7 +88,7 @@ describe("historyChart bars", () => {
   });
 
   it("give the same words in parts, to show when a bar is tapped", () => {
-    const { bars } = historyChart(week([[3030, 100], null]), "kcal");
+    const { bars } = nutritionHistoryChart(week([[3030, 100], null]), "kcal");
 
     expect(bars[0]).toMatchObject({
       title: "Monday",
@@ -102,9 +103,9 @@ describe("historyChart bars", () => {
   });
 });
 
-describe("historyChart band", () => {
+describe("nutritionHistoryChart band", () => {
   it("lies across the days that share a range", () => {
-    const { band, ticks } = historyChart(week([[2000, 0]]), "kcal");
+    const { band, ticks } = nutritionHistoryChart(week([[2000, 0]]), "kcal");
 
     expect(ticks.at(-1)?.label).toBe("3,000");
     expect(band).toEqual([{ left: 0, width: 1, bottom: 2520 / 3000, height: expect.closeTo(260 / 3000) }]);
@@ -114,7 +115,7 @@ describe("historyChart band", () => {
     const changed = week([]);
     changed.days[5].targets = changed.days[6].targets = { kcal: 2000, proteinG: 160 };
 
-    const [before, after] = historyChart(changed, "kcal").band;
+    const [before, after] = nutritionHistoryChart(changed, "kcal").band;
 
     expect(before).toMatchObject({ left: 0, width: expect.closeTo(5 / 7) });
     expect(after).toMatchObject({ left: expect.closeTo(5 / 7), width: expect.closeTo(2 / 7) });
@@ -123,16 +124,16 @@ describe("historyChart band", () => {
   });
 });
 
-describe("historyChart average", () => {
+describe("nutritionHistoryChart average", () => {
   // Story 22
   it("is a line with its number", () => {
-    const { average } = historyChart(week([[2000, 0], [1000, 0], null]), "kcal");
+    const { average } = nutritionHistoryChart(week([[2000, 0], [1000, 0], null]), "kcal");
 
     expect(average).toEqual({ at: 0.5, number: "1,500", label: "Daily average 1,500 kcal" });
   });
 
   it("hides the axis numbers it would be drawn over", () => {
-    const { ticks } = historyChart(
+    const { ticks } = nutritionHistoryChart(
       week([
         [2000, 0],
         [2100, 0],
@@ -145,23 +146,26 @@ describe("historyChart average", () => {
 
   // Story 29
   it("is none, and says so, with nothing to average", () => {
-    expect(historyChart(week([]), "kcal")).toMatchObject({ average: null, nothingToAverage: "No days to average" });
-    expect(historyChart(week([[2000, 0]], "2026-11-16"), "kcal")).toMatchObject({
+    expect(nutritionHistoryChart(week([]), "kcal")).toMatchObject({
+      average: null,
+      nothingToAverage: "No days to average",
+    });
+    expect(nutritionHistoryChart(week([[2000, 0]], "2026-11-16"), "kcal")).toMatchObject({
       average: null,
       nothingToAverage: "No days to average yet",
     });
   });
 });
 
-describe("historyWeekLabel", () => {
+describe("nutritionHistoryWeekLabel", () => {
   it.each([
     ["2026-11-22", "This week"],
     ["2026-11-23", "Last week"],
   ])("on %s is %s", (today, label) => {
-    expect(historyWeekLabel(week([], today))).toBe(label);
+    expect(nutritionHistoryWeekLabel(week([], today))).toBe(label);
   });
 
   it("is the week's dates further back", () => {
-    expect(historyWeekLabel(week([], "2026-12-25"))).toMatch(/16.*22/);
+    expect(nutritionHistoryWeekLabel(week([], "2026-12-25"))).toMatch(/16.*22/);
   });
 });

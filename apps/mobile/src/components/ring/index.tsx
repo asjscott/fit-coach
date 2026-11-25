@@ -17,8 +17,8 @@ export type RingProps = {
   lap?: number;
 };
 
-// Progress towards a target as an arc, accent unless told otherwise, on a hairline-coloured track, with the count in the middle.
-// Decorative: the text beside it says the same in words
+// Progress towards a target as an arc, accent unless told otherwise, on a hairline-coloured track, with the count in
+// the middle. Decorative: the text beside it says the same in words
 export function Ring({ done, target, size = 44, stroke = 6, centre, color = "accent", lap = 0 }: RingProps) {
   const { colors } = useTheme();
   const radius = (size - stroke) / 2;
@@ -47,7 +47,7 @@ export function Ring({ done, target, size = 44, stroke = 6, centre, color = "acc
           />
         ) : null}
         {lap > 0
-          ? // The first, wider arc leaves a gap round the lap, so it stands out from the one under it without its colour
+          ? // The first, wider arc leaves a gap round the lap, so it stands out from the one under it in shape too
             [colors.bg, colors.danger].map((arcColor, i) => (
               <Circle
                 key={arcColor}

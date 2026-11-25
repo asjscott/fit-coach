@@ -11,7 +11,7 @@ export const foodRoutes: FastifyPluginAsyncZod<{ foodSources: FoodSources }> = a
   app.addHook("preHandler", requireAuth);
 
   // Foods matching the words: the user's Saved Foods and Saved Meals by name, then generic before branded (spec #158
-  // stories 64 and 69, #188 story 38). When the outside source is down those are still listed, flagged so the phone can say so
+  // stories 64 and 69, #188 story 38). With the outside source down, only theirs, flagged so the phone can say so
   app.get(
     "/foods/search",
     { schema: { querystring: FoodSearchQuery, response: { 200: FoodSearchResults } } },

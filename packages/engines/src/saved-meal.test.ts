@@ -30,7 +30,7 @@ const bowl = savedMealFood({ id: "m1", name: "Chicken and rice", servings: 4, in
 describe("savedMealFood", () => {
   it("offers a Saved Meal as a food whose serving is its weight over its servings", () => {
     expect(bowl).toMatchObject({
-      source: "meal",
+      source: "saved_meal",
       id: "m1",
       name: "Chicken and rice",
       servings: [{ label: "1 serving", grams: 250 }],

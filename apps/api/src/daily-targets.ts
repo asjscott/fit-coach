@@ -30,9 +30,9 @@ type OnboardedDoc = NonNullable<Awaited<ReturnType<typeof findUser>>>;
 
 const todayOf = (user: OnboardedDoc) => localDateOf(new Date(), user.timeZone ?? "UTC");
 
-function currentTargets(user: OnboardedDoc, date: string): DailyTargets {
+function currentTargets(user: OnboardedDoc, today: string): DailyTargets {
   const { weightKg, ...profile } = TargetsProfile.parse(user.profile);
-  return dailyTargets(profile, weightKg, date);
+  return dailyTargets(profile, weightKg, today);
 }
 
 // Stores today's Daily Targets, today being today in the user's timezone, so they stand once the day is over. Called
@@ -70,5 +70,5 @@ export async function targetsOnDates(user: OnboardedDoc, dates: string[]): Promi
   const kept = await keptTargets
     .find({ clerkUserId: user.clerkUserId, date: { $in: dates.filter((date) => date <= today) } })
     .toArray();
-  return dates.map((date) => kept.find((doc) => doc.date === date)?.targets ?? currentTargets(user, date));
+  return dates.map((date) => kept.find((doc) => doc.date === date)?.targets ?? currentTargets(user, today));
 }

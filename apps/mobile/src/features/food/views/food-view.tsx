@@ -45,14 +45,6 @@ export default function FoodView() {
   const timeZone = useTimeZone();
   // Opens on Today so far (spec #158 story 43)
   const [half, setHalf] = useState<FoodHalf>("today");
-  // Today's summary opens the Ideas half; the ask is cleared once it's followed, so the next one is followed too
-  const { half: askedHalf } = useLocalSearchParams<{ half?: string }>();
-  useEffect(() => {
-    if (askedHalf !== "ideas") return;
-    setHalf("ideas");
-    setDaysBefore(0);
-    router.setParams({ half: undefined });
-  }, [askedHalf]);
   const [daysBefore, setDaysBefore] = useState(0);
   // Today and the 6 days before it, in the user's timezone, as the API counts them
   const date = loggableDates(new Date(), timeZone)[daysBefore];
@@ -77,7 +69,7 @@ export default function FoodView() {
   const search = useRef<TextInputInstance>(null);
   // Bumped when a Saved Food changes, so search shows it as it is now
   const [searchVersion, setSearchVersion] = useState(0);
-  const { foods, isSearching, error } = useFoodSearch(query, searchVersion);
+  const { foods, isSearching, error } = useFoodSearch(query, { version: searchVersion });
   const searching = query.trim().length >= 2;
   const savedFoods = useSavedFoods();
   // The food a scan found, or the one just made with Create food, open to log
@@ -85,7 +77,26 @@ export default function FoodView() {
   const [lookingUp, setLookingUp] = useState(false);
   const [editing, setEditing] = useState<Editing | null>(null);
   // A new Saved Meal, perhaps started from a day's meal, or the one being edited, which takes the whole screen
-  const [editingMeal, setEditingMeal] = useState<{ food?: Food; start?: SavedMealForm } | null>(null);
+  const [editingSavedMeal, setEditingSavedMeal] = useState<{ food?: Food; start?: SavedMealForm } | null>(null);
+  // Today's rings open Today so far and its summary the Ideas half, once the Saved Meal editor, if open, is left. The
+  // ask is cleared once it's noted, so the next one is followed too
+  const { half: askedHalf } = useLocalSearchParams<{ half?: string }>();
+  const [leavingFor, setLeavingFor] = useState<FoodHalf | null>(null);
+  useEffect(() => {
+    if (askedHalf !== "ideas" && askedHalf !== "today") return;
+    setLeavingFor(askedHalf);
+    router.setParams({ half: undefined });
+  }, [askedHalf]);
+  const follow = useCallback(() => {
+    if (!leavingFor) return;
+    setEditingSavedMeal(null);
+    setHalf(leavingFor);
+    setDaysBefore(0);
+    setLeavingFor(null);
+  }, [leavingFor]);
+  useEffect(() => {
+    if (!editingSavedMeal) follow();
+  }, [editingSavedMeal, follow]);
   const { showToast } = useToast();
   // The Recent or Saved Food open to log on the Ideas and recent half
   const [chosen, setChosen] = useState<string | null>(null);
@@ -120,19 +131,19 @@ export default function FoodView() {
     return ok;
   };
 
-  const edit = (food: Food) => (food.source === "meal" ? setEditingMeal({ food }) : setEditing({ food }));
+  const edit = (food: Food) => (food.source === "saved_meal" ? setEditingSavedMeal({ food }) : setEditing({ food }));
 
   const savedFoodChanged = () => {
     setSearchVersion((v) => v + 1);
     refreshRecent();
   };
 
-  const saved = (food: Food) => {
+  const foodSaved = (food: Food) => {
     setEditing(null);
-    setEditingMeal(null);
+    setEditingSavedMeal(null);
     savedFoodChanged();
     // Made from what's already logged, so it isn't offered to log again
-    if (editingMeal?.start) showToast("Saved Meal saved", { type: "success" });
+    if (editingSavedMeal?.start) showToast("Saved Meal saved", { type: "success" });
     // A Saved Food fixed from Ideas and recent stays open there to log
     else if (half === "ideas") setChosen(foodKey(food));
     // A food just made or fixed opens to log it: in the search it came from, or on its own after a scan
@@ -141,24 +152,27 @@ export default function FoodView() {
       setOpenKey(foodKey(food));
     } else setFound(food);
   };
-  const deleted = () => {
+  const foodDeleted = () => {
     setEditing(null);
-    setEditingMeal(null);
+    setEditingSavedMeal(null);
     savedFoodChanged();
     setFound(null);
     setChosen(null);
   };
 
-  if (editingMeal) {
+  if (editingSavedMeal) {
     return (
       <SavedMealEditor
-        food={editingMeal.food}
-        start={editingMeal.start}
+        food={editingSavedMeal.food}
+        start={editingSavedMeal.start}
         choices={recent.choices}
-        onSaved={saved}
-        onDeleted={deleted}
-        onSavedFood={savedFoodChanged}
-        onClose={() => setEditingMeal(null)}
+        onSaved={foodSaved}
+        onDeleted={foodDeleted}
+        onFoodCreated={savedFoodChanged}
+        leaving={leavingFor !== null}
+        onLeave={follow}
+        onStay={() => setLeavingFor(null)}
+        onClose={() => setEditingSavedMeal(null)}
       />
     );
   }
@@ -193,7 +207,7 @@ export default function FoodView() {
               meal={addingTo ?? day?.ideaMeal ?? null}
               onLog={log}
               onEdit={edit}
-              onNewMeal={() => setEditingMeal({})}
+              onNewSavedMeal={() => setEditingSavedMeal({})}
             />
           </>
         ) : (
@@ -241,7 +255,7 @@ export default function FoodView() {
                 <Text size="sm" weight="semiBold" color="muted">
                   {found.source === "saved"
                     ? "From your Saved Foods"
-                    : found.source === "meal"
+                    : found.source === "saved_meal"
                       ? "From your Saved Meals"
                       : "Scanned"}
                 </Text>
@@ -300,7 +314,7 @@ export default function FoodView() {
                 onAddTo={addTo}
                 copyLabel={copyLabel(daysBefore)}
                 onCopy={(meal: Meal) => entries.copy(date, meal)}
-                onSaveAsMeal={(entries) => setEditingMeal({ start: savedMealFormFromEntries(entries) })}
+                onSaveAsMeal={(entries) => setEditingSavedMeal({ start: savedMealFormFromEntries(entries) })}
                 onChange={async (entry: FoodEntry, change: FoodEntryChange) => {
                   const ok = await entries.change(entry.id, change);
                   // A Food Entry moved to another meal is shown there
@@ -319,8 +333,8 @@ export default function FoodView() {
           barcode={"barcode" in editing ? editing.barcode : undefined}
           name={"name" in editing ? editing.name : undefined}
           onClose={() => setEditing(null)}
-          onSaved={saved}
-          onDeleted={deleted}
+          onSaved={foodSaved}
+          onDeleted={foodDeleted}
         />
       ) : null}
     </Screen>

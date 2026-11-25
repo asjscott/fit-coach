@@ -33,7 +33,7 @@ export function FoodResult({
   onEdit?: (food: Food) => void;
 }) {
   const editLabel =
-    food.source === "saved" ? "Edit saved food" : food.source === "meal" ? "Edit saved meal" : undefined;
+    food.source === "saved" ? "Edit saved food" : food.source === "saved_meal" ? "Edit saved meal" : undefined;
   return (
     <FoodRow food={food} open={open} onToggle={onToggle}>
       {/* Starts again from the food as it is now when a Saved Food is edited, so its serving is the new one */}

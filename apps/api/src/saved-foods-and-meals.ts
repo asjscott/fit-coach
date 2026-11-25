@@ -1,9 +1,7 @@
 import type { Food } from "@fit/shared";
+import { byName } from "./name-search";
 import { listSavedFoods, searchSavedFoods } from "./saved-foods";
 import { listSavedMeals, searchSavedMeals } from "./saved-meals";
-
-// As MongoDB's BY_NAME collation orders each list
-const byName = (a: Food, b: Food) => a.name.localeCompare(b.name, "en", { sensitivity: "accent" });
 
 // The user's Saved Foods and Saved Meals together, by name (spec #188 story 38)
 export async function savedFoodsAndMeals(clerkUserId: string): Promise<Food[]> {

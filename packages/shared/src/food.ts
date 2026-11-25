@@ -3,7 +3,7 @@ import { RequestId } from "./request-id";
 
 // Where a food came from: USDA FoodData Central, Open Food Facts, the user's Saved Foods, the Coach's Food Ideas, Tell
 // the coach, whose foods and their nutrients come from the words the user typed, or the user's Saved Meals
-export const FoodSource = z.enum(["usda", "off", "saved", "idea", "coach", "meal"]);
+export const FoodSource = z.enum(["usda", "off", "saved", "idea", "coach", "saved_meal"]);
 export type FoodSource = z.infer<typeof FoodSource>;
 
 // What a weight of food holds. A food's are per 100 g; fibre is 0 when its source has no figure
@@ -20,10 +20,14 @@ export type Nutrients = z.infer<typeof Nutrients>;
 export const Serving = z.object({ label: z.string().min(1), grams: z.number().positive() });
 export type Serving = z.infer<typeof Serving>;
 
+// The most of a food in one portion, by grams or by a count of a serving
+export const MAX_PORTION_GRAMS = 5000;
+export const MAX_PORTION_COUNT = 100;
+
 // How much of a food the user ate, as they chose it: grams, or a count of one of the food's own servings by its label
 export const PortionChoice = z.union([
-  z.strictObject({ grams: z.number().positive().max(5000) }),
-  z.strictObject({ serving: z.string().min(1), count: z.number().positive().max(100) }),
+  z.strictObject({ grams: z.number().positive().max(MAX_PORTION_GRAMS) }),
+  z.strictObject({ serving: z.string().min(1), count: z.number().positive().max(MAX_PORTION_COUNT) }),
 ]);
 export type PortionChoice = z.infer<typeof PortionChoice>;
 
@@ -45,7 +49,7 @@ const FoodFields = z.object({
 });
 
 // A food as a Saved Meal keeps it: anything but another Saved Meal
-export const IngredientFood = FoodFields.extend({ source: FoodSource.exclude(["meal"]) });
+export const IngredientFood = FoodFields.extend({ source: FoodSource.exclude(["saved_meal"]) });
 export type IngredientFood = z.infer<typeof IngredientFood>;
 
 // An ingredient of a Saved Meal: a food as it was when added, and how much of it
@@ -53,7 +57,7 @@ export const Ingredient = z.object({ food: IngredientFood, portion: Portion });
 export type Ingredient = z.infer<typeof Ingredient>;
 
 // What a Food made from a Saved Meal carries, so a Food Entry's snapshot opens to its ingredients (ADR 0002): those of
-// the whole meal, how many servings it makes, and whether it can be logged in grams
+// the whole Saved Meal, how many servings it makes, and whether it can be logged in grams
 export const SavedMealParts = z.object({
   servings: z.number().positive(),
   ingredients: z.array(Ingredient).min(1),
@@ -64,7 +68,7 @@ export type SavedMealParts = z.infer<typeof SavedMealParts>;
 // A food, the same shape whichever source found it (spec #158, "one food shape"). One from a Saved Meal has its parts,
 // and its one serving first
 export const Food = FoodFields.extend({ savedMeal: SavedMealParts.optional() }).refine(
-  ({ source, savedMeal, servings }) => (source === "meal") === !!savedMeal && (!savedMeal || servings.length > 0),
+  ({ source, savedMeal, servings }) => (source === "saved_meal") === !!savedMeal && (!savedMeal || servings.length > 0),
   "only a food from a Saved Meal has its ingredients and serving",
 );
 export type Food = z.infer<typeof Food>;
@@ -87,18 +91,21 @@ export const SavedFoodInput = z.object({
 });
 export type SavedFoodInput = z.input<typeof SavedFoodInput>;
 
+// What a Saved Meal can be
+export const MAX_SAVED_MEAL_SERVINGS = 100;
+export const MAX_INGREDIENTS = 50;
 export const MAX_COOKED_GRAMS = 100_000;
 
 // A new Saved Meal, or an edited one: its ingredients' grams are worked out by the server, as a Food Entry's are
 export const SavedMealInput = z.object({
   name: z.string().trim().min(1).max(100),
-  servings: z.number().positive().max(100),
+  servings: z.number().positive().max(MAX_SAVED_MEAL_SERVINGS),
   // What it weighs cooked, so it can be logged in grams too
   cookedGrams: z.number().positive().max(MAX_COOKED_GRAMS).optional(),
   ingredients: z
     .array(z.object({ food: IngredientFood, portion: PortionChoice }))
     .min(1)
-    .max(50),
+    .max(MAX_INGREDIENTS),
 });
 export type SavedMealInput = z.infer<typeof SavedMealInput>;
 

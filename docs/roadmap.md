@@ -145,12 +145,12 @@ As settled for this milestone. Spec #176 later changed what a Miss is and how fa
 
 ## Before M8: ranges, Nutrition History and Saved Meals (#188)
 
-**Goal:** a ring says what's good enough, a week can be looked back on, and a meal cooked often is logged in one step.
+**Goal:** a ring says what's good enough, a week can be looked back on, and something cooked often is logged in one step.
 
 - **Ranges:** kcal ±5% and protein 90–120% of target. Their rings are orange below, green in range, and over it start a red second lap that says how far over ("250 over"). The Coach's summary and Food Ideas use the ranges.
 - **Each day keeps its Daily Targets,** so a later Weigh-in or Goal doesn't rewrite the past.
 - **Nutrition History:** a week of kcal or protein, a bar per day against its range, with the daily average.
-- **Saved Meals:** a name, ingredients and a number of servings, logged as one Food Entry. This saves meals and doesn't plan them, so M11 stays cut.
+- **Saved Meals:** a name, ingredients and a number of servings, logged as one Food Entry. They're never planned ahead, so M11 stays cut.
 
 **Done when:** it has passed its manual checks on the phones' Release builds.
 

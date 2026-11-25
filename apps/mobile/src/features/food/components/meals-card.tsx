@@ -11,9 +11,8 @@ import { entryPortion, mealLine, mealName } from "../today-so-far";
 import { EntryEditor } from "./entry-editor";
 import { wholeNumber } from "../../nutrition/format";
 
-// The day's four meals under its totals (prototype variant J's Today so far): each shows its number of foods and kcal,
-// and opens, one at a time, to its Food Entries, "Add to (meal)" and "Copy from yesterday" (spec #158 stories 49 to 53),
-// and "Save as meal" when it has any (spec #188 story 33)
+// The day's four meals under its totals (prototype variant J's Today so far): each opens, one at a time, to its Food
+// Entries, "Add to (meal)", "Copy from yesterday" (spec #158 stories 49 to 53) and "Save as meal" (spec #188 story 33)
 export function MealsCard({
   day,
   title,
@@ -92,7 +91,11 @@ export function MealsCard({
                       style={styles.rowBetween}
                       accessibilityRole="button"
                       accessibilityState={{ expanded: editingId === entry.id }}
-                      accessibilityHint="Change its portion or meal, or delete it"
+                      accessibilityHint={
+                        entry.food.savedMeal
+                          ? "Shows its ingredients, to change its portion or meal, or delete it"
+                          : "Change its portion or meal, or delete it"
+                      }
                     >
                       <Text size="sm" color="muted" style={styles.entryName}>
                         {`${entry.food.name}, ${entryPortion(entry.portion)}`}

@@ -3,10 +3,10 @@ import type { Food, Ingredient, SavedMealCreate, SavedMealInput } from "@fit/sha
 import { ObjectId } from "mongodb";
 import { db } from "./db";
 import { isDuplicateKey } from "./duplicate-key";
-import { BY_NAME, nameMatches, SEARCH_LIMIT } from "./saved-foods";
+import { BY_NAME, nameMatches, SEARCH_LIMIT } from "./name-search";
 
 // The shape of a Saved Meal document in MongoDB (spec #188, "Saved Meals"): each ingredient is a copy of its food, so
-// a later change to a Saved Food doesn't change the meal
+// a later change to a Saved Food doesn't change the Saved Meal
 type SavedMealDoc = {
   _id: ObjectId;
   clerkUserId: string;
