@@ -1,19 +1,20 @@
 import {
   adjustRest,
+  afterHoldLogged,
   backHold,
+  canMoveGuide,
   createLogbook,
   finishedHoldSeconds,
   guidedHold,
   guidedPlace,
+  guidedStart,
   guidedStep,
   holdAlone,
   holdCues,
-  holdLogged,
-  holdState,
-  isGuidedWorkout,
   isHoldPaused,
   NO_EQUIPMENT,
   pauseHold,
+  reopenedCourse,
   REST_ADJUSTMENT_SECONDS,
   restAfterSet,
   restStep,
@@ -69,7 +70,8 @@ export type CurrentRest = Rest & { afterId: string; expanded: boolean };
 // The hold being timed, for a Workout Exercise's next Set (#196)
 export type CurrentHold = { workoutExerciseId: string; hold: Hold; run: HoldRun };
 
-// The guided flow under way (#200), or one Recovery Exercise timed alone (#201): where it is, the current hold's run, and whether logging the hold failed
+// The guided flow under way (#200), or one Recovery Exercise timed alone (#201): where it is, the current hold's run,
+// and whether logging the hold failed
 export type CurrentGuide = { course: GuidedCourse; place: GuidedPlace; run: HoldRun; failed?: boolean };
 
 // What a stopped hold fills in, until its Set is logged
@@ -199,15 +201,11 @@ function vibrate(end: boolean) {
 // falls back to Pending Workouts
 const PREVIOUS_SETS_TIMEOUT_MS = 4000;
 
-// The guided flow that was open over this Workout when the app was killed, paused at the first hold not logged. Not over
-// a forgotten Workout, which is to be finished or discarded
+// The guided flow that was open over this Workout when the app was killed, paused
 async function reopenedGuide(logbook: Logbook, workout: InProgressWorkout): Promise<CurrentGuide | null> {
   const now = new Date();
-  if ((await storedGuide.read()) !== workout.id || (await logbook.isStale(now)) || !isGuidedWorkout(workout))
-    return null;
-  const course: GuidedCourse = { skips: {} };
-  const place = guidedPlace(workout, course);
-  return place.current ? { course, place, run: startGuidedRun(now, true) } : null;
+  const course = reopenedCourse(workout, { openOver: await storedGuide.read(), stale: await logbook.isStale(now) });
+  return course && { course, place: guidedPlace(workout, course), run: startGuidedRun(now, true) };
 }
 
 const LogbookContext = createContext<LogbookContextValue | null>(null);
@@ -267,6 +265,8 @@ export function LogbookProvider({ children }: { children: ReactNode }) {
   const [guide, setGuide] = useState<CurrentGuide | null>(null);
   const keptSkips = useRef<{ workoutId: string; skips: GuidedSkips }>(null);
   const loggingHold = useRef(false);
+  // When the guided flow's hold was last looked at, so a cue isn't lost as the look restarts with a new guide
+  const guideLookedAt = useRef<Date>(null);
   const [restFlashing, setRestFlashing] = useState(false);
   // null until it's read from the phone or chosen
   const [chosenRestSound, setChosenRestSound] = useState<boolean | null>(null);
@@ -404,14 +404,14 @@ export function LogbookProvider({ children }: { children: ReactNode }) {
     setGuide({ course, place, run: startGuidedRun(new Date(), AppState.currentState === "background") });
   }, []);
 
-  // From where the logged Sets and the skips since the app opened leave it, then the skipped holds; nothing when the
-  // Workout isn't guided or has no hold left. The sound is unlocked before anything waits, as it must come from the tap
+  // From the skips kept since it was left (guidedStart). The sound is unlocked before anything waits, as it must come
+  // from the tap
   const startGuide = useCallback(async () => {
     unlockRestSound();
     const stored = await logbook.inProgress();
-    if (!stored || !isGuidedWorkout(stored)) return;
-    const kept = { skips: keptSkips.current?.workoutId === stored.id ? keptSkips.current.skips : {} };
-    openGuide(stored, guidedPlace(stored, kept).current ? kept : { skips: {} });
+    const kept = keptSkips.current?.workoutId === stored?.id ? keptSkips.current?.skips : undefined;
+    const course = stored && guidedStart(stored, kept);
+    if (course) openGuide(stored, course);
   }, [logbook, openGuide]);
 
   const startGuideAlone = useCallback(
@@ -536,8 +536,7 @@ export function LogbookProvider({ children }: { children: ReactNode }) {
         );
         const logged = await logbook.inProgress();
         if (!before || !logged) return;
-        const course = holdLogged(before, guide.course);
-        const place = guidedPlace(logged, course);
+        const { course, place } = afterHoldLogged(before, logged, guide.course);
         setGuide((now) => now && { course, place, run: startGuidedRun(new Date(), isHoldPaused(now.run)) });
       } catch {
         setGuide((now) => now && { ...now, run: pauseHold(now.run, new Date()), failed: true });
@@ -546,11 +545,14 @@ export function LogbookProvider({ children }: { children: ReactNode }) {
       }
     };
 
-    let before = new Date();
+    // Carries on from the last look when the effect restarts with a new guide, unless that was a while ago
+    const lookedAt = guideLookedAt.current;
+    let before = lookedAt && Date.now() - lookedAt.getTime() < REST_STEP_MS * 5 ? lookedAt : new Date();
     const timer = setInterval(() => {
       const now = new Date();
       const step = guidedStep(timed, guide.run, before, now);
       before = now;
+      guideLookedAt.current = now;
       if (step.run !== guide.run) setGuide((latest) => latest && { ...latest, run: step.run });
       if (step.alert) {
         vibrate(step.alert === "long");
@@ -580,12 +582,10 @@ export function LogbookProvider({ children }: { children: ReactNode }) {
     setGuide((current) => current && { ...current, run: resumeHold(current.run, new Date()), failed: false });
   };
 
-  // Moves to another hold. Not once the hold is done and being logged, unless that failed
+  // Moves to another hold, when canMoveGuide allows it and no hold is being logged
   const moveGuide = (move: (workout: InProgressWorkout, course: GuidedCourse) => GuidedCourse) => {
     unlockRestSound();
-    const moved = guide?.place.current;
-    if (!workout || !moved || loggingHold.current) return;
-    if (!guide.failed && holdState(guidedHold(moved), guide.run, new Date()).phase === "done") return;
+    if (!workout || !guide || loggingHold.current || !canMoveGuide(guide, new Date())) return;
     const course = move(workout, guide.course);
     setGuide({ course, place: guidedPlace(workout, course), run: startGuidedRun(new Date()) });
   };
@@ -594,7 +594,7 @@ export function LogbookProvider({ children }: { children: ReactNode }) {
 
   const leaveGuide = useCallback(() => setGuide(null), []);
 
-  // The sound is unlocked before anything waits, as it must come from the tap
+  // Unlocks the sound here, as it must come from the tap that starts the hold
   const startHold = useCallback((workoutExerciseId: string, started: Hold) => {
     unlockRestSound();
     setRest(null);

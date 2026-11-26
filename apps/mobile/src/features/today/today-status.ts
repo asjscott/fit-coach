@@ -9,7 +9,7 @@ import {
   type RestDayReason,
 } from "@fit/engines";
 import type { ActivityLevel, WeightUnit } from "@fit/shared";
-import { estimatedTimeLabel, timeStat, volumeLabel } from "../workouts/format";
+import { estimatedTimeLabel, secondsLabel, timeStat, volumeLabel } from "../workouts/format";
 
 // Whether Today asks for the Activity Level (spec #158 story 4): only a user onboarded before it was asked has none,
 // and they're asked once. Skipped is undefined until the phone has read it
@@ -134,21 +134,11 @@ export function checkInLighterRow({ lighter, fullWorkout }: { lighter: boolean; 
 export const SUPERSETS_TO_FIT = "Paired into supersets to fit the time";
 export const supersetWithLabel = (partnerName: string) => `Superset with ${partnerName}`;
 
-// The two Recovery Workouts (#198), on offer every day: on Today, the Rest Day card and the plan's sheet
-export const MOBILITY = "Mobility";
-
 export const mobilityFocusLabels: Record<MobilityFocus, string> = {
   full_body: "Full body",
   hips_and_legs: "Hips and legs",
   back_and_shoulders: "Back and shoulders",
 };
-
-// A length of time to the second: "1 min 50 s", "55 s", "2 min"
-function secondsLabel(seconds: number) {
-  const minutes = Math.floor(seconds / 60);
-  const rest = seconds % 60;
-  return [...(minutes ? [`${minutes} min`] : []), ...(rest || !minutes ? [`${rest} s`] : [])].join(" ");
-}
 
 // How long a hold of a Mobility Workout takes, and how it's made up: "1 min 50 s · 45 s per side"
 export function mobilityHoldLine(hold: RecoveryExercise, setLabel: string) {

@@ -9,7 +9,7 @@ import {
   type MobilityMinutes,
   type RecoveryExercise,
 } from "@fit/engines";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useCurrentUser, usePrimaryEquipmentProfile } from "@/features/user/current-user-provider";
 import { deviceStorage } from "@/features/workouts/device-storage";
 import { useHistory } from "@/features/workouts/history-provider";
@@ -28,7 +28,8 @@ export function useMobility(now: Date) {
   const { workouts } = useHistory();
   const { pending } = useLogbook();
   const equipmentProfile = usePrimaryEquipmentProfile() ?? NO_EQUIPMENT;
-  const injuries = useCurrentUser().user?.profile.injuries ?? [];
+  const profileInjuries = useCurrentUser().user?.profile.injuries;
+  const injuries = useMemo(() => profileInjuries ?? [], [profileInjuries]);
 
   useEffect(() => {
     storedMobility.read().then(setStored, () => {});
@@ -41,11 +42,14 @@ export function useMobility(now: Date) {
     storedMobility.keep(next).catch(() => {});
   };
 
-  const pick = () =>
-    stored
-      ? mobilityWorkout({ ...stored, workouts: withPending(pending, workouts), injuries, equipmentProfile, now })
-      : [];
-  const holds = changed?.now === now ? changed.holds : pick();
+  const picked = useMemo(
+    () =>
+      stored
+        ? mobilityWorkout({ ...stored, workouts: withPending(pending, workouts), injuries, equipmentProfile, now })
+        : [],
+    [stored, pending, workouts, injuries, equipmentProfile, now],
+  );
+  const holds = changed?.now === now ? changed.holds : picked;
 
   return {
     stored,

@@ -15,30 +15,34 @@ import { BigClock } from "./big-clock";
 import { RestFlash } from "./rest-flash";
 import { SoundSwitch } from "./sound-switch";
 
-// A Recovery Workout's holds, run hands-free over the logging screen (#200), which the last one leads from to
-// Finish; or one Recovery Exercise timed alone, which leads back to it (#201)
+// A Recovery Workout's holds, run hands-free over the logging screen (#200), ending on a screen that leads to Finish
+// or Back to the last hold; or one Recovery Exercise timed alone, which leads back to the logging screen (#201)
 export function GuidedScreen() {
   const { guide, pauseGuide, leaveGuide } = useLogbook();
   const { colors } = useTheme();
   const current = guide?.place.current;
-  const over = !!guide && !current;
   const alone = !!guide?.course.only;
+  const overAlone = alone && !current;
 
   useEffect(() => {
-    if (!over) return;
-    leaveGuide();
-    if (!alone) router.push("/workout/finish");
-  }, [over, alone, leaveGuide]);
+    if (overAlone) leaveGuide();
+  }, [overAlone, leaveGuide]);
 
-  // Never runs on unseen
+  // Pauses the flow as the logging screen goes, so it never runs where nobody can see it
   useEffect(() => pauseGuide, [pauseGuide]);
 
   return (
-    <Modal visible={!!current} animationType="none" presentationStyle="fullScreen" onRequestClose={leaveGuide}>
+    <Modal
+      visible={!!guide && !overAlone}
+      animationType="none"
+      presentationStyle="fullScreen"
+      onRequestClose={leaveGuide}
+    >
       {/* A presented screen needs its own provider on iOS (docs/agents/workouts.md, #68) */}
       <SafeAreaProvider>
         <SafeAreaView style={[styles.screen, { backgroundColor: colors.bg }]} edges={["top", "bottom"]}>
-          {current ? <Guiding guide={guide} current={current} /> : null}
+          {guide && current ? <Guiding guide={guide} current={current} /> : null}
+          {guide && !current && !alone ? <HoldsOver guide={guide} /> : null}
         </SafeAreaView>
         <RestFlash />
       </SafeAreaProvider>
@@ -145,6 +149,54 @@ function Guiding({ guide, current }: { guide: CurrentGuide; current: GuidedHold 
     </View>
   );
 }
+
+// Every hold logged or skipped: Back repeats the last, as from any other hold
+function HoldsOver({ guide }: { guide: CurrentGuide }) {
+  const { backGuidedHold, leaveGuide } = useLogbook();
+  const { count } = guide.place;
+
+  useEffect(() => {
+    if (Platform.OS === "ios") AccessibilityInfo.announceForAccessibility(HOLDS_OVER);
+  }, []);
+
+  return (
+    <View style={styles.column}>
+      <HStack align="center" style={styles.top}>
+        <Text color="muted">{`${count} of ${count} holds`}</Text>
+        <SoundSwitch />
+      </HStack>
+      <View style={styles.content}>
+        <Text centered accessibilityRole="header" accessibilityLiveRegion="polite" style={styles.name}>
+          {HOLDS_OVER}
+        </Text>
+      </View>
+      <Stack spacing={3}>
+        <HStack spacing={3}>
+          <LoadingButton
+            label="Back"
+            size="xl"
+            action="secondary"
+            disabled={!guide.place.hasPrevious}
+            onPress={backGuidedHold}
+            style={styles.sideButton}
+          />
+          <LoadingButton
+            label="Finish"
+            size="xl"
+            onPress={() => {
+              leaveGuide();
+              router.push("/workout/finish");
+            }}
+            style={styles.mainButton}
+          />
+        </HStack>
+        <LoadingButton label="Leave timer" size="md" variant="link" action="default" onPress={leaveGuide} />
+      </Stack>
+    </View>
+  );
+}
+
+const HOLDS_OVER = "That\u2019s every hold";
 
 const styles = StyleSheet.create({
   screen: { flex: 1 },

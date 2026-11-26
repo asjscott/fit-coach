@@ -66,12 +66,14 @@ export const estimatedTimeLabel = (seconds: number) => `About ${Math.round(secon
 export const durationLabel = ({ startedAt, endedAt }: WorkoutTimes) =>
   statLabel(timeStat(Date.parse(endedAt) - Date.parse(startedAt)));
 
+// The two Recovery Workouts (#198), on Today, the Rest Day card, the plan's sheet and in History
+export const MOBILITY = "Mobility";
 export const WALK_AND_MOBILITY = "Walk and mobility";
 
 // Which Recovery Workout one in History was, "Mobility · 20 min" by the time it took, or null for any other Workout
 export function recoveryWorkoutLabel(workout: WorkoutTimes & Pick<Workout, "workoutExercises">) {
   const kind = recoveryWorkoutKind(workout);
-  if (kind === "mobility") return `Mobility · ${durationLabel(workout)}`;
+  if (kind === "mobility") return `${MOBILITY} · ${durationLabel(workout)}`;
   return kind && WALK_AND_MOBILITY;
 }
 
@@ -336,6 +338,9 @@ export const describeSet = (set: Set | SetValues, unit: WeightUnit, reading?: Se
 const partsLabel = (parts: readonly [number, string][]) =>
   parts.map(([value, label]) => (label ? `${value} ${label}` : String(value))).join(" ");
 
+// A length of time to the second: "1 min 50 s", "55 s", "2 min"
+export const secondsLabel = (seconds: number) => partsLabel(minutesParts(seconds));
+
 // A superset's letter by its place among the Workout's supersets, from 0: A makes A1 and A2, as gym programmes write them
 export const supersetLetter = (index: number) => String.fromCharCode(65 + index);
 
@@ -344,7 +349,7 @@ export const straightToLabel = (name: string) => `No rest: straight to ${name}`;
 
 // A rest choice on Today: "Auto", "45 s", "1 min 15 s"
 export function restChoiceLabel(choice: RestChoice) {
-  return choice === "auto" ? "Auto" : partsLabel(minutesParts(choice));
+  return choice === "auto" ? "Auto" : secondsLabel(choice);
 }
 
 // The superset box's note on its rests, as pairRestPlan gives them (#111)
