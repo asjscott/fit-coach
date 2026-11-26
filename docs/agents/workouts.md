@@ -19,6 +19,11 @@ History (history-provider.tsx, hooks/use-history.ts): GET /workouts, held in mem
   cover the 8 weeks of weekly Volume and the Weekly Streak's weeks (weeklyStreakSince); Pending Workouts merged in
 Weekly Streak (packages/engines/src/weekly-streak.ts): weeklyStreak, in the user's timeZone; This week and the Week
   Summary both call it
+Week Summary (apps/api/src/week-summaries.ts, routes/week-summaries.ts): GET /week-summaries/:monday (or latest, the
+  week just ended: latestWeekSummaryMonday in packages/engines/src/week-summary.ts) worked out live; only "seen" is
+  stored (weekSummariesSeen, unique on user and week), set by PUT /week-summaries/:monday/seen. A new part is worked out
+  in weekSummaryOf from WeekData and added to WeekSummary (packages/shared/src/week-summaries.ts) as optional. Today's
+  card: useWeekSummaryCard and week-summary-card.tsx in features/today
 Training summaries (packages/engines/src/training-summaries.ts): Volume, Sets, weeks, weekly Volume and the Previous
   Sets selection, pure functions
 API (apps/api/src/workouts.ts, routes/workouts.ts): idempotent POST, paged GET (before + beforeId), DELETE, and
@@ -555,6 +560,9 @@ maps would fix that and isn't set up.
     refuses that header. A new `x-dev-user` is a new account.
   - For offline, abort the API in the same route and override `navigator.onLine`. Don't use `context.setOffline`: in
     dev, routes load from Metro on demand, so it fails with a red "Failed to fetch" that a phone never shows.
+  - `DEV_NOW=<ISO time>` starts the API's clock there (it runs on from it; `dev:local` too), for what depends on the
+    day or hour, such as the Week Summary from 6 pm on Sunday. Match the browser with Playwright's `page.clock.install`
+    and `timezoneId`. The onboarded account is onboarded at that time.
   - It can't show a real sign-in, Clerk with no signal, or native storage. Those stay in `docs/manual-checks.md`.
   - Food search finds nothing without `USDA_API_KEY`. USDA's public `DEMO_KEY` gives a few real searches an hour:
     `USDA_API_KEY=DEMO_KEY pnpm --filter @fit/mobile web:signed-in`. Never commit a real key.
