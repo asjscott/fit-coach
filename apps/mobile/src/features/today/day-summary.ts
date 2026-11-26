@@ -63,7 +63,8 @@ export type DaySummaryTomorrow =
   | null;
 
 export type DaySummary = {
-  // Always false until the finished day is built (#209)
+  // Trained, Recovery Workouts included, or kept a recommended Rest Day, and kcal in range or over. Protein never
+  // decides it, so one short protein target doesn't keep the Coach's Nudge up all evening
   finished: boolean;
   workout: DaySummaryWorkout;
   food: DaySummaryFood;
@@ -162,10 +163,12 @@ export function daySummary(input: DaySummaryInput): DaySummary | null {
   if (hour < FROM_HOUR || hour >= UNTIL_HOUR || !day) return null;
   const date = localDateOf(now, timeZone);
   const today = workouts.filter(({ endedAt }) => localDateOf(new Date(endedAt), timeZone) === date);
+  const workout = workoutOf(today, restDayToday);
+  const food = foodOf(day);
   return {
-    finished: false,
-    workout: workoutOf(today, restDayToday),
-    food: foodOf(day),
+    finished: workout.kind !== "none" && !!food && food.kcal.state !== "under",
+    workout,
+    food,
     tomorrow: tomorrowOf(input, day.targets),
   };
 }
@@ -220,12 +223,24 @@ export function foodRows(food: DaySummaryFood): ReceiptRow[] {
   ];
 }
 
+const tomorrowWhat = (tomorrow: NonNullable<DaySummaryTomorrow>) =>
+  tomorrow.rest ? "Rest" : musclesName(tomorrow.muscles) || "Your next Workout";
+const targetsLabel = ({ kcal, proteinG }: TomorrowTargets) =>
+  `${wholeNumber(kcal)} kcal · ${wholeNumber(proteinG)} g protein`;
+
 // Tomorrow in one line at the foot of the receipt: "Tomorrow: Rest. You've had 3 Workouts this week. 2,980 kcal ·
 // 160 g protein"; null when it's left out
 export function tomorrowLine(tomorrow: DaySummaryTomorrow): string | null {
   if (!tomorrow) return null;
-  const what = tomorrow.rest ? "Rest" : musclesName(tomorrow.muscles) || "Your next Workout";
-  const { kcal, proteinG } = tomorrow.targets;
   const reason = tomorrow.reason ? ` ${tomorrow.reason}` : "";
-  return `Tomorrow: ${what}.${reason} ${wholeNumber(kcal)} kcal · ${wholeNumber(proteinG)} g protein`;
+  return `Tomorrow: ${tomorrowWhat(tomorrow)}.${reason} ${targetsLabel(tomorrow.targets)}`;
+}
+
+// The Tomorrow card that leads a finished day: "Rest." or the Workout, why, and "Eat 2,980 kcal · 160 g protein"
+export function tomorrowCard(tomorrow: NonNullable<DaySummaryTomorrow>) {
+  return {
+    headline: `${tomorrowWhat(tomorrow)}.`,
+    reason: tomorrow.reason,
+    targets: `Eat ${targetsLabel(tomorrow.targets)}`,
+  };
 }

@@ -21,13 +21,14 @@ function Row({ row, detailColor }: { row: ReceiptRow; detailColor: ColorToken })
 }
 
 // The Day Summary as a ticked receipt of the day (prototype variant C): the Workout, then kcal and protein against
-// their ranges, with tomorrow in one line at its foot
+// their ranges, with tomorrow in one line at its foot until the day is finished
 export function DaySummaryReceipt({ summary }: { summary: DaySummary }) {
   const { colors } = useTheme();
   const { food } = summary;
   // As the rings colour them: still to reach, in range, and over in danger like their second lap
   const foodColors: ColorToken[] = food ? [food.kcal, food.protein].map(({ state }) => STATE_COLORS[state]) : [];
-  const tomorrow = tomorrowLine(summary.tomorrow);
+  // A finished day's Tomorrow card says it instead
+  const tomorrow = summary.finished ? null : tomorrowLine(summary.tomorrow);
   return (
     <View style={[styles.receipt, { borderColor: colors.line }]}>
       <Text size="xs" weight="semiBold" color="muted" accessibilityRole="header">

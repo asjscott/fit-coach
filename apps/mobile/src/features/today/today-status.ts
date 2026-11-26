@@ -73,8 +73,10 @@ export const todayRestDay = (
   daysPerWeek: number | undefined,
 ) => (plan === "none" ? null : restDay(workouts, now, daysPerWeek));
 
-// The one card at the top of Today
-export type TodayCard = "loading" | "resume" | "assessment" | "done" | "rest" | "ready" | "connect" | "manual";
+// The one card at the top of Today. On a finished day it's "day-summary": the Day Summary's Tomorrow card and receipt
+// stand in for it, higher up, and for the recovery links under it
+export type TodayCard =
+  "loading" | "resume" | "assessment" | "day-summary" | "done" | "rest" | "ready" | "connect" | "manual";
 
 // Waits for the phone and History, so that a day already finished doesn't flash as ready to train
 export function todayCard({
@@ -85,6 +87,7 @@ export function todayCard({
   assessmentFirst,
   finishedToday,
   restDay: restDayReason,
+  dayFinished,
 }: {
   isLoaded: boolean;
   state: TodayState;
@@ -93,10 +96,13 @@ export function todayCard({
   assessmentFirst: boolean;
   finishedToday: boolean;
   restDay: RestDayReason | null;
+  // The Day Summary's finished (day-summary.ts)
+  dayFinished: boolean;
 }): TodayCard {
   if (workoutInProgress) return "resume";
   if (!isLoaded || state === "loading") return "loading";
   if (assessmentFirst) return "assessment";
+  if (dayFinished) return "day-summary";
   if (finishedToday) return "done";
   if (restDayReason) return "rest";
   if (plan === "planned") return "ready";

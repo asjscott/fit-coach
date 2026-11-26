@@ -381,6 +381,19 @@ From 6 to 10 pm in your timezone. Change the phone's time in Settings (turn off 
 - [ ] **DS5** In airplane mode, after Today has loaded the day once, the receipt still shows, with a Workout finished offline counted. Open the app fresh in airplane mode: no receipt. In light and dark, the receipt reads clearly.
   - iOS: Result: · Android: Result: · Notes:
 
+## Day Summary: the finished day (#209)
+
+From 6 to 10 pm in your timezone, as for #208. The day is finished once you've trained (Mobility and Walk and mobility included) or kept a recommended Rest Day, and kcal is in range or over. Protein never decides it.
+
+- [ ] **DF1** Train, and log food short of the kcal range: Today is as in DS1, with the Nudge, "Done for today." and the links. Log enough food to reach the range and come back to Today: a big "TOMORROW · <day>" card now leads under the rings, with "Rest." or tomorrow's Workout's Muscles, the reason, "Eat … kcal · … g protein" and "See the next Workout ›", and the "TODAY" receipt under it with no tomorrow line. The Coach's Nudge, the Workout card, "Rest between Sets", Mobility and Walk and mobility are gone; Tell the coach, This week, "Start manual workout" and Last workout stay where they were.
+  - iOS: Result: · Android: Result: · Notes:
+- [ ] **DF2** On a recommended Rest Day with nothing done, reach the kcal range: the day finishes the same way, with "✅ Rest Day" in the receipt and "Rest today." gone. With kcal in range and protein short, it's still finished; with kcal over, too.
+  - iOS: Result: · Android: Result: · Notes:
+- [ ] **DF3** Tap "See the next Workout ›": the Planned Workout sheet opens on the next Workout's Exercises, as from the Workout card. Close it: Today is as it was.
+  - iOS: Result: · Android: Result: · Notes:
+- [ ] **DF4** With no Planned Workout or a stale one (a Workout finished in airplane mode), a finished day shows the receipt alone in the Nudge's place, with no Tomorrow card. Start a Workout on a finished day: "Keep going." still shows. At 10 pm, back to the front, Today is as it was before 6 pm. In light and dark, the card and receipt read clearly and a three-Muscle name wraps without overlapping.
+  - iOS: Result: · Android: Result: · Notes:
+
 ## Weekly Streak (#207)
 
 Needs an account onboarded at least two weeks ago, with History behind it.
