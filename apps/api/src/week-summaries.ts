@@ -2,21 +2,42 @@ import {
   dayBefore,
   latestWeekSummaryMonday,
   localDateOf,
+  mondayBefore,
   mondayOf,
   nutritionRanges,
   rangeState,
+  readiness,
   weekDates,
   weekLedger,
   weeklyBudget,
   weeklyStreak,
+  weekOfBlock,
+  weekVerdict,
   workoutsInWeek,
-  type LedgerWorkout,
 } from "@fit/engines";
-import { UserProfile, type NutritionWeek, type WeekAverage, type WeekSummary } from "@fit/shared";
+import {
+  DEFAULT_WEIGHT_UNIT,
+  UserProfile,
+  type CheckIn,
+  type LatestAssessment,
+  type NutritionWeek,
+  type Pr,
+  type SetTarget,
+  type WeekAverage,
+  type WeekKcal,
+  type WeekSummary,
+  type WeightUnit,
+  type WorkingLevel,
+  type WorkingLevelMove,
+  type Workout,
+} from "@fit/shared";
+import { findLatestAssessment } from "./assessments";
+import { findCheckInsBetween } from "./check-ins";
 import { db } from "./db";
 import { ignoringDuplicateKey } from "./duplicate-key";
 import { findNutritionWeek } from "./nutrition-history";
 import { findUser } from "./users";
+import { weighInChange } from "./weigh-ins";
 import { findWorkoutsSince, toWorkout } from "./workouts";
 
 // The only thing stored for the Week Summary (ADR 0009): that a user has seen a week's, one document per user and week
@@ -38,9 +59,16 @@ type WeekData = {
   timeZone: string;
   daysPerWeek: number;
   goal: UserProfile["goal"];
+  unit: WeightUnit;
   // From the onboarding week on, for the Weekly Streak
-  workouts: LedgerWorkout[];
+  workouts: Workout[];
   food: NutritionWeek;
+  // The latest Assessment, for the Block's deload week and the Working Levels; null before the first
+  latest: LatestAssessment;
+  weighIn: { kg: number; changeKg: number } | null;
+  // This week's Check-ins and the week before's
+  checkIns: CheckIn[];
+  checkInsBefore: CheckIn[];
 };
 
 // Weekly Streak, at a moment inside the week, so the week counts as the one under way: its own Workouts add to it. A
@@ -78,40 +106,143 @@ function averageOf(food: NutritionWeek, nutrient: "kcal" | "proteinG"): WeekAver
   return { average, ...range, state: rangeState(average, range).state };
 }
 
-// Budgeted Muscles at or over their Weekly Budget, out of all of them; absent with no Workouts to credit
-function budgetMet({ goal, daysPerWeek, workouts, monday, timeZone }: WeekData, done: number) {
+// The kcal average, with each logged day's kcal against that day's own range
+function kcalOf(food: NutritionWeek): WeekKcal | undefined {
+  const average = averageOf(food, "kcal");
+  if (!average) return undefined;
+  const days = food.days
+    .filter((day) => day.logged)
+    .map(({ date, totals, targets }) => {
+      const kcal = Math.round(totals.kcal);
+      return { date, kcal, state: rangeState(kcal, nutritionRanges(targets).kcal).state };
+    });
+  return { ...average, days };
+}
+
+// Budgeted Muscles at or over their Weekly Budget, out of all of them, and those short of it with their credited Sets;
+// absent with no Workouts to credit
+function budgetOf({ goal, daysPerWeek, workouts, monday, timeZone }: WeekData, done: number) {
   if (!done) return undefined;
   const budget = weeklyBudget(goal, daysPerWeek);
   const ledger = weekLedger(workouts, { monday, timeZone });
   const muscles = Object.entries(budget) as [keyof typeof budget, number][];
-  return { met: muscles.filter(([muscle, sets]) => (ledger[muscle] ?? 0) >= sets).length, muscles: muscles.length };
+  const credited = (muscle: keyof typeof budget) => Math.round((ledger[muscle] ?? 0) * 10) / 10;
+  const short = muscles
+    .filter(([muscle, sets]) => credited(muscle) < sets)
+    .map(([muscle, sets]) => ({ muscle, sets: credited(muscle), budget: sets }));
+  return { met: muscles.length - short.length, muscles: muscles.length, short };
+}
+
+// The PRs the week's Workouts set, one per Exercise: its best that week against its best before the week
+function prsOf(weekWorkouts: Workout[]): Pr[] {
+  const bySlug = new Map<string, Pr>();
+  const inOrder = [...weekWorkouts].sort((a, b) => Date.parse(a.startedAt) - Date.parse(b.startedAt));
+  for (const pr of inOrder.flatMap((workout) => workout.prs ?? [])) {
+    const first = bySlug.get(pr.slug);
+    bySlug.set(pr.slug, first ? { ...pr, previous: first.previous } : pr);
+  }
+  return [...bySlug.values()];
+}
+
+const DIRECTIONS: Partial<Record<string, WorkingLevelMove["direction"]>> = {
+  "target-up": "up",
+  "seconds-up": "up",
+  "load-up": "up",
+  "load-down": "down",
+  "target-down": "down",
+};
+
+// What a Working Level prescribes, without its progress
+function targetOf(level: WorkingLevel): SetTarget {
+  switch (level.unit) {
+    case "kg":
+      return { unit: "kg", kg: level.kg, reps: level.reps };
+    case "reps":
+      return { unit: "reps", reps: level.reps };
+    case "seconds":
+      return { unit: "seconds", seconds: Math.round(level.seconds) };
+    case "band":
+      return { unit: "band", level: level.level, reps: level.reps };
+  }
+}
+
+// The Working Levels a Workout that week moved up or down, in the order they moved. Only each level's last move is
+// stored, so a level moved again since is shown as it is now, or not at all when moved in a later week
+function movesOf({ latest, monday, timeZone }: WeekData): WorkingLevelMove[] {
+  return (latest?.workingLevels ?? [])
+    .flatMap((level) => {
+      const direction = level.change && DIRECTIONS[level.change.code];
+      const { movedBy } = level;
+      if (!direction || !movedBy || mondayOf(new Date(movedBy.startedAt), timeZone) !== monday) return [];
+      const change = level.change!.code as WorkingLevelMove["change"];
+      return [{ at: movedBy.startedAt, move: { slug: level.slug, direction, change, level: targetOf(level) } }];
+    })
+    .sort((a, b) => Date.parse(a.at) - Date.parse(b.at))
+    .map(({ move }) => move);
+}
+
+// The average Readiness of these Check-ins, to a tenth; undefined with none
+function averageReadiness(checkIns: CheckIn[]) {
+  if (!checkIns.length) return undefined;
+  const total = checkIns.reduce((sum, checkIn) => sum + readiness(checkIn), 0);
+  return Math.round((total / checkIns.length) * 10) / 10;
+}
+
+function readinessOf({ checkIns, checkInsBefore }: WeekData) {
+  const average = averageReadiness(checkIns);
+  if (average === undefined) return undefined;
+  const previous = averageReadiness(checkInsBefore);
+  return { average, ...(previous !== undefined && { previous }) };
 }
 
 // The model, part by part. A new part is worked out here from WeekData, and left out when it has no data
 function weekSummaryOf(data: WeekData, seen: boolean): WeekSummary {
-  const { onboardedAt, monday, timeZone, workouts, food } = data;
+  const { onboardedAt, monday, timeZone, workouts, food, latest, weighIn, unit } = data;
   const partWeek = mondayOf(onboardedAt, timeZone) === monday;
-  const done = workoutsInWeek(workouts, { monday, timeZone }).length;
-  const kcal = averageOf(food, "kcal");
+  const weekWorkouts = workoutsInWeek(workouts, { monday, timeZone });
+  const done = weekWorkouts.length;
+  const planned = plannedWorkouts(data, partWeek);
+  const kcal = kcalOf(food);
   const protein = averageOf(food, "proteinG");
-  const weeklyBudget = budgetMet(data, done);
+  const weeklyBudget = budgetOf(data, done);
+  const deload = weekOfBlock(latest?.assessment ?? null, momentOn(monday, timeZone), timeZone)?.deload ?? false;
+  const prs = prsOf(weekWorkouts);
+  const moves = movesOf(data);
+  const readiness = readinessOf(data);
+  const coach = weekVerdict({
+    workouts: { done, planned },
+    partWeek,
+    prs: prs.length,
+    kcal: kcal?.state,
+    protein: protein?.state,
+    weighInChangeKg: weighIn?.changeKg,
+    deload,
+    unit,
+  });
   return {
     monday,
     sunday: weekDates(monday)[6],
     seen,
     partWeek,
-    workouts: { done, planned: plannedWorkouts(data, partWeek) },
+    workouts: { done, planned },
     streak: streakOf(data, done),
     ...(kcal && { kcal }),
     ...(protein && { protein }),
     ...(weeklyBudget && { weeklyBudget }),
+    ...(deload && { deload }),
+    ...(prs.length && { prs }),
+    ...(moves.length && { moves }),
+    ...(weighIn && { weighIn }),
+    ...(readiness && { readiness }),
+    coach,
   };
 }
 
 const isMonday = (date: string) => weekDates(date)[0] === date;
 
 // The Week Summary for the Monday-to-Sunday week starting on `monday`, or "latest" for the week just ended, worked out
-// live from History and food. A week before the user onboarded, or not yet started, has none
+// live from History, food, Weigh-ins, Check-ins and the Working Levels. A week before the user onboarded, or not yet
+// started, has none
 export async function findWeekSummary(clerkUserId: string, requested: string): Promise<WeekSummary | NoWeekSummary> {
   const user = await findUser(clerkUserId);
   const onboardedAt = user?.onboardedAt;
@@ -123,15 +254,34 @@ export async function findWeekSummary(clerkUserId: string, requested: string): P
   if (!isMonday(monday) || monday < firstWeek || monday > mondayOf(now, timeZone)) return "no-such-week";
 
   const { goal, daysPerWeek } = UserProfile.pick({ goal: true, daysPerWeek: true }).required().parse(user.profile);
+  const sunday = weekDates(monday)[6];
+  const weekBefore = mondayBefore(monday);
   // A day's margin before the onboarding week's Monday covers any timezone
   const since = new Date(`${dayBefore(firstWeek)}T00:00:00Z`);
-  const [docs, food, seen] = await Promise.all([
+  const [docs, food, seen, latest, weighIn, checkIns, checkInsBefore] = await Promise.all([
     findWorkoutsSince(clerkUserId, since),
     findNutritionWeek(clerkUserId, monday),
     seenWeeks.findOne({ clerkUserId, monday }),
+    findLatestAssessment(clerkUserId),
+    weighInChange(clerkUserId, monday),
+    findCheckInsBetween(clerkUserId, monday, sunday),
+    findCheckInsBetween(clerkUserId, weekBefore, dayBefore(monday)),
   ]);
   if (!food) return "not-onboarded";
-  const data = { onboardedAt, monday, timeZone, daysPerWeek, goal, workouts: docs.map(toWorkout), food };
+  const data: WeekData = {
+    onboardedAt,
+    monday,
+    timeZone,
+    daysPerWeek,
+    goal,
+    unit: user.unit ?? DEFAULT_WEIGHT_UNIT,
+    workouts: docs.map(toWorkout),
+    food,
+    latest,
+    weighIn,
+    checkIns,
+    checkInsBefore,
+  };
   return weekSummaryOf(data, !!seen);
 }
 

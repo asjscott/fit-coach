@@ -61,7 +61,7 @@ export function mondayBefore(monday: string): string {
 
 // The week's Workouts, each once by id however often it's passed. A Workout belongs to the week it started in, as on
 // Today
-export function workoutsInWeek(workouts: readonly LedgerWorkout[], { monday, timeZone }: LedgerWeek): LedgerWorkout[] {
+export function workoutsInWeek<W extends LedgerWorkout>(workouts: readonly W[], { monday, timeZone }: LedgerWeek): W[] {
   const inWeek = workouts.filter((workout) => mondayOf(new Date(workout.startedAt), timeZone) === monday);
   return [...new Map(inWeek.map((workout) => [workout.id, workout])).values()];
 }
