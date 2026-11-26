@@ -13,6 +13,7 @@ Result codes: **✅ pass** · **❌ fail** · **⚠️ works but feels off** · 
 - **Ranges (#189), on the phones:** RR1–RR3.
 - **Nutrition History (#191), on the phones:** NH1–NH4.
 - **Saved Meals (#192–#194), on the phones:** SM1–SM3.
+- **Mobility and the hold timer (#195), on the phones:** HT1–HT6, GF1–GF10, R2–R5, RX1.
 - **Run when you next train:** P9 and S1, a full Workout with a timer, resting as the timer says. Both can be one session.
 - **🕒 Due later, while you use the app:** C5 (the day after a check-in), P16 (a Monday), J2 (after a week with jumps on), P17 (after a few weeks), DL1 and DL2 (the 5th week of a Block: the week starting 4 Mondays after the Monday of the week Assessment B was done).
 - **On hold:** E1–E3 need Sentry set up on production.
@@ -267,6 +268,10 @@ A Workout pairs Exercises only when it wouldn't otherwise fit its Length. Pairs 
 - [ ] **R3** The day after hard leg training, Mobility starts with holds for the legs. In airplane mode, after closing the app, it still opens and starts.
   - Result: · Notes:
 - [ ] **R4** History shows "Mobility · N min" (the time it took) and "Walk and mobility", and neither counts in This Week.
+  - Result: · Notes:
+- [ ] **R5** Before starting Mobility (#199): Swap opens similar holds under the row, and picking one changes the list and the total; Remove takes a hold out; the last hold has no Remove; a hold with nothing to swap to says so. Start opens the changed list.
+  - Result: · Notes:
+- [ ] **RX1** The new Recovery Exercises (#197) are in the library with the other Recovery Exercises, each with a page of cues. With an injury set, Walk and mobility swaps a hold it rules out for another. Without a foam roller in the Equipment Profile, no roller hold is offered. Run after `pnpm seed:exercises` on production.
   - Result: · Notes:
 
 ## Units (#126, #148)
