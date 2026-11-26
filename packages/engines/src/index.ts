@@ -47,6 +47,7 @@ export { supersetGroups, supersetPartner, supersetTurn, type PlannedProgress } f
 export * from "./training-summaries";
 export * from "./up-next";
 export * from "./week-ledger";
+export * from "./weekly-streak";
 export * from "./weekly-budget";
 export * from "./workout-length";
 export * from "./working-level-sections";

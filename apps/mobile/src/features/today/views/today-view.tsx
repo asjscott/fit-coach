@@ -1,4 +1,12 @@
-import { assessmentOffer, finishedToday, lastWorkout, offerKey, thisWeek, withPending } from "@fit/engines";
+import {
+  assessmentOffer,
+  finishedToday,
+  lastWorkout,
+  offerKey,
+  thisWeek,
+  weeklyStreak,
+  withPending,
+} from "@fit/engines";
 import type { RestDayReason } from "@fit/engines";
 import { router } from "expo-router";
 import { useEffect, useState } from "react";
@@ -148,6 +156,11 @@ export default function TodayView() {
   const week = thisWeek(all, now, daysPerWeek);
   const last = lastWorkout(all);
   const state = todayState({ historyLoaded: workouts !== null, failed: !!error, workoutCount: all.length });
+  // Offline only the Pending Workouts are known, which would undercount it
+  const streak =
+    state === "loaded" && daysPerWeek !== undefined && user?.onboardedAt
+      ? weeklyStreak({ workouts: all, daysPerWeek, onboardedAt: user.onboardedAt, now, timeZone })
+      : null;
   const restDayReason = todayRestDay(plan, all, now, daysPerWeek);
   const finished = finishedToday(all, now);
   const offer =
@@ -346,7 +359,7 @@ export default function TodayView() {
       ) : null}
       {state === "loading" ? null : (
         <View style={{ marginTop: spacing[3] }}>
-          <ThisWeekSection week={week} state={state} now={now} />
+          <ThisWeekSection week={week} state={state} now={now} streak={streak} />
         </View>
       )}
       {card === "loading" || card === "resume" || card === "manual" ? null : (

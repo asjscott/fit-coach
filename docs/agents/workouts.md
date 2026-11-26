@@ -16,7 +16,9 @@ screens (apps/mobile/src/features/workouts/views)
        │    └─ PlannedWorkoutSource: POST /planned-workouts/current through useApi
        └─ useSyncTriggers: sync() on foreground and on reconnect (expo-network)
 History (history-provider.tsx, hooks/use-history.ts): GET /workouts, held in memory only, paged back far enough to
-  cover the 8 weeks of weekly Volume; Pending Workouts merged in
+  cover the 8 weeks of weekly Volume and the Weekly Streak's weeks (weeklyStreakSince); Pending Workouts merged in
+Weekly Streak (packages/engines/src/weekly-streak.ts): weeklyStreak, in the user's timeZone; This week and the Week
+  Summary both call it
 Training summaries (packages/engines/src/training-summaries.ts): Volume, Sets, weeks, weekly Volume and the Previous
   Sets selection, pure functions
 API (apps/api/src/workouts.ts, routes/workouts.ts): idempotent POST, paged GET (before + beforeId), DELETE, and
