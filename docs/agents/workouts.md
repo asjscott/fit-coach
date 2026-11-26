@@ -551,6 +551,12 @@ maps would fix that and isn't set up.
   `.expo/dev-signed-in.log`. Use it for any ticket that changes a signed-in screen.
   - To be several users from Playwright, add `x-dev-user` in `context.route` rather than from the page, since CORS
     refuses that header. A new `x-dev-user` is a new account.
+  - For a fixed clock, such as the Day Summary's 6 to 10 pm (#208), use Playwright's clock before the page loads:
+    `page.clock.install({ time })` then `page.clock.setFixedTime(new Date("2026-11-26T19:00:00-05:00"))`, with
+    `timezoneId` on the context, which the phone sends as the user's timezone. Only the phone's clock moves: the API
+    keeps the real one, so pick a time on today's real date, and upload Workouts with real past times.
+  - Its ports are fixed (8187, 3187). When another checkout already has them, run its two commands by hand on other
+    ports, with `CORS_ORIGINS` and `EXPO_PUBLIC_API_URL` to match, and onboard with the same three requests.
   - For offline, abort the API in the same route and override `navigator.onLine`. Don't use `context.setOffline`: in
     dev, routes load from Metro on demand, so it fails with a red "Failed to fetch" that a phone never shows.
   - It can't show a real sign-in, Clerk with no signal, or native storage. Those stay in `docs/manual-checks.md`.

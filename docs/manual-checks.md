@@ -366,6 +366,21 @@ Run each offline check (WI6, F4, FL6, TC4) twice: once with airplane mode on bef
 - [x] **NH4** With VoiceOver or TalkBack on, each day says its name, amount, range and state, or that nothing is logged. In airplane mode, opening it says it needs a connection; back online, Try again loads it.
   - iOS: Result: · Android: Result: · Notes:
 
+## Day Summary: the receipt (#208)
+
+From 6 to 10 pm in your timezone. Change the phone's time in Settings (turn off automatic time) to reach the edges.
+
+- [ ] **DS1** At 5:59 pm Today is as before. Leave the app open and go to 6:00 pm, then bring it back to the front: a "TODAY" receipt sits under the Coach's Nudge, and the rest of Today is unchanged. At 10:00 pm, back to the front again, it's gone.
+  - iOS: Result: · Android: Result: · Notes:
+- [ ] **DS2** With nothing done and no Rest Day, the receipt says "○ No workout yet" and "○ No food logged". Log some food: on coming back to Today, Calories and Protein show against their targets, "○" while short, ✅ in range, and red with how far over once over, agreeing with the rings.
+  - iOS: Result: · Android: Result: · Notes:
+- [ ] **DS3** Finish a Workout: the row names it by up to three Muscles with its Sets and time ("✅ Quads, glutes and chest · 10 Sets · 48 min"). Finish a second: they merge into one row. A Mobility Workout alone reads "✅ Mobility · 20 min", and a kept Rest Day "✅ Rest Day". Long names wrap; the numbers stay on one line.
+  - iOS: Result: · Android: Result: · Notes:
+- [ ] **DS4** The line at the receipt's foot gives tomorrow: rest or the Workout's Muscles, a reason, and tomorrow's kcal and protein. With no Planned Workout (before the Assessment) or a stale one, it's left out.
+  - iOS: Result: · Android: Result: · Notes:
+- [ ] **DS5** In airplane mode, after Today has loaded the day once, the receipt still shows, with a Workout finished offline counted. Open the app fresh in airplane mode: no receipt. In light and dark, the receipt reads clearly.
+  - iOS: Result: · Android: Result: · Notes:
+
 ## When the server isn't answering (#170, #174)
 
 Needs the phone online with the API stopped, or the server otherwise unreachable while the phone has a network.
