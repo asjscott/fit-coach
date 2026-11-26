@@ -5,9 +5,11 @@ import type { ProfileWithLoads } from "./equipment";
 import { muscleFatigue, type FatigueWorkout } from "./fatigue";
 import {
   byLikeness,
+  isHold,
   isRecoveryWorkout,
   possibleHolds,
-  type LoggedWorkoutExercise,
+  sidesOf,
+  type LoggedWorkout,
   type RecoveryExercise,
 } from "./recovery-workout";
 
@@ -32,18 +34,17 @@ const MOST_SETS = 2;
 
 // How long a hold takes, every Set and side with the change before it. The target is per side
 export const holdTimeSeconds = ({ slug, sets, target }: RecoveryExercise) => {
-  const sides = exerciseBySlug(slug)?.unilateral ? 2 : 1;
-  return sets * sides * (CHANGE_SECONDS + (target.unit === "seconds" ? target.seconds : 0));
+  return sets * sidesOf(exerciseBySlug(slug)) * (CHANGE_SECONDS + (target.unit === "seconds" ? target.seconds : 0));
 };
 
 export const mobilitySeconds = (holds: readonly RecoveryExercise[]) =>
   holds.reduce((sum, hold) => sum + holdTimeSeconds(hold), 0);
 
 // A Recovery Exercise's Set, as planned. Only for a hold, which the walk isn't
-const planHold = (exercise: Exercise): RecoveryExercise => ({
+const planHold = (exercise: Exercise & { holdSeconds: number }): RecoveryExercise => ({
   slug: exercise.slug,
   sets: 1,
-  target: { unit: "seconds", seconds: exercise.holdSeconds! },
+  target: { unit: "seconds", seconds: exercise.holdSeconds },
 });
 
 export type MobilityOptions = {
@@ -66,7 +67,8 @@ const PER_MUSCLE_HOLD = 0.05;
 
 // The Mobility Workout (GLOSSARY.md), in the order to do it. One hold at a time, the best of those that fit: it loosens
 // what recent training left most tired, which counts for half as much each time it's chosen, then varies from the last
-// Mobility and balances the areas. Each area of the focus comes before any is repeated. Ties go by the library's order
+// Mobility and balances the areas. Full body covers each area before any is repeated; a focus goes most tired first.
+// Only 30 minutes repeats a hold, once every one has been chosen; a shorter one falls short. Ties go by library order
 export function mobilityWorkout({
   minutes,
   focus,
@@ -77,7 +79,10 @@ export function mobilityWorkout({
   now,
 }: MobilityOptions): RecoveryExercise[] {
   const areas = FOCUS_AREAS[focus];
-  const possible = possibleHolds(equipmentProfile, injuries).filter(({ area }) => area && areas.includes(area));
+  const possible = possibleHolds(equipmentProfile, injuries).filter(
+    (exercise): exercise is Exercise & { holdSeconds: number } => !!exercise.area && areas.includes(exercise.area),
+  );
+  const setsEach = minutes === 30 ? MOST_SETS : 1;
   const most = minutes * 60 + MOST_OVER_SECONDS;
 
   const fatigue = muscleFatigue(workouts, now);
@@ -97,9 +102,9 @@ export function mobilityWorkout({
   let seconds = 0;
   while (seconds < minutes * 60) {
     const unused = possible.filter(({ slug }) => !chosen.has(slug));
-    const left = unused.length ? unused : possible.filter(({ slug }) => chosen.get(slug)!.sets < MOST_SETS);
+    const left = unused.length ? unused : possible.filter(({ slug }) => chosen.get(slug)!.sets < setsEach);
     const fitting = left.filter((exercise) => seconds + holdTimeSeconds(planHold(exercise)) <= most);
-    const uncovered = fitting.filter(({ area }) => !areaHolds.has(area!));
+    const uncovered = focus === "full_body" ? fitting.filter(({ area }) => !areaHolds.has(area!)) : [];
     // The sort is stable, so ties keep the library's order
     const [best] = (uncovered.length ? uncovered : fitting).sort((a, b) => score(b) - score(a));
     if (!best) break;
@@ -137,7 +142,7 @@ export function alternativeHolds({
 // The new hold takes the old one's place and number of Sets, for its own hold time
 export function swapHold(holds: readonly RecoveryExercise[], slug: string, toSlug: string): RecoveryExercise[] {
   const to = exerciseBySlug(toSlug);
-  if (to?.holdSeconds === undefined) return [...holds];
+  if (!isHold(to)) return [...holds];
   return holds.map((hold) => (hold.slug === slug ? { ...planHold(to), sets: hold.sets } : hold));
 }
 
@@ -145,14 +150,11 @@ export function swapHold(holds: readonly RecoveryExercise[], slug: string, toSlu
 export const removeHold = (holds: readonly RecoveryExercise[], slug: string): RecoveryExercise[] =>
   holds.length > 1 ? holds.filter((hold) => hold.slug !== slug) : [...holds];
 
-// Which Recovery Workout a logged Workout is, by the Exercises it has Sets of, or null for training. A walk logged by
-// itself is neither, so it has no name of its own
-export function recoveryWorkoutKind(workout: {
-  workoutExercises: readonly LoggedWorkoutExercise[];
-}): "mobility" | "walk-and-mobility" | null {
+// Which Recovery Workout a logged Workout is, or null for training. With holds done, any walk in it, even one skipped,
+// makes it Walk and mobility. A walk logged by itself is neither, so it has no name of its own
+export function recoveryWorkoutKind(workout: LoggedWorkout): "mobility" | "walk-and-mobility" | null {
   if (!isRecoveryWorkout(workout)) return null;
-  const done = workout.workoutExercises.filter(({ sets }) => sets.length > 0);
-  const holds = done.filter(({ slug }) => exerciseBySlug(slug)?.holdSeconds !== undefined);
-  if (!holds.length) return null;
-  return holds.length === done.length ? "mobility" : "walk-and-mobility";
+  const exercises = workout.workoutExercises.map(({ slug, sets }) => ({ exercise: exerciseBySlug(slug), sets }));
+  if (!exercises.some(({ exercise, sets }) => isHold(exercise) && sets.length > 0)) return null;
+  return exercises.some(({ exercise }) => exercise?.recovery && !isHold(exercise)) ? "walk-and-mobility" : "mobility";
 }

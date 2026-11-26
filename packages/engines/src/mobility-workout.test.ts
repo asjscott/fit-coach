@@ -65,8 +65,9 @@ describe("mobilityWorkout", () => {
   it.each(cases)("fits $minutes min of $focus, over by a minute at most", (choice) => {
     const seconds = mobilitySeconds(build(choice));
     expect(seconds).toBeLessThanOrEqual(choice.minutes * 60 + 60);
-    // Back and shoulders' holds, all twice, come to 28 min 20 s
-    expect(seconds).toBeGreaterThanOrEqual(choice.minutes * 60 - 100);
+    // Back and shoulders' holds come to 14 min 10 s each once, and 28 min 20 s all twice, which only 30 min does
+    const short = choice.focus === "back_and_shoulders" && choice.minutes === 20 ? 850 : choice.minutes * 60 - 100;
+    expect(seconds).toBeGreaterThanOrEqual(short);
   });
 
   it.each([10, 20, 30] as const)("covers all three areas in a Full body of %i min", (minutes) => {
@@ -114,6 +115,18 @@ describe("mobilityWorkout", () => {
     expect(few.some(({ sets }) => sets === 2)).toBe(true);
   });
 
+  it.each([10, 20] as const)("never repeats a hold in %i min, falling short instead", (minutes) => {
+    const few = build({ minutes, focus: "back_and_shoulders", injuries: ["shoulder"] });
+    expect(few.every(({ sets }) => sets === 1)).toBe(true);
+  });
+
+  it("puts the most tired first within a focus, before covering its other area", () => {
+    // Push-ups leave the chest most tired: its holds are in chest and shoulders, the focus's second area
+    const [first, second] = slugs({ focus: "back_and_shoulders", workouts: trained("push-up", 8) });
+    expect(exerciseBySlug(first)!.area).toBe("chest_and_shoulders");
+    expect(exerciseBySlug(second)!.area).toBe("chest_and_shoulders");
+  });
+
   it("chooses none to avoid with an injury, and none it has no equipment for", () => {
     const all = slugs({ minutes: 30, injuries: ["knee", "shoulder"] });
     expect(
@@ -138,11 +151,15 @@ describe("mobilityWorkout", () => {
       "knee",
       "ankle",
     ];
-    expect(
-      build({ injuries })
+    const sets = (minutes: MobilityOptions["minutes"]) =>
+      build({ minutes, injuries })
         .map(({ slug, sets }) => [slug, sets])
-        .sort(),
-    ).toEqual([
+        .sort();
+    expect(sets(20)).toEqual([
+      ["knees-to-chest", 1],
+      ["lying-hamstring-stretch", 1],
+    ]);
+    expect(sets(30)).toEqual([
       ["knees-to-chest", 2],
       ["lying-hamstring-stretch", 2],
     ]);
@@ -220,7 +237,9 @@ describe("recoveryWorkoutKind", () => {
   it("tells Mobility from Walk and mobility by the walk", () => {
     expect(kind(["cat-cow", 1], ["pigeon", 1])).toBe("mobility");
     expect(kind(["walk", 1], ["pigeon", 1])).toBe("walk-and-mobility");
-    expect(kind(["walk", 0], ["pigeon", 1])).toBe("mobility");
+    // The walk skipped is still Walk and mobility, by every Exercise in it
+    expect(kind(["walk", 0], ["pigeon", 1])).toBe("walk-and-mobility");
+    expect(kind(["cat-cow", 1], ["pigeon", 0])).toBe("mobility");
   });
 
   it("is neither for training, a walk alone or nothing done", () => {

@@ -1504,7 +1504,7 @@ describe("Logbook: Planned Workouts", () => {
     expect(workoutExercises[1]).toMatchObject({
       slug: "standing-quad-stretch",
       loadType: "timed",
-      planned: { sets: 2, target: { unit: "seconds", seconds: 30 } },
+      planned: { sets: 2, target: { unit: "seconds", seconds: 45 } },
     });
   });
 

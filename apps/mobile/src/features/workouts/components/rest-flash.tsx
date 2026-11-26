@@ -4,7 +4,8 @@ import { useReducedMotion } from "@/hooks/use-reduced-motion";
 import { useTheme } from "@/theme";
 import { useLogbook } from "../logbook-provider";
 
-// The Workout's screens flash twice as a rest ends (#179) or a hold reaches its target (#196), unless the user asks for reduced motion
+// The Workout's screens flash twice as a rest ends (#179) or a hold reaches its target (#196), unless the user asks for
+// reduced motion
 export function RestFlash() {
   const { restFlashing } = useLogbook();
   const reducedMotion = useReducedMotion();

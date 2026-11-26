@@ -22,10 +22,10 @@ export const startRest = (slug: string, now: Date, choice?: RestChoice): Rest =>
 
 // The rest after a Set of a Workout Exercise just logged (#96). In a superset there's none while the other Exercise
 // is behind and has Sets left, as the user goes straight to it, and after the pair's second Set it's the longer of
-// the two rests. Once the other has all its Sets, the one left rests as usual. A Recovery Exercise has no rest after it (#200), and
-// nor does a Set of a Workout logged afterwards, which happened on another day (#153). An Assessment always rests as on
-// Auto, so its tests aren't held back by tiredness (#178). The Workout's last planned Set has none (#180), nor the Set
-// that leaves an Assessment no test to do
+// the two rests. Once the other has all its Sets, the one left rests as usual. A Recovery Exercise has no rest after
+// it (#200), and nor does a Set of a Workout logged afterwards, which happened on another day (#153). An Assessment
+// always rests as on Auto, so its tests aren't held back by tiredness (#178). The Workout's last planned Set has none
+// (#180), nor the Set that leaves an Assessment no test to do
 export function restAfterSet(
   workout: Pick<InProgressWorkout, "workoutExercises" | "pastStart" | "assessment" | "bodyProfile">,
   workoutExerciseId: string,

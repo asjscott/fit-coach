@@ -32,11 +32,11 @@ describe("recoveryWorkoutFor", () => {
     expect(new Set(slugs).size).toBe(5);
   });
 
-  it("holds a replacement for its own time, in the same 2 Sets", () => {
+  it("holds a replacement for 2 × 45 s, as Walk and mobility keeps its Sets", () => {
     const [, , , , last] = recoveryWorkoutFor({ equipmentProfile: NO_EQUIPMENT, injuries: ["hip", "knee"] });
     expect(last).toMatchObject({ slug: "lying-hamstring-stretch", sets: 2, target: { unit: "seconds", seconds: 45 } });
     const [, standIn] = recoveryWorkoutFor({ equipmentProfile: NO_EQUIPMENT, injuries: ["hip"] });
-    expect(standIn).toEqual({ slug: "standing-quad-stretch", sets: 2, target: { unit: "seconds", seconds: 30 } });
+    expect(standIn).toEqual({ slug: "standing-quad-stretch", sets: 2, target: { unit: "seconds", seconds: 45 } });
   });
 
   it("rolls only with a foam roller", () => {

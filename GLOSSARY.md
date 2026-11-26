@@ -97,8 +97,12 @@ How long the user wants the rests between Sets, chosen on Today and kept on the 
 _Avoid_: Rest setting, rest preference, rest timer (for the choice)
 
 **Hold timer**:
-The full-screen clock that times a Set of a timed Exercise that isn't a Recovery Exercise: 5 seconds to get into position, a countdown to the bottom of the target range, then up until the user stops it. It fills in the seconds to check and never logs the Set. In an Assessment it only counts up. It's never stored.
+The full-screen clock that times a Set of a timed Exercise. For a strength Exercise: 5 seconds to get into position, a countdown to the bottom of the target range, then up until the user stops it; it fills in the seconds to check and never logs the Set, and in an Assessment it only counts up. For a Recovery Exercise it's the Guided flow's clock, which logs each hold as it ends, whether it runs the Workout's holds or the user starts it for one Recovery Exercise of a Manual Workout. It's never stored.
 _Avoid_: Stopwatch, plank timer, rest timer (for this)
+
+**Guided flow**:
+How a Recovery Workout's holds are done hands-free: one after another on the Hold timer, 10 seconds to change position before each hold and side, each logged as its Set when it ends. The user can pause, skip, go Back to repeat the previous hold (replacing its Set), or leave it for the ordinary logging screen and come back. It ends on a screen offering Back and Finish. Where it is comes from the logged Sets, so it reopens, paused, at the first hold not logged.
+_Avoid_: Routine player, follow-along, guided session
 
 **Weekly Budget**:
 How many credited Sets each of the budgeted Muscles should get in a week, set by the user's Goal and days per week. Workout Length decides how much of it is delivered, not the budget itself. Eight Muscles are budgeted for every Goal, and calves too for athletic and build_muscle; other Muscles aren't budgeted. The Coach plans a Muscle up to a cap of about 130% of its budget, counted from the Week Ledger and the Sets already planned: it adds no Exercise, a Jump included, that would take one of its primary Muscles over it, while secondary credit counts towards a Muscle's total but never keeps an Exercise out.

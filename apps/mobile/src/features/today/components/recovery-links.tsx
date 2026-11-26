@@ -1,6 +1,5 @@
-import { WALK_AND_MOBILITY } from "@/features/workouts/format";
+import { MOBILITY, WALK_AND_MOBILITY } from "@/features/workouts/format";
 import type { ColorToken } from "@/theme";
-import { MOBILITY } from "../today-status";
 import { TodayCardLink } from "./today-card";
 
 // The two Recovery Workouts in place of the Day's Workout, Mobility first (#198)

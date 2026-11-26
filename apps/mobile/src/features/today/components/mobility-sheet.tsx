@@ -18,12 +18,12 @@ import { Pressable } from "@/components/pressable";
 import { HStack } from "@/components/stack";
 import { Text } from "@/components/text";
 import { useWeightUnit } from "@/features/user/current-user-provider";
-import { setTargetLabel } from "@/features/workouts/format";
+import { MOBILITY, setTargetLabel } from "@/features/workouts/format";
 import { useStartMobilityWorkout } from "@/features/workouts/hooks/use-open-workout";
 import { exerciseName, setReading } from "@/features/workouts/library";
 import { spacing, useTheme } from "@/theme";
 import { useMobility } from "../hooks/use-mobility";
-import { MOBILITY, NO_OTHER_HOLDS, mobilityFocusLabels, mobilityHoldLine, mobilityTotalLine } from "../today-status";
+import { NO_OTHER_HOLDS, mobilityFocusLabels, mobilityHoldLine, mobilityTotalLine } from "../today-status";
 
 // The Mobility Workout before it starts: its length and focus, and the holds the app picked for them (#198).
 // `openedAt` is null while it's closed

@@ -1,13 +1,18 @@
 import type { InProgressWorkout, Set } from "@fit/shared";
 import { describe, expect, it } from "vitest";
 import {
+  afterHoldLogged,
   backHold,
+  canMoveGuide,
+  guidedStart,
   guidedHold,
   guidedPlace,
   guidedStep,
   holdAlone,
   holdLogged,
+  holdsDone,
   isGuidedWorkout,
+  reopenedCourse,
   skipHold,
   startGuidedRun,
   type GuidedCourse,
@@ -124,6 +129,97 @@ describe("going back", () => {
 
   it("returns to a hold whose Set was removed on the ordinary screen", () => {
     expect(where(twice(1, 1), start)).toEqual(["cat-cow", 2, undefined, undefined]);
+  });
+
+  it("repeats the last hold from the end, replacing its Set, then is over again", () => {
+    const done = twice(2, 1);
+    expect(guidedPlace(done, start)).toMatchObject({ current: null, hasPrevious: true });
+    const back = backHold(done, start);
+    expect(where(done, back)).toEqual(["open-book", 3, 0, undefined]);
+    expect(guidedPlace(done, holdLogged(done, back)).current).toBeNull();
+  });
+});
+
+describe("starting the guided flow", () => {
+  const twice = (logged = 0) => workoutOf({ slug: "cat-cow", sets: 2, logged }, { slug: "open-book" });
+
+  it("starts from the skips kept since it was left, while they leave a hold", () => {
+    expect(guidedStart(twice(), { "cat-cow": [0] })).toEqual({ skips: { "cat-cow": [0] } });
+  });
+
+  it("starts afresh, taking in the skipped holds, once the kept skips leave none", () => {
+    expect(guidedStart(twice(1), { "cat-cow": [1], "open-book": [0] })).toEqual({ skips: {} });
+    expect(guidedStart(twice(1))).toEqual({ skips: {} });
+  });
+
+  it("doesn't start with every hold logged, nor for a Workout that isn't guided", () => {
+    expect(guidedStart(workoutOf({ slug: "cat-cow", logged: 1 }))).toBeNull();
+    expect(guidedStart(workoutOf({ slug: "plank" }, { slug: "cat-cow" }))).toBeNull();
+  });
+});
+
+describe("reopenedCourse", () => {
+  const opened = { openOver: "workout-1", stale: false };
+  const workout = { ...workoutOf({ slug: "cat-cow", sets: 2, logged: 1 }), id: "workout-1" };
+
+  it("reopens the flow left open over this Workout, from the first hold not logged", () => {
+    const course = reopenedCourse(workout, opened)!;
+    expect(guidedPlace(workout, course)).toMatchObject({ position: 2, replaces: undefined });
+  });
+
+  it("doesn't reopen over another Workout, a forgotten one, or one with every hold logged", () => {
+    expect(reopenedCourse(workout, { ...opened, openOver: "workout-2" })).toBeNull();
+    expect(reopenedCourse(workout, { ...opened, openOver: null })).toBeNull();
+    expect(reopenedCourse(workout, { ...opened, stale: true })).toBeNull();
+    const done = { ...workoutOf({ slug: "cat-cow", sets: 2, logged: 2 }), id: "workout-1" };
+    expect(reopenedCourse(done, opened)).toBeNull();
+  });
+});
+
+describe("canMoveGuide", () => {
+  const START = Date.parse("2026-11-25T10:00:00Z");
+  const run: HoldRun = { startedAt: START, pauses: [] };
+  // Cat-cow: 10 s to get into position, then 45 s
+  const place = guidedPlace(mobility, { skips: {} });
+
+  it("moves during a hold, but not once it's done and being logged", () => {
+    expect(canMoveGuide({ place, run }, new Date(START + 30_000))).toBe(true);
+    expect(canMoveGuide({ place, run }, new Date(START + 56_000))).toBe(false);
+  });
+
+  it("moves once logging the done hold failed, and from the end", () => {
+    expect(canMoveGuide({ place, run, failed: true }, new Date(START + 56_000))).toBe(true);
+    const end = guidedPlace(workoutOf({ slug: "cat-cow", logged: 1 }), { skips: {} });
+    expect(canMoveGuide({ place: end, run }, new Date(START + 56_000))).toBe(true);
+  });
+});
+
+describe("afterHoldLogged", () => {
+  const twice = (logged = 0) => workoutOf({ slug: "cat-cow", sets: 2, logged }, { slug: "open-book" });
+
+  it("goes on to the next hold once the current one's Set is logged", () => {
+    const { course, place } = afterHoldLogged(twice(0), twice(1), { skips: {} });
+    expect(course).toEqual({ skips: {} });
+    expect(place).toMatchObject({ current: { slug: "cat-cow" }, position: 2, done: 1 });
+  });
+
+  it("goes on from the first hold left once a hold gone back to is logged", () => {
+    const back = backHold(twice(2), { skips: {} });
+    const { course, place } = afterHoldLogged(twice(2), twice(2), back);
+    expect(course).toEqual({ skips: {} });
+    expect(place).toMatchObject({ current: { slug: "open-book" }, position: 3 });
+  });
+});
+
+describe("holdsDone", () => {
+  it("counts each hold with a Set once, as the finish screen lists them, and not the walk", () => {
+    const workout = workoutOf(
+      { slug: "walk", logged: 1 },
+      { slug: "cat-cow", sets: 2, logged: 2 },
+      { slug: "open-book", sets: 2, logged: 1 },
+      { slug: "pigeon", sets: 2 },
+    );
+    expect(holdsDone(workout)).toBe(2);
   });
 });
 

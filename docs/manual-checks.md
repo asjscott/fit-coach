@@ -232,7 +232,7 @@ On the installed web app on the iPhone, with the silent switch off and the volum
   - Result: · Notes:
 - [ ] **GF4** Walk and mobility: the walk is logged in minutes as before, then the flow opens.
   - Result: · Notes:
-- [ ] **GF5** After the last hold, Finish shows the time taken and the holds done, and saves. Finish early keeps what's logged; with nothing logged, Save offers to discard.
+- [ ] **GF5** After the last hold, the flow offers Back, which repeats it, and Finish, which shows the time taken and the holds done (a hold of two Sets once), and saves. Finish early keeps what's logged; with nothing logged, Save offers to discard.
   - Result: · Notes:
 - [ ] **GF6** With VoiceOver, the clock reads as "Hold, 0:12 left", each change is announced with the next hold's name, and the buttons behind can't be reached. With Reduce Motion on there's no flash.
   - Result: · Notes:

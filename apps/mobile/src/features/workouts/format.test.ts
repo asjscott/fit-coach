@@ -27,6 +27,7 @@ import {
   straightToLabel,
   supersetLetter,
   restChoiceLabel,
+  secondsLabel,
   supersetNote,
   workoutExerciseSummary,
   workoutTimesLabel,
@@ -555,6 +556,16 @@ describe("supersetLetter", () => {
 describe("straightToLabel", () => {
   it("names the other Exercise exactly as the library does", () => {
     expect(straightToLabel("Barbell Romanian deadlift")).toBe("No rest: straight to Barbell Romanian deadlift");
+  });
+});
+
+describe("secondsLabel", () => {
+  it.each([
+    [55, "55 s"],
+    [110, "1 min 50 s"],
+    [120, "2 min"],
+  ] as const)("reads %i s as %s", (seconds, label) => {
+    expect(secondsLabel(seconds)).toBe(label);
   });
 });
 

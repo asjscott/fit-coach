@@ -2,6 +2,7 @@ import type { InProgressWorkout, InProgressWorkoutExercise } from "@fit/shared";
 import { exerciseBySlug } from "./data/exercises";
 import { holdCues, holdState, isHoldPaused, pauseHold, type Hold, type HoldRun } from "./hold-timer";
 import { CHANGE_SECONDS } from "./mobility-workout";
+import { isHold, sidesOf, type LoggedWorkout } from "./recovery-workout";
 
 // The guided flow runs a Recovery Workout's holds one after another, each logging its Set (#200). Where it is comes
 // from the logged Sets and the skips of this run of it
@@ -28,7 +29,7 @@ export type GuidedPlace = {
   // The current hold's number, or the last's once it's over
   position: number;
   count: number;
-  // Holds logged
+  // Sets logged of holds
   done: number;
   // The Set the current hold replaces, when it was gone back to
   replaces?: number;
@@ -49,6 +50,7 @@ export const isGuidedWorkout = ({
   workoutExercises.some((workoutExercise) => plannedHolds(workoutExercise).length > 0);
 
 type Holds = Pick<InProgressWorkout, "workoutExercises">;
+type GuidedWorkout = Pick<InProgressWorkout, "workoutExercises" | "pastStart">;
 
 // Every hold of the run, and what became of it. Sets fill the holds that weren't skipped, in order, and any more of
 // them the skipped ones, which were then logged on the ordinary screen
@@ -70,9 +72,9 @@ function courseHolds({ workoutExercises }: Holds, { skips, only }: GuidedCourse)
 // As many of a Recovery Exercise's hold, at its planned seconds or else the library's; none for the walk
 function repeatedHold({ id, slug, planned }: InProgressWorkoutExercise, count: number): GuidedHold[] {
   const exercise = exerciseBySlug(slug);
-  if (exercise?.holdSeconds === undefined) return [];
+  if (!isHold(exercise)) return [];
   const seconds = planned?.target.unit === "seconds" ? planned.target.seconds : exercise.holdSeconds;
-  const hold: GuidedHold = { workoutExerciseId: id, slug, seconds, sides: exercise.unilateral ? 2 : 1 };
+  const hold: GuidedHold = { workoutExerciseId: id, slug, seconds, sides: sidesOf(exercise) };
   return Array.from({ length: count }, () => hold);
 }
 
@@ -87,7 +89,10 @@ export function guidedPlace(workout: Holds, course: GuidedCourse): GuidedPlace {
     next: (gone ? left[0] : left[1])?.hold ?? null,
     position: current ? index + 1 : holds.length,
     count: holds.length,
-    done: holdsDone(workout),
+    done: workout.workoutExercises.reduce(
+      (sum, { slug, sets }) => sum + (isHold(exerciseBySlug(slug)) ? sets.length : 0),
+      0,
+    ),
     replaces: current?.setIndex,
     hasPrevious: index > 0,
   };
@@ -116,6 +121,44 @@ export function holdLogged(workout: Holds, { back, ...course }: GuidedCourse): G
   return { ...course, skips: { ...course.skips, [id]: skips.filter((slot) => slot !== gone?.slot) } };
 }
 
+// Where the flow starts: from the skips kept since it was left, while they leave a hold, else afresh, taking in the
+// skipped holds. null when the Workout isn't guided or has no hold left
+export function guidedStart(workout: GuidedWorkout, keptSkips: GuidedSkips = {}): GuidedCourse | null {
+  if (!isGuidedWorkout(workout)) return null;
+  const kept = { skips: keptSkips };
+  if (guidedPlace(workout, kept).current) return kept;
+  const fresh = { skips: {} };
+  return guidedPlace(workout, fresh).current ? fresh : null;
+}
+
+// The flow left open over this Workout when the app was killed, at the first hold not logged, as its skips were lost.
+// Not over a forgotten Workout, which is to be finished or discarded
+export function reopenedCourse(
+  workout: GuidedWorkout & { id: string },
+  { openOver, stale }: { openOver: string | null; stale: boolean },
+): GuidedCourse | null {
+  return openOver === workout.id && !stale ? guidedStart(workout) : null;
+}
+
+// Back or Skip moves to another hold. Not once the hold is done and being logged, unless that failed; from the end,
+// where there's no hold, always
+export function canMoveGuide(
+  { place, run, failed }: { place: GuidedPlace; run: HoldRun; failed?: boolean },
+  now: Date,
+): boolean {
+  return !place.current || !!failed || holdState(guidedHold(place.current), run, now).phase !== "done";
+}
+
+// Where the flow goes once the current hold's Set is logged or replaced, from the Workout before and after
+export function afterHoldLogged(
+  before: Holds,
+  logged: Holds,
+  course: GuidedCourse,
+): { course: GuidedCourse; place: GuidedPlace } {
+  const next = holdLogged(before, course);
+  return { course: next, place: guidedPlace(logged, next) };
+}
+
 // The course that times a Recovery Exercise's next Set by itself, in a Workout whose guided flow doesn't run it
 export function holdAlone(
   workoutExercise: InProgressWorkoutExercise,
@@ -126,16 +169,9 @@ export function holdAlone(
   return { skips: {}, only: { workoutExerciseId: workoutExercise.id, count: workoutExercise.sets.length + 1 } };
 }
 
-// The Sets logged of holds, the walk's left out
-export const holdsDone = ({
-  workoutExercises,
-}: {
-  workoutExercises: readonly { slug: string; sets: readonly unknown[] }[];
-}) =>
-  workoutExercises.reduce(
-    (sum, { slug, sets }) => sum + (exerciseBySlug(slug)?.holdSeconds === undefined ? 0 : sets.length),
-    0,
-  );
+// The holds with a Set logged, each once however many it has, as the finish screen lists them; the walk left out
+export const holdsDone = ({ workoutExercises }: LoggedWorkout) =>
+  workoutExercises.filter(({ slug, sets }) => sets.length > 0 && isHold(exerciseBySlug(slug))).length;
 
 export const guidedHold = ({ seconds, sides }: GuidedHold): Hold => ({
   leadInSeconds: CHANGE_SECONDS,
