@@ -110,8 +110,11 @@ Schemas shared by app and API: packages/shared/src/workouts.ts
   Logbook as its last side ends, with no RPE, then starts the next with a 10 s change. Going to the background pauses it,
   as does a gap of over 2 s between looks, for a phone that froze without saying. Logging the walk or starting a Mobility
   Workout starts it; "Start holds" / "Continue holds" on the logging screen does otherwise. A Set that can't be stored
-  pauses it with Try again. `GuidedScreen` is the modal; the last hold, or Finish early, leads to Finish, which shows
-  Holds in place of Volume and Sets. No Recovery Exercise starts a rest (`restAfterSet`).
+  pauses it with Try again. `GuidedScreen` is the modal; after the last hold it offers Back and Finish, and Finish or
+  Finish early leads to Finish, which shows Holds (`holdsDone`, each hold once) in place of Volume and Sets. No Recovery
+  Exercise starts a rest (`restAfterSet`). The provider's rules are engine functions: where it starts (`guidedStart`),
+  reopens (`reopenedCourse`), whether Back or Skip may move (`canMoveGuide`) and where a logged hold leads
+  (`afterHoldLogged`).
   Back (#201, `backHold`) goes to the hold before; completing it replaces its Set (`editSet`), or logs it if it was
   skipped, then returns to the first hold left. Leave timer keeps the skips in memory, so Continue holds keeps its
   place. `stored-guide.ts` holds the Workout whose flow is open, and on load it reopens paused, its skips lost, unless
@@ -323,10 +326,11 @@ Schemas: packages/shared/src/planned-workouts.ts
   offer. The walk is one Set (#109, `takesOneSet`): `restAfterSet` gives no rest after it, and the logging screen
   offers "Next exercise" rather than a Set 2 (`takesAnotherSet`). Recovery Exercises have no Pattern and no strength ratio, so no Working Level. Every one
   but the walk has an `area` and `holdSeconds` (per side, #197). `recoveryWorkoutFor` replaces a hold ruled out by
-  injuries or equipment, for the phone's start and the planner's fallback alike. A Mobility Workout (#198) has no walk:
-  `mobilityWorkout` (`mobility-workout.ts`) picks its holds, `alternativeHolds`, `swapHold` and
+  injuries or equipment, keeping its 2 × 45 s, for the phone's start and the planner's fallback alike. A Mobility Workout (#198) has no walk:
+  `mobilityWorkout` (`mobility-workout.ts`) picks its holds (Full body covers every area first; a focus goes most tired
+  first; only 30 minutes repeats a hold, once the rest run out), `alternativeHolds`, `swapHold` and
   `removeHold` change them before it starts (#199), `startMobilityWorkout` starts them with targets, and
-  `recoveryWorkoutKind` tells it from Walk and mobility by its Exercises, for History. Its length, focus and last
+  `recoveryWorkoutKind` tells it from Walk and mobility by every Exercise in it, a skipped walk too, for History. Its length, focus and last
   Exercises are on the phone only (`stored-mobility.ts`). `recovery`, `area` and the rest need
   `seed:exercises` re-run, as `ballistic` did.
 - **Jumps come only from the jump rule** (#105, `jumps.ts`): athletic, `UserProfile.includeJumps` on, the squat tested

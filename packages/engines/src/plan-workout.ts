@@ -514,8 +514,8 @@ export function planWorkout(input: PlanWorkoutInput): WorkoutPlan {
       requiredPick(candidates, thisWeek, { goal, budget, ledger }) ??
       requiredSquat(candidates, thisWeek, goal, isRested),
   };
-  // The cap always holds, the Week Ledger counting towards it, so with nothing left to add the plan is the Recovery Workout.
-  // The plan always has an Exercise
+  // The cap always holds, the Week Ledger counting towards it, so with nothing left to add the plan is the Recovery
+  // Workout. The plan always has an Exercise
   const picked = selectExercises(selection, ledger);
   const selected: PlannedExercise[] = picked.length ? picked : recoveryWorkoutFor(input);
   const held = heldBack(candidates, selected, tired);

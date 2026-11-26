@@ -13,7 +13,8 @@ export type StoredMobility = z.infer<typeof StoredMobility>;
 
 const FIRST: StoredMobility = { minutes: 20, focus: "full_body", lastExercises: [] };
 
-// The last Mobility's length, focus and Exercises, kept on the phone only. 20 minutes of Full body until the user chooses
+// The last Mobility's length, focus and Exercises, kept on the phone only. 20 minutes of Full body until the user
+// chooses
 export function createStoredMobility(storage: DeviceStorage) {
   return {
     read: async (): Promise<StoredMobility> => (await readStoredCopy(storage, KEY, StoredMobility)) ?? FIRST,

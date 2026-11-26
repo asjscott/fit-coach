@@ -125,8 +125,8 @@ type LogbookContextValue = {
   stopHold: () => void;
   cancelHold: () => void;
   heldSeconds: HeldSeconds | null;
-  // The guided flow of a Recovery Workout's holds, or null. Starting one ends a rest; it logs each hold as it ends. Where
-  // it is comes from the logged Sets and its skips. One left open when the app was killed reopens paused
+  // The guided flow of a Recovery Workout's holds, or null. Starting one ends a rest; it logs each hold as it ends.
+  // Where it is comes from the logged Sets and its skips. One left open when the app was killed reopens paused
   guide: CurrentGuide | null;
   startGuide: () => Promise<void>;
   pauseGuide: () => void;
