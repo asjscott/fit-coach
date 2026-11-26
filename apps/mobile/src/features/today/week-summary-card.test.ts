@@ -97,8 +97,9 @@ describe("weekSummaryToAsk", () => {
   });
 });
 
-// Story 41: "Last week" in This week opens the week before's Week Summary until the next one is due, at 6 pm on Sunday,
-// when that one's card takes over. Onboarded on Wednesday 18 November 2026; Denver is UTC−7
+// Story 41: "Last week" in This week brings back the latest Week Summary until the next one is due, at 6 pm on Sunday,
+// when it moves on to that one, so the week just ended stays a tap away once its card has gone. Onboarded on Wednesday
+// 18 November 2026; Denver is UTC−7
 describe("lastWeekLink", () => {
   const link = (iso: string) =>
     lastWeekLink({ now: new Date(iso), timeZone: "America/Denver", onboardedAt: "2026-11-18T19:00:00Z" });
@@ -108,17 +109,21 @@ describe("lastWeekLink", () => {
     expect(link("2026-12-07T00:59:00Z")).toBe("2026-11-23");
   });
 
-  it("is gone once the next Week Summary is due", () => {
-    expect(link("2026-12-07T01:00:00Z")).toBeNull();
-    // And back on Monday, for the week that just ended
+  it("moves on to the week ending once its Week Summary is due, and stays on it through the next week", () => {
+    expect(link("2026-12-07T01:00:00Z")).toBe("2026-11-30");
     expect(link("2026-12-07T08:00:00Z")).toBe("2026-11-30");
+  });
+
+  it("opens the part first week from 6 pm on its Sunday", () => {
+    expect(link("2026-11-23T01:00:00Z")).toBe("2026-11-16");
   });
 
   it("opens the part first week", () => {
     expect(link("2026-11-25T16:00:00Z")).toBe("2026-11-16");
   });
 
-  it("isn't there in the week the user onboarded", () => {
+  it("isn't there in the week the user onboarded, before its Week Summary is due", () => {
     expect(link("2026-11-20T16:00:00Z")).toBeNull();
+    expect(link("2026-11-23T00:59:00Z")).toBeNull();
   });
 });

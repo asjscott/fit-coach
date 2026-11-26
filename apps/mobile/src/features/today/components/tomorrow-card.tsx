@@ -8,19 +8,14 @@ import { TodayCardLink } from "./today-card";
 // eat, with the next Workout a tap away in its sheet
 export function TomorrowCard({
   tomorrow,
-  now,
   onSeeNextWorkout,
 }: {
   tomorrow: NonNullable<DaySummaryTomorrow>;
-  now: Date;
   // Null when there's no Planned Workout sheet to open
   onSeeNextWorkout: (() => void) | null;
 }) {
   const { colors } = useTheme();
-  const { headline, reason, targets } = tomorrowCard(tomorrow);
-  const weekday = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1).toLocaleDateString([], {
-    weekday: "long",
-  });
+  const { weekday, headline, reason, targets } = tomorrowCard(tomorrow);
   return (
     <View style={[styles.card, { backgroundColor: colors.raised }]}>
       <Text size="xs" weight="semiBold" color="muted">

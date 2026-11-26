@@ -75,6 +75,24 @@ describe("weeklyStreak", () => {
     expect(streak([...week("2026-10-05", 1), ...weeks])).toBe(3);
   });
 
+  it("counts the first week like any other when the user onboarded on its Monday", () => {
+    // 6 am on Monday 12 October in New York, 3 am in Los Angeles where the tests run
+    const onMonday = { onboardedAt: "2026-10-12T10:00:00.000Z", daysPerWeek: 4, now, timeZone };
+    const weeks = [...week("2026-10-12", 3), ...week("2026-10-19", 3), ...week("2026-10-26", 3)];
+    expect(weeklyStreak({ ...onMonday, workouts: weeks })).toBe(3);
+    expect(weeklyStreak({ ...onMonday, workouts: [...week("2026-10-12", 1), ...weeks.slice(3)] })).toBe(2);
+  });
+
+  it("skips the first week when the user onboarded after its Monday in their timezone", () => {
+    // 12:30 am on Tuesday 13 October in New York, still Monday in Los Angeles where the tests run
+    const earlyTuesday = { onboardedAt: "2026-10-13T04:30:00.000Z", daysPerWeek: 4, now, timeZone };
+    const weeks = [...week("2026-10-12", 3), ...week("2026-10-19", 3), ...week("2026-10-26", 3)];
+    expect(weeklyStreak({ ...earlyTuesday, workouts: weeks })).toBe(2);
+    // 11 pm on Sunday 11 October in New York, already Monday in UTC: the week of 5 October is the partial one
+    const lateSunday = { ...earlyTuesday, onboardedAt: "2026-10-12T03:00:00.000Z" };
+    expect(weeklyStreak({ ...lateSunday, workouts: [...week("2026-10-12", 1), ...weeks.slice(3)] })).toBe(2);
+  });
+
   it("counts nothing before the user onboarded", () => {
     const weeks = [...week("2026-10-12", 3), ...week("2026-10-19", 3), ...week("2026-10-26", 3)];
     expect(streak([...week("2026-09-21", 3), ...week("2026-09-28", 3), ...weeks])).toBe(3);
@@ -128,6 +146,12 @@ describe("weeklyStreakSince", () => {
 
   it("is last week's Monday when last week broke it", () => {
     expect(since(week("2026-11-02", 1))).toBe("2026-10-26");
+  });
+
+  it("is the Monday before a whole onboarding week when nothing broke it", () => {
+    const onMonday = { onboardedAt: "2026-10-12T10:00:00.000Z", daysPerWeek: 4, now, timeZone };
+    const weeks = [...week("2026-10-12", 3), ...week("2026-10-19", 3), ...week("2026-10-26", 3)];
+    expect(weeklyStreakSince({ ...onMonday, workouts: weeks })).toBe("2026-10-05");
   });
 
   it("is the onboarding week's Monday when nothing broke it", () => {

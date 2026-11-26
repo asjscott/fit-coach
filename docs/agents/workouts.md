@@ -18,14 +18,16 @@ screens (apps/mobile/src/features/workouts/views)
 History (history-provider.tsx, hooks/use-history.ts): GET /workouts, held in memory only, paged back far enough to
   cover the 8 weeks of weekly Volume and the Weekly Streak's weeks (weeklyStreakSince); Pending Workouts merged in
 Weekly Streak (packages/engines/src/weekly-streak.ts): weeklyStreak, in the user's timeZone; This week and the Week
-  Summary both call it
+  Summary both call it. partFirstWeek is the one rule for the part first week: skipped by the streak, pro-rated by the
+  Week Summary, and none when the user onboarded on a Monday
 Week Summary (apps/api/src/week-summaries.ts, routes/week-summaries.ts): GET /week-summaries/:monday (or latest, the
-  week just ended: latestWeekSummaryMonday in packages/engines/src/week-summary.ts) worked out live; only "seen" is
-  stored (weekSummariesSeen, unique on user and week), set by PUT /week-summaries/:monday/seen. A new part is worked out
-  in weekSummaryOf from WeekData and added to WeekSummary (packages/shared/src/week-summaries.ts) as optional. The
-  Coach's sentence: weekVerdict (packages/engines/src/week-verdict.ts), ordered templates, the first that matches wins.
-  Working Level moves come from each level's last move (movedBy, change), so a level moved again later shows as it is
-  now. Today's card: useWeekSummaryCard and week-summary-card.tsx in features/today; the screen (/week-summary?monday=)
+  week just ended: latestWeekSummaryMonday) worked out live; only "seen" is stored (weekSummariesSeen, unique on user
+  and week), set by PUT /week-summaries/:monday/seen. The API file only loads the week; the rules are weekSummary in
+  packages/engines/src/week-summary.ts, where a new part is worked out from WeekSummaryInput and added to WeekSummary
+  (packages/shared/src/week-summaries.ts) as optional. The Coach's sentence: weekVerdict
+  (packages/engines/src/week-verdict.ts), ordered templates, the first that matches wins. Working Level moves come from
+  each level's last move (movedBy, change), as only that is stored: a level moved again later shows as it is now, and
+  one moved in a later week drops out of the earlier week's moves. Today's card: useWeekSummaryCard and week-summary-card.tsx in features/today; the screen (/week-summary?monday=)
   is views/week-summary-view.tsx with its parts in week-summary-screen.ts, opened from the card and from "Last week"
   in This week (lastWeekLink)
 Training summaries (packages/engines/src/training-summaries.ts): Volume, Sets, weeks, weekly Volume and the Previous

@@ -193,6 +193,7 @@ export default function TodayView() {
           now,
           timeZone,
           workouts: all,
+          historyLoaded: state !== "offline",
           day,
           restDayToday: restDayReason,
           daysPerWeek,
@@ -238,7 +239,7 @@ export default function TodayView() {
       {summary?.finished ? (
         <View style={{ marginBottom: spacing[4], gap: spacing[3] }}>
           {summary.tomorrow ? (
-            <TomorrowCard tomorrow={summary.tomorrow} now={now} onSeeNextWorkout={today ? openSheet : null} />
+            <TomorrowCard tomorrow={summary.tomorrow} onSeeNextWorkout={today ? openSheet : null} />
           ) : null}
           <DaySummaryReceipt summary={summary} />
         </View>

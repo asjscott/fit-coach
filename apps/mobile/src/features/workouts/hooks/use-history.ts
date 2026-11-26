@@ -47,11 +47,12 @@ export function useHistoryState() {
     const current = ++generation.current;
     const now = new Date();
     const since = weeklyVolumeStart(now).getTime();
-    // The oldest Workout loaded is before the week the streak stops at, so that week is whole too
-    const streakCovered = (workouts: Workout[], oldest: Workout) => {
-      const input = streak.current && { ...streak.current, workouts, now };
-      return !input || mondayOf(new Date(oldest.startedAt), input.timeZone) < weeklyStreakSince(input);
-    };
+    // The oldest Workout loaded is before the week the streak stops at, so that week is whole too. That week depends on
+    // the Workouts loaded so far, so it's worked out again after each page
+    const streakOf = streak.current && { ...streak.current, now };
+    const streakCovered = (workouts: Workout[], oldest: Workout) =>
+      !streakOf ||
+      mondayOf(new Date(oldest.startedAt), streakOf.timeZone) < weeklyStreakSince({ ...streakOf, workouts });
     try {
       let loaded: Workout[] = [];
       let more = true;

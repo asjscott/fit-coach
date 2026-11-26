@@ -1,6 +1,7 @@
-import { latestWeekSummaryMonday, mondayOf } from "@fit/engines";
+import { latestWeekSummaryMonday, mondayOf, RANGE_STATE_WORDS } from "@fit/engines";
 import type { WeekAverage, WeekSummary } from "@fit/shared";
 import { wholeNumber } from "../nutrition/format";
+import { RANGE_STATE_TONES } from "./week-summary-screen";
 
 // The Monday of the week whose Week Summary Today should ask for, or null. It's the week just ended (from 6 pm on its
 // Sunday, in the user's timezone) until the phone knows it's been seen, here or on the other phone. A week before the
@@ -23,11 +24,11 @@ export function weekSummaryToAsk({
   return latest;
 }
 
-// The Monday of the week "Last week" in This week opens, or null. It's the week before this one, from Monday until its
-// own Week Summary's card takes over at 6 pm on Sunday, when the link goes. The week the user onboarded has none before
+// The Monday of the week "Last week" in This week opens, or null: the latest Week Summary's, which moves on to the week
+// ending at 6 pm on Sunday, so that week stays a tap away once its card has gone. The week the user onboarded has none
+// before its own is due
 export function lastWeekLink({ now, timeZone, onboardedAt }: { now: Date; timeZone: string; onboardedAt: string }) {
   const latest = latestWeekSummaryMonday(now, timeZone);
-  if (latest === mondayOf(now, timeZone)) return null;
   if (latest < mondayOf(new Date(onboardedAt), timeZone)) return null;
   return latest;
 }
@@ -42,19 +43,12 @@ export type WeekSummaryBar = {
 
 const share = (done: number, of: number) => (of > 0 ? Math.min(done, of) / of : 0);
 
-const STATE_WORDS: Record<WeekAverage["state"], string> = { below: "under", in: "in range", over: "over" };
-const STATE_TONES: Record<WeekAverage["state"], WeekSummaryBar["tone"]> = {
-  below: "warning",
-  in: "success",
-  over: "danger",
-};
-
 function averageBar(label: string, average: WeekAverage, unit: string): WeekSummaryBar {
   return {
     label,
-    value: `${wholeNumber(average.average)}${unit} avg · ${STATE_WORDS[average.state]}`,
+    value: `${wholeNumber(average.average)}${unit} avg · ${RANGE_STATE_WORDS[average.state]}`,
     fill: share(average.average, average.min),
-    tone: STATE_TONES[average.state],
+    tone: RANGE_STATE_TONES[average.state],
   };
 }
 

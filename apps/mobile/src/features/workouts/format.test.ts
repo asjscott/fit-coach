@@ -205,8 +205,8 @@ describe("setsSummary", () => {
 
 describe("workoutExerciseSummary", () => {
   it("counts the Sets before summarising them", () => {
-    expect(workoutExerciseSummary([lifted(18, 10), lifted(18, 8)], "kg")).toBe("2 sets · 18 kg × 10, 8");
-    expect(workoutExerciseSummary([lifted(18, 10)], "kg")).toBe("1 set · 18 kg × 10");
+    expect(workoutExerciseSummary([lifted(18, 10), lifted(18, 8)], "kg")).toBe("2 Sets · 18 kg × 10, 8");
+    expect(workoutExerciseSummary([lifted(18, 10)], "kg")).toBe("1 Set · 18 kg × 10");
   });
 
   it("says when nothing is logged yet", () => {
@@ -216,7 +216,7 @@ describe("workoutExerciseSummary", () => {
   it("shows the Previous Sets until something is logged", () => {
     const previous = [lifted(18, 10), lifted(18, 10), lifted(18, 8)];
     expect(workoutExerciseSummary([], "kg", previous)).toBe("Last: 18 kg × 10, 10, 8");
-    expect(workoutExerciseSummary([lifted(20, 6)], "kg", previous)).toBe("1 set · 20 kg × 6");
+    expect(workoutExerciseSummary([lifted(20, 6)], "kg", previous)).toBe("1 Set · 20 kg × 6");
   });
 });
 
@@ -224,12 +224,12 @@ describe("workoutExerciseSummary in a Workout started from a plan", () => {
   const planned = { sets: 3, target: { unit: "kg", kg: 20, reps: 8 } } as const;
 
   it("shows the target Sets until something is logged, ahead of the Previous Sets", () => {
-    expect(workoutExerciseSummary([], "kg", [lifted(18, 10)], planned)).toBe("3 sets · 20 kg × 8");
-    expect(workoutExerciseSummary([lifted(20, 6)], "kg", [lifted(18, 10)], planned)).toBe("1 set · 20 kg × 6");
+    expect(workoutExerciseSummary([], "kg", [lifted(18, 10)], planned)).toBe("3 Sets · 20 kg × 8");
+    expect(workoutExerciseSummary([lifted(20, 6)], "kg", [lifted(18, 10)], planned)).toBe("1 Set · 20 kg × 6");
   });
 
   it("says the target is per side for a one-sided Exercise, as Today does", () => {
-    expect(workoutExerciseSummary([], "kg", undefined, planned, oneSided)).toBe("3 sets · 20 kg × 8 per side");
+    expect(workoutExerciseSummary([], "kg", undefined, planned, oneSided)).toBe("3 Sets · 20 kg × 8 per side");
   });
 });
 
@@ -238,7 +238,7 @@ describe("a Jump's Sets", () => {
   const jumps = { sets: 3, target: { unit: "reps", reps: 6 } } as const;
 
   it("counts an upcoming Jump's target Sets in contacts", () => {
-    expect(workoutExerciseSummary([], "kg", undefined, jumps, jump)).toBe("3 sets · 6 contacts");
+    expect(workoutExerciseSummary([], "kg", undefined, jumps, jump)).toBe("3 Sets · 6 contacts");
   });
 
   it("reads a logged Jump Set in contacts, and its row's big number with contacts after it", () => {
@@ -250,7 +250,7 @@ describe("a Jump's Sets", () => {
   it("summarises logged and Previous Jump Sets in contacts", () => {
     const landed = (contacts: number): Set => ({ kind: "bodyweight", reps: contacts, loggedAt });
     expect(setsSummary([landed(6), landed(6)], "kg", jump)).toBe("6, 6 contacts");
-    expect(workoutExerciseSummary([landed(6)], "kg", undefined, jumps, jump)).toBe("1 set · 6 contacts");
+    expect(workoutExerciseSummary([landed(6)], "kg", undefined, jumps, jump)).toBe("1 Set · 6 contacts");
     expect(workoutExerciseSummary([], "kg", [landed(5)], undefined, jump)).toBe("Last: 5 contacts");
   });
 
@@ -258,7 +258,7 @@ describe("a Jump's Sets", () => {
     const reps: Set = { kind: "bodyweight", reps: 12, loggedAt };
     expect(describeSet(reps, "kg")).toBe("12 reps");
     expect(workoutExerciseSummary([], "kg", undefined, { sets: 3, target: { unit: "reps", reps: 12 } })).toBe(
-      "3 sets · 12 reps",
+      "3 Sets · 12 reps",
     );
   });
 });
@@ -278,14 +278,14 @@ describe("setTargetLabel", () => {
     expect(setTargetLabel({ unit: "seconds", seconds: 60 }, "kg")).toBe("60 s");
     expect(setTargetLabel({ unit: "seconds", seconds: 90 }, "kg")).toBe("90 s");
     expect(plannedSetsLabel({ sets: 3, target: { unit: "seconds", seconds: 90 } }, "kg", oneSided)).toBe(
-      "3 sets · 90 s per side",
+      "3 Sets · 90 s per side",
     );
   });
 
   it("reads the walk's target in minutes", () => {
     expect(setTargetLabel({ unit: "seconds", seconds: 1200 }, "kg", walk)).toBe("20 min");
     expect(plannedSetsLabel({ sets: 1, target: { unit: "seconds", seconds: 1200 } }, "kg", walk)).toBe(
-      "1 set · 20 min",
+      "1 Set · 20 min",
     );
   });
 
@@ -336,8 +336,8 @@ describe("setTargetLabel with its Exercise's range", () => {
   it("is what Today and the logging screen's rows show after the Sets", () => {
     const planned = { sets: 3, target: { unit: "kg", kg: 20, reps: 9 } } as const;
     const reading = targetReading("goblet-squat", undefined);
-    expect(plannedSetsLabel(planned, "kg", reading)).toBe("3 sets · 20 kg × 8–12 · aim for 9");
-    expect(workoutExerciseSummary([], "kg", undefined, planned, reading)).toBe("3 sets · 20 kg × 8–12 · aim for 9");
+    expect(plannedSetsLabel(planned, "kg", reading)).toBe("3 Sets · 20 kg × 8–12 · aim for 9");
+    expect(workoutExerciseSummary([], "kg", undefined, planned, reading)).toBe("3 Sets · 20 kg × 8–12 · aim for 9");
   });
 });
 
@@ -352,17 +352,17 @@ describe("plannedSetsLabel", () => {
   const planned = { sets: 3, target: { unit: "kg", kg: 20, reps: 8 } } as const;
 
   it("counts the Sets before the target", () => {
-    expect(plannedSetsLabel(planned, "kg")).toBe("3 sets · 20 kg × 8");
-    expect(plannedSetsLabel({ ...planned, sets: 1 }, "kg")).toBe("1 set · 20 kg × 8");
+    expect(plannedSetsLabel(planned, "kg")).toBe("3 Sets · 20 kg × 8");
+    expect(plannedSetsLabel({ ...planned, sets: 1 }, "kg")).toBe("1 Set · 20 kg × 8");
   });
 
   it("says the target is per side for a one-sided Exercise", () => {
-    expect(plannedSetsLabel(planned, "kg", oneSided)).toBe("3 sets · 20 kg × 8 per side");
+    expect(plannedSetsLabel(planned, "kg", oneSided)).toBe("3 Sets · 20 kg × 8 per side");
   });
 
   // Story 13 (#105): a jump's dose is contacts, with no load
   it("counts a jump's target in contacts", () => {
-    expect(plannedSetsLabel({ sets: 3, target: { unit: "reps", reps: 10 } }, "kg", jump)).toBe("3 sets · 10 contacts");
+    expect(plannedSetsLabel({ sets: 3, target: { unit: "reps", reps: 10 } }, "kg", jump)).toBe("3 Sets · 10 contacts");
   });
 });
 
@@ -645,8 +645,8 @@ describe("loads in the user's unit", () => {
 
   it("shows a Planned Workout's target in the user's unit", () => {
     expect(setTargetLabel(planned.target, "lb")).toBe("44 lb × 8");
-    expect(plannedSetsLabel(planned, "lb")).toBe("3 sets · 44 lb × 8");
-    expect(workoutExerciseSummary([], "lb", undefined, planned)).toBe("3 sets · 44 lb × 8");
+    expect(plannedSetsLabel(planned, "lb")).toBe("3 Sets · 44 lb × 8");
+    expect(workoutExerciseSummary([], "lb", undefined, planned)).toBe("3 Sets · 44 lb × 8");
   });
 
   it("leaves reps, seconds and band levels as they are", () => {

@@ -15,9 +15,19 @@ const percentOf = (target: number, percent: number, step: number) =>
 
 // The ranges the kcal and protein targets stand for (spec #188): worked out whenever they're needed, never stored
 export const nutritionRanges = ({ kcal, proteinG }: Pick<DailyTargets, "kcal" | "proteinG">) => ({
-  kcal: { min: percentOf(kcal, 95, 10), max: percentOf(kcal, 105, 10) },
-  proteinG: { min: percentOf(proteinG, 90, 1), max: percentOf(proteinG, 120, 1) },
+  kcal: nutrientRange("kcal", kcal),
+  proteinG: nutrientRange("proteinG", proteinG),
 });
+
+// The range one target stands for, such as a week's average target
+export function nutrientRange(nutrient: "kcal" | "proteinG", target: number): NutritionRange {
+  return nutrient === "kcal"
+    ? { min: percentOf(target, 95, 10), max: percentOf(target, 105, 10) }
+    : { min: percentOf(target, 90, 1), max: percentOf(target, 120, 1) };
+}
+
+// How a range state reads in a sentence or a label: "calories under on average", "kcal a day · in range"
+export const RANGE_STATE_WORDS: Record<RangeState["state"], string> = { below: "under", in: "in range", over: "over" };
 
 // An amount against its range, rounded as it's shown so the words never contradict the numbers
 export function rangeState(amount: number, { min, max }: NutritionRange): RangeState {

@@ -24,7 +24,7 @@ describe("weekSummaryTiles", () => {
     });
     expect(weekSummaryTiles(summary, "kg")).toEqual([
       { big: "3/3", label: "Workouts", tone: "success" },
-      { big: "🔥 4", label: "Week streak", tone: "text" },
+      { big: "🔥 4", label: "Weekly Streak", tone: "text" },
       { big: "2,870", label: "kcal a day · in range", tone: "success" },
       { big: "171 g", label: "protein a day · in range", tone: "success" },
       { big: "−0.4 kg", label: "since last Weigh-in", tone: "text" },

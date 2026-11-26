@@ -186,6 +186,44 @@ describe("GET /week-summaries/:monday", () => {
     });
   });
 
+  // Onboarded on Monday 2 November, the whole week was the user's: planned in full, and counted in the streak
+  it("counts the first week in full when the user onboarded on its Monday", async () => {
+    const user = await signInAt("2026-11-02T08:00:00Z");
+    await trainAt(user, "2026-11-03T08:00:00Z");
+    await trainAt(user, "2026-11-05T08:00:00Z");
+
+    setNow("2026-11-09T12:00:00Z");
+    expect(await summary(user, "2026-11-02")).toMatchObject({
+      monday: "2026-11-02",
+      partWeek: false,
+      workouts: { done: 2, planned: 3 },
+      streak: 1,
+      coach: { sentence: "A short week." },
+    });
+  });
+
+  // 17 Sets of goblet squats: quads and glutes at 17, over their 14, and abs at 8.5, just short of their 9
+  it("lists the Muscles short of their Weekly Budget with their credited Sets, leaving out those that met it", async () => {
+    const user = await signInAt();
+    await trainAt(user, "2026-11-09T08:00:00Z", 14);
+    await trainAt(user, "2026-11-11T08:00:00Z", 3);
+
+    setNow("2026-11-16T12:00:00Z");
+    expect((await summary(user, "2026-11-09")).weeklyBudget).toEqual({
+      met: 2,
+      muscles: 9,
+      short: [
+        { muscle: "hamstrings", sets: 0, budget: 14 },
+        { muscle: "chest", sets: 0, budget: 14 },
+        { muscle: "lats", sets: 0, budget: 14 },
+        { muscle: "upper_back", sets: 0, budget: 14 },
+        { muscle: "side_delts", sets: 0, budget: 9 },
+        { muscle: "abs", sets: 8.5, budget: 9 },
+        { muscle: "calves", sets: 0, budget: 5 },
+      ],
+    });
+  });
+
   it("follows food logged late for a day of the week", async () => {
     const user = await signInAt();
     await eatAt(user, "2026-11-10T20:00:00Z", "2026-11-10", 1325);

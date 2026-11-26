@@ -3,7 +3,7 @@ import { StyleSheet, View } from "react-native";
 import { Pressable } from "@/components/pressable";
 import { Ring } from "@/components/ring";
 import { Text } from "@/components/text";
-import { weekDatesLabel } from "@/features/workouts/format";
+import { mondayWeekDatesLabel } from "@/features/workouts/format";
 import { radii, spacing, useTheme } from "@/theme";
 import { weekSummaryBars, type WeekSummaryBar } from "../week-summary-card";
 
@@ -31,7 +31,7 @@ function Bar({ label, value, fill, tone }: WeekSummaryBar) {
 export function WeekSummaryCard({ summary, now, onPress }: { summary: WeekSummary; now: Date; onPress: () => void }) {
   const { colors } = useTheme();
   const { workouts, streak } = summary;
-  const dates = weekDatesLabel(new Date(`${summary.monday}T00:00:00`), now);
+  const dates = mondayWeekDatesLabel(summary.monday, now);
   const streakLabel = streak ? ` · 🔥 ${streak}-week streak` : "";
 
   return (
