@@ -367,6 +367,34 @@ Run each offline check (WI6, F4, FL6, TC4) twice: once with airplane mode on bef
 - [x] **NH4** With VoiceOver or TalkBack on, each day says its name, amount, range and state, or that nothing is logged. In airplane mode, opening it says it needs a connection; back online, Try again loads it.
   - iOS: Result: · Android: Result: · Notes:
 
+## Day Summary: the receipt (#208)
+
+From 6 to 10 pm in your timezone. Change the phone's time in Settings (turn off automatic time) to reach the edges.
+
+- [ ] **DS1** At 5:59 pm Today is as before. Leave the app open and go to 6:00 pm, then bring it back to the front: a "TODAY" receipt sits under the Coach's Nudge, and the rest of Today is unchanged. At 10:00 pm, back to the front again, it's gone.
+  - iOS: Result: · Android: Result: · Notes:
+- [ ] **DS2** With nothing done and no Rest Day, the receipt says "○ No workout yet" and "○ No food logged". Log some food: on coming back to Today, Calories and Protein show against their targets, "○" while short, ✅ in range, and red with how far over once over, agreeing with the rings.
+  - iOS: Result: · Android: Result: · Notes:
+- [ ] **DS3** Finish a Workout: the row names it by up to three Muscles with its Sets and time ("✅ Quads, glutes and chest · 10 Sets · 48 min"). Finish a second: they merge into one row. A Mobility Workout alone reads "✅ Mobility · 20 min", and a kept Rest Day "✅ Rest Day". Long names wrap; the numbers stay on one line.
+  - iOS: Result: · Android: Result: · Notes:
+- [ ] **DS4** The line at the receipt's foot gives tomorrow: rest or the Workout's Muscles, a reason, and tomorrow's kcal and protein. With no Planned Workout (before the Assessment) or a stale one, it's left out.
+  - iOS: Result: · Android: Result: · Notes:
+- [ ] **DS5** In airplane mode, after Today has loaded the day once, the receipt still shows, with a Workout finished offline counted. Open the app fresh in airplane mode: no receipt. In light and dark, the receipt reads clearly.
+  - iOS: Result: · Android: Result: · Notes:
+
+## Day Summary: the finished day (#209)
+
+From 6 to 10 pm in your timezone, as for #208. The day is finished once you've trained (Mobility and Walk and mobility included) or kept a recommended Rest Day, and kcal is in range or over. Protein never decides it.
+
+- [ ] **DF1** Train, and log food short of the kcal range: Today is as in DS1, with the Nudge, "Done for today." and the links. Log enough food to reach the range and come back to Today: a big "TOMORROW · <day>" card now leads under the rings, with "Rest." or tomorrow's Workout's Muscles, the reason, "Eat … kcal · … g protein" and "See the next Workout ›", and the "TODAY" receipt under it with no tomorrow line. The Coach's Nudge, the Workout card, "Rest between Sets", Mobility and Walk and mobility are gone; Tell the coach, This week, "Start manual workout" and Last workout stay where they were.
+  - iOS: Result: · Android: Result: · Notes:
+- [ ] **DF2** On a recommended Rest Day with nothing done, reach the kcal range: the day finishes the same way, with "✅ Rest Day" in the receipt and "Rest today." gone. With kcal in range and protein short, it's still finished; with kcal over, too.
+  - iOS: Result: · Android: Result: · Notes:
+- [ ] **DF3** Tap "See the next Workout ›": the Planned Workout sheet opens on the next Workout's Exercises, as from the Workout card. Close it: Today is as it was.
+  - iOS: Result: · Android: Result: · Notes:
+- [ ] **DF4** With no Planned Workout or a stale one (a Workout finished in airplane mode), a finished day shows the receipt alone in the Nudge's place, with no Tomorrow card. Start a Workout on a finished day: "Keep going." still shows. At 10 pm, back to the front, Today is as it was before 6 pm. In light and dark, the card and receipt read clearly and a three-Muscle name wraps without overlapping.
+  - iOS: Result: · Android: Result: · Notes:
+
 ## Weekly Streak (#207)
 
 Needs an account onboarded at least two weeks ago, with History behind it.
@@ -380,13 +408,13 @@ Needs an account onboarded at least two weeks ago, with History behind it.
 
 Needs a Sunday evening, both phones signed in to the same account, and the iPhone and the Android phone both closed beforehand. While building, `DEV_NOW=<ISO time> pnpm --filter @fit/mobile web:signed-in` starts the API's clock there, and Playwright's `page.clock.install` does the browser's (docs/agents/workouts.md, "Running things").
 
-- [x] **WC1** Before 6 pm on Sunday, open the app: Today has no Week Summary card. Send it to the background and bring it back after 6 pm: the card is on Today, under the rings and above every other card (above the Tomorrow card when there is one). In light and in dark it shows a ring of Workouts done against planned, "Last week", the week's dates and "🔥 N-week streak" (left out with no streak), then bars for Workouts, Calories, Protein and Weekly Budget. A week with no food logged has no Calories or Protein bar, and one with no Workouts no Weekly Budget bar. In your first, part week it reads "Your first week", with fewer Workouts planned.
+- [ ] **WC1** Before 6 pm on Sunday, open the app: Today has no Week Summary card. Send it to the background and bring it back after 6 pm: the card is on Today, under the rings and above every other card (above the Tomorrow card when there is one). In light and in dark it shows a ring of Workouts done against planned, "Last week", the week's dates and "🔥 N-week streak" (left out with no streak), then bars for Workouts, Calories, Protein and Weekly Budget. A week with no food logged has no Calories or Protein bar, and one with no Workouts no Weekly Budget bar. In your first, part week it reads "Your first week", with fewer Workouts planned.
   - iOS: Result: · Android: Result: · Notes:
-- [x] **WC2** With the card up, go to Food and History and back to Today: it's still there. Send the app to the background and bring it back: it's gone, and it doesn't come back however often the app is opened that week.
+- [ ] **WC2** With the card up, go to Food and History and back to Today: it's still there. Send the app to the background and bring it back: it's gone, and it doesn't come back however often the app is opened that week.
   - iOS: Result: · Android: Result: · Notes:
-- [x] **WC3** Across both phones: after WC1 on the iPhone, open the app on the Android phone (after 6 pm on Sunday, or any day that week): no card. Next Sunday, do it the other way round, Android first.
+- [ ] **WC3** Across both phones: after WC1 on the iPhone, open the app on the Android phone (after 6 pm on Sunday, or any day that week): no card. Next Sunday, do it the other way round, Android first.
   - iOS: Result: · Android: Result: · Notes:
-- [x] **WC4** In airplane mode on a Sunday after 6 pm (or later in the week, before the card has been seen), open the app: no card. Turn airplane mode off and bring the app back to the front: the card shows, so the offline open didn't count as seen. If you opened it on Monday instead, the card is still the week just ended.
+- [ ] **WC4** In airplane mode on a Sunday after 6 pm (or later in the week, before the card has been seen), open the app: no card. Turn airplane mode off and bring the app back to the front: the card shows, so the offline open didn't count as seen. If you opened it on Monday instead, the card is still the week just ended.
   - iOS: Result: · Android: Result: · Notes:
 
 ## When the server isn't answering (#170, #174)
