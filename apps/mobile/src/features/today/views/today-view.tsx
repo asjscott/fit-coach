@@ -51,6 +51,7 @@ import { RestChoiceSheet } from "../components/rest-choice-sheet";
 import { ThisWeekSection } from "../components/this-week-section";
 import { TomorrowCard } from "../components/tomorrow-card";
 import { TodayCard, TodayCardLink } from "../components/today-card";
+import { WeekSummaryCard } from "../components/week-summary-card";
 import { CheckInCard } from "../components/check-in-card";
 import { DaySummaryReceipt } from "../components/day-summary-receipt";
 import { daySummary } from "../day-summary";
@@ -61,6 +62,7 @@ import { useDaysWorkout } from "../hooks/use-days-workout";
 import { useDismissedOffer } from "../hooks/use-dismissed-offer";
 import { usePlannedWorkout } from "../hooks/use-planned-workout";
 import { usePrNote } from "../hooks/use-pr-note";
+import { useWeekSummaryCard } from "../hooks/use-week-summary-card";
 import { planReasonLines } from "../plan-reasons";
 import {
   showsCheckIn,
@@ -109,6 +111,7 @@ export default function TodayView() {
   const prNote = usePrNote();
   const { day, refresh: refreshDay } = useDay();
   const activityPrompt = useActivityLevelPrompt();
+  const weekSummary = useWeekSummaryCard();
   useRefreshHistory();
   useRenderOnForeground();
 
@@ -219,6 +222,12 @@ export default function TodayView() {
             onPress={() => router.navigate({ pathname: "/food", params: { half: "today" } })}
             pressHint="Opens Food"
           />
+        </View>
+      ) : null}
+      {/* First of the cards, above the Day Summary and the Tomorrow card */}
+      {weekSummary ? (
+        <View style={{ marginBottom: spacing[4] }}>
+          <WeekSummaryCard summary={weekSummary} now={now} />
         </View>
       ) : null}
       {/* A finished day leads with tomorrow, and its receipt, in place of the Nudge */}

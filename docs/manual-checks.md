@@ -14,6 +14,7 @@ Result codes: **✅ pass** · **❌ fail** · **⚠️ works but feels off** · 
 - **Nutrition History (#191), on the phones:** NH1–NH4.
 - **Saved Meals (#192–#194), on the phones:** SM1–SM3.
 - **Mobility and the hold timer (#195), on the phones:** HT1–HT6, GF1–GF10, R2–R5, RX1.
+- **🕒 Week Summary card (#210), on a Sunday evening with both phones:** WC1–WC4.
 - **Run when you next train:** P9 and S1, a full Workout with a timer, resting as the timer says. Both can be one session.
 - **🕒 Due later, while you use the app:** C5 (the day after a check-in), P16 (a Monday), J2 (after a week with jumps on), P17 (after a few weeks), DL1 and DL2 (the 5th week of a Block: the week starting 4 Mondays after the Monday of the week Assessment B was done).
 - **On hold:** E1–E3 need Sentry set up on production.
@@ -401,6 +402,19 @@ Needs an account onboarded at least two weeks ago, with History behind it.
 - [x] **WS1** In light and in dark, This week shows "🔥 N-week streak" under the day circles, where N is the weeks in a row since your first, partial week with at least one fewer Workout than your days per week, Mobility and Walk and mobility included. This week adds to it only once it reaches the number; on a Monday with nothing done yet the streak is still there. With no streak, nothing shows, not "0-week streak". Both phones show the same N.
   - iOS: Result: · Android: Result: · Notes:
 - [x] **WS2** Finish the Workout that brings this week to the number: once Today is back, N goes up by one. In airplane mode the streak is gone (only Pending Workouts are known), and back online it returns. Change your days per week in Profile: past weeks are judged again with the new number.
+  - iOS: Result: · Android: Result: · Notes:
+
+## Week Summary card (#210)
+
+Needs a Sunday evening, both phones signed in to the same account, and the iPhone and the Android phone both closed beforehand. While building, `DEV_NOW=<ISO time> pnpm --filter @fit/mobile web:signed-in` starts the API's clock there, and Playwright's `page.clock.install` does the browser's (docs/agents/workouts.md, "Running things").
+
+- [ ] **WC1** Before 6 pm on Sunday, open the app: Today has no Week Summary card. Send it to the background and bring it back after 6 pm: the card is on Today, under the rings and above every other card (above the Tomorrow card when there is one). In light and in dark it shows a ring of Workouts done against planned, "Last week", the week's dates and "🔥 N-week streak" (left out with no streak), then bars for Workouts, Calories, Protein and Weekly Budget. A week with no food logged has no Calories or Protein bar, and one with no Workouts no Weekly Budget bar. In your first, part week it reads "Your first week", with fewer Workouts planned.
+  - iOS: Result: · Android: Result: · Notes:
+- [ ] **WC2** With the card up, go to Food and History and back to Today: it's still there. Send the app to the background and bring it back: it's gone, and it doesn't come back however often the app is opened that week.
+  - iOS: Result: · Android: Result: · Notes:
+- [ ] **WC3** Across both phones: after WC1 on the iPhone, open the app on the Android phone (after 6 pm on Sunday, or any day that week): no card. Next Sunday, do it the other way round, Android first.
+  - iOS: Result: · Android: Result: · Notes:
+- [ ] **WC4** In airplane mode on a Sunday after 6 pm (or later in the week, before the card has been seen), open the app: no card. Turn airplane mode off and bring the app back to the front: the card shows, so the offline open didn't count as seen. If you opened it on Monday instead, the card is still the week just ended.
   - iOS: Result: · Android: Result: · Notes:
 
 ## When the server isn't answering (#170, #174)

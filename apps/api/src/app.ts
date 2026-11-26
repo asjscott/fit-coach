@@ -19,6 +19,7 @@ import { userRoutes } from "./routes/users";
 import { weighInRoutes } from "./routes/weigh-ins";
 import { workoutRoutes } from "./routes/workouts";
 import { waterRoutes } from "./routes/water";
+import { weekSummaryRoutes } from "./routes/week-summaries";
 import { HealthResponse } from "@fit/shared";
 import { registerAuth } from "./auth";
 import { ensureCheckInIndexes } from "./check-ins";
@@ -32,6 +33,7 @@ import { ensureUserIndexes, migrateUsers } from "./users";
 import { ensureWeighInIndexes, migrateWeighIns } from "./weigh-ins";
 import { ensureWorkoutIndexes } from "./workouts";
 import { ensureWaterIndexes } from "./water";
+import { ensureWeekSummaryIndexes } from "./week-summaries";
 
 // The API with every route registered and its indexes made, not yet listening. Reads MONGODB_URI (db.ts) and
 // DEV_AUTH_USER_ID (auth.ts) when first imported. server.ts listens on it; the route tests inject into it, passing fake
@@ -94,6 +96,7 @@ export async function buildApp({
   await setUp("create saved meal indexes", ensureSavedMealIndexes);
   await setUp("create daily targets indexes", ensureDailyTargetsIndexes);
   await setUp("create water indexes", ensureWaterIndexes);
+  await setUp("create week summary indexes", ensureWeekSummaryIndexes);
   await setUp("migrate users", migrateUsers);
   await setUp("migrate working levels", migrateWorkingLevels);
   await setUp("migrate weigh-ins", migrateWeighIns);
@@ -111,6 +114,7 @@ export async function buildApp({
   await app.register(savedFoodRoutes);
   await app.register(savedMealRoutes);
   await app.register(waterRoutes);
+  await app.register(weekSummaryRoutes);
   await app.register(tellTheCoachRoutes, { foodSources: sources });
   registerTestErrorRoute(app);
 
