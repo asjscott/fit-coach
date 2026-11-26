@@ -15,18 +15,20 @@ import { BigClock } from "./big-clock";
 import { RestFlash } from "./rest-flash";
 import { SoundSwitch } from "./sound-switch";
 
-// A Recovery Workout's holds, run hands-free over the logging screen (#200), which the last one leads from to Finish
+// A Recovery Workout's holds, run hands-free over the logging screen (#200), which the last one leads from to
+// Finish; or one Recovery Exercise timed alone, which leads back to it (#201)
 export function GuidedScreen() {
   const { guide, pauseGuide, leaveGuide } = useLogbook();
   const { colors } = useTheme();
   const current = guide?.place.current;
   const over = !!guide && !current;
+  const alone = !!guide?.course.only;
 
   useEffect(() => {
     if (!over) return;
     leaveGuide();
-    router.push("/workout/finish");
-  }, [over, leaveGuide]);
+    if (!alone) router.push("/workout/finish");
+  }, [over, alone, leaveGuide]);
 
   // Never runs on unseen
   useEffect(() => pauseGuide, [pauseGuide]);
@@ -45,10 +47,11 @@ export function GuidedScreen() {
 }
 
 function Guiding({ guide, current }: { guide: CurrentGuide; current: GuidedHold }) {
-  const { pauseGuide, resumeGuide, skipGuidedHold, leaveGuide } = useLogbook();
+  const { pauseGuide, resumeGuide, skipGuidedHold, backGuidedHold, leaveGuide } = useLogbook();
   const now = useNow(100);
-  const { run, failed, place } = guide;
-  const { position, count, next } = place;
+  const { run, failed, place, course } = guide;
+  const { position, count, next, hasPrevious, replaces } = place;
+  const alone = !!course.only;
   const paused = isHoldPaused(run);
   // The clock may last have been looked at before the hold began
   const state = holdState(guidedHold(current), run, new Date(now));
@@ -68,7 +71,7 @@ function Guiding({ guide, current }: { guide: CurrentGuide; current: GuidedHold 
   return (
     <View style={styles.column}>
       <HStack align="center" style={styles.top}>
-        <Text color="muted">{`Hold ${position} of ${count}`}</Text>
+        <Text color="muted">{`${alone ? `Set ${position}` : `Hold ${position} of ${count}`}${replaces === undefined ? "" : ", again"}`}</Text>
         <SoundSwitch />
       </HStack>
       <ScrollView contentContainerStyle={styles.content}>
@@ -83,31 +86,61 @@ function Guiding({ guide, current }: { guide: CurrentGuide; current: GuidedHold 
             </Text>
           ))}
         </Stack>
-        <Text centered color="muted">
-          {next ? `Next: ${exerciseName(next.slug)}` : "Last hold"}
-        </Text>
+        {alone ? null : (
+          <Text centered color="muted">
+            {next ? `Next: ${exerciseName(next.slug)}` : "Last hold"}
+          </Text>
+        )}
       </ScrollView>
       <Stack spacing={3}>
         <HStack spacing={3}>
-          <LoadingButton label="Skip" size="xl" action="secondary" onPress={skipGuidedHold} style={styles.bigButton} />
+          <LoadingButton
+            label="Back"
+            size="xl"
+            action="secondary"
+            disabled={!hasPrevious}
+            onPress={backGuidedHold}
+            style={styles.sideButton}
+          />
+          {alone ? null : (
+            <LoadingButton
+              label="Skip"
+              size="xl"
+              action="secondary"
+              onPress={skipGuidedHold}
+              style={styles.sideButton}
+            />
+          )}
           <LoadingButton
             label={failed ? "Try again" : paused ? "Resume" : "Pause"}
             size="xl"
             onPress={paused ? resumeGuide : pauseGuide}
-            style={styles.bigButton}
+            style={styles.mainButton}
           />
         </HStack>
-        <LoadingButton
-          label="Finish early"
-          size="md"
-          variant="link"
-          action="default"
-          onPress={() => {
-            leaveGuide();
-            router.push("/workout/finish");
-          }}
-          fullWidth
-        />
+        <HStack spacing={3}>
+          <LoadingButton
+            label="Leave timer"
+            size="md"
+            variant="link"
+            action="default"
+            onPress={leaveGuide}
+            style={styles.halfButton}
+          />
+          {alone ? null : (
+            <LoadingButton
+              label="Finish early"
+              size="md"
+              variant="link"
+              action="default"
+              onPress={() => {
+                leaveGuide();
+                router.push("/workout/finish");
+              }}
+              style={styles.halfButton}
+            />
+          )}
+        </HStack>
       </Stack>
     </View>
   );
@@ -119,5 +152,7 @@ const styles = StyleSheet.create({
   top: { justifyContent: "space-between", minHeight: 48 },
   content: { flexGrow: 1, justifyContent: "center", gap: spacing[6], paddingVertical: spacing[4] },
   name: { fontFamily: fonts.bold, fontSize: 28, lineHeight: 34 },
-  bigButton: { flex: 1, height: 80, paddingHorizontal: spacing[2] },
+  sideButton: { flex: 1, height: 80, paddingHorizontal: spacing[1] },
+  mainButton: { flex: 1.6, height: 80, paddingHorizontal: spacing[1] },
+  halfButton: { flex: 1, paddingHorizontal: spacing[2] },
 });

@@ -105,13 +105,18 @@ Schemas shared by app and API: packages/shared/src/workouts.ts
   `HoldScreen` is a modal like the rest screen and shares its `BigClock` and `SoundSwitch`. Stop leaves whole seconds in
   `heldSeconds`, which that Exercise's new Set's stepper takes until the Set is logged; Cancel leaves them as they were.
 - **The guided flow** (#200): `guided-flow.ts` (`@fit/engines`) says whether a Workout is guided (every Exercise a Recovery
-  Exercise, some planned holds), where it is from the logged Sets and this run's skips (`guidedPlace`), and what happens
+  Exercise, some planned holds), where it is from the logged Sets and this run's `GuidedCourse` (`guidedPlace`), and what happens
   between looks (`guidedStep`). `guide` on the LogbookProvider, in memory like the hold, logs each hold's Set through the
   Logbook as its last side ends, with no RPE, then starts the next with a 10 s change. Going to the background pauses it,
   as does a gap of over 2 s between looks, for a phone that froze without saying. Logging the walk or starting a Mobility
   Workout starts it; "Start holds" / "Continue holds" on the logging screen does otherwise. A Set that can't be stored
   pauses it with Try again. `GuidedScreen` is the modal; the last hold, or Finish early, leads to Finish, which shows
   Holds in place of Volume and Sets. No Recovery Exercise starts a rest (`restAfterSet`).
+  Back (#201, `backHold`) goes to the hold before; completing it replaces its Set (`editSet`), or logs it if it was
+  skipped, then returns to the first hold left. Leave timer keeps the skips in memory, so Continue holds keeps its
+  place. `stored-guide.ts` holds the Workout whose flow is open, and on load it reopens paused, its skips lost, unless
+  the Workout is forgotten. A Recovery Exercise the flow doesn't run, as in a Manual Workout, has Start timer
+  (`holdAlone`): the same screen for its next Set only, at the planned or library seconds, then back to logging.
 - **Next exercise, Log extra set and Finish workout** (#180): `nextStep` (`@fit/engines`) says what moves on from an
   Exercise and whether it's the main button. `nextPlannedExercise` finds the next one, in order after the current and
   wrapping round, with a superset as one step; the rest screen's "Next" goes by it too. `WorkoutView` gives the same
