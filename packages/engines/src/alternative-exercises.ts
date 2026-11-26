@@ -12,7 +12,7 @@ export type Candidate = { exercise: Exercise; target: SetTarget; outgrown?: bool
 // what can stand in, as the guards are about what the Coach gives next and not what the equipment allows
 export type ChoiceCandidates = { possible: readonly Candidate[]; pickable: readonly Candidate[] };
 
-const sharedPrimaryMuscles = (a: Exercise, b: Exercise) =>
+export const sharedPrimaryMuscles = (a: Exercise, b: Exercise) =>
   a.muscles.primary.filter((muscle) => b.muscles.primary.includes(muscle)).length;
 
 const sharesPattern = (a: Exercise, b: Exercise) =>

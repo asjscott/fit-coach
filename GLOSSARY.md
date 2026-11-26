@@ -15,7 +15,7 @@ A movement in the library, such as a goblet squat, with how it is loaded, the mu
 _Avoid_: Movement, lift
 
 **Recovery Exercise**:
-A walk or a mobility hold, made for the Recovery Workout. It has no Pattern, credits no Muscle, and the Coach never plans one into a training Workout.
+A walk or a mobility hold, made for the Recovery Workout. Each hold has an area (hips and legs, back and spine, or chest and shoulders) and a hold time, per side; the walk has neither. It has no Pattern, credits no Muscle, and the Coach never plans one into a training Workout.
 _Avoid_: Stretch, mobility exercise, cooldown
 
 **Pattern**:
@@ -96,6 +96,14 @@ _Avoid_: Today's session, adjusted plan
 How long the user wants the rests between Sets, chosen on Today and kept on the phone: Auto, each Exercise's own rest, or one length from 30 seconds to 3 minutes for every Exercise. It decides how many of the plan's Sets fit the Workout Length, but never changes the Planned Workout. An Assessment Workout always rests on Auto.
 _Avoid_: Rest setting, rest preference, rest timer (for the choice)
 
+**Hold timer**:
+The full-screen clock that times a Set of a timed Exercise. For a strength Exercise: 5 seconds to get into position, a countdown to the bottom of the target range, then up until the user stops it; it fills in the seconds to check and never logs the Set, and in an Assessment it only counts up. For a Recovery Exercise it's the Guided flow's clock, which logs each hold as it ends, whether it runs the Workout's holds or the user starts it for one Recovery Exercise of a Manual Workout. It's never stored.
+_Avoid_: Stopwatch, plank timer, rest timer (for this)
+
+**Guided flow**:
+How a Recovery Workout's holds are done hands-free: one after another on the Hold timer, 10 seconds to change position before each hold and side, each logged as its Set when it ends. The user can pause, skip, go Back to repeat the previous hold (replacing its Set), or leave it for the ordinary logging screen and come back. It ends on a screen offering Back and Finish. Where it is comes from the logged Sets, so it reopens, paused, at the first hold not logged.
+_Avoid_: Routine player, follow-along, guided session
+
 **Weekly Budget**:
 How many credited Sets each of the budgeted Muscles should get in a week, set by the user's Goal and days per week. Workout Length decides how much of it is delivered, not the budget itself. Eight Muscles are budgeted for every Goal, and calves too for athletic and build_muscle; other Muscles aren't budgeted. The Coach plans a Muscle up to a cap of about 130% of its budget, counted from the Week Ledger and the Sets already planned: it adds no Exercise, a Jump included, that would take one of its primary Muscles over it, while secondary credit counts towards a Muscle's total but never keeps an Exercise out.
 _Avoid_: Weekly target, quota, weekly volume
@@ -129,8 +137,12 @@ The most the user wants a Workout to take, 5 minutes of warm-up included: Short 
 _Avoid_: Mode, session type
 
 **Recovery Workout**:
-A walk or mobility Workout the user chooses in place of the Day's Workout, for one day, and what the Coach plans when the 130% cap leaves nothing else to add. Unlike a Rest Day, it's something they do. It credits no Sets.
+A Mobility Workout or a walk with mobility holds ("Walk and mobility"), chosen by the user in place of the Day's Workout, for one day. The one with the walk is also what the Coach plans when the 130% cap leaves nothing else to add. Unlike a Rest Day, it's something they do. It credits no Sets. A hold the user's injuries or equipment rule out is replaced by one like it.
 _Avoid_: Recovery day, recovery session
+
+**Mobility Workout**:
+A Recovery Workout with no walk: 10, 20 or 30 minutes of holds the app picks, leaning to the Muscles recent training left most tired and varying from the last one. The user can limit it to a focus: Full body, Hips and legs, or Back and shoulders. "Mobility" on screen.
+_Avoid_: Mobility session, stretching, stretch routine
 
 **Block**:
 A run of weeks of training, started by an Assessment, with a set length and a deload week. A newer Assessment starts a new one; without one, the next starts the week after the deload.

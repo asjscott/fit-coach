@@ -203,6 +203,48 @@ On the installed web app on the iPhone, with the silent switch off and the volum
 - [ ] **RS8** Log an Exercise's last planned Set: the rest screen has the rating, Next exercise and Log extra set, all in sight without scrolling. Next exercise opens the next Exercise with the rest as a bar (#180).
   - Result: · Notes:
 
+## Hold timer (#196)
+
+On the installed web app on the iPhone, with the silent switch off and the volume up.
+
+- [ ] **HT1** On a planned plank, tap Start timer: 5 s to get into position, then a countdown to the bottom of the range and up past it, readable from a plank on the floor, in light and dark.
+  - Result: · Notes:
+- [ ] **HT2** It beeps and flashes (and vibrates on Android) at the bottom and again at the top of the range; once for a single number (a deload week, or 60 s). Music in another app carries on. With Sound off, it's silent.
+  - Result: · Notes:
+- [ ] **HT3** Stop fills in the seconds and logs nothing; they can be corrected before Log set, and the next Set starts from what was logged, then rests as usual. Cancel, in the 5 s or during the hold, leaves the seconds as they were. Starting during a rest ends the rest.
+  - Result: · Notes:
+- [ ] **HT4** In an Assessment it counts up from 0 after the 5 s, with no sound, vibration or flash. The walk, mobility Exercises and carries have no Start timer.
+  - Result: · Notes:
+- [ ] **HT5** Lock the phone, or switch apps, for part of a hold: on return the seconds are right, with no late beep. Left alone, the screen stays awake.
+  - Result: · Notes:
+- [ ] **HT6** With VoiceOver, the clock reads as "Hold, 0:12 left", each change (Hold, Target reached, Top of the range) is announced, and the buttons behind can't be reached. With Reduce Motion on there's no flash.
+  - Result: · Notes:
+
+## Guided flow (#200)
+
+On the installed web app on the iPhone, with the silent switch off and the volume up.
+
+- [ ] **GF1** Start a Mobility Workout: the flow opens by itself with 10 s to change position, and shows the hold's name, cues, what's next and how far through, readable from the floor. A one-sided hold says "Switch sides", with 10 s between.
+  - Result: · Notes:
+- [ ] **GF2** It beeps (and vibrates on Android) at the start, in the last 3 s and at the end of each side, and nothing but vibration with Sound off. Music in another app carries on. It goes on by itself, with no rest and no RPE.
+  - Result: · Notes:
+- [ ] **GF3** Pause and Resume keep the time. Skip logs nothing. Lock the phone, or switch apps, mid-hold for a minute: it's paused where it was and nothing is logged. Left alone, the screen stays awake.
+  - Result: · Notes:
+- [ ] **GF4** Walk and mobility: the walk is logged in minutes as before, then the flow opens.
+  - Result: · Notes:
+- [ ] **GF5** After the last hold, the flow offers Back, which repeats it, and Finish, which shows the time taken and the holds done (a hold of two Sets once), and saves. Finish early keeps what's logged; with nothing logged, Save offers to discard.
+  - Result: · Notes:
+- [ ] **GF6** With VoiceOver, the clock reads as "Hold, 0:12 left", each change is announced with the next hold's name, and the buttons behind can't be reached. With Reduce Motion on there's no flash.
+  - Result: · Notes:
+- [ ] **GF7** Back repeats the previous hold, and when it ends there's still one Set for it; leaving before then keeps the old one. Back to a skipped hold logs it. Both go on to the first hold left.
+  - Result: · Notes:
+- [ ] **GF8** Mid-flow, force-quit the app and reopen it: Resume workout opens the flow, paused at the first hold not logged, and Resume sounds as before.
+  - Result: · Notes:
+- [ ] **GF9** Leave timer, log or delete a hold's Set, then Continue holds: it starts at the first hold left, and doesn't go back over the skipped ones.
+  - Result: · Notes:
+- [ ] **GF10** Add a Recovery Exercise (not the walk) to a Manual Workout: Start timer runs both sides and logs its Set with no rest, then returns to the logging screen. The walk has no timer.
+  - Result: · Notes:
+
 ## Supersets (#96)
 
 A Workout pairs Exercises only when it wouldn't otherwise fit its Length. Pairs form where the Patterns go together (push with pull or hinge, squat with core), never with a one-sided Exercise or a carry. On the simulators, Bodyweight only on Short paired them. The sheet then says "Paired into supersets to fit the time" and shows "Superset with …" under each paired Exercise.
@@ -217,7 +259,14 @@ A Workout pairs Exercises only when it wouldn't otherwise fit its Length. Pairs 
 
 ## Recovery Workout (#97)
 
-- [ ] **R1** On a real Rest Day, Today shows the "Rest today." card with a "Recovery workout instead" link, which opens the Recovery Workout (a 20-minute walk, then four stretches). The Workout itself has passed from a training day's sheet; only the card hasn't been seen.
+- [ ] **R1** On a real Rest Day, Today shows the "Rest today." card with a "Mobility" link and a "Walk and mobility" link under it. "Walk and mobility" opens the Recovery Workout (a 20-minute walk, then four stretches). The Workout itself has passed from a training day's sheet; only the card hasn't been seen.
+  - Result: · Notes:
+
+- [ ] **R2** Mobility, from Today and from the plan's sheet: 20 min and Full body are chosen at first; changing either changes the list, and each hold's time and the total show. Start opens a Workout of those holds, and afterwards the same plan is on offer. Opened again, the length and focus are as last chosen and the holds mostly differ.
+  - Result: · Notes:
+- [ ] **R3** The day after hard leg training, Mobility starts with holds for the legs. In airplane mode, after closing the app, it still opens and starts.
+  - Result: · Notes:
+- [ ] **R4** History shows "Mobility · N min" (the time it took) and "Walk and mobility", and neither counts in This Week.
   - Result: · Notes:
 
 ## Units (#126, #148)

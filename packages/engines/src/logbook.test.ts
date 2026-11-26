@@ -13,7 +13,8 @@ import type {
 import { describe, expect, it, vi } from "vitest";
 import { EXERCISES } from "./data/exercises";
 import { daysWorkout, equipmentChoices } from "./days-workout";
-import { builtInEquipment } from "./equipment";
+import { builtInEquipment, NO_EQUIPMENT } from "./equipment";
+import { backHold, guidedPlace, holdLogged } from "./guided-flow";
 import {
   createLogbook,
   finishTimes,
@@ -1438,7 +1439,7 @@ describe("Logbook: Planned Workouts", () => {
   it("starts a Recovery Workout: about 30 minutes of timed Sets, whatever the Length", async () => {
     const { logbook } = setup();
 
-    const workout = await logbook.startRecoveryWorkout(at("09:00"));
+    const workout = await logbook.startRecoveryWorkout({ equipmentProfile: NO_EQUIPMENT, injuries: [] }, at("09:00"));
 
     expect(workout.plannedWorkoutId).toBeUndefined();
     expect(
@@ -1451,6 +1452,60 @@ describe("Logbook: Planned Workouts", () => {
       ["worlds-greatest-stretch", "timed", [], { sets: 2, target: { unit: "seconds", seconds: 45 } }],
     ]);
     expect(logbook.nextSetDraft(workout.workoutExercises[0])).toEqual({ kind: "timed", seconds: 1200 });
+  });
+
+  it("starts a Mobility Workout with the holds shown, with targets and linked to no plan", async () => {
+    const { logbook } = setup(memoryStorage(), offline);
+    const workout = await logbook.startMobilityWorkout(
+      [
+        { slug: "pigeon", sets: 1, target: { unit: "seconds", seconds: 45 } },
+        { slug: "cat-cow", sets: 2, target: { unit: "seconds", seconds: 45 } },
+      ],
+      at("09:00"),
+    );
+
+    expect(workout.plannedWorkoutId).toBeUndefined();
+    expect(workout.workoutExercises.map(({ slug, loadType, planned }) => [slug, loadType, planned])).toEqual([
+      ["pigeon", "timed", { sets: 1, target: { unit: "seconds", seconds: 45 } }],
+      ["cat-cow", "timed", { sets: 2, target: { unit: "seconds", seconds: 45 } }],
+    ]);
+    expect(logbook.nextSetDraft(workout.workoutExercises[0])).toEqual({ kind: "timed", seconds: 45 });
+  });
+
+  it("replaces a hold's Set when the guided flow repeats it, and resumes at the first not logged", async () => {
+    const { logbook, storage } = setup(memoryStorage(), offline);
+    const hold = { sets: 1, target: { unit: "seconds" as const, seconds: 45 } };
+    const { workoutExercises } = await logbook.startMobilityWorkout(
+      [
+        { ...hold, slug: "cat-cow" },
+        { ...hold, slug: "pigeon" },
+      ],
+      at("09:00"),
+    );
+    const catCow = workoutExercises[0]!.id;
+    await logbook.logSet(catCow, { kind: "timed", seconds: 20 }, at("09:01"));
+
+    const workout = (await logbook.inProgress())!;
+    const course = backHold(workout, { skips: {} });
+    const { replaces } = guidedPlace(workout, course);
+    await logbook.editSet(catCow, replaces!, { kind: "timed", seconds: 45 });
+
+    // As after the app was killed
+    const reopened = (await setup(storage).logbook.inProgress())!;
+    expect(reopened.workoutExercises[0]!.sets).toMatchObject([{ seconds: 45 }]);
+    expect(guidedPlace(reopened, { skips: {} })).toMatchObject({ current: { slug: "pigeon" }, position: 2 });
+    expect(guidedPlace(reopened, holdLogged(workout, course))).toMatchObject({ current: { slug: "pigeon" } });
+  });
+
+  it("starts a Recovery Workout with a hold the user's injuries rule out replaced", async () => {
+    const { logbook } = setup();
+    const options = { equipmentProfile: NO_EQUIPMENT, injuries: ["hip" as const] };
+    const { workoutExercises } = await logbook.startRecoveryWorkout(options, at("09:00"));
+    expect(workoutExercises[1]).toMatchObject({
+      slug: "standing-quad-stretch",
+      loadType: "timed",
+      planned: { sets: 2, target: { unit: "seconds", seconds: 45 } },
+    });
   });
 
   it("starts with no signal, with Previous Sets from Pending Workouts", async () => {
@@ -1938,7 +1993,10 @@ describe("the Planned Workout on the phone", () => {
   describe("over a Recovery Workout", () => {
     // Logs every Set the Recovery Workout plans, at its targets, and finishes
     async function finishRecovery(logbook: ReturnType<typeof setup>["logbook"]) {
-      const { workoutExercises } = await logbook.startRecoveryWorkout(at("09:00"));
+      const { workoutExercises } = await logbook.startRecoveryWorkout(
+        { equipmentProfile: NO_EQUIPMENT, injuries: [] },
+        at("09:00"),
+      );
       for (const { id, planned } of workoutExercises) {
         for (let i = 0; i < planned!.sets; i++) {
           await logbook.logSet(
@@ -1968,6 +2026,18 @@ describe("the Planned Workout on the phone", () => {
       ]);
       expect(await logbook.pending()).toEqual([workout]);
       expect(await logbook.plannedWorkout()).toEqual({ plannedWorkout: squatPlan(FIRST), stale: false });
+    });
+
+    it("keeps the plan current after a Mobility Workout", async () => {
+      const { logbook } = await offlineWithPlan();
+      const { workoutExercises } = await logbook.startMobilityWorkout(
+        [{ slug: "pigeon", sets: 1, target: { unit: "seconds", seconds: 45 } }],
+        at("09:00"),
+      );
+      await logbook.logSet(workoutExercises[0].id, { kind: "timed", seconds: 45 }, at("09:02"));
+      await logbook.finish({ startedAt: at("09:00"), endedAt: at("09:10"), now: at("09:10") });
+
+      expect(await logbook.plannedWorkout()).toMatchObject({ plannedWorkout: { id: FIRST }, stale: false });
     });
 
     it("leaves the plan current once it's uploaded", async () => {

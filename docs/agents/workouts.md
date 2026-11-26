@@ -95,6 +95,31 @@ Schemas shared by app and API: packages/shared/src/workouts.ts
   closes quietly. Sound is the web build's only (`rest-sound.web.ts`, unlocked by the Log set tap), so the phone apps,
   with no sound module, vibrate and don't show the switch. The switch is kept in device storage
   (`stored-rest-sound.ts`).
+- **The hold timer** (#196): `hold-timer.ts` (`@fit/engines`) works out a hold's phase, seconds and due cues from its
+  description (`Hold`: lead-in, sides, target, and whether it ends on Stop or at the target), its `HoldRun` (start and
+  pauses) and now, and counts no ticks. The guided flow (#195) builds on the same module. `strengthHold` gives a Workout
+  Exercise's hold, or null for one that isn't timed or is a Recovery Exercise, the walk included; an Assessment's has no
+  target. Running, it's `hold` on the LogbookProvider, in memory beside the rest, which starting it clears. The provider
+  looks at it every 100 ms and beeps, vibrates and flashes at the bottom and top of the range (once for one number),
+  with the rest's sound, switch and `RestFlash`; a cue long past on return from the background isn't given.
+  `HoldScreen` is a modal like the rest screen and shares its `BigClock` and `SoundSwitch`. Stop leaves whole seconds in
+  `heldSeconds`, which that Exercise's new Set's stepper takes until the Set is logged; Cancel leaves them as they were.
+- **The guided flow** (#200): `guided-flow.ts` (`@fit/engines`) says whether a Workout is guided (every Exercise a Recovery
+  Exercise, some planned holds), where it is from the logged Sets and this run's `GuidedCourse` (`guidedPlace`), and what happens
+  between looks (`guidedStep`). `guide` on the LogbookProvider, in memory like the hold, logs each hold's Set through the
+  Logbook as its last side ends, with no RPE, then starts the next with a 10 s change. Going to the background pauses it,
+  as does a gap of over 2 s between looks, for a phone that froze without saying. Logging the walk or starting a Mobility
+  Workout starts it; "Start holds" / "Continue holds" on the logging screen does otherwise. A Set that can't be stored
+  pauses it with Try again. `GuidedScreen` is the modal; after the last hold it offers Back and Finish, and Finish or
+  Finish early leads to Finish, which shows Holds (`holdsDone`, each hold once) in place of Volume and Sets. No Recovery
+  Exercise starts a rest (`restAfterSet`). The provider's rules are engine functions: where it starts (`guidedStart`),
+  reopens (`reopenedCourse`), whether Back or Skip may move (`canMoveGuide`) and where a logged hold leads
+  (`afterHoldLogged`).
+  Back (#201, `backHold`) goes to the hold before; completing it replaces its Set (`editSet`), or logs it if it was
+  skipped, then returns to the first hold left. Leave timer keeps the skips in memory, so Continue holds keeps its
+  place. `stored-guide.ts` holds the Workout whose flow is open, and on load it reopens paused, its skips lost, unless
+  the Workout is forgotten. A Recovery Exercise the flow doesn't run, as in a Manual Workout, has Start timer
+  (`holdAlone`): the same screen for its next Set only, at the planned or library seconds, then back to logging.
 - **Next exercise, Log extra set and Finish workout** (#180): `nextStep` (`@fit/engines`) says what moves on from an
   Exercise and whether it's the main button. `nextPlannedExercise` finds the next one, in order after the current and
   wrapping round, with a superset as one step; the rest screen's "Next" goes by it too. `WorkoutView` gives the same
@@ -299,7 +324,14 @@ Schemas: packages/shared/src/planned-workouts.ts
   a Recovery Exercise nothing, and the planner never picks one. It links to no plan, POST /workouts doesn't rebuild
   after one, and on the phone it neither makes the plan stale nor sets `awaitingNextPlan`, so the same plan stays on
   offer. The walk is one Set (#109, `takesOneSet`): `restAfterSet` gives no rest after it, and the logging screen
-  offers "Next exercise" rather than a Set 2 (`takesAnotherSet`). Recovery Exercises have no Pattern and no strength ratio, so no Working Level. `recovery` also needs
+  offers "Next exercise" rather than a Set 2 (`takesAnotherSet`). Recovery Exercises have no Pattern and no strength ratio, so no Working Level. Every one
+  but the walk has an `area` and `holdSeconds` (per side, #197). `recoveryWorkoutFor` replaces a hold ruled out by
+  injuries or equipment, keeping its 2 × 45 s, for the phone's start and the planner's fallback alike. A Mobility Workout (#198) has no walk:
+  `mobilityWorkout` (`mobility-workout.ts`) picks its holds (Full body covers every area first; a focus goes most tired
+  first; only 30 minutes repeats a hold, once the rest run out), `alternativeHolds`, `swapHold` and
+  `removeHold` change them before it starts (#199), `startMobilityWorkout` starts them with targets, and
+  `recoveryWorkoutKind` tells it from Walk and mobility by every Exercise in it, a skipped walk too, for History. Its length, focus and last
+  Exercises are on the phone only (`stored-mobility.ts`). `recovery`, `area` and the rest need
   `seed:exercises` re-run, as `ballistic` did.
 - **Jumps come only from the jump rule** (#105, `jumps.ts`): athletic, `UserProfile.includeJumps` on, the squat tested
   rather than estimated, and no knee or ankle injury (`avoidWith`). `possibleExercises` leaves them out, so the score
@@ -316,8 +348,7 @@ Schemas: packages/shared/src/planned-workouts.ts
   included, is left out when a primary Muscle with a budget would go over 1.3 × its budget, counting the Week Ledger
   (secondary credit included) and the Sets already planned. So the plan can end well short of Long, and the Day's
   Workout's `estimatedSeconds` is the honest time. When the cap leaves nothing at all, the plan is the Recovery Workout
-  (`whenCapped`), which credits nothing, its Exercises standing as themselves on every built-in choice; were it not to
-  fit the equipment, injuries or time, one Set of the best Exercise within the cap. A stored plan needs an Exercise. `pnpm --filter @fit/engines simulate` prints each Muscle's share of its
+  (`recoveryWorkoutFor`), which credits nothing and always has its walk. A stored plan needs an Exercise. `pnpm --filter @fit/engines simulate` prints each Muscle's share of its
   budget from primary credit and in total; `plan-outcomes.test.ts` pins the primary side.
 - **A heavy two-legged squat once a week for athletic and build_muscle** (`requiredSquat`, #100 and spec #119's
   review): back squat, else goblet squat, first in the Workout until the week has had 3 Sets of it, as both Goals score

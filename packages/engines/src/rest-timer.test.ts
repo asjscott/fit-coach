@@ -207,8 +207,9 @@ describe("restAfterSet", () => {
       expect(restAfterSet(recovery, "walk", now, 60)).toBeNull();
     });
 
-    it("rests as usual between a stretch's Sets", () => {
-      expect(secondsOf(restAfterSet(recovery, "stretch", now))).toBe(70);
+    it("doesn't rest after a hold, whatever the rest choice (#200)", () => {
+      expect(restAfterSet(recovery, "stretch", now)).toBeNull();
+      expect(restAfterSet(recovery, "stretch", now, 60)).toBeNull();
     });
   });
 });
