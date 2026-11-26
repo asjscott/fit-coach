@@ -51,7 +51,10 @@ import { RestChoiceSheet } from "../components/rest-choice-sheet";
 import { ThisWeekSection } from "../components/this-week-section";
 import { TodayCard, TodayCardLink } from "../components/today-card";
 import { CheckInCard } from "../components/check-in-card";
+import { DaySummaryReceipt } from "../components/day-summary-receipt";
+import { daySummary } from "../day-summary";
 import { useActivityLevelPrompt } from "../hooks/use-activity-level-prompt";
+import { useRenderOnForeground } from "../hooks/use-render-on-foreground";
 import { useCheckIn } from "../hooks/use-check-in";
 import { useDaysWorkout } from "../hooks/use-days-workout";
 import { useDismissedOffer } from "../hooks/use-dismissed-offer";
@@ -106,6 +109,7 @@ export default function TodayView() {
   const { day, refresh: refreshDay } = useDay();
   const activityPrompt = useActivityLevelPrompt();
   useRefreshHistory();
+  useRenderOnForeground();
 
   const plan = todayPlan({
     isLoaded,
@@ -187,6 +191,19 @@ export default function TodayView() {
   const openSheet = () => setSheetIsOpen(true);
   const connectNote = plan === "connect" ? "Connect to plan your next Workout" : null;
   const reasonLines = planReasonLines(plannedWorkout?.reasons, now);
+  // Waits for History as the day's card does, so the day isn't summed up from part of it
+  const summary =
+    state === "loading"
+      ? null
+      : daySummary({
+          now,
+          timeZone,
+          workouts: all,
+          day,
+          restDayToday: restDayReason,
+          daysPerWeek,
+          plannedWorkout,
+        });
 
   return (
     <Screen scroll="screen" edges={["top"]}>
@@ -208,6 +225,11 @@ export default function TodayView() {
             day={day}
             onPress={() => router.navigate({ pathname: "/food", params: { half: "ideas" } })}
           />
+        </View>
+      ) : null}
+      {summary ? (
+        <View style={{ marginBottom: spacing[4] }}>
+          <DaySummaryReceipt summary={summary} />
         </View>
       ) : null}
       {user &&
