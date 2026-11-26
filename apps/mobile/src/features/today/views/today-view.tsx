@@ -49,6 +49,7 @@ import { PrNote } from "../components/pr-note";
 import { RecoveryLinks } from "../components/recovery-links";
 import { RestChoiceSheet } from "../components/rest-choice-sheet";
 import { ThisWeekSection } from "../components/this-week-section";
+import { TomorrowCard } from "../components/tomorrow-card";
 import { TodayCard, TodayCardLink } from "../components/today-card";
 import { CheckInCard } from "../components/check-in-card";
 import { DaySummaryReceipt } from "../components/day-summary-receipt";
@@ -177,20 +178,6 @@ export default function TodayView() {
           timeZone: user?.timeZone ?? "UTC",
         });
   const leadingOffer = offer?.kind === "start" && plan === "none" && !logbook.workout ? offer : null;
-  const card = todayCard({
-    isLoaded,
-    state,
-    plan,
-    workoutInProgress: !!logbook.workout,
-    assessmentFirst: !!leadingOffer,
-    finishedToday: finished.length > 0,
-    restDay: restDayReason,
-  });
-  const nextWorkout = (action: string) =>
-    today ? `Next Workout: ${estimatedTimeLabel(today.estimatedSeconds)} · ${action}` : "";
-  const openSheet = () => setSheetIsOpen(true);
-  const connectNote = plan === "connect" ? "Connect to plan your next Workout" : null;
-  const reasonLines = planReasonLines(plannedWorkout?.reasons, now);
   // Waits for History as the day's card does, so the day isn't summed up from part of it
   const summary =
     state === "loading"
@@ -204,6 +191,21 @@ export default function TodayView() {
           daysPerWeek,
           plannedWorkout,
         });
+  const card = todayCard({
+    isLoaded,
+    state,
+    plan,
+    workoutInProgress: !!logbook.workout,
+    assessmentFirst: !!leadingOffer,
+    finishedToday: finished.length > 0,
+    restDay: restDayReason,
+    dayFinished: !!summary?.finished,
+  });
+  const nextWorkout = (action: string) =>
+    today ? `Next Workout: ${estimatedTimeLabel(today.estimatedSeconds)} · ${action}` : "";
+  const openSheet = () => setSheetIsOpen(true);
+  const connectNote = plan === "connect" ? "Connect to plan your next Workout" : null;
+  const reasonLines = planReasonLines(plannedWorkout?.reasons, now);
 
   return (
     <Screen scroll="screen" edges={["top"]}>
@@ -219,7 +221,16 @@ export default function TodayView() {
           />
         </View>
       ) : null}
-      {day ? (
+      {/* A finished day leads with tomorrow, and its receipt, in place of the Nudge */}
+      {summary?.finished ? (
+        <View style={{ marginBottom: spacing[4], gap: spacing[3] }}>
+          {summary.tomorrow ? (
+            <TomorrowCard tomorrow={summary.tomorrow} now={now} onSeeNextWorkout={today ? openSheet : null} />
+          ) : null}
+          <DaySummaryReceipt summary={summary} />
+        </View>
+      ) : null}
+      {day && !summary?.finished ? (
         <View style={{ marginBottom: spacing[4] }}>
           <CoachSummaryCard
             day={day}
@@ -227,7 +238,7 @@ export default function TodayView() {
           />
         </View>
       ) : null}
-      {summary ? (
+      {summary && !summary.finished ? (
         <View style={{ marginBottom: spacing[4] }}>
           <DaySummaryReceipt summary={summary} />
         </View>
@@ -324,7 +335,7 @@ export default function TodayView() {
           <TodayCardLink label={LOG_PAST} color="onAccent" size="sm" onPress={() => setPastSheetIsOpen(true)} />
         </TodayCard>
       ) : null}
-      {card === "loading" || card === "resume" ? null : (
+      {card === "loading" || card === "resume" || card === "day-summary" ? null : (
         <View style={{ marginTop: spacing[3] }}>
           <TodayCardLink
             label={`Rest between Sets: ${restChoiceLabel(logbook.restChoice)}`}
@@ -334,8 +345,8 @@ export default function TodayView() {
           />
         </View>
       )}
-      {/* Every day, plan or no plan; a Rest Day's card has its own */}
-      {card === "loading" || card === "resume" || card === "rest" ? null : (
+      {/* Every day, plan or no plan, until it's finished; a Rest Day's card has its own */}
+      {card === "loading" || card === "resume" || card === "rest" || card === "day-summary" ? null : (
         <View style={{ marginTop: spacing[3], gap: spacing[3] }}>
           <RecoveryLinks
             color="muted"
