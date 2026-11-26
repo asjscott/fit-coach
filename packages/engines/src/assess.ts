@@ -9,7 +9,7 @@ import {
   type Workout,
 } from "@fit/shared";
 import { isLoadLimited, isTopSet, TOP_SET_RPE } from "./assessment-protocol";
-import { ASSESSMENT_PATTERNS, testedPatternOf } from "./assessment-tests";
+import { testedPatternOf } from "./assessment-tests";
 import { e1rm, epley, MAX_E1RM_REPS } from "./e1rm";
 import type { ProfileWithLoads } from "./equipment";
 import { KG_PATTERNS, referenceStrength, STRENGTH_RATIOS, typicalReferenceStrength } from "./strength-ratios";
@@ -25,6 +25,22 @@ function topSetOf(sets: Set[]): { topSet: Set; loadLimited: boolean } | null {
   const topSet = sets.find(isTopSet);
   return topSet ? { topSet, loadLimited: false } : null;
 }
+
+type TestedWorkout = { workoutExercises: readonly { slug: string; sets: Set[] }[] };
+
+// The tests of an Assessment Workout that give no measure as they stand, so their Patterns are estimated
+export function unmeasuredTests<E extends TestedWorkout["workoutExercises"][number]>(workout: {
+  workoutExercises: readonly E[];
+}): E[] {
+  return workout.workoutExercises.filter(({ slug, sets }) => testedPatternOf(slug) && !topSetOf(sets));
+}
+
+// Whether an Assessment's Workouts (one, or an old A and B) give a result: any one measured test is enough. The server
+// and the phone both ask this, so Today offers the Assessment again exactly when the server made none
+export const hasAssessmentResult = (workouts: readonly TestedWorkout[]) =>
+  workouts.some(({ workoutExercises }) =>
+    workoutExercises.some(({ slug, sets }) => testedPatternOf(slug) && topSetOf(sets)),
+  );
 
 // The reps a weighted Set would have reached to failure: reps in reserve count, and an unrated Set counts as RPE 9
 const repsToFailure = ({ reps, rpe = TOP_SET_RPE }: { reps: number; rpe?: number }) => reps + (10 - rpe);
@@ -51,6 +67,16 @@ const ESTIMATE_SHARE = 0.8;
 // Core's estimate when the plank wasn't tested: plank seconds don't follow from strength in kg
 const ESTIMATED_PLANK_SECONDS = 30;
 
+// What an untested Pattern's estimate follows from: the user's other results, or typical values when none was measured
+// in kg, as core's always does
+export const estimatedFrom = (
+  pattern: TestedPattern,
+  patterns: Partial<Record<TestedPattern, Pick<AssessmentPattern, "estimated">>>,
+): "other-results" | "typical-values" =>
+  pattern !== "core" && KG_PATTERNS.some((tested) => patterns[tested]?.estimated === false)
+    ? "other-results"
+    : "typical-values";
+
 // An untested Pattern's Reference Strength. Each tested kg Pattern says how strong the user is next to the typical
 // Reference Strength for their weight and gender; the untested Pattern gets its typical value at the average of those
 // shares (the typical value itself when none was tested), less ESTIMATE_SHARE. A load-limited test counts at its floor
@@ -68,23 +94,21 @@ function estimateReferenceStrength(
   return typicalReferenceStrength(bodyProfile, pattern) * share * ESTIMATE_SHARE;
 }
 
-// Turns a pair of Assessment Workouts into the Assessment and the Working Levels it sets. Each Workout is read only
-// for the Patterns it tests. The Working Levels cover every Exercise available in any of the user's Equipment Profiles
+// Turns an Assessment's Workouts, in the order they started (one, or an old A and B), into the Assessment and the
+// Working Levels it sets. The Working Levels cover every Exercise available in any of the user's Equipment Profiles
 export function assess(
-  a: Workout,
-  b: Workout,
+  workouts: readonly Workout[],
   profile: BodyProfile,
   equipmentProfiles: ProfileWithLoads[],
 ): { assessment: Omit<Assessment, "id" | "createdAt">; workingLevels: WorkingLevel[] } {
+  const last = workouts.at(-1);
+  if (!last) throw new Error("An Assessment needs a Workout");
   const tests: Partial<Record<TestedPattern, AssessmentTest>> = {};
-  for (const [workout, part] of [
-    [a, "A"],
-    [b, "B"],
-  ] as const) {
+  for (const workout of workouts) {
     for (const { slug, sets } of workout.workoutExercises) {
       const pattern = testedPatternOf(slug);
       const top = topSetOf(sets);
-      if (!pattern || !ASSESSMENT_PATTERNS[part].includes(pattern) || !top) continue;
+      if (!pattern || !top) continue;
       const { topSet, loadLimited } = top;
       const maximum = maximumOf(slug, topSet, profile.weightKg);
       tests[pattern] = {
@@ -108,9 +132,8 @@ export function assess(
   );
   return {
     assessment: {
-      aWorkoutId: a.id,
-      bWorkoutId: b.id,
-      bStartedAt: b.startedAt,
+      workoutIds: workouts.map(({ id }) => id),
+      lastStartedAt: last.startedAt,
       bodyWeightKg: profile.weightKg,
       patterns,
     },
@@ -118,7 +141,7 @@ export function assess(
       referenceStrengths,
       bodyWeightKg: profile.weightKg,
       equipmentProfiles,
-      movedBy: { workoutId: b.id, startedAt: b.startedAt },
+      movedBy: { workoutId: last.id, startedAt: last.startedAt },
     }),
   };
 }

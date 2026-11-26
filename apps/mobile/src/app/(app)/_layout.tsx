@@ -26,6 +26,16 @@ export default function AppLayout() {
           <Stack.Screen name="(tabs)" />
           {/* The In-progress Workout and its picker and Finish screens cover the tabs */}
           <Stack.Screen name="workout" options={{ presentation: "fullScreenModal" }} />
+          {/* Over the tabs, so the Food tab itself never opens on it */}
+          <Stack.Screen
+            name="nutrition-history"
+            options={{
+              ...stackScreenOptions,
+              headerShown: true,
+              title: "Nutrition History",
+              headerBackButtonDisplayMode: "minimal",
+            }}
+          />
           <Stack.Screen
             name="assessment-results"
             // A bare chevron: the back title would be "(tabs)", the route group's name

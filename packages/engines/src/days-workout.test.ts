@@ -690,6 +690,59 @@ describe("daysWorkout", () => {
     });
   });
 
+  describe("with a chosen rest", () => {
+    const short = (rest: DayChoices["rest"]) =>
+      daysWorkout(longPlan, { workoutLength: "short", noSupersets: true, rest });
+    const setsOf = ({ plannedExercises }: ReturnType<typeof short>) => plannedExercises.map(({ sets }) => sets);
+
+    it("is as with no choice on Auto", () => {
+      expect(short("auto")).toEqual(short(undefined));
+      expect(short("auto").estimatedSeconds).toBe(1725);
+    });
+
+    it("fits more Sets when it's shorter", () => {
+      // Every Set takes 30 s and the 30 s rest, so 25 of them fit Short's 1500 s, where Auto fits 12
+      expect(setsOf(short(30))).toEqual([3, 3, 3, 3, 3, 3, 3, 3, 1]);
+      expect(short(30).estimatedSeconds).toBe(300 + 1500);
+    });
+
+    it("fits fewer Sets when it's longer", () => {
+      // 210 s a Set
+      expect(setsOf(short(180))).toEqual([3, 3, 1]);
+      expect(short(180).estimatedSeconds).toBe(300 + 1470);
+    });
+
+    it("times a Set as its secondsPerSet less its Auto rest plus the choice", () => {
+      // A lateral raise is 60 s a Set with a 45 s rest, so 15 s and the 60 s chosen
+      const plan = { plannedExercises: [planned("dumbbell-lateral-raise")] };
+      expect(daysWorkout(plan, { workoutLength: "long", rest: 60 }).estimatedSeconds).toBe(300 + 3 * 75);
+    });
+
+    it("times a superset's round from its longer Set plus the changeover", () => {
+      // At Quick's 900 s, 9 Sets of 105 s don't fit alone, so the press and the row pair: 3 × (30 + 75 + 30)
+      const plan = {
+        plannedExercises: [planned("dumbbell-bench-press"), planned("inverted-row"), planned("goblet-squat")],
+      };
+      const today = daysWorkout(plan, { workoutLength: "quick", rest: 75 });
+      expect(today.paired).toBe(true);
+      expect(today.estimatedSeconds).toBe(300 + 405 + 315);
+      // At 60 s they fit alone
+      expect(daysWorkout(plan, { workoutLength: "quick", rest: 60 }).paired).toBe(false);
+    });
+
+    it("leaves the walk its time, as it has no rest", () => {
+      const walk: PlannedExercise = { slug: "walk", sets: 1, target: { unit: "seconds", seconds: 1200 } };
+      const today = daysWorkout({ plannedExercises: [walk] }, { workoutLength: "long", rest: 30 });
+      expect(today.estimatedSeconds).toBe(300 + 1200);
+    });
+
+    it("leaves the stored plan unchanged", () => {
+      const before = structuredClone(longPlan);
+      short(180);
+      expect(longPlan).toEqual(before);
+    });
+  });
+
   describe("supersets", () => {
     const shape = (plan: Pick<PlannedWorkout, "plannedExercises">, choices: DayChoices) =>
       daysWorkout(plan, choices).plannedExercises.map(({ slug, sets, supersetWith }) => [slug, sets, supersetWith]);

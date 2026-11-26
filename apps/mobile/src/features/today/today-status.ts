@@ -1,6 +1,15 @@
-import { restDay, summarizeWorkout, type FinishedWorkoutSets, type RestDayReason } from "@fit/engines";
+import {
+  holdTimeSeconds,
+  mobilitySeconds,
+  restDay,
+  summarizeWorkout,
+  type FinishedWorkoutSets,
+  type MobilityFocus,
+  type RecoveryExercise,
+  type RestDayReason,
+} from "@fit/engines";
 import type { ActivityLevel, WeightUnit } from "@fit/shared";
-import { estimatedTimeLabel, timeStat, volumeLabel } from "../workouts/format";
+import { estimatedTimeLabel, secondsLabel, timeStat, volumeLabel } from "../workouts/format";
 
 // Whether Today asks for the Activity Level (spec #158 story 4): only a user onboarded before it was asked has none,
 // and they're asked once. Skipped is undefined until the phone has read it
@@ -125,8 +134,22 @@ export function checkInLighterRow({ lighter, fullWorkout }: { lighter: boolean; 
 export const SUPERSETS_TO_FIT = "Paired into supersets to fit the time";
 export const supersetWithLabel = (partnerName: string) => `Superset with ${partnerName}`;
 
-// On the Rest Day card and in the plan's sheet
-export const RECOVERY_INSTEAD = "Recovery workout instead";
+export const mobilityFocusLabels: Record<MobilityFocus, string> = {
+  full_body: "Full body",
+  hips_and_legs: "Hips and legs",
+  back_and_shoulders: "Back and shoulders",
+};
+
+// How long a hold of a Mobility Workout takes, and how it's made up: "1 min 50 s · 45 s per side"
+export function mobilityHoldLine(hold: RecoveryExercise, setLabel: string) {
+  return [secondsLabel(holdTimeSeconds(hold)), ...(hold.sets > 1 ? [`${hold.sets} sets`] : []), setLabel].join(" · ");
+}
+
+// The whole list: "14 holds · About 20 min"
+export const mobilityTotalLine = (holds: readonly RecoveryExercise[]) =>
+  `${counted(holds.length, "hold")} · ${estimatedTimeLabel(mobilitySeconds(holds))}`;
+
+export const NO_OTHER_HOLDS = "There are no other holds you can do with your injuries and equipment.";
 
 // What's in a Planned Workout: "6 Exercises · 18 Sets · About 45 min", and "· lighter after your check-in" when it
 // took Sets off

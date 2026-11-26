@@ -34,7 +34,7 @@ describe("POST /workouts", () => {
 
     expect((await user.post("/workouts", b)).statusCode).toBe(201);
     const latest = (await user.get("/assessments/latest")).body as LatestAssessment;
-    expect(latest?.assessment).toMatchObject({ aWorkoutId: a.id, bWorkoutId: b.id });
+    expect(latest?.assessment).toMatchObject({ workoutIds: [a.id, b.id] });
     expect(latest?.workingLevels).toEqual(
       expect.arrayContaining([
         expect.objectContaining({ slug: "goblet-squat", unit: "kg" }),
@@ -70,8 +70,22 @@ describe("POST /workouts", () => {
     const recovery = workout(2, [
       { slug: "walk", sets: [held(20 * 60)] },
       { slug: "cat-cow", sets: [held(45), held(45)] },
+      // One of the Exercises added in #197
+      { slug: "pigeon", sets: [held(90)] },
     ]);
     expect((await user.post("/workouts", recovery)).statusCode).toBe(201);
+
+    expect(await currentPlan(user)).toEqual(plan);
+  });
+
+  it("keeps the same Planned Workout after a Mobility Workout, which has no walk", async () => {
+    const { user, plan } = await assessedUser();
+
+    const mobility = workout(2, [
+      { slug: "pigeon", sets: [held(45)] },
+      { slug: "cat-cow", sets: [held(45), held(45)] },
+    ]);
+    expect((await user.post("/workouts", mobility)).statusCode).toBe(201);
 
     expect(await currentPlan(user)).toEqual(plan);
   });

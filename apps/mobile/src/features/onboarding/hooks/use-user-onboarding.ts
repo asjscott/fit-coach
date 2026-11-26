@@ -11,7 +11,7 @@ import {
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
-import { LoadsForm, pruneLoads, toLoadsForm } from "@/features/equipment/loads";
+import { loadsForm, pruneLoads, toLoadsForm } from "@/features/equipment/loads";
 import {
   loadTagsAsked,
   EquipmentByGroup,
@@ -37,7 +37,7 @@ export const onboardingValues = (unit: WeightUnit, isEditing: boolean) =>
     weight: isEditing ? bodyWeightAnswer(unit).optional() : bodyWeightAnswer(unit),
     trainingSetup: TrainingSetup,
     equipment: EquipmentByGroup,
-    loads: LoadsForm,
+    loads: loadsForm(unit),
   });
 export type OnboardingValues = z.infer<ReturnType<typeof onboardingValues>>;
 

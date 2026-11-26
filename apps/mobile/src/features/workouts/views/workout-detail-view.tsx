@@ -14,7 +14,7 @@ import { useToast } from "@/contexts/toast-context";
 import { spacing, useTheme } from "@/theme";
 import { errorMessage } from "@/utils/error-message";
 import { SetRow } from "../components/set-row";
-import { dateLabel, prLabel, timeStat, volumeLabel, workoutTimesLabel } from "../format";
+import { dateLabel, prLabel, recoveryWorkoutLabel, timeStat, volumeLabel, workoutTimesLabel } from "../format";
 import { useHistory } from "../history-provider";
 import { exerciseName, setReading } from "../library";
 import { useLogbook } from "../logbook-provider";
@@ -83,6 +83,7 @@ function WorkoutDetail({ workout, note, onDelete }: WorkoutDetailProps) {
   const { showToast } = useToast();
   const [confirming, setConfirming] = useState(false);
   const summary = summarizeWorkout(workout);
+  const recoveryLabel = recoveryWorkoutLabel(workout);
 
   const handleDelete = async () => {
     try {
@@ -110,6 +111,7 @@ function WorkoutDetail({ workout, note, onDelete }: WorkoutDetailProps) {
         }}
       />
       <Stack spacing={1}>
+        {recoveryLabel ? <Text weight="semiBold">{recoveryLabel}</Text> : null}
         <Text color="muted">{workoutTimesLabel(workout)}</Text>
         {note !== undefined && (
           <Text size="sm" color="muted">

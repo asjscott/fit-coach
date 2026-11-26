@@ -1,4 +1,4 @@
-import { EXERCISES } from "@fit/engines";
+import { EXERCISES, NO_EQUIPMENT } from "@fit/engines";
 import { describe, expect, it } from "vitest";
 import { librarySections } from "./library-sections";
 
@@ -16,7 +16,10 @@ const titlesAndSlugs = (sections: ReturnType<typeof librarySections>["sections"]
 
 describe("librarySections", () => {
   it("groups Exercises by their first movement pattern, in pattern order", () => {
-    const { sections } = librarySections(library, { tags: ["dumbbells", "barbell", "pull_up_bar"], showAll: true });
+    const { sections } = librarySections(library, {
+      equipmentProfile: { tags: ["dumbbells", "barbell", "pull_up_bar"], loads: {} },
+      showAll: true,
+    });
     expect(titlesAndSlugs(sections)).toEqual([
       ["Squat", ["back-squat", "goblet-squat"]],
       ["Push", ["push-up"]],
@@ -26,7 +29,7 @@ describe("librarySections", () => {
   });
 
   it("hides Exercises the equipment doesn't support, and empty groups, unless showing all", () => {
-    const { sections } = librarySections(library, { tags: [], showAll: false });
+    const { sections } = librarySections(library, { equipmentProfile: NO_EQUIPMENT, showAll: false });
     expect(titlesAndSlugs(sections)).toEqual([
       ["Push", ["push-up"]],
       ["Core", ["plank"]],
@@ -34,7 +37,7 @@ describe("librarySections", () => {
   });
 
   it("marks the Exercises the equipment doesn't support when showing all", () => {
-    const { sections } = librarySections(library, { tags: [], showAll: true });
+    const { sections } = librarySections(library, { equipmentProfile: NO_EQUIPMENT, showAll: true });
     const available = sections.flatMap((s) => s.data).map((row) => [row.exercise.slug, row.available]);
     expect(available).toEqual([
       ["back-squat", false],
@@ -47,7 +50,7 @@ describe("librarySections", () => {
 
   it("lists the Recovery Exercises last, in a group of their own", () => {
     const { sections } = librarySections([exercise("walk"), ...library, exercise("cat-cow")], {
-      tags: [],
+      equipmentProfile: NO_EQUIPMENT,
       showAll: false,
     });
     expect(titlesAndSlugs(sections)).toEqual([
@@ -58,6 +61,9 @@ describe("librarySections", () => {
   });
 
   it("counts the Exercises the equipment supports out of the whole library", () => {
-    expect(librarySections(library, { tags: [], showAll: false })).toMatchObject({ availableCount: 2, total: 5 });
+    expect(librarySections(library, { equipmentProfile: NO_EQUIPMENT, showAll: false })).toMatchObject({
+      availableCount: 2,
+      total: 5,
+    });
   });
 });

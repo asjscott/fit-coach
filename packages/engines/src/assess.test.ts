@@ -1,6 +1,6 @@
-import type { AssessmentPattern, EquipmentProfile, Set, WorkingLevel, Workout } from "@fit/shared";
+import type { AssessmentMarker, AssessmentPattern, EquipmentProfile, Set, WorkingLevel, Workout } from "@fit/shared";
 import { describe, expect, it } from "vitest";
-import { assess } from "./assess";
+import { assess, estimatedFrom, hasAssessmentResult, unmeasuredTests } from "./assess";
 
 const loggedAt = "2026-10-24T09:00:00.000Z";
 const rated = (kg: number, rpe: number, reps = 5): Set => ({ kind: "external", kg, reps, rpe, loggedAt });
@@ -10,7 +10,7 @@ const held = (seconds: number): Set => ({ kind: "timed", seconds, loggedAt });
 
 const assessmentWorkout = (
   id: string,
-  assessment: "A" | "B",
+  assessment: AssessmentMarker,
   startedAt: string,
   workoutExercises: { slug: string; sets: Set[] }[],
 ): Workout => ({
@@ -65,16 +65,28 @@ const setByB = { movedBy: { workoutId: B_ID, startedAt: "2026-10-22T09:00:00.000
 
 describe("assess", () => {
   it("records the pair, when its B started and the body weight used", () => {
-    expect(assess(a, b, profile, [home]).assessment).toMatchObject({
-      aWorkoutId: A_ID,
-      bWorkoutId: B_ID,
-      bStartedAt: "2026-10-22T09:00:00.000Z",
+    expect(assess([a, b], profile, [home]).assessment).toMatchObject({
+      workoutIds: [A_ID, B_ID],
+      lastStartedAt: "2026-10-22T09:00:00.000Z",
       bodyWeightKg: 80,
     });
   });
 
+  it("reads every Pattern from a single Assessment Workout, as from a pair", () => {
+    const single = assessmentWorkout(B_ID, "single", "2026-10-22T09:00:00.000Z", [
+      ...a.workoutExercises,
+      ...b.workoutExercises,
+    ]);
+    const { assessment, workingLevels } = assess([single], profile, [home]);
+
+    expect(assessment).toMatchObject({ workoutIds: [B_ID], lastStartedAt: "2026-10-22T09:00:00.000Z" });
+    expect(Object.values(assessment.patterns).every((pattern) => !pattern.estimated)).toBe(true);
+    expect(levelOf(workingLevels, "goblet-squat")).toMatchObject({ kg: 12, reps: 8, ...setByB });
+    expect(levelOf(workingLevels, "one-arm-dumbbell-row")).toMatchObject({ kg: 14, reps: 8, ...setByB });
+  });
+
   it("takes the first Set at RPE 9 or higher as the top Set, and estimates the maximum from it", () => {
-    const { squat } = assess(a, b, profile, [home]).assessment.patterns;
+    const { squat } = assess([a, b], profile, [home]).assessment.patterns;
 
     expect(squat).toMatchObject({ slug: "goblet-squat", topSet: { kg: 14, reps: 5, rpe: 9 }, estimated: false });
     // 14 kg x 5 with 1 rep in reserve counts as 6 reps: 14 x (1 + 6/30)
@@ -85,10 +97,12 @@ describe("assess", () => {
     const atRpe = (rpe: number) =>
       tested(
         assess(
-          a,
-          assessmentWorkout(B_ID, "B", "2026-10-22T09:00:00.000Z", [
-            { slug: "dumbbell-floor-press", sets: [rated(12, rpe)] },
-          ]),
+          [
+            a,
+            assessmentWorkout(B_ID, "B", "2026-10-22T09:00:00.000Z", [
+              { slug: "dumbbell-floor-press", sets: [rated(12, rpe)] },
+            ]),
+          ],
           profile,
           [home],
         ).assessment.patterns.push,
@@ -100,7 +114,7 @@ describe("assess", () => {
   });
 
   it("reads each Pattern's test from the Workout that tested it", () => {
-    const { patterns } = assess(a, b, profile, [home]).assessment;
+    const { patterns } = assess([a, b], profile, [home]).assessment;
 
     expect(
       Object.fromEntries(Object.entries(patterns).map(([pattern, test]) => [pattern, tested(test)?.slug])),
@@ -122,8 +136,8 @@ describe("assess", () => {
       ]);
 
     it("is load-limited when its last Set went past 12 reps: the maximum is a lower bound, Epley at 12 reps", () => {
-      const { squat } = assess(withSquat([rated(16, 6), rated(20, 6), rated(20, 8, 15)]), b, profile, [home]).assessment
-        .patterns;
+      const { squat } = assess([withSquat([rated(16, 6), rated(20, 6), rated(20, 8, 15)]), b], profile, [home])
+        .assessment.patterns;
 
       // 20 x (1 + 12/30) = 28, whatever the reps past 12 and the reps in reserve
       expect(squat).toMatchObject({
@@ -136,14 +150,14 @@ describe("assess", () => {
     });
 
     it("is untested when it stopped at 12 reps or fewer", () => {
-      const { squat } = assess(withSquat([rated(10, 6), rated(14, 8, 12)]), b, profile, [home]).assessment.patterns;
+      const { squat } = assess([withSquat([rated(10, 6), rated(14, 8, 12)]), b], profile, [home]).assessment.patterns;
 
       expect(squat).toEqual({ estimated: true, referenceStrength: expect.any(Number) });
     });
   });
 
   it("isn't load-limited when it reached RPE 9", () => {
-    expect(assess(a, b, profile, [home]).assessment.patterns.squat).toMatchObject({ loadLimited: false });
+    expect(assess([a, b], profile, [home]).assessment.patterns.squat).toMatchObject({ loadLimited: false });
   });
 
   describe("an untested Pattern", () => {
@@ -153,7 +167,7 @@ describe("assess", () => {
     ]);
 
     it("is estimated from the others, scaled from how strong the user is for their weight", () => {
-      const { push } = assess(a, withoutPush, profile, [home]).assessment.patterns;
+      const { push } = assess([a, withoutPush], profile, [home]).assessment.patterns;
 
       // For an 80 kg man the typical Reference Strengths are squat 80, hinge 100, push 60 and pull 80. He tested at
       // squat 42 (0.525 of typical), hinge 80 (0.8) and pull 19.2 / 0.3 = 64 (0.8): 0.7083 of typical on average.
@@ -162,7 +176,7 @@ describe("assess", () => {
     });
 
     it("still gives its Exercises Working Levels", () => {
-      const { workingLevels } = assess(a, withoutPush, profile, [home]);
+      const { workingLevels } = assess([a, withoutPush], profile, [home]);
 
       // A floor press is 0.37 of push's 34: 12.58, for 8 reps 12.58 / (1 + 10/30) = 9.435, so the 8 kg dumbbells
       expect(levelOf(workingLevels, "dumbbell-floor-press")).toEqual({
@@ -177,7 +191,7 @@ describe("assess", () => {
 
     it("is estimated as typical for the user's weight and gender, less a fifth, when nothing was tested", () => {
       const nothing = (id: string, part: "A" | "B") => assessmentWorkout(id, part, "2026-10-22T09:00:00.000Z", []);
-      const { patterns } = assess(nothing(A_ID, "A"), nothing(B_ID, "B"), { weightKg: 60, gender: "female" }, [
+      const { patterns } = assess([nothing(A_ID, "A"), nothing(B_ID, "B")], { weightKg: 60, gender: "female" }, [
         home,
       ]).assessment;
 
@@ -191,7 +205,7 @@ describe("assess", () => {
         { slug: "goblet-squat", sets: [rated(20, 8, 15)] },
         { slug: "dumbbell-romanian-deadlift", sets: [rated(20, 9)] },
       ]);
-      const { push } = assess(limitedSquat, withoutPush, profile, [home]).assessment.patterns;
+      const { push } = assess([limitedSquat, withoutPush], profile, [home]).assessment.patterns;
 
       // Squat at least 28 / 0.4 = 70 (0.875 of typical), hinge 0.8, pull 0.8: 60 x 0.825 x 0.8 = 39.6
       expect(push?.referenceStrength).toBeCloseTo(39.6, 5);
@@ -199,7 +213,7 @@ describe("assess", () => {
   });
 
   it("keeps each tested Pattern's Reference Strength", () => {
-    const { patterns } = assess(a, b, profile, [home]).assessment;
+    const { patterns } = assess([a, b], profile, [home]).assessment;
 
     // Goblet squat's maximum of 16.8 is 0.4 of a back squat's: 42 kg. The dumbbell Romanian deadlift's 24 is 0.3 of
     // a deadlift's: 80 kg
@@ -209,7 +223,7 @@ describe("assess", () => {
 
   // #131: a weighted Working Level is a load and a target reps at the bottom of its range, 8 for a dumbbell lift
   it("gives each tested Exercise the heaviest load the user has for 8 reps with 2 in reserve, for 8 reps", () => {
-    const { workingLevels } = assess(a, b, profile, [home]);
+    const { workingLevels } = assess([a, b], profile, [home]);
 
     // The maximum / (1 + 10/30), then the heaviest dumbbell at or below it: squat 16.8 -> 12.6 -> 12,
     // hinge 20 x 1.2 = 24 -> 18 -> 16, push 12 x (1 + 5/30) = 14 -> 10.5 -> 10, pull 16 x 1.2 = 19.2 -> 14.4 -> 14
@@ -224,7 +238,7 @@ describe("assess", () => {
   });
 
   it("gives every Exercise available in any of the Equipment Profiles a Working Level in its unit", () => {
-    const { workingLevels } = assess(a, b, profile, [home, gym]);
+    const { workingLevels } = assess([a, b], profile, [home, gym]);
 
     // Left out: what needs kettlebells, a mini band, a dip station, an ab wheel, a landmine, or dumbbells with a
     // bench or box, since neither profile has both
@@ -255,7 +269,7 @@ describe("assess", () => {
   });
 
   it("scales the other Exercises of a Pattern from its Reference Strength", () => {
-    const { workingLevels } = assess(a, b, profile, [home, gym]);
+    const { workingLevels } = assess([a, b], profile, [home, gym]);
 
     // Squat's Reference Strength is 42 kg: a back squat's maximum. A barbell lift starts at 6 reps, the bottom of its
     // 6–10 range: 42 / (1 + 8/30) = 33.2, and the heaviest bar load at or below it is 32.5
@@ -269,7 +283,7 @@ describe("assess", () => {
   });
 
   it("takes carry from hinge, for 8 reps as a carry has no range", () => {
-    const { workingLevels } = assess(a, b, profile, [home]);
+    const { workingLevels } = assess([a, b], profile, [home]);
 
     // Hinge's Reference Strength is 80 kg; a farmer's carry is 0.4 of it per hand, 32 / (1 + 10/30) = 24, and the
     // heaviest dumbbell at or below it is 20
@@ -283,7 +297,7 @@ describe("assess", () => {
   });
 
   it("gives a band Exercise the lightest band it can use, at the bottom of the 10–15 band range", () => {
-    const { workingLevels } = assess(a, b, profile, [home, gym]);
+    const { workingLevels } = assess([a, b], profile, [home, gym]);
 
     expect(levelOf(workingLevels, "band-row")).toEqual({
       slug: "band-row",
@@ -296,7 +310,7 @@ describe("assess", () => {
   });
 
   it("gives a core rep Exercise 10 reps", () => {
-    const { workingLevels } = assess(a, b, profile, [home]);
+    const { workingLevels } = assess([a, b], profile, [home]);
 
     expect(levelOf(workingLevels, "dead-bug")).toEqual({ slug: "dead-bug", unit: "reps", reps: 10, ...setByB });
   });
@@ -306,7 +320,7 @@ describe("assess", () => {
       const pushTest = assessmentWorkout(B_ID, "B", "2026-10-22T09:00:00.000Z", [
         { slug: "dumbbell-bench-press", sets: [rated(benchKg, 9)] },
       ]);
-      return levelOf(assess(a, pushTest, profile, [home]).workingLevels, "push-up");
+      return levelOf(assess([a, pushTest], profile, [home]).workingLevels, "push-up");
     };
 
     // 20 kg x 6 counts a maximum of 24, so a Reference Strength of 60 and a push-up maximum of 78 kg. The push-up
@@ -318,7 +332,7 @@ describe("assess", () => {
   });
 
   it("takes plank seconds as core's Reference Strength, and seeds the timed Working Levels from it", () => {
-    const { assessment, workingLevels } = assess(a, b, profile, [home]);
+    const { assessment, workingLevels } = assess([a, b], profile, [home]);
 
     expect(assessment.patterns.core).toMatchObject({ slug: "plank", topSet: { seconds: 90 }, maximum: 90 });
     expect(assessment.patterns.core?.referenceStrength).toBe(90);
@@ -354,7 +368,7 @@ describe("assess", () => {
       ]);
 
     it("converts a push-up test to kg through body weight x its share, then Epley", () => {
-      const { push } = assess(a, pushUps(10), profile, [bodyweightOnly]).assessment.patterns;
+      const { push } = assess([a, pushUps(10)], profile, [bodyweightOnly]).assessment.patterns;
 
       // A push-up moves 80 x 0.64 = 51.2 kg. 10 reps to failure: 51.2 x (1 + 10/30) = 68.27 kg, and a push-up is 1.3
       // of a bench press, so push's Reference Strength is 52.51 kg
@@ -367,7 +381,7 @@ describe("assess", () => {
       // The round trip: test -> Reference Strength -> the same Exercise's maximum. 10 reps to failure, 2 in reserve,
       // leaves 8. Epley runs both ways past 12 reps too, so 15 leaves 13
       const pushUpLevel = (reps: number) =>
-        levelOf(assess(a, pushUps(reps), profile, [bodyweightOnly]).workingLevels, "push-up");
+        levelOf(assess([a, pushUps(reps)], profile, [bodyweightOnly]).workingLevels, "push-up");
 
       expect(pushUpLevel(10)).toEqual({ slug: "push-up", unit: "reps", reps: 8, ...setByB });
       expect(pushUpLevel(15)).toEqual({ slug: "push-up", unit: "reps", reps: 13, ...setByB });
@@ -379,7 +393,7 @@ describe("assess", () => {
         { slug: "single-leg-glute-bridge", sets: [maxReps(15)] },
         { slug: "plank", sets: [held(60)] },
       ]);
-      const { assessment, workingLevels } = assess(bodyweightA, pushUps(10), profile, [bodyweightOnly]);
+      const { assessment, workingLevels } = assess([bodyweightA, pushUps(10)], profile, [bodyweightOnly]);
 
       expect(Object.keys(assessment.patterns).sort()).toEqual(["core", "hinge", "pull", "push", "squat"]);
       const available = [
@@ -390,5 +404,71 @@ describe("assess", () => {
       ];
       expect(workingLevels.map((level) => level.slug).sort()).toEqual(available.sort());
     });
+  });
+});
+
+// Spec #176 stories 5 to 8
+describe("finishing early", () => {
+  const single = (workoutExercises: { slug: string; sets: Set[] }[]) =>
+    assessmentWorkout(A_ID, "single", "2026-10-20T09:00:00.000Z", workoutExercises);
+
+  it("gives a result from the plank alone, the other Patterns at typical values less a fifth", () => {
+    const plankOnly = single([{ slug: "plank", sets: [held(75)] }]);
+    expect(hasAssessmentResult([plankOnly])).toBe(true);
+
+    const { patterns } = assess([plankOnly], profile, [home]).assessment;
+    expect(patterns.core).toMatchObject({ slug: "plank", referenceStrength: 75, estimated: false });
+    // 0.75 of an 80 kg man is typical for push: 60 kg, less a fifth
+    expect(patterns.push).toMatchObject({ estimated: true });
+    expect(patterns.push?.referenceStrength).toBeCloseTo(48, 5);
+  });
+
+  it("gives a result from any one weighted or bodyweight test", () => {
+    expect(hasAssessmentResult([single([{ slug: "goblet-squat", sets: [rated(14, 9)] }])])).toBe(true);
+    expect(hasAssessmentResult([single([{ slug: "push-up", sets: [maxReps(8)] }])])).toBe(true);
+  });
+
+  it("gives none when nothing was measured: no weighted test reached RPE 9 and no other was done", () => {
+    expect(hasAssessmentResult([single([{ slug: "goblet-squat", sets: [rated(10, 7), rated(12, 8)] }])])).toBe(false);
+  });
+
+  it("reads an old A and B together", () => {
+    const unfinishedA = single([{ slug: "goblet-squat", sets: [rated(10, 7)] }]);
+    expect(hasAssessmentResult([unfinishedA, b])).toBe(true);
+  });
+
+  it("takes the inverted row a pull-up was swapped for as pull's Reference Strength", () => {
+    const swapped = single([{ slug: "inverted-row", sets: [maxReps(12)] }]);
+    expect(assess([swapped], profile, [home]).assessment.patterns.pull).toMatchObject({
+      slug: "inverted-row",
+      topSet: { reps: 12 },
+      estimated: false,
+    });
+  });
+
+  it("names the tests that give no measure, in the Workout's order", () => {
+    const { workoutExercises } = single([
+      { slug: "goblet-squat", sets: [rated(14, 9)] },
+      { slug: "dumbbell-floor-press", sets: [rated(10, 7)] },
+      { slug: "pull-up", sets: [] },
+      { slug: "plank", sets: [held(60)] },
+    ]);
+    expect(unmeasuredTests({ workoutExercises }).map(({ slug }) => slug)).toEqual(["dumbbell-floor-press", "pull-up"]);
+  });
+});
+
+describe("estimatedFrom", () => {
+  const measured = { estimated: false };
+
+  it("is the other results with any Pattern measured in kg", () => {
+    expect(estimatedFrom("hinge", { squat: measured, core: { estimated: true } })).toBe("other-results");
+  });
+
+  it("is typical values with only the plank measured, as its seconds say nothing in kg", () => {
+    expect(estimatedFrom("hinge", { squat: { estimated: true }, core: measured })).toBe("typical-values");
+  });
+
+  it("is typical values for core, whatever else was measured", () => {
+    expect(estimatedFrom("core", { squat: measured, push: measured })).toBe("typical-values");
   });
 });

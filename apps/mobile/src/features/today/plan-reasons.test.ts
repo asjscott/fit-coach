@@ -16,9 +16,9 @@ const behind = (muscles: Muscle[]): PlanReason => ({ code: "behind", muscles });
 // Story 42, #132: why an Exercise's Working Level changed, under the Exercise
 describe("progressionChangeLine", () => {
   it.each([
-    [{ code: "target-up" }, "One more rep: every Set reached the target."],
+    [{ code: "target-up" }, "More reps: every Set reached the target."],
     // Story 54, #135
-    [{ code: "seconds-up" }, "Five more seconds: every Set reached the target."],
+    [{ code: "seconds-up" }, "More seconds: every Set reached the target."],
     [{ code: "load-up" }, "Heavier: every Set reached the top of the range."],
     [{ code: "new-base" }, "From the weight you lifted last time."],
     // Stories 47–49, #134

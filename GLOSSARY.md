@@ -15,7 +15,7 @@ A movement in the library, such as a goblet squat, with how it is loaded, the mu
 _Avoid_: Movement, lift
 
 **Recovery Exercise**:
-A walk or a mobility hold, made for the Recovery Workout. It has no Pattern, credits no Muscle, and the Coach never plans one into a training Workout.
+A walk or a mobility hold, made for the Recovery Workout. Each hold has an area (hips and legs, back and spine, or chest and shoulders) and a hold time, per side; the walk has neither. It has no Pattern, credits no Muscle, and the Coach never plans one into a training Workout.
 _Avoid_: Stretch, mobility exercise, cooldown
 
 **Pattern**:
@@ -92,6 +92,18 @@ _Avoid_: Session, planned session, program
 The Workout on offer today: the Planned Workout on the Workout Length and equipment chosen for it, cut to fit, with its estimated time and any Exercise with no alternative left out. Choices stay on the phone, last for one Workout and never change the Planned Workout.
 _Avoid_: Today's session, adjusted plan
 
+**Rest Choice**:
+How long the user wants the rests between Sets, chosen on Today and kept on the phone: Auto, each Exercise's own rest, or one length from 30 seconds to 3 minutes for every Exercise. It decides how many of the plan's Sets fit the Workout Length, but never changes the Planned Workout. An Assessment Workout always rests on Auto.
+_Avoid_: Rest setting, rest preference, rest timer (for the choice)
+
+**Hold timer**:
+The full-screen clock that times a Set of a timed Exercise. For a strength Exercise: 5 seconds to get into position, a countdown to the bottom of the target range, then up until the user stops it; it fills in the seconds to check and never logs the Set, and in an Assessment it only counts up. For a Recovery Exercise it's the Guided flow's clock, which logs each hold as it ends, whether it runs the Workout's holds or the user starts it for one Recovery Exercise of a Manual Workout. It's never stored.
+_Avoid_: Stopwatch, plank timer, rest timer (for this)
+
+**Guided flow**:
+How a Recovery Workout's holds are done hands-free: one after another on the Hold timer, 10 seconds to change position before each hold and side, each logged as its Set when it ends. The user can pause, skip, go Back to repeat the previous hold (replacing its Set), or leave it for the ordinary logging screen and come back. It ends on a screen offering Back and Finish. Where it is comes from the logged Sets, so it reopens, paused, at the first hold not logged.
+_Avoid_: Routine player, follow-along, guided session
+
 **Weekly Budget**:
 How many credited Sets each of the budgeted Muscles should get in a week, set by the user's Goal and days per week. Workout Length decides how much of it is delivered, not the budget itself. Eight Muscles are budgeted for every Goal, and calves too for athletic and build_muscle; other Muscles aren't budgeted. The Coach plans a Muscle up to a cap of about 130% of its budget, counted from the Week Ledger and the Sets already planned: it adds no Exercise, a Jump included, that would take one of its primary Muscles over it, while secondary credit counts towards a Muscle's total but never keeps an Exercise out.
 _Avoid_: Weekly target, quota, weekly volume
@@ -125,8 +137,12 @@ The most the user wants a Workout to take, 5 minutes of warm-up included: Short 
 _Avoid_: Mode, session type
 
 **Recovery Workout**:
-A walk or mobility Workout the user chooses in place of the Day's Workout, for one day, and what the Coach plans when the 130% cap leaves nothing else to add. Unlike a Rest Day, it's something they do. It credits no Sets.
+A Mobility Workout or a walk with mobility holds ("Walk and mobility"), chosen by the user in place of the Day's Workout, for one day. The one with the walk is also what the Coach plans when the 130% cap leaves nothing else to add. Unlike a Rest Day, it's something they do. It credits no Sets. A hold the user's injuries or equipment rule out is replaced by one like it.
 _Avoid_: Recovery day, recovery session
+
+**Mobility Workout**:
+A Recovery Workout with no walk: 10, 20 or 30 minutes of holds the app picks, leaning to the Muscles recent training left most tired and varying from the last one. The user can limit it to a focus: Full body, Hips and legs, or Back and shoulders. "Mobility" on screen.
+_Avoid_: Mobility session, stretching, stretch routine
 
 **Block**:
 A run of weeks of training, started by an Assessment, with a set length and a deload week. A newer Assessment starts a new one; without one, the next starts the week after the deload.
@@ -139,15 +155,15 @@ _Avoid_: Off day, recovery day
 ### Assessment
 
 **Assessment Workout**:
-One of the two Workouts the Coach prescribes to measure the user's starting strength: A tests squat, hinge and core, B tests push and pull.
+The Workout the Coach prescribes to measure the user's starting strength: it tests squat, push, hinge, pull and core, in that order. Before, there were two: A (squat, hinge and core) and B (push and pull). An old A and B still make one Assessment; an A alone makes none. It can be finished with tests undone, as long as one was measured; with none, it stays in History and makes no Assessment.
 _Avoid_: Test session, baseline session, test workout
 
 **Assessment**:
-The results of one completed pair of Assessment Workouts: for each tested Pattern, the Exercise used, its top Set, the maximum estimated from it and the Reference Strength that follows. A test is load-limited when the heaviest load available couldn't reach RPE 9, so its maximum is only a lower bound. A bodyweight or timed test is one Set of as many reps or seconds as the user can do. A Pattern is untested when no test was safe for the user's injuries or its weighted test stopped short of RPE 9; its Reference Strength is then estimated from the other Patterns. The newest Assessment is the one that counts.
+The results of one Assessment Workout, or of an old A and B: for each tested Pattern, the Exercise used, its top Set, the maximum estimated from it and the Reference Strength that follows. A test is load-limited when the heaviest load available couldn't reach RPE 9, so its maximum is only a lower bound. A bodyweight or timed test is one Set of as many reps or seconds as the user can do. A Pattern is untested when no test was safe for the user's injuries, its test was left undone or its weighted test stopped short of RPE 9; its Reference Strength is then estimated from the other Patterns, or from typical values when none was measured in kg. The newest Assessment is the one that counts.
 _Avoid_: Baseline, test results, fitness test
 
 **Working Level**:
-What the Coach will prescribe next for one Exercise for this user: a load and a target reps within a rep range for a weighted Exercise (8–12 by default, 6–10 for a barbell lift, a fixed 8 for a Ballistic Exercise, and no range for a carry), a band level and reps within 10–15 for a band Exercise, reps up to 15 for a bodyweight one, seconds for a timed one. Each records the Workout that last moved it and the run of Misses it is on. An Assessment sets the first one, at the bottom of the range; a bodyweight one above 15 reps, or a timed one above 60 seconds, starts on the harder variant.
+What the Coach will prescribe next for one Exercise for this user: a load and a target reps within a rep range for a weighted Exercise (8–12 by default, 6–10 for a barbell lift, a fixed 8 for a Ballistic Exercise, and no range for a carry), a band level and reps within 10–15 for a band Exercise, reps up to 15 for a bodyweight one, seconds for a timed one. The target is an aim inside the range, not a limit: when every Set reaches it, the next is the lowest Set + 1 rep, or + 5 seconds, up to the top (20 reps once they're climbing past the range). Each records the Workout that last moved it and the run of Misses it is on. An Assessment sets the first one, at the bottom of the range; a bodyweight one above 15 reps, or a timed one above 60 seconds, starts on the harder variant.
 _Avoid_: Exercise state, starting load, current weight
 
 **Reference Strength**:
@@ -160,8 +176,16 @@ _Avoid_: Strength score, base e1RM
 The move from one load to the next an Equipment Profile has for one kind of equipment, such as from the 25 lb to the 30 lb dumbbells, or a set step for cable and machine. Progression moves a weighted Exercise up or down one Load Step at a time.
 _Avoid_: Increment, jump, plate step
 
+**Range**:
+The reps or seconds that are valid for a target, shown with it: "8–12", or "15+" with no top. It stretches to take in a target outside it. A fixed dose, such as a carry's or the deload week's, has none and reads as one number.
+_Avoid_: Rep window, bracket
+
+**Aim**:
+The target inside its Range that the Coach asks for today: "8–12 · aim for 9". A Set anywhere in the Range is valid; beating the Aim raises the next one.
+_Avoid_: Goal (for this), limit
+
 **Miss**:
-A Workout in which an Exercise's Sets average more than 2 reps, or 10 seconds, short of their target. Two in a row, counted over the Workouts that include that Exercise, drop it a Load Step, or lower a bodyweight or timed target. A skipped Workout isn't one, and nothing in a deload week is, though a deload week doesn't break the run either.
+A Workout in which an Exercise's Sets average more than 2 reps, or 10 seconds, short of their target and, where there's a rep range, under its bottom: Sets inside the range are valid, so never a Miss. Bodyweight and timed Exercises have no range, so only the shortfall counts. Two in a row, counted over the Workouts that include that Exercise, drop it a Load Step, or lower a bodyweight or timed target. A skipped Workout isn't one, and nothing in a deload week is, though a deload week doesn't break the run either.
 _Avoid_: Failure, failed set, stall
 
 **PR**:
@@ -182,13 +206,21 @@ _Avoid_: Meal log, food log item, intake
 A food that belongs to the user, made by them from a label when no source had it, and found again by its name or barcode. The foods they logged lately are Recent, not Saved Foods.
 _Avoid_: Favourite, custom food, my foods
 
+**Saved Meal**:
+Something the user makes again and again: a name, its ingredients, each a food and a portion kept as they were when added, and how many servings they make. It's listed with the Saved Foods and logged as one Food Entry, by servings or, when it has a cooked weight, by grams too. The Food Entry opens to the ingredients. Another Saved Meal can't be an ingredient. A meal, alone, is Breakfast, Lunch, Dinner or Snacks.
+_Avoid_: Recipe, meal (for this), custom meal
+
 **Activity Level**:
 How much the user moves in daily life, their strength Workouts included but never their Activities: sedentary, lightly active, active or very active.
 _Avoid_: Activity (for this), lifestyle, exercise level
 
 **Daily Targets**:
-The calories, protein, fat, carbs, fibre and water the Coach sets the user for each day, the same every day, from their latest Weigh-in, Activity Level and Goal. Fibre is the user's to change; the others follow the rules.
+The calories, protein, fat, carbs, fibre and water the Coach sets the user for each day, the same every day, from their latest Weigh-in, Activity Level and Goal. Fibre is the user's to change; the others follow the rules. Calories and protein are each a range around their target, 5% either side for calories and 90–120% for protein, and a day is below, in range or over each.
 _Avoid_: Macros, budget (the Weekly Budget is for Sets), goals
+
+**Nutrition History**:
+A week, Monday to Sunday, of the calories or protein the user ate each day against that day's range, with their daily average. The average leaves out today and days with no Food Entry; water alone doesn't count as one.
+_Avoid_: History (alone, which is Workouts), food log, trends
 
 **Weigh-in**:
 The user's body weight for one week, Monday to Sunday: at most one per week, a later one replacing it. The latest is the body weight everything else reads.

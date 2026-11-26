@@ -1,4 +1,4 @@
-import { portionNutrients } from "@fit/engines";
+import { allowsGrams, portionNutrients } from "@fit/engines";
 import type { Food } from "@fit/shared";
 import { ScrollView, StyleSheet, View } from "react-native";
 import { Chip } from "@/components/chip";
@@ -6,10 +6,11 @@ import { Input, InputField } from "@/components/input";
 import { Text } from "@/components/text";
 import { spacing } from "@/theme";
 import { portionLine } from "../food-portion";
+import { entryPortion } from "../today-so-far";
 import type { PortionState } from "../hooks/use-portion";
 
-// A portion of a food: grams, or a count of one of its own servings, and what that portion holds (spec #158 stories
-// 71 and 72). The portion's state comes from usePortion, so the screen around it can log or save it
+// A portion of a food, in grams when it can be logged in them or a count of one of its own servings, and what it holds
+// (spec #158 stories 71 and 72). Its state comes from usePortion, so the screen around it can log or save it
 export function FoodPortionPanel({ food, portion }: { food: Food; portion: PortionState }) {
   const { unit, amount, setAmount, choose, grams } = portion;
 
@@ -25,7 +26,9 @@ export function FoodPortionPanel({ food, portion }: { food: Food; portion: Porti
               onPress={() => choose({ unit: "serving", serving })}
             />
           ))}
-          <Chip label="Grams" selected={unit.unit === "g"} onPress={() => choose({ unit: "g" })} />
+          {allowsGrams(food) ? (
+            <Chip label="Grams" selected={unit.unit === "g"} onPress={() => choose({ unit: "g" })} />
+          ) : null}
         </ScrollView>
       ) : null}
       <View style={styles.amountRow}>
@@ -39,7 +42,9 @@ export function FoodPortionPanel({ food, portion }: { food: Food; portion: Porti
           />
         </Input>
         <Text color="muted" style={styles.unitLabel}>
-          {unit.unit === "g" ? "g" : `× ${unit.serving.label}${grams ? ` · ${Math.round(grams)} g` : ""}`}
+          {unit.unit === "g"
+            ? "g"
+            : `× ${unit.serving.label}${grams ? ` · ${grams < 1 ? entryPortion({ grams }) : `${Math.round(grams)} g`}` : ""}`}
         </Text>
       </View>
       <Text weight="semiBold" accessibilityLiveRegion="polite">

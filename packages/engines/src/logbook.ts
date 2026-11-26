@@ -6,9 +6,7 @@ import {
   Pr,
   Workout,
   WorkoutUpload,
-  type AssessmentPart,
   type BodyProfile,
-  type EquipmentProfile,
   type Exercise,
   type InProgressWorkoutExercise,
   type LoadType,
@@ -28,7 +26,7 @@ import {
   type ProtocolState,
   type TestProgress,
 } from "./assessment-protocol";
-import { canAssess, chooseTests, partTests } from "./assessment-tests";
+import { assessmentTests, canAssess, chooseTests, testSwap } from "./assessment-tests";
 import { exerciseBySlug } from "./data/exercises";
 import {
   exerciseLoadsByEquipmentKg,
@@ -37,7 +35,7 @@ import {
   type ProfileWithLoads,
   type StepDirection,
 } from "./equipment";
-import { isRecoveryWorkout, RECOVERY_WORKOUT, trainingWorkouts } from "./recovery-workout";
+import { isRecoveryWorkout, recoveryWorkoutFor, trainingWorkouts, type RecoveryExercise } from "./recovery-workout";
 import { previousSets } from "./training-summaries";
 
 // Strings by key: SQLite on the phone, localStorage on web, a Map in tests
@@ -355,7 +353,7 @@ export function createLogbook({
   async function startWithTargets(
     plannedExercises: readonly (Pick<PlannedExercise, "slug" | "sets" | "target"> & { supersetWith?: string })[],
     now: Date,
-    plannedWorkoutId?: string,
+    { id: plannedWorkoutId, deloadWeek }: Partial<Pick<PlannedWorkout, "id" | "deloadWeek">> = {},
   ) {
     const fromServer = await Promise.all(
       plannedExercises.map(({ slug }) => previousSetsSource.forExercise(slug).catch(() => null)),
@@ -378,6 +376,7 @@ export function createLogbook({
         id: newId(),
         startedAt: now.toISOString(),
         ...(plannedWorkoutId && { plannedWorkoutId }),
+        ...(deloadWeek && { deloadWeek }),
         workoutExercises,
       };
       await write(workout);
@@ -434,24 +433,22 @@ export function createLogbook({
       });
     },
 
-    // Starts Assessment Workout A or B with its tests already added, in order: one per Pattern, chosen from the
+    // Starts the Assessment Workout with its tests already added, in order: one per Pattern, chosen from the
     // primary Equipment Profile and the user's injuries. Body weight and gender are for the first suggested load
     startAssessment: async (
       {
-        part,
         equipmentProfile,
         injuries,
         bodyProfile,
       }: {
-        part: AssessmentPart;
-        equipmentProfile: Pick<EquipmentProfile, "tags">;
+        equipmentProfile: ProfileWithLoads;
         bodyProfile: BodyProfile;
       } & Pick<UserProfile, "injuries">,
       now: Date,
     ) => {
       const tests = chooseTests(equipmentProfile, injuries);
       if (!canAssess(tests)) throw new LogbookError("No Assessment suits this equipment and these injuries");
-      const { exercises } = partTests(tests, part);
+      const { exercises } = assessmentTests(tests);
       const fromServer = await Promise.all(
         exercises.map(({ slug }) => previousSetsSource.forExercise(slug).catch(() => null)),
       );
@@ -461,7 +458,7 @@ export function createLogbook({
         const workout: InProgressWorkout = {
           id: newId(),
           startedAt: now.toISOString(),
-          assessment: part,
+          assessment: "single",
           bodyProfile,
           workoutExercises: exercises.map((exercise, i) => newWorkoutExercise(exercise, fromServer[i], pending)),
         };
@@ -470,16 +467,55 @@ export function createLogbook({
       });
     },
 
+    // Swaps a pull-up test for the inverted row in its place, when testSwap offers it
+    swapTest: async (
+      workoutExerciseId: string,
+      equipmentProfile: ProfileWithLoads,
+      injuries: UserProfile["injuries"],
+    ) => {
+      const swapOf = async () => {
+        const workout = await readOrThrow();
+        const test = findWorkoutExercise(workout, workoutExerciseId);
+        const exercise = workout.assessment && testSwap(test, equipmentProfile, injuries);
+        if (!exercise) throw new LogbookError("This test can't be swapped");
+        return { workout, test, exercise };
+      };
+      const { exercise } = await serially(swapOf);
+      const fromServer = await previousSetsSource.forExercise(exercise.slug).catch(() => null);
+      await serially(async () => {
+        // Again, as a Set may have been logged while the server was asked
+        const { workout, test } = await swapOf();
+        const swapped = { ...newWorkoutExercise(exercise, fromServer, await readPending()), id: test.id };
+        workout.workoutExercises = workout.workoutExercises.map((we) => (we === test ? swapped : we));
+        await write(workout);
+      });
+    },
+
+    // Passes over an Assessment Workout's test with no Set, which testProgress then leaves out. It can still be done
+    skipTest: (workoutExerciseId: string) =>
+      serially(async () => {
+        const workout = await readOrThrow();
+        const test = findWorkoutExercise(workout, workoutExerciseId);
+        if (!workout.assessment || test.sets.length > 0) throw new LogbookError("This test can't be skipped");
+        test.skipped = true;
+        await write(workout);
+        return workout;
+      }),
+
     // Starts a Planned Workout with its Exercises added and nothing logged: only what the user does counts, and
     // the targets start each Exercise's first Set. Works with no signal, and later edits never touch the link
     startPlannedWorkout: (
-      { id: plannedWorkoutId, plannedExercises }: Pick<PlannedWorkout, "id" | "plannedExercises">,
+      { plannedExercises, ...plan }: Pick<PlannedWorkout, "id" | "plannedExercises" | "deloadWeek">,
       now: Date,
-    ) => startWithTargets(plannedExercises, now, plannedWorkoutId),
+    ) => startWithTargets(plannedExercises, now, plan),
 
     // Starts the Recovery Workout the same way, from the library built into the app, so it works with no signal. It
-    // links to no plan, so the Planned Workout stays current and is offered again
-    startRecoveryWorkout: (now: Date) => startWithTargets(RECOVERY_WORKOUT, now),
+    // links to no plan, so the Planned Workout stays current and is offered again. A hold the user can't do is replaced
+    startRecoveryWorkout: (options: Parameters<typeof recoveryWorkoutFor>[0], now: Date) =>
+      startWithTargets(recoveryWorkoutFor(options), now),
+
+    // Starts a Mobility Workout (mobility-workout.ts) the same way, with the holds the user was shown
+    startMobilityWorkout: (holds: readonly RecoveryExercise[], now: Date) => startWithTargets(holds, now),
 
     removeWorkoutExercise: (workoutExerciseId: string) =>
       serially(async () => {
@@ -512,6 +548,7 @@ export function createLogbook({
         refuseUnratedTestSet(workout, values);
         refuseSetOnDoneTest(workout, workoutExercise);
         workoutExercise.sets.push({ ...values, loggedAt: now.toISOString() });
+        delete workoutExercise.skipped;
         await write(parseOrThrow(InProgressWorkout, workout));
         return workoutExercise;
       }),

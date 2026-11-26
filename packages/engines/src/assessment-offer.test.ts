@@ -1,15 +1,34 @@
+import type { AssessmentMarker } from "@fit/shared";
 import { describe, expect, it } from "vitest";
-import { assessmentOffer, offerKey, pendingB, type AssessmentOfferInput } from "./assessment-offer";
+import {
+  assessmentOffer,
+  completesAssessment,
+  offerKey,
+  pendingAssessment,
+  type AssessmentOfferInput,
+} from "./assessment-offer";
 import { chooseTests } from "./assessment-tests";
 
-const workout = (id: string, day: string, assessment?: "A" | "B", isPending = false) => ({
+const loggedAt = "2026-10-20T09:10:00.000Z";
+// Its plank was held, unless it measured nothing: a squat short of RPE 9
+const workout = (id: string, day: string, assessment?: AssessmentMarker, isPending = false, measured = true) => ({
   id,
   startedAt: `2026-10-${day}T09:00:00.000Z`,
   isPending,
+  workoutExercises: [
+    measured
+      ? { slug: "plank", loadType: "timed" as const, sets: [{ kind: "timed" as const, seconds: 60, loggedAt }] }
+      : {
+          slug: "goblet-squat",
+          loadType: "external" as const,
+          sets: [{ kind: "external" as const, kg: 10, reps: 5, rpe: 7, loggedAt }],
+        },
+  ],
   ...(assessment && { assessment }),
 });
-// The latest Assessment, from a B started on this day
-const assessment = (id: string, day: string) => ({ id, bStartedAt: `2026-10-${day}T08:00:00.000Z` });
+const NO_TESTS = { squat: null, push: null, hinge: null, pull: null, core: null };
+// The latest Assessment, from a Workout started on this day
+const assessment = (id: string, day: string) => ({ id, lastStartedAt: `2026-10-${day}T08:00:00.000Z` });
 // Today's offer on 23 October with History loaded, a test for every Pattern, and nothing dismissed unless a test says so
 const offer = (
   workouts: AssessmentOfferInput["workouts"],
@@ -21,121 +40,138 @@ const offer = (
     historyLoaded: true,
     latestAssessment,
     now: new Date("2026-10-23T09:00:00Z"),
-    tests: chooseTests({ tags: ["dumbbells"] }, []),
+    tests: chooseTests({ tags: ["dumbbells"], loads: {} }, []),
     dismissed: null,
     timeZone: "UTC",
     ...more,
   });
 
 describe("assessmentOffer", () => {
-  it("offers A to a user who hasn't done one", () => {
-    expect(offer([workout("w1", "20")], null)).toEqual({ kind: "start", part: "A", untested: [] });
+  it("offers the Assessment to a user who hasn't done one", () => {
+    expect(offer([workout("w1", "20")], null)).toEqual({ kind: "start", untested: [] });
   });
 
-  it("offers A to a user with no Workouts at all", () => {
-    expect(offer([], null)).toEqual({ kind: "start", part: "A", untested: [] });
+  it("offers it to a user with no Workouts at all", () => {
+    expect(offer([], null)).toEqual({ kind: "start", untested: [] });
   });
 
-  it("offers B once A is done, until a B follows it", () => {
-    const workouts = [workout("w2", "21"), workout("a1", "20", "A")];
-    expect(offer(workouts, null)).toEqual({ kind: "start", part: "B", aWorkoutId: "a1", redoA: false, untested: [] });
+  // Story 10
+  it("offers it to a user who did an A with no B, or a B with no A before it", () => {
+    expect(offer([workout("w2", "21"), workout("a1", "20", "A")], null)).toMatchObject({ kind: "start" });
+    expect(offer([workout("a1", "20", "A"), workout("b1", "19", "B")], null)).toMatchObject({ kind: "start" });
   });
 
-  it("doesn't count a B from before the latest A", () => {
-    const workouts = [workout("a2", "22", "A"), workout("b1", "21", "B"), workout("a1", "20", "A")];
-    expect(offer(workouts, assessment("x1", "21"))).toMatchObject({ kind: "start", part: "B", aWorkoutId: "a2" });
+  it("offers it while that A is still on the phone, as A alone gives no Results", () => {
+    expect(offer([workout("a1", "20", "A", true)], null)).toMatchObject({ kind: "start" });
   });
 
-  it("also offers to redo A when it's more than 14 days old with no B after it", () => {
-    const workouts = [workout("a1", "01", "A")];
-    expect(offer(workouts, null, { now: new Date("2026-10-16T09:00:00Z") })).toMatchObject({
-      kind: "start",
-      part: "B",
-      redoA: true,
-    });
+  // Story 9
+  it("links to the Results of an Assessment made from an A and B, even with a newer A alone", () => {
+    const workouts = [workout("b1", "12", "B"), workout("a1", "10", "A")];
+    expect(offer(workouts, assessment("x1", "12"))).toEqual({ kind: "results", assessmentId: "x1" });
+    expect(offer([workout("a2", "15", "A"), ...workouts], assessment("x1", "12"))).toMatchObject({ kind: "results" });
   });
 
   it("names the Patterns it can't test, which the Assessment estimates", () => {
     // Every push on the list, push-up included, is flagged for a wrist injury
-    const tests = chooseTests({ tags: ["table"] }, ["wrist"]);
-    expect(offer([], null, { tests })).toMatchObject({ part: "A", untested: [] });
-    expect(offer([workout("a1", "20", "A")], null, { tests })).toMatchObject({ part: "B", untested: ["push"] });
+    const tests = chooseTests({ tags: ["table"], loads: {} }, ["wrist"]);
+    expect(offer([], null, { tests })).toEqual({ kind: "start", untested: ["push"] });
   });
 
-  it("says the Assessment is unavailable when A or B has no test at all", () => {
-    const tests = { ...chooseTests({ tags: [] }, []), push: null, pull: null };
-    expect(offer([], null, { tests })).toEqual({ kind: "unavailable" });
-    expect(offer([workout("a1", "20", "A")], null, { tests })).toEqual({ kind: "unavailable" });
+  it("is unavailable only when no Pattern has a test", () => {
+    const { core } = chooseTests({ tags: [], loads: {} }, []);
+    expect(offer([], null, { tests: { ...NO_TESTS, core } })).toEqual({
+      kind: "start",
+      untested: ["squat", "push", "hinge", "pull"],
+    });
+    expect(offer([], null, { tests: NO_TESTS })).toEqual({ kind: "unavailable" });
   });
 
   it("still links to the Results when the Assessment is no longer available", () => {
-    const tests = { ...chooseTests({ tags: [] }, []), squat: null, hinge: null, core: null };
-    const workouts = [workout("b1", "22", "B"), workout("a1", "20", "A")];
-    expect(offer(workouts, assessment("x1", "22"), { tests })).toEqual({ kind: "results", assessmentId: "x1" });
+    expect(offer([workout("s1", "22", "single")], assessment("x1", "22"), { tests: NO_TESTS })).toEqual({
+      kind: "results",
+      assessmentId: "x1",
+    });
   });
 
-  it("says the Results come once synced while B is Pending", () => {
-    const workouts = [workout("b1", "22", "B", true), workout("a1", "20", "A")];
-    expect(offer(workouts, null)).toEqual({ kind: "syncing", bWorkoutId: "b1" });
+  it("says the Results come once synced while a finished one is Pending, an old B included", () => {
+    expect(offer([workout("s1", "22", "single", true)], null)).toEqual({ kind: "syncing", workoutId: "s1" });
+    const pair = [workout("b1", "22", "B", true), workout("a1", "20", "A")];
+    expect(offer(pair, null)).toEqual({ kind: "syncing", workoutId: "b1" });
   });
 
-  it("links to the Results once the Assessment is on the server", () => {
-    const workouts = [workout("b1", "22", "B"), workout("a1", "20", "A")];
-    expect(offer(workouts, assessment("x1", "22"))).toEqual({ kind: "results", assessmentId: "x1" });
+  it("says so while a retake is Pending too", () => {
+    const workouts = [workout("s2", "22", "single", true), workout("s1", "12", "single")];
+    expect(offer(workouts, assessment("x1", "12"))).toEqual({ kind: "syncing", workoutId: "s2" });
   });
 
-  it("keeps linking to the Results when the Assessment's Workouts were deleted from History", () => {
-    // a0 is from an earlier Assessment; the latest one's A and B are gone from History
-    const workouts = [workout("w1", "20"), workout("a0", "01", "A")];
+  it("offers nothing while a synced one's Assessment hasn't reached the phone", () => {
+    expect(offer([workout("s1", "22", "single")], null)).toBeNull();
+    expect(offer([workout("b1", "22", "B"), workout("a1", "20", "A")], null)).toBeNull();
+  });
+
+  // Spec #176 story 7
+  it("offers it again after one that measured nothing, synced or still Pending", () => {
+    expect(offer([workout("s1", "22", "single", false, false)], null)).toMatchObject({ kind: "start" });
+    expect(offer([workout("s1", "22", "single", true, false)], null)).toMatchObject({ kind: "start" });
+  });
+
+  it("offers it again after an old A and B that measured nothing between them", () => {
+    const pair = (aMeasured: boolean, isPending: boolean) => [
+      workout("b1", "22", "B", isPending, false),
+      workout("a1", "20", "A", false, aMeasured),
+    ];
+    expect(offer(pair(false, false), null)).toMatchObject({ kind: "start" });
+    expect(offer(pair(false, true), null)).toMatchObject({ kind: "start" });
+    expect(offer(pair(true, false), null)).toBeNull();
+    expect(offer(pair(true, true), null)).toMatchObject({ kind: "syncing" });
+  });
+
+  it("keeps linking to the Results after a retake that measured nothing", () => {
+    const workouts = [workout("s2", "22", "single", true, false), workout("s1", "12", "single")];
     expect(offer(workouts, assessment("x1", "12"))).toMatchObject({ kind: "results" });
   });
 
-  it("offers B for a retake: an A newer than the latest Assessment", () => {
-    const workouts = [workout("a2", "22", "A"), workout("b1", "12", "B"), workout("a1", "10", "A")];
-    expect(offer(workouts, assessment("x1", "12"))).toMatchObject({ kind: "start", part: "B", aWorkoutId: "a2" });
+  it("says a measured one is syncing under a newer one that measured nothing", () => {
+    const workouts = [workout("s2", "22", "single", true, false), workout("s1", "21", "single", true)];
+    expect(offer(workouts, null)).toEqual({ kind: "syncing", workoutId: "s1" });
   });
 
-  it("offers B for a retake started after the latest Assessment's B, though that Assessment was worked out later", () => {
-    // a1 and b1 synced on the 22nd, after a2 was started offline
-    const workouts = [workout("a2", "15", "A"), workout("b1", "12", "B"), workout("a1", "10", "A")];
-    const latest = { ...assessment("x1", "12"), createdAt: "2026-10-22T10:00:00.000Z" };
-    expect(offer(workouts, latest)).toMatchObject({ kind: "start", part: "B", aWorkoutId: "a2" });
+  it("links to the Results once the Assessment is on the server", () => {
+    expect(offer([workout("s1", "22", "single")], assessment("x1", "22"))).toEqual({
+      kind: "results",
+      assessmentId: "x1",
+    });
+  });
+
+  it("keeps linking to the Results when the Assessment's Workouts were deleted from History", () => {
+    expect(offer([workout("w1", "20")], assessment("x1", "12"))).toMatchObject({ kind: "results" });
   });
 
   it("offline, offers only what the Pending Workouts show", () => {
     const offline = { historyLoaded: false };
-    expect(offer([workout("a1", "20", "A", true)], undefined, offline)).toMatchObject({ kind: "start", part: "B" });
+    expect(offer([workout("s1", "22", "single", true)], undefined, offline)).toMatchObject({ kind: "syncing" });
     expect(offer([workout("b1", "22", "B", true)], undefined, offline)).toMatchObject({ kind: "syncing" });
-    // With History unknown, an A may well be on the server already
+    // With History unknown, an Assessment may well be on the server already
     expect(offer([workout("w1", "22", undefined, true)], undefined, offline)).toBeNull();
+    expect(offer([workout("a1", "20", "A", true)], undefined, offline)).toBeNull();
   });
 
   it("ignores the latest Assessment until History has loaded too", () => {
-    const pendingA = [workout("a2", "22", "A", true)];
-    expect(offer(pendingA, assessment("x1", "12"), { historyLoaded: false })).toMatchObject({ kind: "start" });
     expect(offer([], assessment("x1", "12"), { historyLoaded: false })).toBeNull();
   });
 
   it("hides a dismissed offer until a different one comes along", () => {
-    const workouts = [workout("a1", "20", "A")];
-    const dismissed = offerKey(offer(workouts, null)!);
-    expect(offer(workouts, null, { dismissed })).toBeNull();
-
-    const withB = [workout("b1", "22", "B", true), ...workouts];
-    expect(offer(withB, null, { dismissed })).toMatchObject({ kind: "syncing" });
-  });
-
-  it("brings a dismissed B offer back once A goes stale", () => {
-    const workouts = [workout("a1", "01", "A")];
-    const dismissed = offerKey(offer(workouts, null, { now: new Date("2026-10-10T09:00:00Z") })!);
-    expect(offer(workouts, null, { now: new Date("2026-10-16T09:00:00Z"), dismissed })).toMatchObject({ redoA: true });
+    const dismissed = offerKey(offer([], null)!);
+    expect(offer([], null, { dismissed })).toBeNull();
+    expect(offer([workout("s1", "22", "single", true)], null, { dismissed })).toMatchObject({ kind: "syncing" });
   });
 });
 
-// Stories 69, 70: the Block started by an Assessment whose B was on Monday 12 October has its deload week, the 5th, from
+// Stories 69, 70: the Block started by an Assessment on Monday 12 October has its deload week, the 5th, from
 // Monday 9 November
 describe("assessmentOffer: the retake in the deload week (#137)", () => {
-  const workouts = [workout("b1", "12", "B"), workout("a1", "10", "A")];
+  const workouts = [workout("s1", "12", "single")];
   const on = (date: string, more?: Partial<AssessmentOfferInput>) =>
     offer(workouts, assessment("x1", "12"), { now: new Date(`${date}T09:00:00Z`), ...more });
 
@@ -160,12 +196,6 @@ describe("assessmentOffer: the retake in the deload week (#137)", () => {
     expect(on("2026-12-14", { dismissed })).toMatchObject({ kind: "retake", deloadWeek: "2026-12-14" });
   });
 
-  it("offers B once the retake's A is done", () => {
-    const withA = [{ ...workout("a2", "12", "A"), startedAt: "2026-11-10T09:00:00.000Z" }, ...workouts];
-    const retaking = offer(withA, assessment("x1", "12"), { now: new Date("2026-11-11T09:00:00Z") });
-    expect(retaking).toMatchObject({ kind: "start", part: "B", aWorkoutId: "a2" });
-  });
-
   it("follows the user's timezone for the deload week", () => {
     // 05:00 on Monday 9 November in UTC is still Sunday in Los Angeles
     const sunday = { now: new Date("2026-11-09T05:00:00Z"), timeZone: "America/Los_Angeles" };
@@ -173,18 +203,43 @@ describe("assessmentOffer: the retake in the deload week (#137)", () => {
   });
 
   it("links to the Results when no test suits the user any longer", () => {
-    const tests = { ...chooseTests({ tags: [] }, []), squat: null, hinge: null, core: null };
-    expect(on("2026-11-10", { tests })).toMatchObject({ kind: "results" });
+    expect(on("2026-11-10", { tests: NO_TESTS })).toMatchObject({ kind: "results" });
   });
 });
 
-describe("pendingB", () => {
-  it("is the newest B while it's on the phone", () => {
-    expect(pendingB([workout("b1", "22", "B", true), workout("a1", "20", "A")])?.id).toBe("b1");
+describe("pendingAssessment", () => {
+  it("is the newest single Assessment Workout or B while it's on the phone", () => {
+    expect(pendingAssessment([workout("s1", "22", "single", true), workout("a1", "20", "A")])?.id).toBe("s1");
+    expect(pendingAssessment([workout("b1", "22", "B", true), workout("a1", "20", "A")])?.id).toBe("b1");
   });
 
-  it("is none once B has synced, or when a newer A awaits its own B", () => {
-    expect(pendingB([workout("b1", "22", "B"), workout("a1", "20", "A")])).toBeUndefined();
-    expect(pendingB([workout("a2", "23", "A"), workout("b1", "22", "B", true)])).toBeUndefined();
+  it("is none for an A alone, or once it has synced", () => {
+    expect(pendingAssessment([workout("a1", "20", "A", true)])).toBeUndefined();
+    expect(pendingAssessment([workout("s1", "22", "single")])).toBeUndefined();
+  });
+});
+
+describe("completesAssessment", () => {
+  const startedAt = "2026-11-09T10:00:00.000Z";
+  const plank = (...seconds: number[]) => [
+    {
+      slug: "plank",
+      loadType: "timed" as const,
+      sets: seconds.map((each) => ({ kind: "timed" as const, seconds: each, loggedAt: "2026-11-09T10:00:00.000Z" })),
+    },
+  ];
+
+  it("is a single one that measured a test", () => {
+    expect(completesAssessment({ startedAt, assessment: "single", workoutExercises: plank(60) })).toBe(true);
+    expect(completesAssessment({ startedAt, assessment: "single", workoutExercises: plank() })).toBe(false);
+  });
+
+  it("is an old B, whose A may have the result, and not an A", () => {
+    expect(completesAssessment({ startedAt, assessment: "B", workoutExercises: plank() })).toBe(true);
+    expect(completesAssessment({ startedAt, assessment: "A", workoutExercises: plank(60) })).toBe(false);
+  });
+
+  it("isn't any other Workout", () => {
+    expect(completesAssessment({ startedAt, workoutExercises: plank(60) })).toBe(false);
   });
 });

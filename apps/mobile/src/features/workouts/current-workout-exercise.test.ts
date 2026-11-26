@@ -1,36 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { currentWorkoutExercise, nextPlannedExercise } from "./current-workout-exercise";
-
-const planned = { sets: 3, target: { unit: "reps", reps: 8 } } as const;
-
-describe("nextPlannedExercise", () => {
-  it("is the first Exercise of a Workout just started from a plan", () => {
-    expect(
-      nextPlannedExercise([
-        { id: "squat", sets: [], planned },
-        { id: "row", sets: [], planned },
-      ]),
-    ).toBe("squat");
-  });
-
-  it("is the first still short of its target Sets when the Workout is reopened", () => {
-    expect(
-      nextPlannedExercise([
-        { id: "squat", sets: [{}, {}, {}], planned },
-        { id: "row", sets: [{}], planned },
-        { id: "press", sets: [], planned },
-      ]),
-    ).toBe("row");
-  });
-
-  it("is none in a Manual Workout", () => {
-    expect(nextPlannedExercise([{ id: "squat", sets: [] }])).toBeUndefined();
-  });
-
-  it("is none once every target is met", () => {
-    expect(nextPlannedExercise([{ id: "squat", sets: [{}, {}, {}], planned }])).toBeUndefined();
-  });
-});
+import { currentWorkoutExercise } from "./current-workout-exercise";
 
 describe("currentWorkoutExercise", () => {
   it("is the last added when none has been chosen", () => {

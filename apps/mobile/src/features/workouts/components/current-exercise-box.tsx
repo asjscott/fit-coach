@@ -1,6 +1,15 @@
-import { exerciseLoadsByEquipmentKg, isRatedTest, takesAnotherSet, takesNoMoreSets } from "@fit/engines";
-import { RPE_SCALE, type InProgressWorkoutExercise, type LoadType, type Set, type SetValues } from "@fit/shared";
-import { useState, type ReactNode } from "react";
+import {
+  exerciseLoadsByEquipmentKg,
+  holdAlone,
+  isRatedTest,
+  isSkippedTest,
+  strengthHold,
+  takesAnotherSet,
+  takesNoMoreSets,
+  testSwap,
+} from "@fit/engines";
+import { RPE_SCALE, type InProgressWorkoutExercise, type LoadType, type SetValues } from "@fit/shared";
+import { useMemo, useState, type ReactNode } from "react";
 import { StyleSheet, View } from "react-native";
 import { Alert, AlertIcon, AlertText } from "@/components/alert";
 import { ConfirmModal } from "@/components/choice-modal";
@@ -10,18 +19,26 @@ import { SectionLabel } from "@/components/section-label";
 import { HStack, Stack } from "@/components/stack";
 import { Text } from "@/components/text";
 import { useToast } from "@/contexts/toast-context";
-import { usePrimaryEquipmentProfile, useWeightUnit } from "@/features/user/current-user-provider";
+import { useCurrentUser, usePrimaryEquipmentProfile, useWeightUnit } from "@/features/user/current-user-provider";
 import { fonts, radii, spacing, useTheme } from "@/theme";
 import { errorMessage } from "@/utils/error-message";
+import { dumbbellBuildLabel, type BuildLabel } from "../dumbbell-build";
 import { plannedSetsLabel, previousSetsLabel } from "../format";
-import { offersLastSetRpe, withRpe } from "../last-set-rpe";
-import { exerciseName, setReading } from "../library";
-import { useLogbook } from "../logbook-provider";
+import { exerciseName, targetReading, type SetReading } from "../library";
+import { useLogbook, type HeldSeconds } from "../logbook-provider";
 import { protocolNote } from "../protocol-note";
-import { draftValues, loadStep, rpeMissing, setDraft, SET_FIELDS, type SetDraft } from "../set-entry";
-import { RestTimer } from "./rest-timer";
+import {
+  createLoadSteps,
+  draftValues,
+  rpeMissing,
+  setDraft,
+  SET_FIELDS,
+  type LoadSteps,
+  type SetDraft,
+} from "../set-entry";
+import { LastSetRpe } from "./last-set-rpe";
 import { SetRow } from "./set-row";
-import { SetStepper, type LoadSteps } from "./set-stepper";
+import { SetStepper } from "./set-stepper";
 import { WorkoutExerciseMenu } from "./workout-exercise-menu";
 
 export type CurrentExerciseBoxProps = {
@@ -29,17 +46,21 @@ export type CurrentExerciseBoxProps = {
   // Its place in the Workout, from 0, and how many there are
   position: number;
   count: number;
-  // Offered once it takes no more Sets: an Assessment Workout's "Next test", none when every test is done, or "Next
-  // exercise" after the walk's one Set
   next?: NextAction;
+  // Passes over an Assessment Workout's test with no Set, moving on to the next
+  onSkipTest?: () => Promise<void>;
 };
 
-type NextAction = { label: string; onPress: () => void };
+// What moves on from an Exercise: "main" comes with Log extra set, "secondary" goes under Log set, and "test" is an
+// Assessment Workout's Next test, once the test takes no more Sets
+export type NextAction = { label: string; onPress: () => void } & (
+  { as: "test" | "secondary" } | { as: "main"; onLogExtra: () => void }
+);
 
 // The Workout Exercise being logged: its name, target, Previous Sets, the Sets so far (each with a ⋯ to edit or delete it) and
-// steppers for the next Set, which starts from the previous one, then the rest after the last Set. A test that's done,
+// steppers for the next Set, which starts from the previous one. A test that's done,
 // or the walk once logged, takes no more Sets
-export function CurrentExerciseBox({ workoutExercise, position, count, next }: CurrentExerciseBoxProps) {
+export function CurrentExerciseBox({ workoutExercise, position, count, next, onSkipTest }: CurrentExerciseBoxProps) {
   return (
     <ExerciseBox>
       <HStack spacing={2} align="start">
@@ -52,8 +73,64 @@ export function CurrentExerciseBox({ workoutExercise, position, count, next }: C
         <WorkoutExerciseMenu workoutExercise={workoutExercise} />
       </HStack>
       <ExerciseLogging workoutExercise={workoutExercise} next={next} />
-      <RestTimer />
+      {onSkipTest ? <TestWayOut workoutExercise={workoutExercise} onSkip={onSkipTest} /> : null}
     </ExerciseBox>
+  );
+}
+
+// For an Assessment Workout's test with no Set: swapping a pull-up for the inverted row when it's offered, and skipping
+// the test, which is then estimated
+function TestWayOut({
+  workoutExercise,
+  onSkip,
+}: Pick<CurrentExerciseBoxProps, "workoutExercise"> & { onSkip: () => Promise<void> }) {
+  const { workout, swapTest } = useLogbook();
+  const primaryEquipment = usePrimaryEquipmentProfile();
+  const injuries = useCurrentUser().user?.profile.injuries ?? [];
+  const { showToast } = useToast();
+  const [busy, setBusy] = useState(false);
+  if (!workout?.assessment || !primaryEquipment || workoutExercise.sets.length > 0) return null;
+  const swap = testSwap(workoutExercise, primaryEquipment, injuries);
+
+  const act = async (action: () => Promise<void>) => {
+    setBusy(true);
+    try {
+      await action();
+    } catch (err) {
+      showToast(errorMessage(err), { error: err });
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <Stack spacing={2} style={styles.entry}>
+      {swap ? (
+        <LoadingButton
+          label={`Swap to ${swap.name.toLowerCase()}`}
+          size="md"
+          action="secondary"
+          disabled={busy}
+          onPress={() => act(() => swapTest(workoutExercise.id, primaryEquipment, injuries))}
+          fullWidth
+        />
+      ) : null}
+      {isSkippedTest(workoutExercise) ? (
+        <Text size="sm" color="muted">
+          Skipped: it&apos;ll be estimated unless you log a Set.
+        </Text>
+      ) : (
+        <LoadingButton
+          label="Skip test"
+          size="md"
+          variant="link"
+          action="default"
+          disabled={busy}
+          onPress={() => act(onSkip)}
+          fullWidth
+        />
+      )}
+    </Stack>
   );
 }
 
@@ -65,13 +142,15 @@ export function ExerciseBox({ children }: { children: ReactNode }) {
 
 // Logging one Workout Exercise, under its name: its target, Previous Sets, the Sets so far and the next Set's
 // steppers, or once it takes no more Sets, the next action. hideTarget leaves the target to the summary under the
-// name, as a superset shows it
+// name, as a superset shows it. onLog is called as a Set is logged
 export function ExerciseLogging({
   workoutExercise,
   next,
   hideTarget = false,
-}: Pick<CurrentExerciseBoxProps, "workoutExercise" | "next"> & { hideTarget?: boolean }) {
-  const { workout, logSet, editSet, deleteSet, nextSetDraft, protocolState } = useLogbook();
+  onLog,
+}: Pick<CurrentExerciseBoxProps, "workoutExercise" | "next"> & { hideTarget?: boolean; onLog?: () => void }) {
+  const { workout, logSet, editSet, deleteSet, nextSetDraft, protocolState, startHold, startGuideAlone, heldSeconds } =
+    useLogbook();
   const primaryEquipment = usePrimaryEquipmentProfile();
   const unit = useWeightUnit();
   const { showToast } = useToast();
@@ -81,9 +160,8 @@ export function ExerciseLogging({
   const [actionsIndex, setActionsIndex] = useState<number | null>(null);
   const [deletingIndex, setDeletingIndex] = useState<number | null>(null);
   const { id, slug, loadType, sets, previousSets, planned } = workoutExercise;
-  const reading = setReading(slug);
+  const reading = targetReading(slug, workout?.deloadWeek);
   const editingSet = editingIndex === null ? undefined : sets[editingIndex];
-  const lastSet = sets.at(-1);
   const nextNumber = sets.length + 1;
   // In an Assessment Workout every Exercise is a test, and the Logbook says what it asks for next
   const protocol =
@@ -91,13 +169,14 @@ export function ExerciseLogging({
   const note = protocol && protocolNote(protocol, sets.length, loadType, { nextTest: !!next, unit });
   // A test that's done, or the walk once its one Set is logged (#109)
   const done = (!!protocol && takesNoMoreSets(protocol)) || !takesAnotherSet(workoutExercise);
+  const hold = workout && strengthHold(workoutExercise, workout);
+  const alone = workout && holdAlone(workoutExercise, workout);
   const asksRpe = !!workout && isRatedTest(workout, loadType);
-  const loadsByEquipmentKg = exerciseLoadsByEquipmentKg(slug, primaryEquipment);
-  const loadSteps: LoadSteps = {
-    step: loadStep(loadsByEquipmentKg, unit),
-    loadsKnown: loadsByEquipmentKg.length > 0,
-    unit,
-  };
+  const loadSteps = useMemo(
+    () => createLoadSteps(exerciseLoadsByEquipmentKg(slug, primaryEquipment), unit),
+    [slug, primaryEquipment, unit],
+  );
+  const buildLabel = useMemo(() => dumbbellBuildLabel(slug, primaryEquipment, unit), [slug, primaryEquipment, unit]);
 
   return (
     <>
@@ -153,19 +232,7 @@ export function ExerciseLogging({
         </View>
       ) : null}
 
-      {lastSet && editingIndex === null && workout && offersLastSetRpe(workout, workoutExercise) ? (
-        <LastSetRpe
-          set={lastSet}
-          number={sets.length}
-          onRate={async (rpe) => {
-            try {
-              await editSet(id, sets.length - 1, withRpe(lastSet, rpe));
-            } catch (err) {
-              showToast(errorMessage(err), { error: err });
-            }
-          }}
-        />
-      ) : null}
+      {editingIndex === null ? <LastSetRpe workoutExercise={workoutExercise} /> : null}
 
       {editingSet && editingIndex !== null ? (
         <SetEntry
@@ -175,7 +242,8 @@ export function ExerciseLogging({
           initial={editingSet}
           asksRpe={asksRpe}
           loadSteps={loadSteps}
-          jump={reading.jump}
+          buildLabel={buildLabel}
+          reading={reading}
           submitLabel={`Save set ${editingIndex + 1}`}
           onSubmit={async (values) => {
             await editSet(id, editingIndex, values);
@@ -190,6 +258,10 @@ export function ExerciseLogging({
             <LoadingButton label={next.label} size="lg" onPress={next.onPress} fullWidth />
           </View>
         ) : null
+      ) : next?.as === "main" ? (
+        <View style={styles.entry}>
+          <NextButtons next={next} />
+        </View>
       ) : (
         // Remounts after each Set, so the steppers start from the Set just logged
         <SetEntry
@@ -199,10 +271,18 @@ export function ExerciseLogging({
           initial={nextSetDraft(workoutExercise, protocol)}
           asksRpe={asksRpe}
           loadSteps={loadSteps}
-          jump={reading.jump}
+          buildLabel={buildLabel}
+          reading={reading}
+          held={heldSeconds?.workoutExerciseId === id ? heldSeconds : null}
+          onStartHold={hold ? () => startHold(id, hold) : alone ? () => startGuideAlone(id) : undefined}
           submitLabel={`Log set ${nextNumber}`}
-          onSubmit={(values) => logSet(id, values)}
-        />
+          onSubmit={(values) => {
+            onLog?.();
+            return logSet(id, values);
+          }}
+        >
+          {next?.as === "secondary" ? <NextButtons next={next} /> : null}
+        </SetEntry>
       )}
 
       <ConfirmModal
@@ -228,32 +308,20 @@ export function ExerciseLogging({
   );
 }
 
-// The optional RPE for the Exercise's last Set so far (#133): one tap on a chip rates it, a tap on the chosen one takes
-// it off, and logging on without one skips it
-function LastSetRpe({
-  set,
-  number,
-  onRate,
-}: {
-  set: Set;
-  number: number;
-  onRate: (rpe: number | undefined) => Promise<void>;
-}) {
+// The next action, and as the main button, Log extra set under it, on the logging screen and the rest screen
+export function NextButtons({ next }: { next: NextAction }) {
   return (
-    <Stack spacing={2} style={styles.entry}>
-      <Text size="sm" color="muted">
-        {`How hard was set ${number}? Optional: 10 is no more reps`}
-      </Text>
-      <HStack spacing={2}>
-        {RPE_SCALE.map((choice) => (
-          <Chip
-            key={choice}
-            label={String(choice)}
-            selected={set.rpe === choice}
-            onPress={() => void onRate(set.rpe === choice ? undefined : choice)}
-          />
-        ))}
-      </HStack>
+    <Stack spacing={3}>
+      <LoadingButton
+        label={next.label}
+        size="lg"
+        action={next.as === "secondary" ? "secondary" : "primary"}
+        onPress={next.onPress}
+        fullWidth
+      />
+      {next.as === "main" ? (
+        <LoadingButton label="Log extra set" size="lg" action="secondary" onPress={next.onLogExtra} fullWidth />
+      ) : null}
     </Stack>
   );
 }
@@ -266,11 +334,15 @@ type SetEntryProps = {
   // Asks how hard the Set felt, for an Assessment Workout's test Sets
   asksRpe?: boolean;
   loadSteps: LoadSteps;
-  // A jump's reps are entered as contacts (#105)
-  jump?: boolean;
+  // How to build the load in the stepper, shown under it
+  buildLabel: BuildLabel;
+  reading: SetReading;
+  // The seconds a stopped hold fills in, and what starts one, for an Exercise with a hold timer
+  held?: HeldSeconds | null;
+  onStartHold?: () => void;
   submitLabel: string;
   onSubmit: (values: SetValues) => Promise<void>;
-  // Shown under the submit button, e.g. Cancel while editing
+  // Shown under the submit button: Cancel while editing, or a secondary Next exercise
   children?: ReactNode;
 };
 
@@ -282,13 +354,21 @@ function SetEntry({
   initial,
   asksRpe = false,
   loadSteps,
-  jump = false,
+  buildLabel,
+  reading,
+  held = null,
+  onStartHold,
   submitLabel,
   onSubmit,
   children,
 }: SetEntryProps) {
   const { showToast } = useToast();
-  const [draft, setDraftState] = useState<SetDraft>(() => setDraft(loadType, initial, loadSteps.unit));
+  const [draft, setDraftState] = useState<SetDraft>(() => setDraft(loadType, initial, loadSteps));
+  const [filled, setFilled] = useState<HeldSeconds | null>(null);
+  if (held && held !== filled) {
+    setFilled(held);
+    setDraftState((prev) => ({ ...prev, seconds: String(held.seconds) }));
+  }
   const [rpe, setRpe] = useState<number | undefined>(initial?.rpe);
   const [saving, setSaving] = useState(false);
 
@@ -309,6 +389,8 @@ function SetEntry({
     }
   };
 
+  const build = draft.load === undefined ? undefined : buildLabel(draft.load, draft.kg);
+
   return (
     <Stack spacing={3} style={styles.entry}>
       <Text size="sm" color="muted" weight="semiBold">
@@ -316,13 +398,34 @@ function SetEntry({
       </Text>
       {SET_FIELDS[loadType].map((field) => {
         const value = draft[field] ?? "";
-        const onChange = (text: string) => setDraftState((prev) => ({ ...prev, [field]: text }));
         return field === "load" ? (
-          <SetStepper key={field} field={field} value={value} onChange={onChange} {...loadSteps} />
+          <Stack key={field} spacing={1}>
+            <SetStepper
+              field={field}
+              value={value}
+              kg={draft.kg}
+              steps={loadSteps}
+              onChange={(load, kg) => setDraftState((prev) => ({ ...prev, load, kg }))}
+            />
+            {build ? (
+              <Text size="sm" color="muted" centered>
+                {build}
+              </Text>
+            ) : null}
+          </Stack>
         ) : (
-          <SetStepper key={field} field={field} value={value} onChange={onChange} jump={jump} />
+          <SetStepper
+            key={field}
+            field={field}
+            value={value}
+            onChange={(text) => setDraftState((prev) => ({ ...prev, [field]: text }))}
+            reading={reading}
+          />
         );
       })}
+      {onStartHold ? (
+        <LoadingButton label="Start timer" size="lg" action="secondary" onPress={onStartHold} fullWidth />
+      ) : null}
       {asksRpe ? (
         <Stack spacing={2}>
           <Text size="sm" color="muted">

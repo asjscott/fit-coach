@@ -1,6 +1,8 @@
-import { finishTimes, LogbookError, summarizeWorkout } from "@fit/engines";
+import { finishTimes, holdsDone, isGuidedWorkout, LogbookError, summarizeWorkout } from "@fit/engines";
+import { router } from "expo-router";
 import { useState } from "react";
 import { StyleSheet, View } from "react-native";
+import { ChoiceModal } from "@/components/choice-modal";
 import { LoadingButton } from "@/components/loading-button";
 import { Screen } from "@/components/screen";
 import { SectionLabel } from "@/components/section-label";
@@ -16,6 +18,7 @@ import { useHasEnded } from "../hooks/use-has-ended";
 import { useLeaveWorkout } from "../hooks/use-leave-workout";
 import { exerciseName } from "../library";
 import { useLogbook, type FinishOutcome } from "../logbook-provider";
+import { unfinishedTestsNote } from "../unfinished-tests";
 import { toastWhenUploaded } from "../upload-toast";
 import { useWeightUnit } from "@/features/user/current-user-provider";
 
@@ -35,6 +38,7 @@ export default function FinishView() {
   const [startError, setStartError] = useState<string>();
   const [endError, setEndError] = useState<string>();
   const [finishing, setFinishing] = useState(false);
+  const [confirmingUnfinished, setConfirmingUnfinished] = useState(false);
   const [confirmingDiscard, setConfirmingDiscard] = useState(false);
   const hasEnded = useHasEnded(workout);
   const leaveWorkout = useLeaveWorkout();
@@ -55,6 +59,7 @@ export default function FinishView() {
     endedAt: endedAt.toISOString(),
   });
   const saved = workout.workoutExercises.filter((we) => we.sets.length > 0);
+  const unfinished = unfinishedTestsNote(workout);
   const leftOut = workout.workoutExercises.filter((we) => we.sets.length === 0);
 
   const changeTime = (set: (date: Date) => void) => (date: Date) => {
@@ -68,7 +73,7 @@ export default function FinishView() {
       setConfirmingDiscard(true);
       return;
     }
-    toastWhenUploaded(showToast, outcome, workout.assessment);
+    toastWhenUploaded(showToast, outcome, workout);
     leaveWorkout();
   };
 
@@ -109,8 +114,14 @@ export default function FinishView() {
         </Stack>
       )}
       <View style={[styles.stats, { borderColor: colors.line }]}>
-        <Stat value={volumeLabel(summary.volumeKg, unit)} unit={unit} label="Volume" size="3xl" />
-        <Stat value={String(summary.sets)} label="Sets" size="3xl" />
+        {isGuidedWorkout(workout) ? (
+          <Stat value={String(holdsDone(workout))} label="Holds" size="3xl" />
+        ) : (
+          <>
+            <Stat value={volumeLabel(summary.volumeKg, unit)} unit={unit} label="Volume" size="3xl" />
+            <Stat value={String(summary.sets)} label="Sets" size="3xl" />
+          </>
+        )}
         <Stat {...timeStat(Math.max(0, summary.durationMs))} label="Time" size="3xl" />
       </View>
       <SectionLabel right={String(summary.exercises)} style={styles.sectionLabel}>
@@ -130,8 +141,39 @@ export default function FinishView() {
         </Text>
       )}
       <View style={styles.footer}>
-        <LoadingButton label="Save workout" icon="check" loading={finishing} onPress={handleSave} fullWidth />
+        <LoadingButton
+          label="Save workout"
+          icon="check"
+          loading={finishing}
+          onPress={unfinished && saved.length > 0 ? () => setConfirmingUnfinished(true) : handleSave}
+          fullWidth
+        />
       </View>
+      {unfinished ? (
+        <ChoiceModal
+          isOpen={confirmingUnfinished}
+          title={unfinished.title}
+          message={unfinished.message}
+          onClose={() => setConfirmingUnfinished(false)}
+          choices={[
+            {
+              label: "Back to tests",
+              onPress: () => {
+                setConfirmingUnfinished(false);
+                router.dismissTo("/workout");
+              },
+            },
+            {
+              label: "Save workout",
+              action: "primary",
+              onPress: async () => {
+                setConfirmingUnfinished(false);
+                await handleSave();
+              },
+            },
+          ]}
+        />
+      ) : null}
       <NothingToSaveModal
         isOpen={confirmingDiscard}
         onClose={() => setConfirmingDiscard(false)}

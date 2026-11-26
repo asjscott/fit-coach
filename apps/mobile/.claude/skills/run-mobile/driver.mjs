@@ -246,11 +246,14 @@ if (cmd === "tour") {
       await page.getByLabel("kg", { exact: true }).fill("16");
       await page.getByLabel("reps", { exact: true }).fill("10");
       await button("Log set 1").click();
+      // The rest fills the screen until it's skipped
+      await button("Skip").click();
       await page.waitForTimeout(800);
       await button("Minus 1 rep").click();
       await button("Minus 1 rep").click();
       await snap("workout-logging");
       await button("Log set 2").click();
+      await button("Skip").click();
       await page.waitForTimeout(800);
       // Pressing a logged Set opens it for correcting or deleting
       await page.getByRole("button", { name: /^Set 1, / }).click();
@@ -263,6 +266,8 @@ if (cmd === "tour") {
       await page.waitForURL(/\/workout$/);
       await page.getByLabel("seconds", { exact: true }).fill("45");
       await button("Log set 1").click();
+      // The rest fills the screen until it's skipped
+      await button("Skip").click();
       await snap("workout-in-progress");
       await snap("workout-in-progress", { tall: true });
       // The other Exercises are rows; pressing one makes it current. Reorder and remove live in each ⋯ menu,

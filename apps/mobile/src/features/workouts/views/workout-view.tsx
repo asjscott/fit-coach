@@ -1,4 +1,12 @@
-import { setCount, supersetGroups, workoutVolume } from "@fit/engines";
+import {
+  guidedPlace,
+  isGuidedWorkout,
+  nextPlannedExercise,
+  nextStep,
+  setCount,
+  supersetGroups,
+  workoutVolume,
+} from "@fit/engines";
 import type { InProgressWorkout } from "@fit/shared";
 import { Stack as NavStack, router } from "expo-router";
 import { useState } from "react";
@@ -18,10 +26,14 @@ import { usePrimaryEquipmentProfile, useWeightUnit } from "@/features/user/curre
 import { useNow } from "@/hooks/use-now";
 import { fonts, spacing, useTheme } from "@/theme";
 import { errorMessage } from "@/utils/error-message";
-import { CurrentExerciseBox } from "../components/current-exercise-box";
+import { CurrentExerciseBox, type NextAction } from "../components/current-exercise-box";
+import { GuidedScreen } from "../components/guided-screen";
+import { HoldScreen } from "../components/hold-screen";
+import { RestScreen } from "../components/rest-screen";
+import { RestTimer } from "../components/rest-timer";
 import { SupersetBox } from "../components/superset-box";
 import { WorkoutExerciseRow } from "../components/workout-exercise-row";
-import { nextPlannedExercise, useCurrentWorkoutExercise } from "../current-workout-exercise";
+import { useCurrentWorkoutExercise } from "../current-workout-exercise";
 import { elapsedClockLabel, relativeDateLabel, supersetLetter, timeLabel, volumeLabel } from "../format";
 import { useHasEnded } from "../hooks/use-has-ended";
 import { useLeaveWorkout } from "../hooks/use-leave-workout";
@@ -29,7 +41,7 @@ import { useStartWorkout } from "../hooks/use-open-workout";
 import { useLogbook } from "../logbook-provider";
 
 // The In-progress Workout, laid out for logging between sets: Elapsed, Sets and Volume at the top, the current
-// Workout Exercise open in a box and the others collapsed to rows, Add exercise, and Finish alone at the bottom.
+// Workout Exercise open in a box and the others collapsed to rows, Add exercise, and Finish alone at the bottom, under a minimised rest.
 // Discard workout sits in the header's ⋯ menu
 export default function WorkoutView() {
   const { workout } = useLogbook();
@@ -43,22 +55,57 @@ export default function WorkoutView() {
 
 function InProgress({ workout }: { workout: InProgressWorkout }) {
   const { colors } = useTheme();
-  const { discard, testProgress } = useLogbook();
+  const { discard, testProgress, skipTest, rest, minimizeRest, startGuide } = useLogbook();
   const primaryEquipment = usePrimaryEquipmentProfile();
   const { showToast } = useToast();
   const leaveWorkout = useLeaveWorkout();
   const [confirmingDiscard, setConfirmingDiscard] = useState(false);
   const { workoutExercises } = workout;
   const tests = workout.assessment && primaryEquipment ? testProgress(workout, primaryEquipment) : undefined;
-  const nextPlanned = nextPlannedExercise(workoutExercises);
   const [currentId, choose] = useCurrentWorkoutExercise(
     workoutExercises.map((we) => we.id),
-    tests?.nextTestId ?? nextPlanned,
+    tests?.nextTestId ?? nextPlannedExercise(workoutExercises),
   );
-  // What the current Exercise offers once it takes no more Sets: an Assessment Workout's next test, else the next
-  // planned Exercise
-  const nextId = tests ? tests.nextTestId : nextPlanned;
-  const next = nextId ? { label: tests ? "Next test" : "Next exercise", onPress: () => choose(nextId) } : undefined;
+  // Where Log extra set opened the steppers, until a Set of it is logged or deleted, or another Exercise is chosen
+  const [extra, setExtra] = useState<{ id: string; loggedSets: number } | null>(null);
+  const loggedSets = (id: string) => workoutExercises.find((we) => we.id === id)?.sets.length ?? 0;
+  if (extra && (extra.id !== currentId || extra.loggedSets !== loggedSets(extra.id))) setExtra(null);
+
+  // What moves on from an Exercise, leaving any rest as a bar: an Assessment Workout's next test, else its next step
+  const nextAfter = (id: string): NextAction | undefined => {
+    const { nextTestId } = tests ?? {};
+    if (nextTestId) return { label: "Next test", as: "test", onPress: () => choose(nextTestId) };
+    const step = nextStep(workout, id);
+    if (!step) return undefined;
+    const action = {
+      label: step.to === "finish" ? "Finish workout" : "Next exercise",
+      onPress: () => {
+        minimizeRest();
+        if (step.to === "finish") router.push("/workout/finish");
+        else choose(step.id);
+      },
+    };
+    if (!step.main) return { ...action, as: "secondary" };
+    const onLogExtra = () => {
+      minimizeRest();
+      choose(id);
+      setExtra({ id, loggedSets: loggedSets(id) });
+    };
+    return { ...action, as: "main", onLogExtra };
+  };
+  const nextAfterCurrent = currentId === null ? undefined : nextAfter(currentId);
+  const next: NextAction | undefined =
+    extra && nextAfterCurrent ? { ...nextAfterCurrent, as: "secondary" } : nextAfterCurrent;
+  // A rest is after an Exercise's Set whichever is current now
+  const nextAfterRest = rest && !workout.assessment ? nextAfter(rest.afterId) : undefined;
+  // The next test once this one is skipped too
+  const skip = async (id: string) => {
+    const skipped = await skipTest(id);
+    const { nextTestId } = primaryEquipment ? testProgress(skipped, primaryEquipment) : {};
+    if (nextTestId) choose(nextTestId);
+  };
+  // The way into the guided flow when it isn't running, while a hold is left
+  const guided = isGuidedWorkout(workout) ? guidedPlace(workout, { skips: {} }) : undefined;
   const groups = supersetGroups(workoutExercises);
   const pairs = groups.filter((group) => group.length === 2);
 
@@ -67,11 +114,7 @@ function InProgress({ workout }: { workout: InProgressWorkout }) {
       <NavStack.Screen
         options={{
           headerTitle: () => (
-            <WorkoutTitle
-              title={workout.assessment ? `Assessment ${workout.assessment}` : "Workout"}
-              startedAt={workout.startedAt}
-              pastStart={workout.pastStart}
-            />
+            <WorkoutTitle title={workoutTitle(workout)} startedAt={workout.startedAt} pastStart={workout.pastStart} />
           ),
           headerRight: () => (
             <OverflowMenu
@@ -97,7 +140,7 @@ function InProgress({ workout }: { workout: InProgressWorkout }) {
               const pair = [workoutExercise, partner] as const;
               return pair.some(({ id }) => id === currentId) ? (
                 <View key={workoutExercise.id} style={styles.current}>
-                  <SupersetBox pair={pair} letter={letter} currentId={currentId ?? ""} onChoose={choose} />
+                  <SupersetBox pair={pair} letter={letter} currentId={currentId ?? ""} onChoose={choose} next={next} />
                 </View>
               ) : (
                 <View key={workoutExercise.id} style={[styles.pairRows, { borderLeftColor: colors.accent }]}>
@@ -120,6 +163,7 @@ function InProgress({ workout }: { workout: InProgressWorkout }) {
                   position={i}
                   count={workoutExercises.length}
                   next={next}
+                  onSkipTest={() => skip(workoutExercise.id)}
                 />
               </View>
             ) : (
@@ -148,6 +192,15 @@ function InProgress({ workout }: { workout: InProgressWorkout }) {
         )}
       </KeyboardAwareScrollView>
       <View style={[styles.footer, { borderTopColor: colors.line, backgroundColor: colors.bg }]}>
+        <RestTimer />
+        {guided?.current ? (
+          <LoadingButton
+            label={guided.done > 0 ? "Continue holds" : "Start holds"}
+            onPress={startGuide}
+            fullWidth
+            style={styles.guide}
+          />
+        ) : null}
         {/* Finish is the main button once every test is done; finishing early stays possible (untested Patterns) */}
         <LoadingButton
           label="Finish"
@@ -156,6 +209,9 @@ function InProgress({ workout }: { workout: InProgressWorkout }) {
           fullWidth
         />
       </View>
+      <HoldScreen workout={workout} />
+      <GuidedScreen />
+      <RestScreen workout={workout} next={nextAfterRest} />
       <ConfirmModal
         isOpen={confirmingDiscard}
         title="Discard Workout?"
@@ -176,7 +232,11 @@ function InProgress({ workout }: { workout: InProgressWorkout }) {
   );
 }
 
-// "Workout" (or "Assessment A") over its start time, in the header, or the earlier day it's logged for (#129)
+// An old A or B in progress still says which
+const workoutTitle = ({ assessment }: InProgressWorkout) =>
+  assessment === undefined ? "Workout" : assessment === "single" ? "Assessment" : `Assessment ${assessment}`;
+
+// "Workout" (or "Assessment") over its start time, in the header, or the earlier day it's logged for (#129)
 function WorkoutTitle({ title, startedAt, pastStart }: { title: string; startedAt: string; pastStart?: string }) {
   return (
     <View style={styles.title}>
@@ -240,5 +300,6 @@ const styles = StyleSheet.create({
     borderBottomWidth: StyleSheet.hairlineWidth,
   },
   addLabel: { fontFamily: fonts.semiBold },
+  guide: { marginBottom: spacing[3] },
   footer: { paddingHorizontal: spacing[5], paddingVertical: spacing[3], borderTopWidth: StyleSheet.hairlineWidth },
 });

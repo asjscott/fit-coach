@@ -39,6 +39,14 @@ describe("recentAndSaved", () => {
     expect(recentAndSaved([], [gone])).toEqual([{ key: "saved:s9", food: gone, saved: false }]);
   });
 
+  // Nothing is left to edit, so "Edit saved meal" isn't offered (its source alone would)
+  it("no longer marks a Recent Saved Meal as saved once it's deleted", () => {
+    const gone = food("saved_meal", "m9", "Old chili");
+
+    expect(recentAndSaved([], [gone])).toMatchObject([{ food: gone, saved: false }]);
+    expect(recentAndSaved([gone], [gone])).toMatchObject([{ food: gone, saved: true }]);
+  });
+
   it("is empty when nothing is saved or logged", () => {
     expect(recentAndSaved([], [])).toEqual([]);
   });

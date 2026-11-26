@@ -28,6 +28,10 @@ export type Muscle = z.infer<typeof Muscle>;
 export const LoadType = z.enum(["external", "bodyweight", "timed"]);
 export type LoadType = z.infer<typeof LoadType>;
 
+// What part of the body a Recovery Exercise loosens
+export const RecoveryArea = z.enum(["hips_and_legs", "back_and_spine", "chest_and_shoulders"]);
+export type RecoveryArea = z.infer<typeof RecoveryArea>;
+
 export const Exercise = z
   .object({
     slug: z.string().regex(/^[a-z0-9-]+$/), // stable ID, e.g. "goblet-squat"
@@ -36,11 +40,17 @@ export const Exercise = z
     patterns: z.array(z.object({ pattern: Pattern, credit: z.number().min(0).max(1) })),
     muscles: z.object({ primary: z.array(Muscle).min(1), secondary: z.array(Muscle) }),
     equipmentOptions: z.array(z.array(EquipmentTag)).min(1), // any one option works; [[]] = no equipment
+    // How many dumbbells it takes, for one that can be done with them (#181); absent from a collection seeded before it
+    dumbbells: z.union([z.literal(1), z.literal(2)]).optional(),
     loadType: LoadType,
     unilateral: z.boolean(),
     ballistic: z.boolean().default(false), // the default covers an exercises collection seeded before this field
     // For a Recovery Workout only: credits nothing and the planner never picks it. Defaults like ballistic
     recovery: z.boolean().default(false),
+    // A hold's area and how long it's held, per side (#197). Every Recovery Exercise but the walk has both and no other
+    // Exercise has either; absent from a collection seeded before them
+    area: RecoveryArea.optional(),
+    holdSeconds: z.number().int().positive().optional(),
     // Done as one Set, like the walk (#109): no rest after it and no Set 2. Defaults like ballistic
     oneSet: z.boolean().default(false),
     secondsPerSet: z.number().int().positive(), // including rest

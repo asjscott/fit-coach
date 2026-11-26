@@ -1,3 +1,4 @@
+import { isSkippedTest } from "@fit/engines";
 import type { InProgressWorkoutExercise } from "@fit/shared";
 import { StyleSheet, View } from "react-native";
 import { Icon } from "@/components/icons";
@@ -5,7 +6,8 @@ import { Pressable } from "@/components/pressable";
 import { Text } from "@/components/text";
 import { fonts, spacing, useTheme } from "@/theme";
 import { workoutExerciseSummary } from "../format";
-import { exerciseName, setReading } from "../library";
+import { exerciseName, targetReading } from "../library";
+import { useLogbook } from "../logbook-provider";
 import { WorkoutExerciseMenu } from "./workout-exercise-menu";
 import { useWeightUnit } from "@/features/user/current-user-provider";
 
@@ -20,11 +22,15 @@ export type WorkoutExerciseRowProps = {
 // A Workout Exercise that isn't current, collapsed to one row: a tick once it has Sets (else its number), its
 // name and a one-line summary of its Sets (its target or Previous Sets before any), and its ⋯ menu. Pressing the row makes it current
 export function WorkoutExerciseRow({ workoutExercise, position, onPress }: WorkoutExerciseRowProps) {
+  const { workout } = useLogbook();
   const unit = useWeightUnit();
   const { colors } = useTheme();
   const name = exerciseName(workoutExercise.slug);
   const { sets, previousSets, planned } = workoutExercise;
-  const summary = workoutExerciseSummary(sets, unit, previousSets?.sets, planned, setReading(workoutExercise.slug));
+  const reading = targetReading(workoutExercise.slug, workout?.deloadWeek);
+  const summary = isSkippedTest(workoutExercise)
+    ? "Skipped"
+    : workoutExerciseSummary(sets, unit, previousSets?.sets, planned, reading);
   const done = sets.length > 0;
 
   return (
@@ -54,7 +60,8 @@ export function WorkoutExerciseRow({ workoutExercise, position, onPress }: Worko
           <Text isTruncated style={styles.name}>
             {name}
           </Text>
-          <Text size="sm" color="muted" isTruncated>
+          {/* Two lines, so a target's aim isn't cut off */}
+          <Text size="sm" color="muted" numberOfLines={2}>
             {summary}
           </Text>
         </View>

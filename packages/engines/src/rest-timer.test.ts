@@ -1,14 +1,7 @@
 import type { Set } from "@fit/shared";
 import { describe, expect, it } from "vitest";
-import {
-  extendRest,
-  pairRestPlan,
-  restAfterSet,
-  restSeconds,
-  restSecondsLeft,
-  startRest,
-  type Rest,
-} from "./rest-timer";
+import { restSeconds } from "./rest-choice";
+import { adjustRest, pairRestPlan, restAfterSet, restSecondsLeft, restStep, startRest, type Rest } from "./rest-timer";
 
 const at = (iso: string) => new Date(iso);
 
@@ -30,6 +23,44 @@ describe("startRest", () => {
 
   it("gives an Exercise this app version doesn't know the library's typical rest", () => {
     expect(startRest("not-in-the-library", at("2026-11-09T10:00:00Z")).endsAt).toBe(Date.parse("2026-11-09T10:01:15Z"));
+  });
+});
+
+describe("restAfterSet in an Assessment", () => {
+  const now = at("2026-11-09T10:00:00Z");
+  const profile = {
+    tags: ["dumbbells" as const],
+    loads: { dumbbells: { kind: "fixed" as const, weightsKg: [10, 20] } },
+  };
+  const squat = (kg: number, reps: number, rpe: number) => ({
+    id: "squat",
+    slug: "goblet-squat",
+    loadType: "external" as const,
+    sets: [{ kind: "external" as const, kg, reps, rpe, loggedAt: "2026-11-09T09:59:00Z" }],
+  });
+  const plank = (seconds?: number) => ({
+    id: "plank",
+    slug: "plank",
+    loadType: "timed" as const,
+    sets: seconds ? [{ kind: "timed" as const, seconds, loggedAt: "2026-11-09T10:00:00Z" }] : [],
+  });
+  type Test = ReturnType<typeof squat | typeof plank> & { skipped?: boolean };
+  const restAfter = (id: string, ...workoutExercises: Test[]) =>
+    restAfterSet({ assessment: "single", workoutExercises }, id, now, "auto", profile);
+
+  it("is none once every test is done, at RPE 9, limited by the equipment or held", () => {
+    expect(restAfter("plank", squat(20, 5, 9), plank(60))).toBeNull();
+    expect(restAfter("squat", squat(20, 15, 7), plank(60))).toBeNull();
+  });
+
+  it("is none once the others are skipped", () => {
+    expect(restAfter("squat", squat(20, 5, 9), { ...plank(), skipped: true })).toBeNull();
+  });
+
+  it("is as usual while a test is left, or the test takes more Sets", () => {
+    expect(restAfter("squat", squat(20, 5, 9), plank())).not.toBeNull();
+    expect(restAfter("squat", squat(10, 5, 7), plank(60))).not.toBeNull();
+    expect(restAfter("squat", squat(10, 15, 7), plank(60))).not.toBeNull();
   });
 });
 
@@ -80,6 +111,38 @@ describe("restAfterSet", () => {
     expect(secondsOf(restAfterSet(workout(3, 4, 3), "row", now))).toBe(60);
   });
 
+  describe("after the Workout's last planned Set", () => {
+    const done = (pressSets: number, rowSets: number, squatSets: number) => {
+      const [press, row, squat] = workout(pressSets, rowSets).workoutExercises;
+      return { workoutExercises: [press!, row!, { ...squat!, sets: Array<Set>(squatSets).fill(set) }] };
+    };
+
+    it("doesn't rest, whichever Exercise it's of", () => {
+      expect(restAfterSet(done(3, 3, 3), "squat", now)).toBeNull();
+      expect(restAfterSet(done(3, 3, 3), "row", now)).toBeNull();
+      expect(restAfterSet(done(3, 3, 3), "squat", now, 60)).toBeNull();
+    });
+
+    it("rests after an Exercise's last Set while another has Sets left", () => {
+      expect(secondsOf(restAfterSet(done(0, 0, 3), "squat", now))).toBe(90);
+      expect(secondsOf(restAfterSet(done(3, 3, 2), "row", now))).toBe(90);
+    });
+
+    it("rests after a Set past the plan", () => {
+      expect(secondsOf(restAfterSet(done(3, 3, 4), "squat", now))).toBe(90);
+    });
+
+    it("always rests in a Manual Workout", () => {
+      const manual = workout(0, 0).workoutExercises.map(({ id, slug, loadType, sets }) => ({
+        id,
+        slug,
+        loadType,
+        sets,
+      }));
+      expect(secondsOf(restAfterSet({ workoutExercises: manual }, "squat", now))).toBe(90);
+    });
+  });
+
   // Seen in check S2: a 1-Set chin-up (120 s Sets, 90 s rest) paired with 3 Sets of lateral raise (60 s, 45 s rest)
   describe("once one Exercise of a pair has all its Sets", () => {
     const chinUpWithLateralRaise = (chinUpSets: number, lateralRaiseSets: number, chinUpFirst = true) => {
@@ -92,12 +155,41 @@ describe("restAfterSet", () => {
       expect(restAfterSet(chinUpWithLateralRaise(1, 0, chinUpFirst), "chin-up", now)).toBeNull();
       expect(secondsOf(restAfterSet(chinUpWithLateralRaise(1, 1, chinUpFirst), "raise", now))).toBe(90);
       expect(secondsOf(restAfterSet(chinUpWithLateralRaise(1, 2, chinUpFirst), "raise", now))).toBe(45);
-      expect(secondsOf(restAfterSet(chinUpWithLateralRaise(1, 3, chinUpFirst), "raise", now))).toBe(45);
+      // The last planned Set (#180)
+      expect(restAfterSet(chinUpWithLateralRaise(1, 3, chinUpFirst), "raise", now)).toBeNull();
     });
 
     it("rests the pair's 90 s when the lateral raise goes first in round 1", () => {
       expect(restAfterSet(chinUpWithLateralRaise(0, 1), "raise", now)).toBeNull();
       expect(secondsOf(restAfterSet(chinUpWithLateralRaise(1, 1), "chin-up", now))).toBe(90);
+    });
+  });
+
+  describe("with a chosen rest", () => {
+    it("rests the choice after a Set, whatever the Exercise", () => {
+      expect(secondsOf(restAfterSet(workout(0, 0), "squat", now, 30))).toBe(30);
+      expect(secondsOf(restAfterSet(workout(0, 0), "squat", now, 180))).toBe(180);
+    });
+
+    it("rests as usual on Auto", () => {
+      expect(secondsOf(restAfterSet(workout(0, 0), "squat", now, "auto"))).toBe(90);
+    });
+
+    it("rests it after a superset's round, and never mid-round", () => {
+      expect(restAfterSet(workout(1, 0), "press", now, 60)).toBeNull();
+      expect(secondsOf(restAfterSet(workout(1, 1), "row", now, 60))).toBe(60);
+    });
+
+    it("rests it once the other Exercise of a pair has no Sets left", () => {
+      expect(secondsOf(restAfterSet(workout(4, 3, 4), "press", now, 60))).toBe(60);
+    });
+
+    it("still doesn't rest on a past Workout", () => {
+      expect(restAfterSet({ ...workout(0, 0), pastStart: "2026-11-06T09:00:00.000Z" }, "squat", now, 60)).toBeNull();
+    });
+
+    it("rests as on Auto in an Assessment", () => {
+      expect(secondsOf(restAfterSet({ ...workout(0, 0), assessment: "A" }, "squat", now, 30))).toBe(90);
     });
   });
 
@@ -112,10 +204,12 @@ describe("restAfterSet", () => {
 
     it("doesn't rest after the walk, which goes straight on to the stretches", () => {
       expect(restAfterSet(recovery, "walk", now)).toBeNull();
+      expect(restAfterSet(recovery, "walk", now, 60)).toBeNull();
     });
 
-    it("rests as usual between a stretch's Sets", () => {
-      expect(secondsOf(restAfterSet(recovery, "stretch", now))).toBe(70);
+    it("doesn't rest after a hold, whatever the rest choice (#200)", () => {
+      expect(restAfterSet(recovery, "stretch", now)).toBeNull();
+      expect(restAfterSet(recovery, "stretch", now, 60)).toBeNull();
     });
   });
 });
@@ -136,6 +230,15 @@ describe("pairRestPlan", () => {
 
   it("says which has fewer Sets, and the other's own rest for once it's done", () => {
     expect(plan([0, 1], [0, 3])).toEqual({ pairSeconds: 90, fewer: { slug: "chin-up", otherSeconds: 45 } });
+  });
+
+  it("rests the chosen rest after each round and once the other is done", () => {
+    const pair = [member("chin-up", 1, 1), member("dumbbell-lateral-raise", 1, 3)] as const;
+    expect(pairRestPlan(pair, 60)).toEqual({
+      pairSeconds: 60,
+      fewer: { slug: "chin-up", otherSeconds: 60 },
+      done: "chin-up",
+    });
   });
 
   it("isn't done with the one with fewer Sets until the round it's in is over", () => {
@@ -162,14 +265,65 @@ describe("restSecondsLeft", () => {
   });
 });
 
-describe("extendRest", () => {
+describe("adjustRest", () => {
+  const rest = startRest("back-squat", at("2026-11-09T10:00:00Z"));
+  const atTwoMinutes = at("2026-11-09T10:02:00Z");
+
   it("adds 15 seconds to the current rest", () => {
-    const rest = startRest("back-squat", at("2026-11-09T10:00:00Z"));
-    expect(restSecondsLeft(extendRest(rest), at("2026-11-09T10:02:00Z"))).toBe(45);
+    expect(adjustRest(rest, 15, atTwoMinutes)).toEqual({ endsAt: Date.parse("2026-11-09T10:02:45Z") });
+  });
+
+  it("takes 15 seconds off the current rest", () => {
+    expect(adjustRest(rest, -15, atTwoMinutes)).toEqual({ endsAt: Date.parse("2026-11-09T10:02:15Z") });
+  });
+
+  it("ends the rest when there's less than that left", () => {
+    expect(adjustRest(rest, -15, at("2026-11-09T10:02:16Z"))).toBeNull();
+  });
+
+  it("keeps what else the rest holds", () => {
+    expect(adjustRest({ ...rest, expanded: true }, 15, atTwoMinutes)).toEqual({
+      endsAt: Date.parse("2026-11-09T10:02:45Z"),
+      expanded: true,
+    });
   });
 
   it("leaves the next rest its usual length", () => {
-    extendRest(startRest("back-squat", at("2026-11-09T10:00:00Z")));
+    adjustRest(rest, 15, atTwoMinutes);
     expect(startRest("back-squat", at("2026-11-09T10:03:00Z")).endsAt).toBe(Date.parse("2026-11-09T10:05:30Z"));
+  });
+});
+
+describe("restStep", () => {
+  const rest: Rest = { endsAt: Date.parse("2026-11-09T10:01:30Z") };
+  const step = (before: string, now: string) =>
+    restStep(rest, at(`2026-11-09T10:${before}Z`), at(`2026-11-09T10:${now}Z`));
+
+  it("is quiet until the last 3 seconds", () => {
+    expect(step("01:25.900", "01:26.100")).toEqual({ ended: false, alerts: false });
+  });
+
+  it.each([
+    ["3", "01:26.950", "01:27.050"],
+    ["2", "01:27.950", "01:28.050"],
+    ["1", "01:28.950", "01:29.050"],
+  ])("alerts as the countdown turns to %s", (_, before, now) => {
+    expect(step(before, now)).toEqual({ ended: false, alerts: true });
+  });
+
+  it("alerts once for each of the last seconds", () => {
+    expect(step("01:27.050", "01:27.150")).toEqual({ ended: false, alerts: false });
+  });
+
+  it("alerts as it ends", () => {
+    expect(step("01:29.950", "01:30.050")).toEqual({ ended: true, alerts: true });
+  });
+
+  it("ends quietly when it ended a while ago, with the app in the background", () => {
+    expect(step("00:20.000", "03:00.000")).toEqual({ ended: true, alerts: false });
+  });
+
+  it("goes on quietly after the app was in the background for part of it", () => {
+    expect(step("00:20.000", "01:10.000")).toEqual({ ended: false, alerts: false });
   });
 });

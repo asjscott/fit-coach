@@ -4,8 +4,8 @@ import { Nutrients, Serving } from "./food";
 import { DayMeal, Meal } from "./food-entry";
 import { AvoidedFood } from "./user";
 
-// What the Coach sets the user for each day, the same every day (GLOSSARY.md). Worked out by the server whenever a
-// day is read, never stored
+// What the Coach sets the user for each day, the same every day (GLOSSARY.md). Worked out by the server, which keeps
+// the last ones each day had (spec #188)
 export const DailyTargets = z.object({
   kcal: z.number(),
   proteinG: z.number(),
@@ -43,12 +43,33 @@ export const Day = z.object({
   meals: z.array(DayMeal),
   // The water the user has logged that day, in ml
   waterMl: z.number(),
-  // Up to two Food Ideas the user's Diet allows to fill what's left of the day; none once protein is met
+  // Up to two Food Ideas the user's Diet allows that fit under the top of the kcal range; none once protein is in range
   ideas: z.array(FoodIdea),
   // The meal Add puts an idea into: the one for the time of day now, in the user's timezone
   ideaMeal: Meal,
 });
 export type Day = z.infer<typeof Day>;
+
+// GET /nutrition-history/:date: the Monday to Sunday week the date is in, in the user's timezone (GLOSSARY.md)
+export const NutritionWeek = z.object({
+  // Today in the user's timezone, which can be in another week
+  today: LocalDate,
+  // The date of the user's first Food Entry, however far back; null with none
+  firstLoggedDate: LocalDate.nullable(),
+  days: z
+    .array(
+      z.object({
+        date: LocalDate,
+        totals: Nutrients.pick({ kcal: true, proteinG: true }),
+        // The day's own, as it kept them
+        targets: DailyTargets.pick({ kcal: true, proteinG: true }),
+        // Whether the day has a Food Entry; water alone doesn't count
+        logged: z.boolean(),
+      }),
+    )
+    .length(7),
+});
+export type NutritionWeek = z.infer<typeof NutritionWeek>;
 
 // One glass of water on the Food tab, in ml: the steps the phone sets the day's water in
 export const WATER_GLASS_ML = 250;

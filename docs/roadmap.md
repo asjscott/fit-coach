@@ -65,7 +65,7 @@ These were made while building and stay: whole-Workout upload instead of per-Set
 
 ## Order
 
-**M6 Progression → M7 Nutrition → M8 Daily loop → M12 Progress → M10 Activities → M13 Release-lite.**
+**M6 Progression → M7 Nutrition → #188 (ranges, Nutrition History, Saved Meals) → #195 (Mobility Workouts and a hold timer) → M8 Daily loop → M12 Progress → M10 Activities → M13 Release-lite.**
 
 M9 Rewards is cut down to PR detection (M6) and a Weekly Streak (M8). M11 Meal planner is cut. The numbers are kept from the PDF so old references still point somewhere.
 
@@ -92,6 +92,8 @@ M9 Rewards is cut down to PR detection (M6) and a Weekly Streak (M8). M11 Meal p
 - **Load Steps.** One Load Step is the next load the Equipment Profile has, wherever it lists loads (barbell plates in pairs, dumbbells, kettlebells). Cable and machine, which list none, get a stored step, editable per profile: 10 lb by default, or 5 kg for a kg user. Full gym's built-in loads follow the user's unit (in lb: dumbbells 5–100 lb in 5s, a 45 lb bar and pound plates). Loads are stored as the exact kg of what was entered, so 25 lb always shows as 25 lb.
 
 ### Progression ([ADR 0007](adr/0007-progression-and-deload.md))
+
+As settled for this milestone. Spec #176 later changed what a Miss is and how far the target goes up, here and under "Settled before the spec": ADR 0007 has the rules now.
 
 - **Working Level becomes a load and a target reps** within a rep range: 8–12 by default, 6–10 for barbell lifts, 10–15 for band-only Exercises. `GLOSSARY.md`'s Working Level changes with it.
 - **Double progression.** When every Set reaches the top of the range, the next Workout goes up one Load Step, to the reps Epley predicts at the new load, but only if that's at least the bottom of the range; until then reps keep climbing towards 20, as at a load ceiling. A step on light dumbbells or kettlebells can be 14–50% ([research](research/progression-and-deload.md)). Otherwise, when every Set reaches the target, the target goes up 1 rep.
@@ -141,14 +143,34 @@ M9 Rewards is cut down to PR detection (M6) and a Weekly Streak (M8). M11 Meal p
 
 **Done when:** two weeks of real eating logged on the phones' Release builds, mostly by barcode, Saved Foods and copy; targets look right against the user's own numbers.
 
+## Before M8: ranges, Nutrition History and Saved Meals (#188)
+
+**Goal:** a ring says what's good enough, a week can be looked back on, and something cooked often is logged in one step.
+
+- **Ranges:** kcal ±5% and protein 90–120% of target. Their rings are orange below, green in range, and over it start a red second lap that says how far over ("250 over"). The Coach's summary and Food Ideas use the ranges.
+- **Each day keeps its Daily Targets,** so a later Weigh-in or Goal doesn't rewrite the past.
+- **Nutrition History:** a week of kcal or protein, a bar per day against its range, with the daily average.
+- **Saved Meals:** a name, ingredients and a number of servings, logged as one Food Entry. They're never planned ahead, so M11 stays cut.
+
+**Done when:** it has passed its manual checks on the phones' Release builds.
+
+## Before M8: Mobility Workouts and a hold timer (#195)
+
+**Goal:** resting never has to mean walking, and the app times every hold.
+
+- **Mobility Workout:** 10, 20 or 30 minutes of holds picked for tired Muscles, offered every day beside Walk and mobility, with 27 new Recovery Exercises.
+- **Hold timer:** full-screen, for every timed strength Exercise, and as a guided flow through a Recovery Workout's holds.
+
+**Done when:** it has passed its manual checks on the phones' Release builds.
+
 ## M8 Daily loop
 
 **Goal:** the app reaches out at the right time with something useful. See [ADR 0006](adr/0006-scheduled-jobs-through-github-actions.md).
 
 - **Web push.** VAPID keys on the server, a subscription saved per device. iOS only delivers it to the installed PWA (iOS 16.4+).
 - **Scheduled jobs.** A GitHub Actions workflow runs hourly and POSTs to `/jobs/run` with a secret. That wakes the Render instance, which, for each user, runs whatever is due in that user's timezone and records that it ran, so a late or repeated call never sends twice. Agenda is dropped.
-- **Evening summary, due at 6 pm so it arrives by 7, templated:** "Push day done ✅ · 1,840 / 2,300 kcal · 120 g protein · Tomorrow: Legs, Standard", or "Tomorrow: Rest Day · next up Legs" when the Rest Day rule says so, with tomorrow's kcal and protein targets. It says "tomorrow" again ([ADR 0008](adr/0008-a-few-invited-users-and-tomorrow.md) reverses that part of [0004](adr/0004-spec-77-replaces-the-plans-m5.md)).
-- **Sunday weekly review**, in the app and announced by push: Workouts done against planned and the Weekly Streak; the Weekly Budget met per Muscle; PRs and Exercises that progressed or dropped; average kcal and protein against target; the change since last week's Weigh-in; the Readiness trend from Check-ins.
+- **Evening summary, due at 6 pm so it arrives by 7, templated:** "Push day done ✅ · 1,840 / 2,300 kcal · 120 g protein · Tomorrow: Legs, Standard", or "Tomorrow: Rest Day · next up Legs" when the Rest Day rule says so, with tomorrow's kcal and protein targets. It reads kcal and protein against their ranges (#188). It says "tomorrow" again ([ADR 0008](adr/0008-a-few-invited-users-and-tomorrow.md) reverses that part of [0004](adr/0004-spec-77-replaces-the-plans-m5.md)).
+- **Sunday weekly review**, in the app and announced by push: Workouts done against planned and the Weekly Streak; the Weekly Budget met per Muscle; PRs and Exercises that progressed or dropped; average kcal and protein against their ranges; the change since last week's Weigh-in; the Readiness trend from Check-ins.
 - **Weekly Streak.** A week counts when the user finishes at least `daysPerWeek − 1` Workouts, Recovery Workouts included. No freezes. Weeks run Monday to Sunday, as the Week Ledger does.
 - The PDF's event bus is dropped unless the spec finds a need. An LLM sentence in the summary is optional, through M7's interface.
 

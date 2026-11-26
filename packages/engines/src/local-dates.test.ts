@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { dayBefore, isLoggableDate, loggableDates, mondayOfDate, weekdayOf } from "./local-dates";
+import { dayBefore, isLoggableDate, loggableDates, mondayOfDate, weekDates, weekdayOf } from "./local-dates";
 
 describe("dayBefore", () => {
   it("is the calendar date before, across a month, a year and daylight saving", () => {
@@ -72,5 +72,19 @@ describe("mondayOfDate", () => {
     expect(mondayOfDate("2026-11-16")).toBe("2026-11-16");
     expect(mondayOfDate("2026-11-22")).toBe("2026-11-16");
     expect(mondayOfDate("2027-01-01")).toBe("2026-12-28");
+  });
+});
+
+describe("weekDates", () => {
+  it.each(["2026-10-26", "2026-10-29", "2026-11-01"])("is %s's week, Monday to Sunday", (date) => {
+    expect(weekDates(date)).toEqual([
+      "2026-10-26",
+      "2026-10-27",
+      "2026-10-28",
+      "2026-10-29",
+      "2026-10-30",
+      "2026-10-31",
+      "2026-11-01",
+    ]);
   });
 });
