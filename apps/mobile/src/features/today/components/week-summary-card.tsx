@@ -1,5 +1,6 @@
 import type { WeekSummary } from "@fit/shared";
 import { StyleSheet, View } from "react-native";
+import { Pressable } from "@/components/pressable";
 import { Ring } from "@/components/ring";
 import { Text } from "@/components/text";
 import { weekDatesLabel } from "@/features/workouts/format";
@@ -26,16 +27,19 @@ function Bar({ label, value, fill, tone }: WeekSummaryBar) {
 }
 
 // The Week Summary card (prototype variant C): a ring for Workouts done against planned and the Weekly Streak, then
-// a bar for each part the week has data for
-export function WeekSummaryCard({ summary, now }: { summary: WeekSummary; now: Date }) {
+// a bar for each part the week has data for. A tap opens the Week Summary screen
+export function WeekSummaryCard({ summary, now, onPress }: { summary: WeekSummary; now: Date; onPress: () => void }) {
   const { colors } = useTheme();
   const { workouts, streak } = summary;
   const dates = weekDatesLabel(new Date(`${summary.monday}T00:00:00`), now);
   const streakLabel = streak ? ` · 🔥 ${streak}-week streak` : "";
 
   return (
-    <View
+    <Pressable
       testID="week-summary-card"
+      onPress={onPress}
+      accessibilityRole="button"
+      accessibilityHint="Opens the Week Summary"
       style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.line }]}
     >
       <View style={styles.header}>
@@ -55,7 +59,10 @@ export function WeekSummaryCard({ summary, now }: { summary: WeekSummary; now: D
       {weekSummaryBars(summary).map((bar) => (
         <Bar key={bar.label} {...bar} />
       ))}
-    </View>
+      <Text size="sm" weight="semiBold" color="accent">
+        See your week ›
+      </Text>
+    </Pressable>
   );
 }
 

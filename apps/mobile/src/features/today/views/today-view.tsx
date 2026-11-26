@@ -63,6 +63,7 @@ import { useDismissedOffer } from "../hooks/use-dismissed-offer";
 import { usePlannedWorkout } from "../hooks/use-planned-workout";
 import { usePrNote } from "../hooks/use-pr-note";
 import { useWeekSummaryCard } from "../hooks/use-week-summary-card";
+import { lastWeekLink } from "../week-summary-card";
 import { planReasonLines } from "../plan-reasons";
 import {
   showsCheckIn,
@@ -165,6 +166,9 @@ export default function TodayView() {
     state === "loaded" && daysPerWeek !== undefined && user?.onboardedAt
       ? weeklyStreak({ workouts: all, daysPerWeek, onboardedAt: user.onboardedAt, now, timeZone })
       : null;
+  // "Last week" in This week, until the next Week Summary is due
+  const lastWeek = user?.onboardedAt ? lastWeekLink({ now, timeZone, onboardedAt: user.onboardedAt }) : null;
+  const openWeekSummary = (monday: string) => router.push({ pathname: "/week-summary", params: { monday } });
   const restDayReason = todayRestDay(plan, all, now, daysPerWeek);
   const finished = finishedToday(all, now);
   const offer =
@@ -227,7 +231,7 @@ export default function TodayView() {
       {/* First of the cards, above the Day Summary and the Tomorrow card */}
       {weekSummary ? (
         <View style={{ marginBottom: spacing[4] }}>
-          <WeekSummaryCard summary={weekSummary} now={now} />
+          <WeekSummaryCard summary={weekSummary} now={now} onPress={() => openWeekSummary(weekSummary.monday)} />
         </View>
       ) : null}
       {/* A finished day leads with tomorrow, and its receipt, in place of the Nudge */}
@@ -379,7 +383,13 @@ export default function TodayView() {
       ) : null}
       {state === "loading" ? null : (
         <View style={{ marginTop: spacing[3] }}>
-          <ThisWeekSection week={week} state={state} now={now} streak={streak} />
+          <ThisWeekSection
+            week={week}
+            state={state}
+            now={now}
+            streak={streak}
+            onLastWeek={lastWeek ? () => openWeekSummary(lastWeek) : null}
+          />
         </View>
       )}
       {card === "loading" || card === "resume" || card === "manual" ? null : (
