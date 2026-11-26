@@ -1,6 +1,6 @@
 import type { Set } from "@fit/shared";
 import { describe, expect, it } from "vitest";
-import { daySummary, foodRows, tomorrowLine, workoutRow, type DaySummaryInput } from "./day-summary";
+import { daySummary, foodRows, tomorrowCard, tomorrowLine, workoutRow, type DaySummaryInput } from "./day-summary";
 
 const targets = { kcal: 2980, proteinG: 160, fatG: 90, carbsG: 330, fibreG: 30, waterMl: 2500 };
 const totals = { kcal: 2900, proteinG: 170, fatG: 80, carbsG: 300, fibreG: 25 };
@@ -238,9 +238,62 @@ describe("daySummary: tomorrow", () => {
     );
   });
 
+  it("leads a finished day as the Tomorrow card: Rest or the Workout, why, and what to eat", () => {
+    const rest = evenings({ workouts: [fullBody], plannedWorkout })?.tomorrow ?? null;
+    expect(rest && tomorrowCard(rest)).toEqual({
+      headline: "Rest.",
+      reason: "You've trained today, and this week's Workouts still fit.",
+      targets: "Eat 2,980 kcal · 160 g protein",
+    });
+    const train = evenings({ workouts: [mobility], plannedWorkout })?.tomorrow ?? null;
+    expect(train && tomorrowCard(train)).toEqual({
+      headline: "Quads, glutes and chest.",
+      reason: "Chest is furthest behind this week.",
+      targets: "Eat 2,980 kcal · 160 g protein",
+    });
+  });
+
   it("is left out with no Planned Workout or a stale one, rather than guessed", () => {
     expect(evenings({ workouts: [fullBody], plannedWorkout: null })?.tomorrow).toBeNull();
     expect(tomorrowLine(null)).toBeNull();
+  });
+});
+
+describe("daySummary: finished", () => {
+  // The ranges for 2,980 kcal and 160 g: 2,830 to 3,130 kcal, 144 to 192 g
+  const ate = (kcal: number, proteinG: number) => ({ day: { ...loggedDay, totals: { ...totals, kcal, proteinG } } });
+
+  it("is finished after training, with kcal in range", () => {
+    expect(evenings({ workouts: [fullBody], ...ate(2900, 170) })?.finished).toBe(true);
+  });
+
+  it("is finished after training, with kcal over the range", () => {
+    expect(evenings({ workouts: [fullBody], ...ate(3300, 170) })?.finished).toBe(true);
+  });
+
+  it("isn't finished after training while kcal is short, so the Nudge keeps saying what's left", () => {
+    expect(evenings({ workouts: [fullBody], ...ate(2080, 170) })?.finished).toBe(false);
+  });
+
+  it("is finished on a recommended Rest Day kept, with kcal in range", () => {
+    expect(evenings({ restDayToday: "trained-yesterday", ...ate(2900, 170) })?.finished).toBe(true);
+  });
+
+  it("is finished after a Recovery Workout, with kcal in range", () => {
+    expect(evenings({ workouts: [mobility], ...ate(2900, 170) })?.finished).toBe(true);
+  });
+
+  it("never waits on protein: in range on kcal and short on protein is finished", () => {
+    expect(evenings({ workouts: [fullBody], ...ate(2900, 120) })?.finished).toBe(true);
+  });
+
+  it("isn't finished with no Workout and no Rest Day, however the food went", () => {
+    expect(evenings(ate(2900, 170))?.finished).toBe(false);
+  });
+
+  it("isn't finished with no food logged", () => {
+    const noFood = { day: { targets, totals: { ...totals, kcal: 0, proteinG: 0 }, meals: [] } };
+    expect(evenings({ workouts: [fullBody], ...noFood })?.finished).toBe(false);
   });
 });
 

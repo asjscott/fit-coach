@@ -96,6 +96,7 @@ describe("todayCard", () => {
     assessmentFirst: false,
     finishedToday: false,
     restDay: null,
+    dayFinished: false,
   } as const;
 
   it("offers the plan on an ordinary day", () => {
@@ -134,6 +135,15 @@ describe("todayCard", () => {
 
   it("offers a Manual Workout with nothing else to show", () => {
     expect(todayCard({ ...ready, plan: "none" })).toBe("manual");
+  });
+
+  it("gives way to the Day Summary on a finished day, after training or on a Rest Day kept", () => {
+    expect(todayCard({ ...ready, finishedToday: true, dayFinished: true })).toBe("day-summary");
+    expect(todayCard({ ...ready, restDay: "trained-yesterday", dayFinished: true })).toBe("day-summary");
+  });
+
+  it("still puts a Workout under way first on a finished day", () => {
+    expect(todayCard({ ...ready, workoutInProgress: true, dayFinished: true })).toBe("resume");
   });
 });
 
