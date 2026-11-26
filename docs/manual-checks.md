@@ -186,65 +186,65 @@ Result codes: **✅ pass** · **❌ fail** · **⚠️ works but feels off** · 
 
 On the installed web app on the iPhone, with the silent switch off and the volume up.
 
-- [ ] **RS1** Log a Set and put the phone down a few steps away: the countdown reads from across the room, in light and dark, and shows the next Set and its target.
-  - Result: · Notes:
-- [ ] **RS2** Keep music playing in another app and rest to the end: it beeps at 3, 2, 1 and 0, loud enough to notice, and the music carries on.
-  - Result: · Notes:
-- [ ] **RS3** The phone vibrates at 3, 2, 1 and 0 where it can (Android; Safari on the iPhone can't). Where it can't, the rest works the same otherwise.
-  - Result: · Notes:
-- [ ] **RS4** At 0 the screen flashes twice and the logging screen is back, with the next Set's steppers ready. With Reduce Motion on (Settings → Accessibility → Motion), there's no flash.
-  - Result: · Notes:
-- [ ] **RS5** Turn Sound off during a rest: the rest ends silently. Close and reopen the app: the next rest still has it off. Turn it on mid-rest: it beeps again.
-  - Result: · Notes:
-- [ ] **RS6** Lock the phone, or switch apps, for part of a rest: on return the time left is right. Stay away past its end: it's closed, with no beep, vibration or flash. The next rest still beeps.
-  - Result: · Notes:
+- [x] **RS1** Log a Set and put the phone down a few steps away: the countdown reads from across the room, in light and dark, and shows the next Set and its target.
+  - Result: · Notes: Pass
+- [x] **RS2** Keep music playing in another app and rest to the end: it beeps at 3, 2, 1 and 0, loud enough to notice, and the music carries on.
+  - Result: Pass · Notes
+- [x] **RS3** The phone vibrates at 3, 2, 1 and 0 where it can (Android; Safari on the iPhone can't). Where it can't, the rest works the same otherwise.
+  - Result: PAss· Notes:
+- [x] **RS4** At 0 the screen flashes twice and the logging screen is back, with the next Set's steppers ready. With Reduce Motion on (Settings → Accessibility → Motion), there's no flash.
+  - Result: PAss· Notes: Flashing twice doesn't look good, just falsh once. No flash on mobility
+- [x] **RS5** Turn Sound off during a rest: the rest ends silently. Close and reopen the app: the next rest still has it off. Turn it on mid-rest: it beeps again.
+  - Result: Pass· Notes:
+- [x] **RS6** Lock the phone, or switch apps, for part of a rest: on return the time left is right. Stay away past its end: it's closed, with no beep, vibration or flash. The next rest still beeps.
+  - Result: Pass · Notes:
 - [ ] **RS7** With VoiceOver, the countdown reads as "Rest, 1:05 left", and the buttons behind the rest screen can't be reached.
   - Result: · Notes:
 
-- [ ] **RS8** Log an Exercise's last planned Set: the rest screen has the rating, Next exercise and Log extra set, all in sight without scrolling. Next exercise opens the next Exercise with the rest as a bar (#180).
-  - Result: · Notes:
+- [x] **RS8** Log an Exercise's last planned Set: the rest screen has the rating, Next exercise and Log extra set, all in sight without scrolling. Next exercise opens the next Exercise with the rest as a bar (#180).
+  - Result: Pass· Notes:
 
 ## Hold timer (#196)
 
 On the installed web app on the iPhone, with the silent switch off and the volume up.
 
-- [ ] **HT1** On a planned plank, tap Start timer: 5 s to get into position, then a countdown to the bottom of the range and up past it, readable from a plank on the floor, in light and dark.
-  - Result: · Notes:
-- [ ] **HT2** It beeps and flashes (and vibrates on Android) at the bottom and again at the top of the range; once for a single number (a deload week, or 60 s). Music in another app carries on. With Sound off, it's silent.
-  - Result: · Notes:
-- [ ] **HT3** Stop fills in the seconds and logs nothing; they can be corrected before Log set, and the next Set starts from what was logged, then rests as usual. Cancel, in the 5 s or during the hold, leaves the seconds as they were. Starting during a rest ends the rest.
-  - Result: · Notes:
-- [ ] **HT4** In an Assessment it counts up from 0 after the 5 s, with no sound, vibration or flash. The walk, mobility Exercises and carries have no Start timer.
-  - Result: · Notes:
-- [ ] **HT5** Lock the phone, or switch apps, for part of a hold: on return the seconds are right, with no late beep. Left alone, the screen stays awake.
-  - Result: · Notes:
-- [ ] **HT6** With VoiceOver, the clock reads as "Hold, 0:12 left", each change (Hold, Target reached, Top of the range) is announced, and the buttons behind can't be reached. With Reduce Motion on there's no flash.
-  - Result: · Notes:
+- [x] **HT1** On a planned plank, tap Start timer: 5 s to get into position, then a countdown to the bottom of the range and up past it, readable from a plank on the floor, in light and dark.
+  - Result: Pass · Notes:
+- [x] **HT2** It beeps and flashes (and vibrates on Android) at the bottom and again at the top of the range; once for a single number (a deload week, or 60 s). Music in another app carries on. With Sound off, it's silent.
+  - Result: Pass · Notes:
+- [x] **HT3** Stop fills in the seconds and logs nothing; they can be corrected before Log set, and the next Set starts from what was logged, then rests as usual. Cancel, in the 5 s or during the hold, leaves the seconds as they were. Starting during a rest ends the rest.
+  - Result: PAss · Notes:
+- [x] **HT4** In an Assessment it counts up from 0 after the 5 s, with no sound, vibration or flash. The walk, mobility Exercises and carries have no Start timer.
+  - Result: Pass · Notes:
+- [x] **HT5** Lock the phone, or switch apps, for part of a hold: on return the seconds are right, with no late beep. Left alone, the screen stays awake.
+  - Result: Pass · Notes:
+- [x] **HT6** With VoiceOver, the clock reads as "Hold, 0:12 left", each change (Hold, Target reached, Top of the range) is announced, and the buttons behind can't be reached. With Reduce Motion on there's no flash.
+  - Result: PAss · Notes:
 
 ## Guided flow (#200)
 
 On the installed web app on the iPhone, with the silent switch off and the volume up.
 
-- [ ] **GF1** Start a Mobility Workout: the flow opens by itself with 10 s to change position, and shows the hold's name, cues, what's next and how far through, readable from the floor. A one-sided hold says "Switch sides", with 10 s between.
-  - Result: · Notes:
-- [ ] **GF2** It beeps (and vibrates on Android) at the start, in the last 3 s and at the end of each side, and nothing but vibration with Sound off. Music in another app carries on. It goes on by itself, with no rest and no RPE.
-  - Result: · Notes:
-- [ ] **GF3** Pause and Resume keep the time. Skip logs nothing. Lock the phone, or switch apps, mid-hold for a minute: it's paused where it was and nothing is logged. Left alone, the screen stays awake.
-  - Result: · Notes:
-- [ ] **GF4** Walk and mobility: the walk is logged in minutes as before, then the flow opens.
-  - Result: · Notes:
-- [ ] **GF5** After the last hold, the flow offers Back, which repeats it, and Finish, which shows the time taken and the holds done (a hold of two Sets once), and saves. Finish early keeps what's logged; with nothing logged, Save offers to discard.
-  - Result: · Notes:
-- [ ] **GF6** With VoiceOver, the clock reads as "Hold, 0:12 left", each change is announced with the next hold's name, and the buttons behind can't be reached. With Reduce Motion on there's no flash.
-  - Result: · Notes:
-- [ ] **GF7** Back repeats the previous hold, and when it ends there's still one Set for it; leaving before then keeps the old one. Back to a skipped hold logs it. Both go on to the first hold left.
-  - Result: · Notes:
-- [ ] **GF8** Mid-flow, force-quit the app and reopen it: Resume workout opens the flow, paused at the first hold not logged, and Resume sounds as before.
-  - Result: · Notes:
-- [ ] **GF9** Leave timer, log or delete a hold's Set, then Continue holds: it starts at the first hold left, and doesn't go back over the skipped ones.
-  - Result: · Notes:
-- [ ] **GF10** Add a Recovery Exercise (not the walk) to a Manual Workout: Start timer runs both sides and logs its Set with no rest, then returns to the logging screen. The walk has no timer.
-  - Result: · Notes:
+- [x] **GF1** Start a Mobility Workout: the flow opens by itself with 10 s to change position, and shows the hold's name, cues, what's next and how far through, readable from the floor. A one-sided hold says "Switch sides", with 10 s between.
+  - Result: Pass · Notes:
+- [x] **GF2** It beeps (and vibrates on Android) at the start, in the last 3 s and at the end of each side, and nothing but vibration with Sound off. Music in another app carries on. It goes on by itself, with no rest and no RPE.
+  - Result: Pass · Notes: It flashes twice in mobility, no flash should happen at all
+- [x] **GF3** Pause and Resume keep the time. Skip logs nothing. Lock the phone, or switch apps, mid-hold for a minute: it's paused where it was and nothing is logged. Left alone, the screen stays awake.
+  - Result: Pass · Notes:
+- [x] **GF4** Walk and mobility: the walk is logged in minutes as before, then the flow opens.
+  - Result: Pass · Notes:
+- [x] **GF5** After the last hold, the flow offers Back, which repeats it, and Finish, which shows the time taken and the holds done (a hold of two Sets once), and saves. Finish early keeps what's logged; with nothing logged, Save offers to discard.
+  - Result: Pass· Notes:
+- [x] **GF6** With VoiceOver, the clock reads as "Hold, 0:12 left", each change is announced with the next hold's name, and the buttons behind can't be reached. With Reduce Motion on there's no flash.
+  - Result: Pass · Notes:
+- [x] **GF7** Back repeats the previous hold, and when it ends there's still one Set for it; leaving before then keeps the old one. Back to a skipped hold logs it. Both go on to the first hold left.
+  - Result: Pass · Notes:
+- [x] **GF8** Mid-flow, force-quit the app and reopen it: Resume workout opens the flow, paused at the first hold not logged, and Resume sounds as before.
+  - Result: Pass · Notes:
+- [x] **GF9** Leave timer, log or delete a hold's Set, then Continue holds: it starts at the first hold left, and doesn't go back over the skipped ones.
+  - Result: Pass · Notes:
+- [x] **GF10** Add a Recovery Exercise (not the walk) to a Manual Workout: Start timer runs both sides and logs its Set with no rest, then returns to the logging screen. The walk has no timer.
+  - Result: Pass · Notes:
 
 ## Supersets (#96)
 
@@ -260,26 +260,26 @@ A Workout pairs Exercises only when it wouldn't otherwise fit its Length. Pairs 
 
 ## Recovery Workout (#97)
 
-- [ ] **R1** On a real Rest Day, Today shows the "Rest today." card with a "Mobility" link and a "Walk and mobility" link under it. "Walk and mobility" opens the Recovery Workout (a 20-minute walk, then four stretches). The Workout itself has passed from a training day's sheet; only the card hasn't been seen.
-  - Result: · Notes:
+- [x] **R1** On a real Rest Day, Today shows the "Rest today." card with a "Mobility" link and a "Walk and mobility" link under it. "Walk and mobility" opens the Recovery Workout (a 20-minute walk, then four stretches). The Workout itself has passed from a training day's sheet; only the card hasn't been seen.
+  - Result: Pass· Notes:
 
-- [ ] **R2** Mobility, from Today and from the plan's sheet: 20 min and Full body are chosen at first; changing either changes the list, and each hold's time and the total show. Start opens a Workout of those holds, and afterwards the same plan is on offer. Opened again, the length and focus are as last chosen and the holds mostly differ.
-  - Result: · Notes:
-- [ ] **R3** The day after hard leg training, Mobility starts with holds for the legs. In airplane mode, after closing the app, it still opens and starts.
-  - Result: · Notes:
-- [ ] **R4** History shows "Mobility · N min" (the time it took) and "Walk and mobility", and neither counts in This Week.
-  - Result: · Notes:
-- [ ] **R5** Before starting Mobility (#199): Swap opens similar holds under the row, and picking one changes the list and the total; Remove takes a hold out; the last hold has no Remove; a hold with nothing to swap to says so. Start opens the changed list.
-  - Result: · Notes:
-- [ ] **RX1** The new Recovery Exercises (#197) are in the library with the other Recovery Exercises, each with a page of cues. With an injury set, Walk and mobility swaps a hold it rules out for another. Without a foam roller in the Equipment Profile, no roller hold is offered. Run after `pnpm seed:exercises` on production.
-  - Result: · Notes:
+- [x] **R2** Mobility, from Today and from the plan's sheet: 20 min and Full body are chosen at first; changing either changes the list, and each hold's time and the total show. Start opens a Workout of those holds, and afterwards the same plan is on offer. Opened again, the length and focus are as last chosen and the holds mostly differ.
+  - Result: Pass· Notes:
+- [x] **R3** The day after hard leg training, Mobility starts with holds for the legs. In airplane mode, after closing the app, it still opens and starts.
+  - Result: Pass · Notes:
+- [x] **R4** History shows "Mobility · N min" (the time it took) and "Walk and mobility", and neither counts in This Week.
+  - Result: Pass · Notes:
+- [x] **R5** Before starting Mobility (#199): Swap opens similar holds under the row, and picking one changes the list and the total; Remove takes a hold out; the last hold has no Remove; a hold with nothing to swap to says so. Start opens the changed list.
+  - Result: Pass · Notes:
+- [x] **RX1** The new Recovery Exercises (#197) are in the library with the other Recovery Exercises, each with a page of cues. With an injury set, Walk and mobility swaps a hold it rules out for another. Without a foam roller in the Equipment Profile, no roller hold is offered. Run after `pnpm seed:exercises` on production.
+  - Result: Pass · Notes:
 
 ## Units (#126, #148)
 
-- [ ] **U1** On a home Equipment Profile with dumbbells but no weights entered, the load stepper moves by 5 lb, or 2 kg once kg is picked.
-  - Result: · Notes:
-- [ ] **U2** A new account's onboarding asks "Weight (lb)". After saving 180 lb in Edit profile, picking kg reads 81.6 kg on Profile, and Edit profile asks "Weight (kg)".
-  - Result: · Notes:
+- [x] **U1** On a home Equipment Profile with dumbbells but no weights entered, the load stepper moves by 5 lb, or 2 kg once kg is picked.
+  - Result: Pass · Notes:
+- [x] **U2** A new account's onboarding asks "Weight (lb)". After saving 180 lb in Edit profile, picking kg reads 81.6 kg on Profile, and Edit profile asks "Weight (kg)".
+  - Result: PAss · Notes:
 
 ## Load Steps (#127)
 
@@ -288,13 +288,13 @@ A Workout pairs Exercises only when it wouldn't otherwise fit its Length. Pairs 
 
 ## Bar-and-plates dumbbells (#181)
 
-- [ ] **BP1** In Edit profile, at home with dumbbells, choose **Bar and plates** and enter a 4 lb bar × 2, 3 lb × 4 and 5 lb × 4, adding and removing a row on the way. Profile's Equipment reads "Dumbbells (2 × 4 lb bars, 4 × 3 lb and 4 × 5 lb plates)", editing again shows it back, and a goblet squat's stepper goes 12, 13, 14.
-  - Result: · Notes:
+- [x] **BP1** In Edit profile, at home with dumbbells, choose **Bar and plates** and enter a 4 lb bar × 2, 3 lb × 4 and 5 lb × 4, adding and removing a row on the way. Profile's Equipment reads "Dumbbells (2 × 4 lb bars, 4 × 3 lb and 4 × 5 lb plates)", editing again shows it back, and a goblet squat's stepper goes 12, 13, 14.
+  - Result: Pass · Notes:
 
 ## PRs (#130)
 
-- [ ] **PR1** Beat an Exercise's best with signal and Save workout. While the "Workout saved. New PR: …" toast is up (about 10 s), tap **See workout**: it opens the Workout in History with "New PR · …" under that Exercise.
-  - Result: · Notes:
+- [x] **PR1** Beat an Exercise's best with signal and Save workout. While the "Workout saved. New PR: …" toast is up (about 10 s), tap **See workout**: it opens the Workout in History with "New PR · …" under that Exercise.
+  - Result: Pass · Notes:
 
 ## Jumps (#105)
 
@@ -321,56 +321,56 @@ A Workout pairs Exercises only when it wouldn't otherwise fit its Length. Pairs 
 
 Run each offline check (WI6, F4, FL6, TC4) twice: once with airplane mode on before the app opens, and once turning it on with the app already open. Either way, the connection message shows at once, with no spinner first (#171), and the app doesn't call the server while the phone says it has no network.
 
-- [ ] **WI4** Log a Weigh-in for an earlier day this week, then another for today: Profile shows only the second, dated today, and the rings follow it. Log one for a day last week (when the days offered reach into it): Profile still shows this week's.
+- [x] **WI4** Log a Weigh-in for an earlier day this week, then another for today: Profile shows only the second, dated today, and the rings follow it. Log one for a day last week (when the days offered reach into it): Profile still shows this week's.
   - iOS: Result: · Android: Result: · Notes:
-- [ ] **WI6** Offline, Log weight's Save shows "Couldn't log your weight" and Profile keeps the weight it had. Back online, logging works. Cancel, and on the iPhone a swipe down, close the sheet at any time, even while Save is loading (#172).
+- [x] **WI6** Offline, Log weight's Save shows "Couldn't log your weight" and Profile keeps the weight it had. Back online, logging works. Cancel, and on the iPhone a swipe down, close the sheet at any time, even while Save is loading (#172).
   - iOS: Result: · Android: Result: · Notes:
-- [ ] **F4** In airplane mode, a search says "Searching for food needs a connection." and nothing breaks; back online, searching again works.
+- [x] **F4** In airplane mode, a search says "Searching for food needs a connection." and nothing breaks; back online, searching again works.
   - iOS: Result: · Android: Result: · Notes:
-- [ ] **FL6** In airplane mode, open the Food tab (or step to another day): it says logging food needs a connection. With a day already showing, change a portion and Save, or Add a food: a toast says logging needs a connection and nothing was saved, and what you chose stays open to try again. Back online, Save or Add again: it's logged once, with nothing doubled.
+- [x] **FL6** In airplane mode, open the Food tab (or step to another day): it says logging food needs a connection. With a day already showing, change a portion and Save, or Add a food: a toast says logging needs a connection and nothing was saved, and what you chose stays open to try again. Back online, Save or Add again: it's logged once, with nothing doubled.
   - iOS: Result: · Android: Result: · Notes:
-- [ ] **SC3** Scan a product Open Food Facts doesn't have (a store's own brand, or something small-batch): Create food opens, saying nothing has the barcode yet. Fill in the name, the serving ("1 bar", 45) and the label's kcal, protein, carbs and fat, leaving fibre empty, and tap Create food: it shows as "From your Saved Foods", opened on its serving with the figures you typed and 0 g fibre. Add it to a meal.
+- [x] **SC3** Scan a product Open Food Facts doesn't have (a store's own brand, or something small-batch): Create food opens, saying nothing has the barcode yet. Fill in the name, the serving ("1 bar", 45) and the label's kcal, protein, carbs and fat, leaving fibre empty, and tap Create food: it shows as "From your Saved Foods", opened on its serving with the figures you typed and 0 g fibre. Add it to a meal.
   - iOS: Result: · Android: Result: · Notes:
-- [ ] **SC4** Scan the same product again: it's found straight away as your Saved Food, without Create food. Search its name: it comes first, marked "Saved food", above the USDA results.
+- [x] **SC4** Scan the same product again: it's found straight away as your Saved Food, without Create food. Search its name: it comes first, marked "Saved food", above the USDA results.
   - iOS: Result: · Android: Result: · Notes:
-- [ ] **SM1** On the Ideas half, tap "New saved meal", name it and set 2 servings. Scan a packaged food, choose a portion and Add ingredient; scan one nothing has, make it with Create food, and add that too. kcal and protein per serving show and follow each change, and a saved meal is never offered as an ingredient. Save: it opens to log, with servings and no Grams. Add 0.5: the day has one food with its name, and tapping it shows the ingredients at that portion. On Android, the system back leaves the editor for the Food tab. In airplane mode, Save says saving needs a connection and everything stays as typed (#192).
+- [x] **SM1** On the Ideas half, tap "New saved meal", name it and set 2 servings. Scan a packaged food, choose a portion and Add ingredient; scan one nothing has, make it with Create food, and add that too. kcal and protein per serving show and follow each change, and a saved meal is never offered as an ingredient. Save: it opens to log, with servings and no Grams. Add 0.5: the day has one food with its name, and tapping it shows the ingredients at that portion. On Android, the system back leaves the editor for the Food tab. In airplane mode, Save says saving needs a connection and everything stays as typed (#192).
   - iOS: Result: · Android: Result: · Notes:
-- [ ] **SM2** On a past day, open a meal holding a food and a Saved Meal and tap "Save as meal": New saved meal opens with the food and the Saved Meal's own ingredients, at the portions logged. Change one, remove another, name it, set the servings and Save: the same day shows again, its meal unchanged, and the new Saved Meal is found by search. A meal with nothing logged doesn't offer it (#193).
+- [x] **SM2** On a past day, open a meal holding a food and a Saved Meal and tap "Save as meal": New saved meal opens with the food and the Saved Meal's own ingredients, at the portions logged. Change one, remove another, name it, set the servings and Save: the same day shows again, its meal unchanged, and the new Saved Meal is found by search. A meal with nothing logged doesn't offer it (#193).
   - iOS: Result: · Android: Result: · Notes:
-- [ ] **SM3** Edit a Saved Meal to give it a cooked weight: logging it now offers Grams beside servings. Log 350 g: the day has that share of it, and the Food Entry opens to its ingredients at 350 g. Change the entry to 1 serving and back to grams. Clear the cooked weight: only servings are offered, and the day logged stays as it was. A weight over 100,000 g is refused, saying so (#194).
+- [x] **SM3** Edit a Saved Meal to give it a cooked weight: logging it now offers Grams beside servings. Log 350 g: the day has that share of it, and the Food Entry opens to its ingredients at 350 g. Change the entry to 1 serving and back to grams. Clear the cooked weight: only servings are offered, and the day logged stays as it was. A weight over 100,000 g is refused, saying so (#194).
   - iOS: Result: · Android: Result: · Notes:
-- [ ] **TC4** In airplane mode, Tell says telling the Coach needs a connection, stops loading at once, and the words stay in the box (#173). Back online, Tell works.
+- [x] **TC4** In airplane mode, Tell says telling the Coach needs a connection, stops loading at once, and the words stay in the box (#173). Back online, Tell works.
   - iOS: Result: · Android: Result: · Notes:
-- [ ] **FI6** After 21:00, the idea buttons read "+ Snacks", and a Recent or Saved Food chosen on the Ideas half has Snacks picked for it.
+- [x] **FI6** After 21:00, the idea buttons read "+ Snacks", and a Recent or Saved Food chosen on the Ideas half has Snacks picked for it.
   - iOS: Result: · Android: Result: · Notes:
-- [ ] **TB2** From Profile's "Exercise library", tap an Exercise: its detail opens. Back (the header's arrow, and on the iPhone a swipe from the left edge; on Android the system back) returns to the library, and again to Profile.
+- [x] **TB2** From Profile's "Exercise library", tap an Exercise: its detail opens. Back (the header's arrow, and on the iPhone a swipe from the left edge; on Android the system back) returns to the library, and again to Profile.
   - iOS: Result: · Android: Result: · Notes:
 
 ## Ranges and rings (#189)
 
-- [ ] **RR1** On the Food tab, log food until kcal and protein pass through each state, in light and in dark: below, the ring is orange with what's left to the bottom of its range; in range, full and green with the amount and "in range"; over, a red second lap you can tell from the green under it, with how far over. Today's rings show the same, and the Coach's summary agrees with both.
+- [x] **RR1** On the Food tab, log food until kcal and protein pass through each state, in light and in dark: below, the ring is orange with what's left to the bottom of its range; in range, full and green with the amount and "in range"; over, a red second lap you can tell from the green under it, with how far over. Today's rings show the same, and the Coach's summary agrees with both.
   - iOS: Result: · Android: Result: · Notes:
-- [ ] **RR2** Log far too much (over twice a target): the red lap is full and goes no further. Fibre, water and the Workout rings stay orange.
+- [x] **RR2** Log far too much (over twice a target): the red lap is full and goes no further. Fibre, water and the Workout rings stay orange.
   - iOS: Result: · Android: Result: · Notes:
-- [ ] **RR3** With VoiceOver or TalkBack on, each kcal and protein ring says its state in words: left to be in range, in range, or over the range.
+- [x] **RR3** With VoiceOver or TalkBack on, each kcal and protein ring says its state in words: left to be in range, in range, or over the range.
   - iOS: Result: · Android: Result: · Notes:
 
 ## Nutrition History (#191)
 
-- [ ] **NH1** Tap the Food tab's kcal ring, then go back and tap protein: Nutrition History opens on each. Today's rings still open the Food tab itself. Back (the header's arrow, the iPhone's swipe, Android's system back) returns to the day.
+- [x] **NH1** Tap the Food tab's kcal ring, then go back and tap protein: Nutrition History opens on each. Today's rings still open the Food tab itself. Back (the header's arrow, the iPhone's swipe, Android's system back) returns to the day.
   - iOS: Result: · Android: Result: · Notes:
-- [ ] **NH2** In light and in dark, this week and one with days below, in range and over: the bars are orange, green and red as those days' rings are, the band and the dotted average are clear behind and over them, and no number overlaps another. Change your Goal: from today the band steps, and the days before keep theirs. Days with nothing logged (or only water) are empty slots, and the average leaves them and today out.
+- [x] **NH2** In light and in dark, this week and one with days below, in range and over: the bars are orange, green and red as those days' rings are, the band and the dotted average are clear behind and over them, and no number overlaps another. Change your Goal: from today the band steps, and the days before keep theirs. Days with nothing logged (or only water) are empty slots, and the average leaves them and today out.
   - iOS: Result: · Android: Result: · Notes:
-- [ ] **NH3** The arrows go back to the week of your first Food Entry and stop, and forward no later than this week. Tap each bar and an empty slot: its amount, range and state show below. Leave this week open in the background overnight and come back: today has moved on, and after a Sunday it's the new week, with the old one an arrow back.
+- [x] **NH3** The arrows go back to the week of your first Food Entry and stop, and forward no later than this week. Tap each bar and an empty slot: its amount, range and state show below. Leave this week open in the background overnight and come back: today has moved on, and after a Sunday it's the new week, with the old one an arrow back.
   - iOS: Result: · Android: Result: · Notes:
-- [ ] **NH4** With VoiceOver or TalkBack on, each day says its name, amount, range and state, or that nothing is logged. In airplane mode, opening it says it needs a connection; back online, Try again loads it.
+- [x] **NH4** With VoiceOver or TalkBack on, each day says its name, amount, range and state, or that nothing is logged. In airplane mode, opening it says it needs a connection; back online, Try again loads it.
   - iOS: Result: · Android: Result: · Notes:
 
 ## When the server isn't answering (#170, #174)
 
 Needs the phone online with the API stopped, or the server otherwise unreachable while the phone has a network.
 
-- [ ] **NA1** With the app already open, stop the API, then search for a food, Save a food's portion and Log weight. Each stops loading within 15 s and says "Fit Coach isn't answering. Check your connection, or try again in a minute.", not that it needs a connection. Today, the Food tab and History say Fit Coach can't be reached, not "No connection". Start the API again: everything works without restarting the app.
+- [x] **NA1** With the app already open, stop the API, then search for a food, Save a food's portion and Log weight. Each stops loading within 15 s and says "Fit Coach isn't answering. Check your connection, or try again in a minute.", not that it needs a connection. Today, the Food tab and History say Fit Coach can't be reached, not "No connection". Start the API again: everything works without restarting the app.
   - iOS: Result: · Android: Result: · Notes:
 
 ## Sentry (#122)
