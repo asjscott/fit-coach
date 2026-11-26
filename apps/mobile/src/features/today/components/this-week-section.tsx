@@ -10,16 +10,19 @@ import { useWeightUnit } from "@/features/user/current-user-provider";
 
 const workoutsLabel = (n: number) => `${n} ${n === 1 ? "Workout" : "Workouts"}`;
 
-// This week so far: Workouts done against days per week, the week's Sets, Volume and Time, and the days trained.
-// Offline only the Pending Workouts are known, so the stats would be wrong and give way to a note
+// This week so far: Workouts done against days per week, the week's Sets, Volume and Time, the days trained, and the
+// Weekly Streak. Offline only the Pending Workouts are known, so the stats would be wrong and give way to a note
 export function ThisWeekSection({
   week,
   state,
   now,
+  streak,
 }: {
   week: ThisWeek;
   state: Exclude<TodayState, "loading">;
   now: Date;
+  // In weeks; left out at zero, and when it can't be worked out
+  streak: number | null;
 }) {
   const unit = useWeightUnit();
   const { colors } = useTheme();
@@ -63,6 +66,11 @@ export function ThisWeekSection({
         </View>
       </View>
       <DayCircles days={week.days} />
+      {streak ? (
+        <View style={[styles.streak, { backgroundColor: colors.raised }]}>
+          <Text weight="semiBold">{`🔥 ${streak}-week streak`}</Text>
+        </View>
+      ) : null}
     </View>
   );
 }
@@ -70,4 +78,11 @@ export function ThisWeekSection({
 const styles = StyleSheet.create({
   tiles: { flexDirection: "row", gap: spacing[3] },
   tile: { flex: 1, minHeight: 112, gap: 2, padding: spacing[3], borderRadius: radii.md },
+  streak: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    padding: spacing[3],
+    borderRadius: radii.md,
+  },
 });
