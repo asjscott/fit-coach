@@ -1,5 +1,6 @@
 import type { ThisWeek } from "@fit/engines";
 import { StyleSheet, View } from "react-native";
+import { Pressable } from "@/components/pressable";
 import { Ring } from "@/components/ring";
 import { Text } from "@/components/text";
 import { timeStat, volumeLabel, weekDatesLabel } from "@/features/workouts/format";
@@ -17,12 +18,15 @@ export function ThisWeekSection({
   state,
   now,
   streak,
+  onLastWeek,
 }: {
   week: ThisWeek;
   state: Exclude<TodayState, "loading">;
   now: Date;
   // In weeks; left out at zero, and when it can't be worked out
   streak: number | null;
+  // Opens the week before's Week Summary; null once the next one is due (lastWeekLink)
+  onLastWeek: (() => void) | null;
 }) {
   const unit = useWeightUnit();
   const { colors } = useTheme();
@@ -66,9 +70,16 @@ export function ThisWeekSection({
         </View>
       </View>
       <DayCircles days={week.days} />
-      {streak ? (
+      {streak || onLastWeek ? (
         <View style={[styles.streak, { backgroundColor: colors.raised }]}>
-          <Text weight="semiBold">{`🔥 ${streak}-week streak`}</Text>
+          <Text weight="semiBold">{streak ? `🔥 ${streak}-week streak` : ""}</Text>
+          {onLastWeek ? (
+            <Pressable onPress={onLastWeek} accessibilityRole="link" hitSlop={8}>
+              <Text size="sm" weight="semiBold" color="accent">
+                Last week ›
+              </Text>
+            </Pressable>
+          ) : null}
         </View>
       ) : null}
     </View>

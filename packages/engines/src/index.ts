@@ -50,6 +50,7 @@ export * from "./week-ledger";
 export * from "./weekly-streak";
 export * from "./weekly-budget";
 export * from "./week-summary";
+export * from "./week-verdict";
 export * from "./workout-length";
 export * from "./working-level-sections";
 export * from "./target-range";

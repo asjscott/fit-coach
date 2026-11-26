@@ -23,6 +23,15 @@ export function weekSummaryToAsk({
   return latest;
 }
 
+// The Monday of the week "Last week" in This week opens, or null. It's the week before this one, from Monday until its
+// own Week Summary's card takes over at 6 pm on Sunday, when the link goes. The week the user onboarded has none before
+export function lastWeekLink({ now, timeZone, onboardedAt }: { now: Date; timeZone: string; onboardedAt: string }) {
+  const latest = latestWeekSummaryMonday(now, timeZone);
+  if (latest === mondayOf(now, timeZone)) return null;
+  if (latest < mondayOf(new Date(onboardedAt), timeZone)) return null;
+  return latest;
+}
+
 export type WeekSummaryBar = {
   label: string;
   value: string;
@@ -51,7 +60,7 @@ function averageBar(label: string, average: WeekAverage, unit: string): WeekSumm
 
 // The Week Summary card's bars (prototype variant C), in order: Workouts done against planned, average kcal and
 // protein against their ranges, and the Weekly Budget met. A part the week has no data for has no bar
-export function weekSummaryBars({ workouts, kcal, protein, weeklyBudget }: WeekSummary): WeekSummaryBar[] {
+export function weekSummaryBars({ workouts, kcal, protein, weeklyBudget, deload }: WeekSummary): WeekSummaryBar[] {
   const bars: WeekSummaryBar[] = [
     {
       label: "Workouts",
@@ -62,7 +71,10 @@ export function weekSummaryBars({ workouts, kcal, protein, weeklyBudget }: WeekS
   ];
   if (kcal) bars.push(averageBar("Calories", kcal, ""));
   if (protein) bars.push(averageBar("Protein", protein, " g"));
-  if (weeklyBudget) {
+  // A deload week is lighter on purpose, so it isn't measured against the budget
+  if (weeklyBudget && deload) {
+    bars.push({ label: "Weekly Budget", value: "Deload: lighter on purpose", fill: 1, tone: "success" });
+  } else if (weeklyBudget) {
     const { met, muscles } = weeklyBudget;
     bars.push({
       label: "Weekly Budget",

@@ -1,6 +1,6 @@
 import type { WeekSummary } from "@fit/shared";
 import { describe, expect, it } from "vitest";
-import { weekSummaryBars, weekSummaryToAsk } from "./week-summary-card";
+import { lastWeekLink, weekSummaryBars, weekSummaryToAsk } from "./week-summary-card";
 
 const week = (parts: Partial<WeekSummary> = {}): WeekSummary => ({
   monday: "2026-11-23",
@@ -9,6 +9,7 @@ const week = (parts: Partial<WeekSummary> = {}): WeekSummary => ({
   partWeek: false,
   workouts: { done: 3, planned: 3 },
   streak: 4,
+  coach: { sentence: "A full week.", line: "Every Workout done." },
   ...parts,
 });
 
@@ -18,9 +19,9 @@ describe("weekSummaryBars", () => {
     expect(
       weekSummaryBars(
         week({
-          kcal: { average: 2870, min: 2720, max: 3010, state: "in" },
+          kcal: { average: 2870, min: 2720, max: 3010, state: "in", days: [] },
           protein: { average: 171, min: 144, max: 192, state: "in" },
-          weeklyBudget: { met: 7, muscles: 9 },
+          weeklyBudget: { met: 7, muscles: 9, short: [] },
         }),
       ),
     ).toEqual([
@@ -36,9 +37,9 @@ describe("weekSummaryBars", () => {
       weekSummaryBars(
         week({
           workouts: { done: 1, planned: 3 },
-          kcal: { average: 2040, min: 2720, max: 3010, state: "below" },
+          kcal: { average: 2040, min: 2720, max: 3010, state: "below", days: [] },
           protein: { average: 230, min: 144, max: 192, state: "over" },
-          weeklyBudget: { met: 0, muscles: 9 },
+          weeklyBudget: { met: 0, muscles: 9, short: [] },
         }),
       ),
     ).toEqual([
@@ -54,6 +55,17 @@ describe("weekSummaryBars", () => {
     expect(weekSummaryBars(week({ workouts: { done: 0, planned: 2 } }))).toEqual([
       { label: "Workouts", value: "0 of 2", fill: 0, tone: "accent" },
     ]);
+  });
+
+  // Story 54: a light week isn't read as a bad one
+  it("reads the Weekly Budget as lighter on purpose on a deload week", () => {
+    const bars = weekSummaryBars(week({ deload: true, weeklyBudget: { met: 2, muscles: 9, short: [] } }));
+    expect(bars.at(-1)).toEqual({
+      label: "Weekly Budget",
+      value: "Deload: lighter on purpose",
+      fill: 1,
+      tone: "success",
+    });
   });
 });
 
@@ -82,5 +94,31 @@ describe("weekSummaryToAsk", () => {
 
   it("doesn't ask for a week before the user onboarded", () => {
     expect(asks("2026-11-20T16:00:00Z")).toBeNull();
+  });
+});
+
+// Story 41: "Last week" in This week opens the week before's Week Summary until the next one is due, at 6 pm on Sunday,
+// when that one's card takes over. Onboarded on Wednesday 18 November 2026; Denver is UTC−7
+describe("lastWeekLink", () => {
+  const link = (iso: string) =>
+    lastWeekLink({ now: new Date(iso), timeZone: "America/Denver", onboardedAt: "2026-11-18T19:00:00Z" });
+
+  it("opens the week before, from Monday until 6 pm on Sunday in the user's timezone", () => {
+    expect(link("2026-11-30T08:00:00Z")).toBe("2026-11-23");
+    expect(link("2026-12-07T00:59:00Z")).toBe("2026-11-23");
+  });
+
+  it("is gone once the next Week Summary is due", () => {
+    expect(link("2026-12-07T01:00:00Z")).toBeNull();
+    // And back on Monday, for the week that just ended
+    expect(link("2026-12-07T08:00:00Z")).toBe("2026-11-30");
+  });
+
+  it("opens the part first week", () => {
+    expect(link("2026-11-25T16:00:00Z")).toBe("2026-11-16");
+  });
+
+  it("isn't there in the week the user onboarded", () => {
+    expect(link("2026-11-20T16:00:00Z")).toBeNull();
   });
 });

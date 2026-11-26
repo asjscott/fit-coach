@@ -417,6 +417,21 @@ Needs a Sunday evening, both phones signed in to the same account, and the iPhon
 - [ ] **WC4** In airplane mode on a Sunday after 6 pm (or later in the week, before the card has been seen), open the app: no card. Turn airplane mode off and bring the app back to the front: the card shows, so the offline open didn't count as seen. If you opened it on Monday instead, the card is still the week just ended.
   - iOS: Result: · Android: Result: · Notes:
 
+## Week Summary screen and Last week (#211)
+
+Needs a week with Workouts, food, a Weigh-in and Check-ins, and for WS4 the deload week (the 5th week of the Block, counted from the Monday of the Assessment's week). Light and dark for each.
+
+- [ ] **WS1** Tap the Week Summary card: the Week Summary screen opens (prototype variant B), with the week's dates, the Coach's sentence ("A full week, and two PRs.") and the line under it, then tiles for Workouts, the streak, kcal and protein a day, the change since the last Weigh-in, and Readiness against the week before. Back returns to Today.
+  - iOS: Result: · Android: Result: · Notes:
+- [ ] **WS2** Under the tiles: "Weekly Budget · N of M met" with a chip for each Muscle short of it ("Calves 2/5"), then Progress with each PR ("⭐ PR · …" over what it beat) and each Exercise whose Working Level moved ("↑ 44 lb × 10", or "↓ back to … , missed twice"), then a bar for each day's kcal: green in range, orange under, red over, none on a day with no food logged. Weights are in your unit: switch kg and lb on Profile and open it again.
+  - iOS: Result: · Android: Result: · Notes:
+- [ ] **WS3** On Today from Monday to Sunday before 6 pm, This week has "Last week ›" at the right of the streak row (with no streak, on its own). It opens the screen for the week before. From 6 pm on Sunday it's gone, and the new card opens the week just ended. It isn't there in the week you onboarded.
+  - iOS: Result: · Android: Result: · Notes:
+- [ ] **WS4** In the week after a deload week, open "Last week": the screen says "DELOAD WEEK" over the dates and "A deload week, lighter on purpose.", and the Weekly Budget reads "Deload: lighter on purpose" with no Muscles listed as short. The card's Weekly Budget bar says the same.
+  - iOS: Result: · Android: Result: · Notes:
+- [ ] **WS5** A week with no Weigh-in and no Check-ins has no Weigh-in or Readiness tile, and one with no food logged no kcal or protein tile and no "Calories each day". A week with nothing logged at all says "A quiet week." In airplane mode the screen says it needs a connection, with Try again.
+  - iOS: Result: · Android: Result: · Notes:
+
 ## When the server isn't answering (#170, #174)
 
 Needs the phone online with the API stopped, or the server otherwise unreachable while the phone has a network.

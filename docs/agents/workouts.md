@@ -22,8 +22,12 @@ Weekly Streak (packages/engines/src/weekly-streak.ts): weeklyStreak, in the user
 Week Summary (apps/api/src/week-summaries.ts, routes/week-summaries.ts): GET /week-summaries/:monday (or latest, the
   week just ended: latestWeekSummaryMonday in packages/engines/src/week-summary.ts) worked out live; only "seen" is
   stored (weekSummariesSeen, unique on user and week), set by PUT /week-summaries/:monday/seen. A new part is worked out
-  in weekSummaryOf from WeekData and added to WeekSummary (packages/shared/src/week-summaries.ts) as optional. Today's
-  card: useWeekSummaryCard and week-summary-card.tsx in features/today
+  in weekSummaryOf from WeekData and added to WeekSummary (packages/shared/src/week-summaries.ts) as optional. The
+  Coach's sentence: weekVerdict (packages/engines/src/week-verdict.ts), ordered templates, the first that matches wins.
+  Working Level moves come from each level's last move (movedBy, change), so a level moved again later shows as it is
+  now. Today's card: useWeekSummaryCard and week-summary-card.tsx in features/today; the screen (/week-summary?monday=)
+  is views/week-summary-view.tsx with its parts in week-summary-screen.ts, opened from the card and from "Last week"
+  in This week (lastWeekLink)
 Training summaries (packages/engines/src/training-summaries.ts): Volume, Sets, weeks, weekly Volume and the Previous
   Sets selection, pure functions
 API (apps/api/src/workouts.ts, routes/workouts.ts): idempotent POST, paged GET (before + beforeId), DELETE, and
