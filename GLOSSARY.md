@@ -196,6 +196,16 @@ _Avoid_: Personal best, record, PB
 How many weeks in a row the user has finished at least one fewer Workout than their days per week, Recovery Workouts included. Weeks run Monday to Sunday, as the Week Ledger does.
 _Avoid_: Streak (alone), consistency score
 
+### The day and the week
+
+**Day Summary**:
+What the Coach says about the day in the evening, from 6 to 10 pm on Today: the Workout done, or a Rest Day kept, or none; the calories and protein logged against their ranges; and tomorrow, a training day with its Planned Workout or a Rest Day, with tomorrow's calories and protein. It's never sent, only shown when the app is open. Until the day is finished it's a receipt under the Coach's Nudge, with tomorrow in one line; once the user has trained or kept a Rest Day and their calories are in range or over, tomorrow leads, and it takes the place of the Coach's Nudge and the day's Workout card.
+_Avoid_: Evening summary, daily summary, daily report
+
+**Week Summary**:
+What the Coach says about the week just ended, Monday to Sunday, shown on Today once, the first time the app is opened after 6 pm on Sunday on any of the user's devices, and found again from This week until the next one: Workouts done against planned, the Weekly Streak, the Weekly Budget met per Muscle, PRs and Exercises that progressed or dropped, average calories and protein against their ranges, the change since the last Weigh-in, and the Readiness trend. It's worked out from the week whenever it's shown, so something logged late still counts.
+_Avoid_: Weekly review, weekly report, recap
+
 ### Nutrition and activity
 
 **Food Entry**:
@@ -237,6 +247,10 @@ _Avoid_: Dietary preference, restrictions, allergies (alone)
 **Food Idea**:
 A food from the Coach's own list, with a set portion, that it suggests to fill what's left of the day's calories and protein. It never suggests one the user's Diet rules out.
 _Avoid_: Suggestion, recommendation, meal plan
+
+**Coach's Nudge**:
+The line under the rings on Today saying what's left of the day's calories and protein, and how a Food Idea could fill it. In the evening, once the day is finished, the Day Summary replaces it.
+_Avoid_: Coach's summary, summary (alone), food summary
 
 **Activity**:
 Training done outside the app, such as a run, a ride or a game of a sport: its type, duration and effort, logged by hand, told to the Coach or imported from Strava, on the day it was done. It adds Fatigue to the Muscles its type works and credits part of its calories to the day.

@@ -1,3 +1,7 @@
+---
+status: superseded by ADR-0009
+---
+
 # Scheduled jobs through GitHub Actions
 
 The evening summary and the Sunday review need something to run at a time of day. The Build plan used Agenda inside the API, but on Render's free instance the API sleeps after 15 minutes, and a sleeping process runs no timers. So a scheduled GitHub Actions workflow calls `POST /jobs/run` with a shared secret every hour. The call wakes the API, which works out which jobs are due in the user's timezone, runs them and records each run, so a late, missed or repeated call never sends twice or skips a day.

@@ -6,7 +6,7 @@ The detail here is kept brief on purpose. Each milestone gets its own spec issue
 
 ## What we're building
 
-Fit Coach is a personal trainer for its author, in Vancouver, BC, and one or two people they invite. You tell the Coach what you did and ate, today or yesterday, and it tells you what to do today or tomorrow. The Coach plans each strength Workout from the equipment on hand, the week so far, other activities like runs and rides, and how the user feels, then moves each Exercise forward as the user gets stronger. Around that it adds the things that decide whether training works: food logged against targets with a nudge on what's left, body weight, a summary each evening that says what tomorrow holds, a review each Sunday, and a view of progress over months.
+Fit Coach is a personal trainer for its author, in Vancouver, BC, and one or two people they invite. You tell the Coach what you did and ate, today or yesterday, and it tells you what to do today or tomorrow. The Coach plans each strength Workout from the equipment on hand, the week so far, other activities like runs and rides, and how the user feels, then moves each Exercise forward as the user gets stronger. Around that it adds the things that decide whether training works: food logged against targets with a nudge on what's left, body weight, a summary each evening that says what tomorrow holds, a summary of the week each Sunday, and a view of progress over months.
 
 Structured logging is the backbone: Sets are logged live, offline, as progression needs them exact. A "Tell the coach" text box on Today ("yesterday I ran 10k, had eggs and toast") is the quick way in, and becomes dated Food Entries and Activities behind a confirm screen. See [ADR 0008](adr/0008-a-few-invited-users-and-tomorrow.md).
 
@@ -21,14 +21,13 @@ It is not a product for the public. Sign-up is invite-only, and there are no app
 
 ## Hosting
 
-| Piece      | Production (`main`) | Development (`dev`)                                           |
-| ---------- | ------------------- | ------------------------------------------------------------- |
-| Web app    | Cloudflare Pages    | Not deployed: Expo on the user's Mac                          |
-| API        | Render free service | `pnpm --filter @fit/api dev` on the user's Mac                |
-| Database   | Atlas M0            | The database in `apps/api/.env`, kept apart from production's |
-| Auth       | Clerk free          | Clerk development instance                                    |
-| Scheduling | GitHub Actions cron | Run by hand                                                   |
-| Errors     | Sentry free         | None: no DSN locally                                          |
+| Piece    | Production (`main`) | Development (`dev`)                                           |
+| -------- | ------------------- | ------------------------------------------------------------- |
+| Web app  | Cloudflare Pages    | Not deployed: Expo on the user's Mac                          |
+| API      | Render free service | `pnpm --filter @fit/api dev` on the user's Mac                |
+| Database | Atlas M0            | The database in `apps/api/.env`, kept apart from production's |
+| Auth     | Clerk free          | Clerk development instance                                    |
+| Errors   | Sentry free         | None: no DSN locally                                          |
 
 Only `main` is ever deployed. `dev` runs only on the user's Mac, and the phones run Release builds that talk to the API there over Wi-Fi, so each milestone is lived with at home as it lands. This replaced a staging deploy of `dev` on 2026-11-15 (#121, closed). `main` takes only finished milestones.
 
@@ -137,7 +136,7 @@ As settled for this milestone. Spec #176 later changed what a Miss is and how fa
 - **Food log.** Each Food Entry keeps a snapshot of the food's kcal, protein, carbs, fat and fibre and the portion, as [ADR 0002](adr/0002-previous-sets-are-a-snapshot.md) does for Sets. Portions in grams, or the food's own servings where the source has them. Logging food needs a connection; there is no offline queue.
 - **Finding food:** search on USDA FoodData Central (free key), generic foods (Foundation and SR Legacy) first and branded after; barcodes on Open Food Facts, then USDA's branded data by UPC. When neither has it, Create food from the label makes a Saved Food, linked to the barcode so the next scan finds it. Recent is the user's own log, most recent first. "Copy from yesterday" copies one meal into the same meal, after what's there. The Canadian Nutrient File only if gaps show up.
 - **Food Ideas:** a list of about 40 high-protein foods shipped with the app, each with a set portion and tagged meat, fish, vegetarian or vegan. The Coach offers the two with the most protein per kcal that fit in the kcal left and that the Diet allows (any, pescatarian, vegetarian or vegan, plus foods to avoid: dairy, gluten, nuts, pork). Add puts one in the meal for the time of day: Breakfast before 11, Lunch before 4 pm, Dinner before 9 pm, Snacks after. Once protein is met, ideas stop. Search and barcodes are never filtered by the Diet.
-- **Daily totals** are worked out when needed, not stored, until M8's weekly review needs them stored.
+- **Daily totals** are worked out when needed, not stored.
 - **Tell the coach (last ticket; may move to M8 without holding up M7):** a text box on Today. "Yesterday I had two eggs and toast" becomes dated Food Entries through a provider-agnostic interface, on Gemini Flash's free tier, with a confirm screen and a portion slider. Food descriptions only, never photos. M10 extends the same box to Activities.
 - **API keys stay on the server;** the API proxies USDA and Gemini.
 
@@ -165,16 +164,20 @@ As settled for this milestone. Spec #176 later changed what a Miss is and how fa
 
 ## M8 Daily loop
 
-**Goal:** the app reaches out at the right time with something useful. See [ADR 0006](adr/0006-scheduled-jobs-through-github-actions.md).
+**Goal:** when the app is opened, it sums up the day and the week. Grilled on 2026-11-26; nothing is sent, as [ADR 0009](adr/0009-summaries-on-opening-no-notifications.md) records, replacing web push and the cron of [0006](adr/0006-scheduled-jobs-through-github-actions.md). Templates only, no LLM. The screens come from the prototype on the `prototype/m8-summaries` branch: Today's variant C, "Tomorrow first", and the Week Summary screen's variant B, "Scorecard" ([screenshots](https://claude.ai/artifact/8iGLc4bWdTWakEzUuSu3NE)).
 
-- **Web push.** VAPID keys on the server, a subscription saved per device. iOS only delivers it to the installed PWA (iOS 16.4+).
-- **Scheduled jobs.** A GitHub Actions workflow runs hourly and POSTs to `/jobs/run` with a secret. That wakes the Render instance, which, for each user, runs whatever is due in that user's timezone and records that it ran, so a late or repeated call never sends twice. Agenda is dropped.
-- **Evening summary, due at 6 pm so it arrives by 7, templated:** "Push day done ✅ · 1,840 / 2,300 kcal · 120 g protein · Tomorrow: Legs, Standard", or "Tomorrow: Rest Day · next up Legs" when the Rest Day rule says so, with tomorrow's kcal and protein targets. It reads kcal and protein against their ranges (#188). It says "tomorrow" again ([ADR 0008](adr/0008-a-few-invited-users-and-tomorrow.md) reverses that part of [0004](adr/0004-spec-77-replaces-the-plans-m5.md)).
-- **Sunday weekly review**, in the app and announced by push: Workouts done against planned and the Weekly Streak; the Weekly Budget met per Muscle; PRs and Exercises that progressed or dropped; average kcal and protein against their ranges; the change since last week's Weigh-in; the Readiness trend from Check-ins.
-- **Weekly Streak.** A week counts when the user finishes at least `daysPerWeek − 1` Workouts, Recovery Workouts included. No freezes. Weeks run Monday to Sunday, as the Week Ledger does.
-- The PDF's event bus is dropped unless the spec finds a need. An LLM sentence in the summary is optional, through M7's interface.
+- **Day Summary,** from 6 to 10 pm on Today, as a receipt of the day: a row for the Workout, named by up to three of its most-credited Muscles with its Sets and time ("✅ Chest, back and quads · 18 Sets · 48 min"), or "✅ Mobility · 20 min", "✅ Rest Day" or "○ No workout yet"; a row each for kcal and protein against their ranges ("○ Calories 2,080 / 2,980"), or "No food logged"; and tomorrow, from the current Planned Workout and the Rest Day rule run for tomorrow, with tomorrow's kcal and protein targets. Protein never decides whether the day is finished. Two Workouts merge into one row; Manual and backdated Workouts count. Offline, it's made from what Today has cached, or hidden if there's nothing.
+- **Unfinished day:** Today stays as it is, the Coach's Nudge and the Workout card, with the receipt under the Nudge and tomorrow as one line at its foot.
+- **Finished day** (trained today, Recovery Workouts included, or kept a recommended Rest Day, and kcal in range or over): tomorrow leads. A big Tomorrow card ("Rest." or tomorrow's Workout, why, and tomorrow's targets, with "See the next Workout ›") and the receipt under it take the place of the Coach's Nudge, the Workout card ("Done for today.", "Train again") and the Rest-between-Sets, Mobility and Walk-and-mobility links.
+- Before 6 pm and after 10 pm Today is as before.
+- **Week Summary,** for the Monday-to-Sunday week just ended, shown on Today the first time the app comes to the front after 6 pm on Sunday, on either phone, for the rest of that visit. "Seen" is kept on the server per user and week; an offline open doesn't count. On a Sunday evening it comes first, above the Tomorrow card. A "Last week" link in This week opens it again until the next one.
+  - **Card** (prototype variant C): a ring and the streak, then bars for Workouts done against planned (`daysPerWeek`, pro-rated for a part week), average kcal and protein against their ranges, and the Weekly Budget met; the change since the last Weigh-in is on the screen.
+  - **Screen** (prototype variant B, a scorecard): the Coach's sentence on the week; tiles for Workouts, the streak, kcal and protein a day, the Weigh-in change and average Readiness against the week before; the Muscles short of their Weekly Budget; PRs and Exercises that moved up or down; kcal for each day. A deload week says so, and its Weekly Budget reads "Deload: lighter on purpose".
+  - Worked out live whenever it's shown, so something logged late counts. Whatever has no data is left out, not shown as zero.
+- **Weekly Streak.** A week counts when the user finishes at least `daysPerWeek − 1` Workouts, Recovery Workouts included. No freezes; a part first week isn't held against the user. Worked out from History, shown in the Week Summary and in This week, and the current week counts once it reaches the number.
+- Nothing else is stored: no daily totals, no job runs.
 
-**Done when:** two weeks of evening summaries and two Sunday reviews arrive on the phone, on time to within about an hour, with no duplicates.
+**Done when:** it has passed its manual checks on the phones' Release builds, and two weeks of Day Summaries and two Week Summaries have been lived with on them.
 
 ## M12 Progress
 
@@ -200,7 +203,7 @@ As settled for this milestone. Spec #176 later changed what a Miss is and how fa
 
 - The table from Activity type and effort to Muscles and credited Sets.
 - What counts as a hard Activity for the Rest Day rule.
-- Strava: webhooks into a sleeping Render instance, or polling from the M8 cron.
+- Strava: webhooks into a sleeping Render instance, or importing when the app is opened (M8 has no cron, [ADR 0009](adr/0009-summaries-on-opening-no-notifications.md)).
 
 **Done when:** a week with runs or rides, logged and imported, changes the Planned Workouts as expected.
 
@@ -229,7 +232,6 @@ Demo videos, TestFlight, Play and GDPR flows are dropped, and Sentry moved to M6
 
 - **Render's free API sleeps** after 15 minutes and takes about 50 seconds to wake. Offline-first hides it for logging; Today should show the cached Planned Workout while it wakes.
 - **Expo has no service worker of its own**, so M6's offline ticket adds a build step (Workbox or similar). Clerk must also let the app open offline with the cached session.
-- **GitHub Actions minutes.** The repository is private, with 2,000 free minutes a month, and each run bills at least a minute. An hourly cron for production is about 725 minutes, alongside CI. If that's too tight, the cron runs only in the evening hours. It can also run late.
 - **Gemini's free tier** can change its terms or limits, and has to cover three users' "Tell the coach" boxes; the provider interface keeps it swappable, and M7's core doesn't need it.
 - **iOS can clear a PWA's storage** under pressure. History on the server and `storage.persist()` limit the loss to Pending Workouts.
 - **Atlas M0** has 512 MB, plenty for one user, even with a development database beside production's.
