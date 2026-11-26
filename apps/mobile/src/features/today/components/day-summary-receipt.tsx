@@ -3,7 +3,7 @@ import { Text } from "@/components/text";
 import { radii, spacing, useTheme, type ColorToken } from "@/theme";
 import { foodRows, tomorrowLine, workoutRow, type DaySummary, type RangeRow, type ReceiptRow } from "../day-summary";
 
-const STATE_COLORS: Record<RangeRow["state"], ColorToken> = { under: "muted", in: "success", over: "danger" };
+const STATE_COLORS: Record<RangeRow["state"], ColorToken> = { below: "muted", in: "success", over: "danger" };
 
 function Row({ row, detailColor }: { row: ReceiptRow; detailColor: ColorToken }) {
   return (

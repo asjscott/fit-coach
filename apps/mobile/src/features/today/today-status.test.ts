@@ -275,7 +275,7 @@ describe("a Mobility Workout's list", () => {
   it("gives each hold's time, its sides and changes included", () => {
     expect(mobilityHoldLine(hold("pigeon", 1, 45), "45 s per side")).toBe("1 min 50 s · 45 s per side");
     expect(mobilityHoldLine(hold("cat-cow", 1, 45), "45 s")).toBe("55 s · 45 s");
-    expect(mobilityHoldLine(hold("foam-roll-quads", 2, 50), "50 s")).toBe("2 min · 2 sets · 50 s");
+    expect(mobilityHoldLine(hold("foam-roll-quads", 2, 50), "50 s")).toBe("2 min · 2 Sets · 50 s");
   });
 
   it("gives the total", () => {

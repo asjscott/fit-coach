@@ -9,7 +9,7 @@ import { Screen } from "@/components/screen";
 import { Spinner } from "@/components/spinner";
 import { Text } from "@/components/text";
 import { useWeightUnit } from "@/features/user/current-user-provider";
-import { weekDatesLabel } from "@/features/workouts/format";
+import { mondayWeekDatesLabel } from "@/features/workouts/format";
 import { radii, spacing, useTheme } from "@/theme";
 import { useWeekSummary } from "../hooks/use-week-summary";
 import { budgetPart, dayBars, progressRows, weekSummaryTiles, type WeekSummaryTile } from "../week-summary-screen";
@@ -48,7 +48,7 @@ export default function WeekSummaryView() {
 function Scorecard({ summary }: { summary: WeekSummary }) {
   const { colors } = useTheme();
   const unit = useWeightUnit();
-  const dates = weekDatesLabel(new Date(`${summary.monday}T00:00:00`), new Date());
+  const dates = mondayWeekDatesLabel(summary.monday);
   const full = summary.workouts.done >= summary.workouts.planned;
   const budget = budgetPart(summary);
   const progress = progressRows(summary, unit);

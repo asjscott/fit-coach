@@ -1,4 +1,4 @@
-import { weekDates } from "@fit/engines";
+import { RANGE_STATE_WORDS, weekDates } from "@fit/engines";
 import { inUnitToStep, type WeekAverage, type WeekSummary, type WeightUnit } from "@fit/shared";
 import { muscleLabel } from "../exercises/labels";
 import { wholeNumber } from "../nutrition/format";
@@ -11,8 +11,12 @@ export type Tone = "text" | "success" | "accent" | "warning" | "danger";
 
 export type WeekSummaryTile = { big: string; label: string; tone: Tone };
 
-const STATE_WORDS: Record<WeekAverage["state"], string> = { below: "under", in: "in range", over: "over" };
-const STATE_TONES: Record<WeekAverage["state"], Tone> = { below: "warning", in: "success", over: "danger" };
+// How an average against its range is coloured, on the card's bars and the screen's tiles
+export const RANGE_STATE_TONES = {
+  below: "warning",
+  in: "success",
+  over: "danger",
+} as const satisfies Record<WeekAverage["state"], Tone>;
 
 // A signed number to a tenth, with a real minus: "−0.4", "+2"
 const signed = (value: number) => `${value < 0 ? "−" : value > 0 ? "+" : ""}${Math.abs(value).toLocaleString()}`;
@@ -34,19 +38,19 @@ export function weekSummaryTiles(summary: WeekSummary, unit: WeightUnit): WeekSu
       tone: workouts.done >= workouts.planned ? "success" : "accent",
     },
   ];
-  if (streak) tiles.push({ big: `🔥 ${streak}`, label: "Week streak", tone: "text" });
+  if (streak) tiles.push({ big: `🔥 ${streak}`, label: "Weekly Streak", tone: "text" });
   if (kcal) {
     tiles.push({
       big: wholeNumber(kcal.average),
-      label: `kcal a day · ${STATE_WORDS[kcal.state]}`,
-      tone: STATE_TONES[kcal.state],
+      label: `kcal a day · ${RANGE_STATE_WORDS[kcal.state]}`,
+      tone: RANGE_STATE_TONES[kcal.state],
     });
   }
   if (protein) {
     tiles.push({
       big: `${wholeNumber(protein.average)} g`,
-      label: `protein a day · ${STATE_WORDS[protein.state]}`,
-      tone: STATE_TONES[protein.state],
+      label: `protein a day · ${RANGE_STATE_WORDS[protein.state]}`,
+      tone: RANGE_STATE_TONES[protein.state],
     });
   }
   if (weighIn) {

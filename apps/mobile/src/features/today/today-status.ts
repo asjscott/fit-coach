@@ -9,7 +9,7 @@ import {
   type RestDayReason,
 } from "@fit/engines";
 import type { ActivityLevel, WeightUnit } from "@fit/shared";
-import { estimatedTimeLabel, secondsLabel, timeStat, volumeLabel } from "../workouts/format";
+import { estimatedTimeLabel, lengthLabel, secondsLabel, setsLabel, volumeLabel } from "../workouts/format";
 
 // Whether Today asks for the Activity Level (spec #158 story 4): only a user onboarded before it was asked has none,
 // and they're asked once. Skipped is undefined until the phone has read it
@@ -115,11 +115,10 @@ const counted = (n: number, noun: string) => `${n} ${noun}${n === 1 ? "" : "s"}`
 export function todayLoggedLine(workouts: readonly FinishedWorkoutSets[], weightUnit: WeightUnit) {
   const summaries = workouts.map(summarizeWorkout);
   const total = (field: "sets" | "durationMs" | "volumeKg") => summaries.reduce((sum, s) => sum + s[field], 0);
-  const { value, unit } = timeStat(total("durationMs"));
   const volumeKg = total("volumeKg");
   return [
-    counted(total("sets"), "Set"),
-    `${value} ${unit}`,
+    setsLabel(total("sets")),
+    lengthLabel(total("durationMs")),
     ...(volumeKg ? [`${volumeLabel(volumeKg, weightUnit)} ${weightUnit}`] : []),
   ].join(" · ");
 }
@@ -148,7 +147,7 @@ export const mobilityFocusLabels: Record<MobilityFocus, string> = {
 
 // How long a hold of a Mobility Workout takes, and how it's made up: "1 min 50 s · 45 s per side"
 export function mobilityHoldLine(hold: RecoveryExercise, setLabel: string) {
-  return [secondsLabel(holdTimeSeconds(hold)), ...(hold.sets > 1 ? [`${hold.sets} sets`] : []), setLabel].join(" · ");
+  return [secondsLabel(holdTimeSeconds(hold)), ...(hold.sets > 1 ? [setsLabel(hold.sets)] : []), setLabel].join(" · ");
 }
 
 // The whole list: "14 holds · About 20 min"
@@ -167,7 +166,7 @@ export function todayPlanLine(
   const sets = plannedExercises.reduce((sum, exercise) => sum + exercise.sets, 0);
   return [
     counted(plannedExercises.length, "Exercise"),
-    counted(sets, "Set"),
+    setsLabel(sets),
     estimatedTimeLabel(estimatedSeconds),
     ...(lighter ? [LIGHTER_AFTER_CHECK_IN.toLowerCase()] : []),
   ].join(" · ");

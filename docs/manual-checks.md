@@ -373,13 +373,13 @@ From 6 to 10 pm in your timezone. Change the phone's time in Settings (turn off 
 
 - [ ] **DS1** At 5:59 pm Today is as before. Leave the app open and go to 6:00 pm, then bring it back to the front: a "TODAY" receipt sits under the Coach's Nudge, and the rest of Today is unchanged. At 10:00 pm, back to the front again, it's gone.
   - iOS: Result: · Android: Result: · Notes:
-- [ ] **DS2** With nothing done and no Rest Day, the receipt says "○ No workout yet" and "○ No food logged". Log some food: on coming back to Today, Calories and Protein show against their targets, "○" while short, ✅ in range, and red with how far over once over, agreeing with the rings.
+- [ ] **DS2** With nothing done and no Rest Day, the receipt says "○ No Workout yet" and "○ No food logged". Log some food: on coming back to Today, Calories and Protein show against their targets, "○" while short, ✅ in range, and red with how far over once over, agreeing with the rings.
   - iOS: Result: · Android: Result: · Notes:
 - [ ] **DS3** Finish a Workout: the row names it by up to three Muscles with its Sets and time ("✅ Quads, glutes and chest · 10 Sets · 48 min"). Finish a second: they merge into one row. A Mobility Workout alone reads "✅ Mobility · 20 min", and a kept Rest Day "✅ Rest Day". Long names wrap; the numbers stay on one line.
   - iOS: Result: · Android: Result: · Notes:
 - [ ] **DS4** The line at the receipt's foot gives tomorrow: rest or the Workout's Muscles, a reason, and tomorrow's kcal and protein. With no Planned Workout (before the Assessment) or a stale one, it's left out.
   - iOS: Result: · Android: Result: · Notes:
-- [ ] **DS5** In airplane mode, after Today has loaded the day once, the receipt still shows, with a Workout finished offline counted. Open the app fresh in airplane mode: no receipt. In light and dark, the receipt reads clearly.
+- [ ] **DS5** In airplane mode, after Today has loaded the day once, the receipt still shows once you finish a Workout offline, counting it; with none finished offline today it hides rather than say "No Workout yet". Open the app fresh in airplane mode: no receipt. In light and dark, the receipt reads clearly.
   - iOS: Result: · Android: Result: · Notes:
 
 ## Day Summary: the finished day (#209)
@@ -425,7 +425,7 @@ Needs a week with Workouts, food, a Weigh-in and Check-ins, and for WS4 the delo
   - iOS: Result: · Android: Result: · Notes:
 - [ ] **WS2** Under the tiles: "Weekly Budget · N of M met" with a chip for each Muscle short of it ("Calves 2/5"), then Progress with each PR ("⭐ PR · …" over what it beat) and each Exercise whose Working Level moved ("↑ 44 lb × 10", or "↓ back to … , missed twice"), then a bar for each day's kcal: green in range, orange under, red over, none on a day with no food logged. Weights are in your unit: switch kg and lb on Profile and open it again.
   - iOS: Result: · Android: Result: · Notes:
-- [ ] **WS3** On Today from Monday to Sunday before 6 pm, This week has "Last week ›" at the right of the streak row (with no streak, on its own). It opens the screen for the week before. From 6 pm on Sunday it's gone, and the new card opens the week just ended. It isn't there in the week you onboarded.
+- [ ] **WS3** On Today from Monday to Sunday before 6 pm, This week has "Last week ›" at the right of the streak row (with no streak, on its own). It opens the screen for the week before. From 6 pm on Sunday it opens the week just ended, as the new card does, and still does once the card has gone. It isn't there in the week you onboarded until 6 pm on its Sunday.
   - iOS: Result: · Android: Result: · Notes:
 - [ ] **WS4** In the week after a deload week, open "Last week": the screen says "DELOAD WEEK" over the dates and "A deload week, lighter on purpose.", and the Weekly Budget reads "Deload: lighter on purpose" with no Muscles listed as short. The card's Weekly Budget bar says the same.
   - iOS: Result: · Android: Result: · Notes:

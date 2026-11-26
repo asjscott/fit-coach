@@ -19,6 +19,7 @@ const input = (overrides: Partial<DaySummaryInput>): DaySummaryInput => ({
   timeZone: "UTC",
   workouts: [],
   day: loggedDay,
+  historyLoaded: true,
   restDayToday: null,
   daysPerWeek: 3,
   plannedWorkout: null,
@@ -138,7 +139,7 @@ describe("daySummary: the Workout", () => {
   it("says there's no Workout yet with nothing done and no Rest Day", () => {
     const summary = evenings({});
     expect(summary?.workout).toEqual({ kind: "none" });
-    expect(summary && workoutRow(summary.workout)).toEqual({ label: "○ No workout yet", detail: "" });
+    expect(summary && workoutRow(summary.workout)).toEqual({ label: "○ No Workout yet", detail: "" });
   });
 });
 
@@ -150,8 +151,8 @@ describe("daySummary: food", () => {
   it("is short of the kcal range, with protein short too", () => {
     const food = ate(2080, 120);
     expect(food).toEqual({
-      kcal: { amount: 2080, target: 2980, state: "under" },
-      protein: { amount: 120, target: 160, state: "under" },
+      kcal: { amount: 2080, target: 2980, state: "below" },
+      protein: { amount: 120, target: 160, state: "below" },
     });
     expect(foodRows(food)).toEqual([
       { label: "○ Calories", detail: "2,080 / 2,980 kcal" },
@@ -202,6 +203,7 @@ describe("daySummary: tomorrow", () => {
       rest: true,
       reason: "You've trained today, and this week's Workouts still fit.",
       targets: tomorrowTargets,
+      date: "2026-11-26",
     });
     expect(summary && tomorrowLine(summary.tomorrow)).toBe(
       "Tomorrow: Rest. You've trained today, and this week's Workouts still fit. 2,980 kcal · 160 g protein",
@@ -224,6 +226,7 @@ describe("daySummary: tomorrow", () => {
       muscles: ["quads", "glutes", "chest"],
       reason: "Chest is furthest behind this week.",
       targets: tomorrowTargets,
+      date: "2026-11-26",
     });
     expect(summary && tomorrowLine(summary.tomorrow)).toBe(
       "Tomorrow: Quads, glutes and chest. Chest is furthest behind this week. 2,980 kcal · 160 g protein",
@@ -241,12 +244,14 @@ describe("daySummary: tomorrow", () => {
   it("leads a finished day as the Tomorrow card: Rest or the Workout, why, and what to eat", () => {
     const rest = evenings({ workouts: [fullBody], plannedWorkout })?.tomorrow ?? null;
     expect(rest && tomorrowCard(rest)).toEqual({
+      weekday: "Thursday",
       headline: "Rest.",
       reason: "You've trained today, and this week's Workouts still fit.",
       targets: "Eat 2,980 kcal · 160 g protein",
     });
     const train = evenings({ workouts: [mobility], plannedWorkout })?.tomorrow ?? null;
     expect(train && tomorrowCard(train)).toEqual({
+      weekday: "Thursday",
       headline: "Quads, glutes and chest.",
       reason: "Chest is furthest behind this week.",
       targets: "Eat 2,980 kcal · 160 g protein",
@@ -300,9 +305,18 @@ describe("daySummary: finished", () => {
 describe("daySummary: offline", () => {
   it("is made from the cached day and the Pending Workouts", () => {
     const pending = { ...fullBody, isPending: true };
-    const summary = evenings({ workouts: [pending], restDayToday: "trained-today" });
+    const summary = evenings({ workouts: [pending], restDayToday: "trained-today", historyLoaded: false });
     expect(summary?.workout).toMatchObject({ kind: "trained", sets: 10 });
     expect(summary?.food).toMatchObject({ kcal: { state: "in" } });
+  });
+
+  // History didn't load, so a Workout already uploaded today is unknown: "No Workout yet" or a kept Rest Day could be
+  // wrong
+  it("is hidden when no Workout today is known, with History not loaded", () => {
+    const yesterday = { ...workout(local(24, 18), local(24, 19), [["goblet-squat", external(5)]]), isPending: true };
+    expect(evenings({ workouts: [yesterday], historyLoaded: false })).toBeNull();
+    expect(evenings({ workouts: [yesterday], historyLoaded: false, restDayToday: "trained-yesterday" })).toBeNull();
+    expect(evenings({ workouts: [yesterday], historyLoaded: true })?.workout).toEqual({ kind: "none" });
   });
 
   it("is hidden with no day cached", () => {

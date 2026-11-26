@@ -26,6 +26,9 @@ export function nutrientRange(nutrient: "kcal" | "proteinG", target: number): Nu
     : { min: percentOf(target, 90, 1), max: percentOf(target, 120, 1) };
 }
 
+// How a range state reads in a sentence or a label: "calories under on average", "kcal a day · in range"
+export const RANGE_STATE_WORDS: Record<RangeState["state"], string> = { below: "under", in: "in range", over: "over" };
+
 // An amount against its range, rounded as it's shown so the words never contradict the numbers
 export function rangeState(amount: number, { min, max }: NutritionRange): RangeState {
   const shown = Math.round(amount);

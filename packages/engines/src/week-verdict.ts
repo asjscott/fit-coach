@@ -1,5 +1,5 @@
 import { inUnitToStep, type WeightUnit } from "@fit/shared";
-import type { RangeState } from "./nutrition-ranges";
+import { RANGE_STATE_WORDS, type RangeState } from "./nutrition-ranges";
 
 type Average = RangeState["state"];
 
@@ -39,13 +39,11 @@ const TEMPLATES: { matches: (week: WeekVerdictInput) => boolean; sentence: (week
   { matches: () => true, sentence: () => "A short week." },
 ];
 
-const KCAL_WORDS: Record<Average, string> = { below: "under", in: "in range", over: "over" };
-
 function foodClause({ kcal, protein }: WeekVerdictInput): string | null {
   if (!kcal) return null;
   if (kcal === "in" && protein === "in") return "food in range on average";
   if (kcal === "in" && protein === "below") return "calories in range but protein short";
-  return `calories ${KCAL_WORDS[kcal]} on average`;
+  return `calories ${RANGE_STATE_WORDS[kcal]} on average`;
 }
 
 function weightClause({ weighInChangeKg, unit }: WeekVerdictInput): string | null {
