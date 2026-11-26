@@ -42,6 +42,18 @@ import { RecoveryLinks } from "../components/recovery-links";
 import { RestChoiceSheet } from "../components/rest-choice-sheet";
 import { ThisWeekSection } from "../components/this-week-section";
 import { TodayCard, TodayCardLink } from "../components/today-card";
+import {
+  DaySummaryA,
+  DaySummaryB,
+  DaySummaryC,
+  ProtoSwitcher,
+  StreakRow,
+  useProto,
+  VARIANT_NAMES,
+  WeekCardA,
+  WeekCardB,
+  WeekCardC,
+} from "../prototype-m8/summaries";
 import { CheckInCard } from "../components/check-in-card";
 import { useActivityLevelPrompt } from "../hooks/use-activity-level-prompt";
 import { useCheckIn } from "../hooks/use-check-in";
@@ -97,6 +109,8 @@ export default function TodayView() {
   const prNote = usePrNote();
   const { day, refresh: refreshDay } = useDay();
   const activityPrompt = useActivityLevelPrompt();
+  const proto = useProto();
+  const pv = proto.variant;
   useRefreshHistory();
 
   const plan = todayPlan({
@@ -176,227 +190,253 @@ export default function TodayView() {
   const reasonLines = planReasonLines(plannedWorkout?.reasons, now);
 
   return (
-    <Screen scroll="screen" edges={["top"]}>
-      <Text size="sm" weight="semiBold" color="muted" style={{ marginBottom: spacing[3] }}>
-        {now.toLocaleDateString([], { weekday: "long", day: "numeric", month: "long" })}
-      </Text>
-      {day ? (
-        <View style={{ marginBottom: spacing[4] }}>
-          <DayRings
-            day={day}
-            onPress={() => router.navigate({ pathname: "/food", params: { half: "today" } })}
-            pressHint="Opens Food"
+    <>
+      <Screen scroll="screen" edges={["top"]}>
+        <Text size="sm" weight="semiBold" color="muted" style={{ marginBottom: spacing[3] }}>
+          {proto.sunday
+            ? "Sunday, November 29"
+            : now.toLocaleDateString([], { weekday: "long", day: "numeric", month: "long" })}
+        </Text>
+        {day ? (
+          <View style={{ marginBottom: spacing[4] }}>
+            <DayRings
+              day={day}
+              onPress={() => router.navigate({ pathname: "/food", params: { half: "today" } })}
+              pressHint="Opens Food"
+            />
+          </View>
+        ) : null}
+        {pv && proto.sunday ? (
+          <View style={{ marginBottom: spacing[4] }}>
+            {pv === "A" ? <WeekCardA /> : pv === "B" ? <WeekCardB /> : <WeekCardC />}
+          </View>
+        ) : null}
+        {pv === "A" ? (
+          <View style={{ marginBottom: spacing[4] }}>
+            <DaySummaryA />
+          </View>
+        ) : null}
+        {pv === "C" ? (
+          <View style={{ marginBottom: spacing[4] }}>
+            <DaySummaryC />
+          </View>
+        ) : null}
+        {day && !pv ? (
+          <View style={{ marginBottom: spacing[4] }}>
+            <CoachSummaryCard
+              day={day}
+              onPress={() => router.navigate({ pathname: "/food", params: { half: "ideas" } })}
+            />
+          </View>
+        ) : null}
+        {user &&
+        showsWeighInReminder({
+          weighInDay: user.profile.weighInDay,
+          latestWeighIn: user.latestWeighIn,
+          now,
+          timeZone,
+        }) ? (
+          <View style={{ marginBottom: spacing[4] }}>
+            <WeighInReminderRow />
+          </View>
+        ) : null}
+        {/* Only with the day, since it logs into it; it hides itself without a Gemini key on the API */}
+        {day ? <TellTheCoachBox onLogged={refreshDay} style={{ marginBottom: spacing[4] }} /> : null}
+        {activityPrompt.asks ? (
+          <View style={{ marginBottom: spacing[4] }}>
+            <ActivityLevelCard onSkip={activityPrompt.skip} />
+          </View>
+        ) : null}
+        {prNote.shown.length ? (
+          <View style={{ marginBottom: spacing[3] }}>
+            <PrNote shown={prNote.shown} now={now} onDismiss={prNote.dismiss} />
+          </View>
+        ) : null}
+        {card === "loading" ? <Spinner /> : null}
+        {card === "resume" && logbook.workout ? (
+          <TodayCard
+            tone="accent"
+            headline="Keep going."
+            line={`Started ${elapsedLabel(now.getTime() - Date.parse(logbook.workout.startedAt))} ago`}
+          >
+            <LoadingButton label="Resume workout" icon="dumbbell" action="inverse" fullWidth onPress={resumeWorkout} />
+          </TodayCard>
+        ) : null}
+        {card === "assessment" && leadingOffer ? (
+          <AssessmentCard offer={leadingOffer} onDismiss={() => dismiss(offerKey(leadingOffer))} />
+        ) : null}
+        {card === "done" && pv === "B" ? <DaySummaryB /> : null}
+        {card === "done" && (pv === null || pv === "A") ? (
+          <TodayCard tone="success" headline="Done for today." line={todayLoggedLine(finished, unit)}>
+            {today ? <TodayCardLink label={nextWorkout("Train again")} color="accent" onPress={openSheet} /> : null}
+            {connectNote ? <Text color="muted">{connectNote}</Text> : null}
+          </TodayCard>
+        ) : null}
+        {card === "rest" && restDayReason ? (
+          <TodayCard
+            tone="quiet"
+            headline="Rest today."
+            line={`${WHY_REST[restDayReason]} You can still train if you want to.`}
+          >
+            {today ? <TodayCardLink label={nextWorkout("Train anyway")} color="text" onPress={openSheet} /> : null}
+            <RecoveryLinks color="text" onMobility={handleMobility} onWalkAndMobility={handleWalkAndMobility} />
+            {connectNote ? <Text color="muted">{connectNote}</Text> : null}
+          </TodayCard>
+        ) : null}
+        {card === "ready" && today ? (
+          <TodayCard
+            tone="accent"
+            headline="Time to train."
+            line={todayPlanLine(today.plannedExercises, today.estimatedSeconds, today.lighter)}
+          >
+            {reasonLines.length ? <Text color="onAccent">{reasonLines[0]}</Text> : null}
+            {plannedWorkout?.cue ? <Text color="onAccent">{plannedWorkout.cue}</Text> : null}
+            <LoadingButton
+              label="Start workout"
+              icon="dumbbell"
+              action="inverse"
+              fullWidth
+              loading={startingPlan}
+              disabled={starting || !today.plannedExercises.length}
+              onPress={handleStartPlan}
+            />
+            <TodayCardLink label="See or change this Workout" color="onAccent" size="sm" onPress={openSheet} />
+          </TodayCard>
+        ) : null}
+        {card === "connect" ? (
+          <TodayCard
+            tone="quiet"
+            headline={plan === "planning" ? "Planning your next Workout." : "Connect to plan your next Workout."}
           />
-        </View>
-      ) : null}
-      {day ? (
-        <View style={{ marginBottom: spacing[4] }}>
-          <CoachSummaryCard
-            day={day}
-            onPress={() => router.navigate({ pathname: "/food", params: { half: "ideas" } })}
-          />
-        </View>
-      ) : null}
-      {user &&
-      showsWeighInReminder({
-        weighInDay: user.profile.weighInDay,
-        latestWeighIn: user.latestWeighIn,
-        now,
-        timeZone,
-      }) ? (
-        <View style={{ marginBottom: spacing[4] }}>
-          <WeighInReminderRow />
-        </View>
-      ) : null}
-      {/* Only with the day, since it logs into it; it hides itself without a Gemini key on the API */}
-      {day ? <TellTheCoachBox onLogged={refreshDay} style={{ marginBottom: spacing[4] }} /> : null}
-      {activityPrompt.asks ? (
-        <View style={{ marginBottom: spacing[4] }}>
-          <ActivityLevelCard onSkip={activityPrompt.skip} />
-        </View>
-      ) : null}
-      {prNote.shown.length ? (
-        <View style={{ marginBottom: spacing[3] }}>
-          <PrNote shown={prNote.shown} now={now} onDismiss={prNote.dismiss} />
-        </View>
-      ) : null}
-      {card === "loading" ? <Spinner /> : null}
-      {card === "resume" && logbook.workout ? (
-        <TodayCard
-          tone="accent"
-          headline="Keep going."
-          line={`Started ${elapsedLabel(now.getTime() - Date.parse(logbook.workout.startedAt))} ago`}
-        >
-          <LoadingButton label="Resume workout" icon="dumbbell" action="inverse" fullWidth onPress={resumeWorkout} />
-        </TodayCard>
-      ) : null}
-      {card === "assessment" && leadingOffer ? (
-        <AssessmentCard offer={leadingOffer} onDismiss={() => dismiss(offerKey(leadingOffer))} />
-      ) : null}
-      {card === "done" ? (
-        <TodayCard tone="success" headline="Done for today." line={todayLoggedLine(finished, unit)}>
-          {today ? <TodayCardLink label={nextWorkout("Train again")} color="accent" onPress={openSheet} /> : null}
-          {connectNote ? <Text color="muted">{connectNote}</Text> : null}
-        </TodayCard>
-      ) : null}
-      {card === "rest" && restDayReason ? (
-        <TodayCard
-          tone="quiet"
-          headline="Rest today."
-          line={`${WHY_REST[restDayReason]} You can still train if you want to.`}
-        >
-          {today ? <TodayCardLink label={nextWorkout("Train anyway")} color="text" onPress={openSheet} /> : null}
-          <RecoveryLinks color="text" onMobility={handleMobility} onWalkAndMobility={handleWalkAndMobility} />
-          {connectNote ? <Text color="muted">{connectNote}</Text> : null}
-        </TodayCard>
-      ) : null}
-      {card === "ready" && today ? (
-        <TodayCard
-          tone="accent"
-          headline="Time to train."
-          line={todayPlanLine(today.plannedExercises, today.estimatedSeconds, today.lighter)}
-        >
-          {reasonLines.length ? <Text color="onAccent">{reasonLines[0]}</Text> : null}
-          {plannedWorkout?.cue ? <Text color="onAccent">{plannedWorkout.cue}</Text> : null}
-          <LoadingButton
-            label="Start workout"
-            icon="dumbbell"
-            action="inverse"
-            fullWidth
-            loading={startingPlan}
-            disabled={starting || !today.plannedExercises.length}
-            onPress={handleStartPlan}
-          />
-          <TodayCardLink label="See or change this Workout" color="onAccent" size="sm" onPress={openSheet} />
-        </TodayCard>
-      ) : null}
-      {card === "connect" ? (
-        <TodayCard
-          tone="quiet"
-          headline={plan === "planning" ? "Planning your next Workout." : "Connect to plan your next Workout."}
+        ) : null}
+        {card === "manual" ? (
+          <TodayCard tone="accent" headline="Time to train." line="Add Exercises as you go.">
+            <LoadingButton
+              label="Start manual workout"
+              icon="dumbbell"
+              action="inverse"
+              fullWidth
+              loading={starting}
+              onPress={handleManual}
+            />
+            <TodayCardLink label={LOG_PAST} color="onAccent" size="sm" onPress={() => setPastSheetIsOpen(true)} />
+          </TodayCard>
+        ) : null}
+        {card === "loading" || card === "resume" ? null : (
+          <View style={{ marginTop: spacing[3] }}>
+            <TodayCardLink
+              label={`Rest between Sets: ${restChoiceLabel(logbook.restChoice)}`}
+              color="muted"
+              size="sm"
+              onPress={() => setRestSheetIsOpen(true)}
+            />
+          </View>
+        )}
+        {/* Every day, plan or no plan; a Rest Day's card has its own */}
+        {card === "loading" || card === "resume" || card === "rest" ? null : (
+          <View style={{ marginTop: spacing[3], gap: spacing[3] }}>
+            <RecoveryLinks
+              color="muted"
+              size="sm"
+              onMobility={handleMobility}
+              onWalkAndMobility={handleWalkAndMobility}
+            />
+          </View>
+        )}
+        {showsCheckIn({ card, hasDaysWorkout: !!today, checkIn: checkInState }) ? (
+          <View style={{ marginTop: spacing[3] }}>
+            <CheckInCard onCheckIn={keepCheckIn} />
+          </View>
+        ) : null}
+        {state === "offline" ? (
+          <Text size="sm" color="muted" style={{ marginTop: spacing[2] }}>
+            {serverNotAnswering
+              ? "Can't reach Fit Coach. Workouts save on this phone until it's back."
+              : "No connection. Workouts save on this phone until there is."}
+          </Text>
+        ) : null}
+        {state === "loading" ? null : (
+          <View style={{ marginTop: spacing[3] }}>
+            <ThisWeekSection week={week} state={state} now={now} />
+            {pv ? (
+              <View style={{ marginTop: spacing[3] }}>
+                <StreakRow />
+              </View>
+            ) : null}
+          </View>
+        )}
+        {card === "loading" || card === "resume" || card === "manual" ? null : (
+          <View style={{ marginTop: spacing[4] }}>
+            <LoadingButton
+              label="Start manual workout"
+              size="md"
+              action="secondary"
+              variant="outline"
+              fullWidth
+              loading={starting}
+              disabled={startingPlan}
+              onPress={handleManual}
+            />
+            <View style={{ marginTop: spacing[3], alignItems: "center" }}>
+              <TodayCardLink label={LOG_PAST} color="muted" size="sm" onPress={() => setPastSheetIsOpen(true)} />
+            </View>
+          </View>
+        )}
+        <RestChoiceSheet
+          isOpen={restSheetIsOpen}
+          onClose={() => setRestSheetIsOpen(false)}
+          choice={logbook.restChoice}
+          onChoose={logbook.chooseRest}
         />
-      ) : null}
-      {card === "manual" ? (
-        <TodayCard tone="accent" headline="Time to train." line="Add Exercises as you go.">
-          <LoadingButton
-            label="Start manual workout"
-            icon="dumbbell"
-            action="inverse"
-            fullWidth
-            loading={starting}
-            onPress={handleManual}
-          />
-          <TodayCardLink label={LOG_PAST} color="onAccent" size="sm" onPress={() => setPastSheetIsOpen(true)} />
-        </TodayCard>
-      ) : null}
-      {card === "loading" || card === "resume" ? null : (
-        <View style={{ marginTop: spacing[3] }}>
-          <TodayCardLink
-            label={`Rest between Sets: ${restChoiceLabel(logbook.restChoice)}`}
-            color="muted"
-            size="sm"
-            onPress={() => setRestSheetIsOpen(true)}
-          />
-        </View>
-      )}
-      {/* Every day, plan or no plan; a Rest Day's card has its own */}
-      {card === "loading" || card === "resume" || card === "rest" ? null : (
-        <View style={{ marginTop: spacing[3], gap: spacing[3] }}>
-          <RecoveryLinks
-            color="muted"
-            size="sm"
+        <MobilitySheet openedAt={mobilityOpenedAt} onClose={() => setMobilityOpenedAt(null)} />
+        <PastWorkoutSheet isOpen={pastSheetIsOpen} onClose={() => setPastSheetIsOpen(false)} onPick={handleStartPast} />
+        {offer && !leadingOffer ? (
+          <View style={{ marginTop: spacing[5] }}>
+            <AssessmentSection offer={offer} onDismiss={() => dismiss(offerKey(offer))} />
+          </View>
+        ) : null}
+        {state === "loading" ? null : (
+          <>
+            <Divider spacing={6} />
+            <LastWorkoutSection workout={last} isOffline={state === "offline"} now={now} />
+          </>
+        )}
+        {today ? (
+          <PlannedWorkoutSheet
+            isOpen={sheetIsOpen}
+            onClose={() => setSheetIsOpen(false)}
+            cue={plannedWorkout?.cue}
+            reasons={reasonLines}
+            plannedExercises={today.plannedExercises}
+            deloadWeek={today.deloadWeek}
+            estimatedSeconds={today.estimatedSeconds}
+            dropped={today.dropped}
+            workoutLength={today.workoutLength}
+            onChooseLength={today.chooseLength}
+            equipment={today.equipment}
+            equipmentChoices={today.equipmentChoices}
+            onChooseEquipment={today.chooseEquipment}
+            onPickAlternative={today.pickAlternative}
+            supersets={{ paired: today.paired, off: today.noSupersets, onChooseOff: today.chooseNoSupersets }}
+            checkIn={
+              checkIn
+                ? {
+                    ratings: checkIn,
+                    onChange: keepCheckIn,
+                    lighter: today.lighter,
+                    fullWorkout: today.fullWorkout,
+                    onChooseFullWorkout: today.chooseFullWorkout,
+                  }
+                : null
+            }
+            onStart={handleStartPlan}
             onMobility={handleMobility}
             onWalkAndMobility={handleWalkAndMobility}
           />
-        </View>
-      )}
-      {showsCheckIn({ card, hasDaysWorkout: !!today, checkIn: checkInState }) ? (
-        <View style={{ marginTop: spacing[3] }}>
-          <CheckInCard onCheckIn={keepCheckIn} />
-        </View>
-      ) : null}
-      {state === "offline" ? (
-        <Text size="sm" color="muted" style={{ marginTop: spacing[2] }}>
-          {serverNotAnswering
-            ? "Can't reach Fit Coach. Workouts save on this phone until it's back."
-            : "No connection. Workouts save on this phone until there is."}
-        </Text>
-      ) : null}
-      {state === "loading" ? null : (
-        <View style={{ marginTop: spacing[3] }}>
-          <ThisWeekSection week={week} state={state} now={now} />
-        </View>
-      )}
-      {card === "loading" || card === "resume" || card === "manual" ? null : (
-        <View style={{ marginTop: spacing[4] }}>
-          <LoadingButton
-            label="Start manual workout"
-            size="md"
-            action="secondary"
-            variant="outline"
-            fullWidth
-            loading={starting}
-            disabled={startingPlan}
-            onPress={handleManual}
-          />
-          <View style={{ marginTop: spacing[3], alignItems: "center" }}>
-            <TodayCardLink label={LOG_PAST} color="muted" size="sm" onPress={() => setPastSheetIsOpen(true)} />
-          </View>
-        </View>
-      )}
-      <RestChoiceSheet
-        isOpen={restSheetIsOpen}
-        onClose={() => setRestSheetIsOpen(false)}
-        choice={logbook.restChoice}
-        onChoose={logbook.chooseRest}
-      />
-      <MobilitySheet openedAt={mobilityOpenedAt} onClose={() => setMobilityOpenedAt(null)} />
-      <PastWorkoutSheet isOpen={pastSheetIsOpen} onClose={() => setPastSheetIsOpen(false)} onPick={handleStartPast} />
-      {offer && !leadingOffer ? (
-        <View style={{ marginTop: spacing[5] }}>
-          <AssessmentSection offer={offer} onDismiss={() => dismiss(offerKey(offer))} />
-        </View>
-      ) : null}
-      {state === "loading" ? null : (
-        <>
-          <Divider spacing={6} />
-          <LastWorkoutSection workout={last} isOffline={state === "offline"} now={now} />
-        </>
-      )}
-      {today ? (
-        <PlannedWorkoutSheet
-          isOpen={sheetIsOpen}
-          onClose={() => setSheetIsOpen(false)}
-          cue={plannedWorkout?.cue}
-          reasons={reasonLines}
-          plannedExercises={today.plannedExercises}
-          deloadWeek={today.deloadWeek}
-          estimatedSeconds={today.estimatedSeconds}
-          dropped={today.dropped}
-          workoutLength={today.workoutLength}
-          onChooseLength={today.chooseLength}
-          equipment={today.equipment}
-          equipmentChoices={today.equipmentChoices}
-          onChooseEquipment={today.chooseEquipment}
-          onPickAlternative={today.pickAlternative}
-          supersets={{ paired: today.paired, off: today.noSupersets, onChooseOff: today.chooseNoSupersets }}
-          checkIn={
-            checkIn
-              ? {
-                  ratings: checkIn,
-                  onChange: keepCheckIn,
-                  lighter: today.lighter,
-                  fullWorkout: today.fullWorkout,
-                  onChooseFullWorkout: today.chooseFullWorkout,
-                }
-              : null
-          }
-          onStart={handleStartPlan}
-          onMobility={handleMobility}
-          onWalkAndMobility={handleWalkAndMobility}
-        />
-      ) : null}
-      <ForgottenWorkoutModal isOpen={forgotten} onDone={() => setForgotten(false)} />
-    </Screen>
+        ) : null}
+        <ForgottenWorkoutModal isOpen={forgotten} onDone={() => setForgotten(false)} />
+      </Screen>
+      {pv ? <ProtoSwitcher current={pv} keys={["A", "B", "C"]} names={VARIANT_NAMES} /> : null}
+    </>
   );
 }
