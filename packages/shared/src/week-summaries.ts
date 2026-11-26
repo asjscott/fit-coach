@@ -39,7 +39,7 @@ export const WeekSummary = z.object({
   sunday: LocalDate,
   // Whether this user has seen this week's summary, on either phone
   seen: z.boolean(),
-  // The week the user onboarded in, part of a week, whose planned Workouts are pro-rated
+  // The week the user onboarded in after its Monday, part of a week, whose planned Workouts are pro-rated
   partWeek: z.boolean(),
   // Workouts finished, Recovery Workouts included, against the days per week (pro-rated for a part week)
   workouts: z.object({ done: z.int(), planned: z.int() }),

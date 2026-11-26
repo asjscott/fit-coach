@@ -399,7 +399,7 @@ From 6 to 10 pm in your timezone, as for #208. The day is finished once you've t
 
 Needs an account onboarded at least two weeks ago, with History behind it.
 
-- [x] **WS1** In light and in dark, This week shows "🔥 N-week streak" under the day circles, where N is the weeks in a row since your first, partial week with at least one fewer Workout than your days per week, Mobility and Walk and mobility included. This week adds to it only once it reaches the number; on a Monday with nothing done yet the streak is still there. With no streak, nothing shows, not "0-week streak". Both phones show the same N.
+- [x] **WS1** In light and in dark, This week shows "🔥 N-week streak" under the day circles, where N is the weeks in a row since your first whole week (the week you onboarded counts when you onboarded on its Monday) with at least one fewer Workout than your days per week, Mobility and Walk and mobility included. This week adds to it only once it reaches the number; on a Monday with nothing done yet the streak is still there. With no streak, nothing shows, not "0-week streak". Both phones show the same N.
   - iOS: Result: · Android: Result: · Notes:
 - [x] **WS2** Finish the Workout that brings this week to the number: once Today is back, N goes up by one. In airplane mode the streak is gone (only Pending Workouts are known), and back online it returns. Change your days per week in Profile: past weeks are judged again with the new number.
   - iOS: Result: · Android: Result: · Notes:

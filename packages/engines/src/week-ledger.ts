@@ -44,6 +44,10 @@ export function addCredits(ledger: MuscleCredits, credits: MuscleCredits, sets: 
 export const localDateOf = (date: Date, timeZone: string): string =>
   new Intl.DateTimeFormat("en-CA", { timeZone, dateStyle: "short" }).format(date);
 
+// The hour of this moment in the timezone, 0 to 23
+export const localHourOf = (date: Date, timeZone: string): number =>
+  Number(new Intl.DateTimeFormat("en-GB", { timeZone, hour: "numeric", hourCycle: "h23" }).format(date));
+
 // The Monday of the week holding this moment, as YYYY-MM-DD in the timezone. `weekStart` is the phone's version, in
 // the host's time; the server's host time is nobody's. Worked out on the calendar, so daylight saving can't shift it
 export function mondayOf(date: Date, timeZone: string): string {
