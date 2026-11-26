@@ -366,6 +366,15 @@ Run each offline check (WI6, F4, FL6, TC4) twice: once with airplane mode on bef
 - [x] **NH4** With VoiceOver or TalkBack on, each day says its name, amount, range and state, or that nothing is logged. In airplane mode, opening it says it needs a connection; back online, Try again loads it.
   - iOS: Result: · Android: Result: · Notes:
 
+## Weekly Streak (#207)
+
+Needs an account onboarded at least two weeks ago, with History behind it.
+
+- [x] **WS1** In light and in dark, This week shows "🔥 N-week streak" under the day circles, where N is the weeks in a row since your first, partial week with at least one fewer Workout than your days per week, Mobility and Walk and mobility included. This week adds to it only once it reaches the number; on a Monday with nothing done yet the streak is still there. With no streak, nothing shows, not "0-week streak". Both phones show the same N.
+  - iOS: Result: · Android: Result: · Notes:
+- [x] **WS2** Finish the Workout that brings this week to the number: once Today is back, N goes up by one. In airplane mode the streak is gone (only Pending Workouts are known), and back online it returns. Change your days per week in Profile: past weeks are judged again with the new number.
+  - iOS: Result: · Android: Result: · Notes:
+
 ## When the server isn't answering (#170, #174)
 
 Needs the phone online with the API stopped, or the server otherwise unreachable while the phone has a network.
