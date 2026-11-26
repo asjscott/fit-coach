@@ -7,6 +7,7 @@ import {
   guidedStep,
   holdAlone,
   holdLogged,
+  holdsDone,
   isGuidedWorkout,
   skipHold,
   startGuidedRun,
@@ -124,6 +125,18 @@ describe("going back", () => {
 
   it("returns to a hold whose Set was removed on the ordinary screen", () => {
     expect(where(twice(1, 1), start)).toEqual(["cat-cow", 2, undefined, undefined]);
+  });
+});
+
+describe("holdsDone", () => {
+  it("counts each hold with a Set once, as the finish screen lists them, and not the walk", () => {
+    const workout = workoutOf(
+      { slug: "walk", logged: 1 },
+      { slug: "cat-cow", sets: 2, logged: 2 },
+      { slug: "open-book", sets: 2, logged: 1 },
+      { slug: "pigeon", sets: 2 },
+    );
+    expect(holdsDone(workout)).toBe(2);
   });
 });
 

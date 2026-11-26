@@ -2,6 +2,7 @@ import type { InProgressWorkout, InProgressWorkoutExercise } from "@fit/shared";
 import { exerciseBySlug } from "./data/exercises";
 import { holdCues, holdState, isHoldPaused, pauseHold, type Hold, type HoldRun } from "./hold-timer";
 import { CHANGE_SECONDS } from "./mobility-workout";
+import { isHold, sidesOf, type LoggedWorkout } from "./recovery-workout";
 
 // The guided flow runs a Recovery Workout's holds one after another, each logging its Set (#200). Where it is comes
 // from the logged Sets and the skips of this run of it
@@ -28,7 +29,7 @@ export type GuidedPlace = {
   // The current hold's number, or the last's once it's over
   position: number;
   count: number;
-  // Holds logged
+  // Sets logged of holds
   done: number;
   // The Set the current hold replaces, when it was gone back to
   replaces?: number;
@@ -70,9 +71,9 @@ function courseHolds({ workoutExercises }: Holds, { skips, only }: GuidedCourse)
 // As many of a Recovery Exercise's hold, at its planned seconds or else the library's; none for the walk
 function repeatedHold({ id, slug, planned }: InProgressWorkoutExercise, count: number): GuidedHold[] {
   const exercise = exerciseBySlug(slug);
-  if (exercise?.holdSeconds === undefined) return [];
+  if (!isHold(exercise)) return [];
   const seconds = planned?.target.unit === "seconds" ? planned.target.seconds : exercise.holdSeconds;
-  const hold: GuidedHold = { workoutExerciseId: id, slug, seconds, sides: exercise.unilateral ? 2 : 1 };
+  const hold: GuidedHold = { workoutExerciseId: id, slug, seconds, sides: sidesOf(exercise) };
   return Array.from({ length: count }, () => hold);
 }
 
@@ -87,7 +88,10 @@ export function guidedPlace(workout: Holds, course: GuidedCourse): GuidedPlace {
     next: (gone ? left[0] : left[1])?.hold ?? null,
     position: current ? index + 1 : holds.length,
     count: holds.length,
-    done: holdsDone(workout),
+    done: workout.workoutExercises.reduce(
+      (sum, { slug, sets }) => sum + (isHold(exerciseBySlug(slug)) ? sets.length : 0),
+      0,
+    ),
     replaces: current?.setIndex,
     hasPrevious: index > 0,
   };
@@ -126,16 +130,9 @@ export function holdAlone(
   return { skips: {}, only: { workoutExerciseId: workoutExercise.id, count: workoutExercise.sets.length + 1 } };
 }
 
-// The Sets logged of holds, the walk's left out
-export const holdsDone = ({
-  workoutExercises,
-}: {
-  workoutExercises: readonly { slug: string; sets: readonly unknown[] }[];
-}) =>
-  workoutExercises.reduce(
-    (sum, { slug, sets }) => sum + (exerciseBySlug(slug)?.holdSeconds === undefined ? 0 : sets.length),
-    0,
-  );
+// The holds with a Set logged, each once however many it has, as the finish screen lists them; the walk left out
+export const holdsDone = ({ workoutExercises }: LoggedWorkout) =>
+  workoutExercises.filter(({ slug, sets }) => sets.length > 0 && isHold(exerciseBySlug(slug))).length;
 
 export const guidedHold = ({ seconds, sides }: GuidedHold): Hold => ({
   leadInSeconds: CHANGE_SECONDS,

@@ -17,13 +17,17 @@ export const RECOVERY_WORKOUT: readonly RecoveryExercise[] = [
   })),
 ];
 
+// A Recovery Exercise held for seconds per side, as every one but the walk is
+export const isHold = (exercise: Exercise | undefined): exercise is Exercise & { holdSeconds: number } =>
+  exercise?.holdSeconds !== undefined;
+
+// A one-sided Exercise is held on each side in turn
+export const sidesOf = (exercise: Pick<Exercise, "unilateral"> | undefined): 1 | 2 => (exercise?.unilateral ? 2 : 1);
+
 // Everything the equipment and injuries allow of the Recovery Exercises but the walk
 export const possibleHolds = (equipmentProfile: ProfileWithLoads, injuries: readonly InjuryTag[]) =>
   EXERCISES.filter(
-    (exercise) =>
-      exercise.holdSeconds !== undefined &&
-      isAvailable(exercise, equipmentProfile) &&
-      isSafeFor(exercise, [...injuries]),
+    (exercise) => isHold(exercise) && isAvailable(exercise, equipmentProfile) && isSafeFor(exercise, [...injuries]),
   );
 
 // Most like the hold first: by the primary Muscles they share, then the same area, then the library's order
@@ -32,8 +36,8 @@ export const byLikeness = (hold: Exercise) => (a: Exercise, b: Exercise) =>
   Number(b.area === hold.area) - Number(a.area === hold.area);
 
 // The Recovery Workout the user can do, for the phone's start and the planner's fallback alike (#197): each hold their
-// injuries or equipment rule out gives way to the one most like it, for its own hold time, and drops out when none is
-// left. The walk always stays
+// injuries or equipment rule out gives way to the one most like it, keeping its Sets (2 × 45 s), and drops out when
+// none is left. The walk always stays
 export function recoveryWorkoutFor({
   equipmentProfile,
   injuries,
@@ -45,11 +49,11 @@ export function recoveryWorkoutFor({
   const used = new Set(RECOVERY_WORKOUT.map(({ slug }) => slug));
   return RECOVERY_WORKOUT.flatMap((planned) => {
     const hold = exerciseBySlug(planned.slug);
-    if (hold?.holdSeconds === undefined || possible.includes(hold)) return [planned];
+    if (!isHold(hold) || possible.includes(hold)) return [planned];
     const [standIn] = possible.filter(({ slug }) => !used.has(slug)).sort(byLikeness(hold));
     if (!standIn) return [];
     used.add(standIn.slug);
-    return [{ ...planned, slug: standIn.slug, target: { unit: "seconds" as const, seconds: standIn.holdSeconds! } }];
+    return [{ ...planned, slug: standIn.slug }];
   });
 }
 
@@ -62,7 +66,7 @@ export const takesAnotherSet = ({ slug, sets }: LoggedWorkoutExercise) => !takes
 
 // What it takes to tell a Recovery Workout, however it came to be logged
 export type LoggedWorkoutExercise = { slug: string; sets: readonly unknown[] };
-type LoggedWorkout = { workoutExercises: readonly LoggedWorkoutExercise[] };
+export type LoggedWorkout = { workoutExercises: readonly LoggedWorkoutExercise[] };
 
 // A Workout whose Sets are all of Recovery Exercises. It isn't training: it counts towards neither This Week, the days
 // per week nor a Rest Day, and the planner plans as though it never happened. Known by its Exercises rather than a
