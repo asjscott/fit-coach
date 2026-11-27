@@ -62,6 +62,13 @@ describe("restAfterSet in an Assessment", () => {
     expect(restAfter("squat", squat(10, 5, 7), plank(60))).not.toBeNull();
     expect(restAfter("squat", squat(10, 15, 7), plank(60))).not.toBeNull();
   });
+
+  // GLOSSARY: an Assessment Workout always rests on Auto, whatever the Next Workout sheet's Rest Choice (#206)
+  it.each(["auto", 30, 180] as const)("rests the goblet squat's Auto 1:30 on a rest choice of %s", (choice) => {
+    const workoutExercises = [squat(20, 5, 7), plank()];
+    const rest = restAfterSet({ assessment: "single", workoutExercises }, "squat", now, choice, profile);
+    expect(rest?.endsAt).toBe(Date.parse("2026-11-09T10:01:30Z"));
+  });
 });
 
 describe("restAfterSet", () => {
