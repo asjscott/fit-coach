@@ -8,22 +8,23 @@ Result codes: **✅ pass** · **❌ fail** · **⚠️ works but feels off** · 
 
 ## What's left
 
-- **Run on the phone now:** R1, U1, U2, LS2, PR1, RS1–RS7. Each is a part no run has covered yet.
+- **Run on the phone now:** R1, U1, U2, LS2, PR1, RS1–RS7, RS9–RS11. Each is a part no run has covered yet.
 - **M7, on the phones:** WI4, WI6, F4, FL6, SC3, SC4, TC4, FI6, TB2, NA1. Session 5 passed the rest of M7 on the simulators and phones; these are the parts not yet seen, and the offline checks again after #170–#174.
 - **Ranges (#189), on the phones:** RR1–RR3.
 - **Nutrition History (#191), on the phones:** NH1–NH4.
 - **Saved Meals (#192–#194), on the phones:** SM1–SM3.
 - **Mobility and the hold timer (#195), on the phones:** HT1–HT6, GF1–GF10, R2–R5, RX1.
+- **🕒 Week Summary card (#210), on a Sunday evening with both phones:** WC1–WC4.
 - **Run when you next train:** P9 and S1, a full Workout with a timer, resting as the timer says. Both can be one session.
 - **🕒 Due later, while you use the app:** C5 (the day after a check-in), P16 (a Monday), J2 (after a week with jumps on), P17 (after a few weeks), DL1 and DL2 (the 5th week of a Block: the week starting 4 Mondays after the Monday of the week Assessment B was done).
 - **On hold:** E1–E3 need Sentry set up on production.
 
 ## Session
 
-- Date:
-- Device(s) and OS version:
-- Build:
-- Branch and commit:
+- Date: Thursday 26 November 2026, 3:13–5:00 pm in Denver (M8 on the iOS Simulator only, by Claude)
+- Device(s) and OS version: iOS Simulator, iPhone 17 Pro, iOS 26.4. No Android, no phone
+- Build: Expo Go 58.0.7 with Metro (development, not Release), `CLERK_STUB=1` (signed in as the dev user, no Clerk), against the in-memory API (`dev:local`'s setup) with its clock movable while it ran, behind a proxy that picked the account and could refuse connections. History seeded through the API's own endpoints at past times
+- Branch and commit: spec/206-daily-loop at 79fb688
 
 ## Setting up the phones
 
@@ -184,7 +185,7 @@ Result codes: **✅ pass** · **❌ fail** · **⚠️ works but feels off** · 
 
 ## Rest screen (#179)
 
-On the installed web app on the iPhone, with the silent switch off and the volume up.
+On the installed web app on the iPhone, with the silent switch off and the volume up. Rest in a planned Workout or the Assessment: a Manual Workout has none (#206).
 
 - [x] **RS1** Log a Set and put the phone down a few steps away: the countdown reads from across the room, in light and dark, and shows the next Set and its target.
   - Result: · Notes: Pass
@@ -203,6 +204,12 @@ On the installed web app on the iPhone, with the silent switch off and the volum
 
 - [x] **RS8** Log an Exercise's last planned Set: the rest screen has the rating, Next exercise and Log extra set, all in sight without scrolling. Next exercise opens the next Exercise with the rest as a bar (#180).
   - Result: Pass· Notes:
+- [ ] **RS9** Today has no "Rest between Sets" link (#206). Open "See or change this Workout": under the Workout Length chips and above the equipment, one row reads "Rest between Sets" with the choice under it, an Auto chip and a slider. Auto is selected at first. Drag the slider: the length follows in 15 s steps from 30 s to 3 min, the thumb whole at both ends, Auto deselects and the count of Sets that fit the Length changes (Standard: 22 Sets on Auto, 27 at 1 min). Tap Auto: it's selected again and the slider's fill goes. Close and reopen the app: the choice is kept, and a rest after a Set of the planned Workout is that long.
+  - iOS: Result: ✅ (simulator, iPhone 17 Pro, light and dark) No "Rest between Sets" link on Today. In "See or change this Workout" one row sits between the Length chips and the equipment: "Rest between Sets" / "Auto", the Auto chip and the slider, all on one line. Auto selected at first, Standard 22 Sets. Dragging the slider (touch): 1 min → Auto deselected, "1 min", 27 Sets; 3 min → 11 Sets; 30 s → 30 Sets. Tap Auto: selected again, fill gone, 22 Sets. Set 1 min, force-quit and reopen: Today said 27 Sets and the sheet kept 1 min. Rechecked after 448fb65 (simulator, touch): dragged fully right, 3 min, the thumb's ring is whole in light and dark; fully left, 30 s, whole with its shadow; a tap mid-track lands under the finger (1 min 45 s). A rest after a Set of the planned Workout at 1 min was 1:00 (RS10). Nit left: at 3 min the thumb's soft shadow is cut by a straight edge on its right (the row's right padding edge), not at 30 s. Rechecked after 5260c86 (simulator, touch, the sheet opened from "Train again ›"): still ❌ for the nit. At 3 min in light the shadow is still cut by a straight vertical line on its right, now about 5 pt from the ring at the sheet's padding edge (x ≈ 386 pt); on the left of the same thumb it fades out over about 9 pt, so 4 pt of room isn't enough for a 4 pt shadowRadius on iOS. In dark the shadow barely shows, so no cut is visible. At 30 s the ring and shadow are whole in light and dark. A tap mid-track lands under the finger (1 min 45 s) and the row stays on one line in both. Rechecked after 2d78976 (10 pt of room; simulator, touch, the sheet opened from "See or change this Workout ›"): ✅, the nit is gone. At 3 min the ring is whole and its shadow fades out evenly on both sides, about 9 pt either way, with no straight edge: measured from pixels in light it goes 234 → 255 over about 9 pt on the right just as on the left, the last of it inside the sheet's padding edge; in dark it's even (25 → 27) on both sides. At 30 s the same, in light and dark. A tap mid-track lands under the finger (1 min 45 s) and the row stays on one line in both. The styleguide's Training days slider (light) is the same at 6 days and at 2 days: ring whole, shadow even on both sides. Not checked: the iPhone SE width (needs another simulator boot) · Android: Result: · Notes:
+- [x] **RS10** Choose 1 min in the sheet, then start a Manual Workout and log a few Sets of a strength Exercise: no rest screen and no rest bar over Finish, only the next Set's steppers (#206).
+  - iOS: Result: ✅ (simulator) Rest between Sets at 1 min in the sheet, then Start manual workout, Goblet squat: Log set 1 and Log set 2 (17.5 lb × 2) each went straight to the next Set's steppers and the RPE chips, with no rest screen and no rest bar over Finish. Saved it, then Train again › → Start workout on the planned Workout: Log set 1 of Renegade row opened the rest screen at 1:00 · Android: Result: · Notes:
+- [x] **RS11** Choose 30 s in the sheet, then start the Assessment and log a test's first Set: the rest is the Exercise's own Auto length (1:30 for a goblet squat), not 30 s (#206).
+  - iOS: Result: ✅ (simulator) A fresh account that needs its Assessment has no sheet on Today (only Start assessment and Not now), so the Rest Choice can't be set from that account; as it's kept on the phone, it was set to 30 s on another account's sheet, then the phone switched to the fresh one. Start assessment, Goblet squat Set 1 (35.5 lb × 5, RPE 7): the rest screen showed 1:30, not 0:30, next "Set 2 · 39.5 lb × 5" · Android: Result: · Notes:
 
 ## Hold timer (#196)
 
@@ -366,12 +373,77 @@ Run each offline check (WI6, F4, FL6, TC4) twice: once with airplane mode on bef
 - [x] **NH4** With VoiceOver or TalkBack on, each day says its name, amount, range and state, or that nothing is logged. In airplane mode, opening it says it needs a connection; back online, Try again loads it.
   - iOS: Result: · Android: Result: · Notes:
 
+## Day Summary: the receipt (#208)
+
+From 6 to 10 pm in your timezone. Change the phone's time in Settings (turn off automatic time) to reach the edges.
+
+- [x] **DS1** At 5:59 pm Today is as before. Leave the app open and go to 6:00 pm, then bring it back to the front: a "TODAY" receipt sits under the Coach's Nudge, and the rest of Today is unchanged. At 10:00 pm, back to the front again, it's gone.
+  - iOS: Result: ✅ (simulator; Mac clock untouched, the phone's zone set with SIMCTL_CHILD_TZ so the real time crossed the edges) Opened at 5:57 pm New York: no receipt. Left open, Home and back at 6:00 pm: the receipt (and, the day being finished, the Tomorrow card) appeared, the rest unchanged. Same at 9:58 pm Noronha, then back to the front at 10:00 pm: gone, Today as before 6 pm. Earlier in Halifax at 6:15 pm the "TODAY" receipt sat under the Nudge with the rest of Today as before · Android: Result: · Notes:
+- [x] **DS2** With nothing done and no Rest Day, the receipt says "○ No Workout yet" and "○ No food logged". Log some food: on coming back to Today, Calories and Protein show against their targets, "○" while short, ✅ in range, and ❌ in red with how far over once over ("❌ Calories 3,262 / 2,980 kcal · 132 over"), agreeing with the rings.
+  - iOS: Result: ✅ (simulator; phone in America/Halifax via SIMCTL_CHILD_TZ, 6:15–6:35 pm there) "○ No Workout yet" and "○ No food logged"; then "○ Calories 99 / 2,970 kcal", "✅ Protein 150 / 159 g" in green, and once over "212 / 159 g · 21 over" in red, matching the rings. Kcal over (3,262) reads "✅ Calories … · 132 over" in red. Re-checked after the ❌ fix: ✅ (#206, simulator; phone in America/New_York via SIMCTL_CHILD_TZ, 8:31 pm there; food logged through the API, then Home and back) 3,300 kcal / 165 g: "❌ Calories 3,300 / 2,980 kcal · 170 over" in red, "✅ Protein 165 / 160 g" in green, rings "170 kcal over" and "g protein in range". Then 3,630 kcal / 227 g: "❌ Calories … · 500 over" and "❌ Protein 227 / 160 g · 35 over", both red, matching the rings ("500 kcal over", "35 g protein over") · Android: Result: · Notes:
+- [x] **DS3** Finish a Workout: the row names it by up to three Muscles with its Sets and time ("✅ Quads, glutes and chest · 10 Sets · 48 min"). Finish a second: they merge into one row. A Mobility Workout alone reads "✅ Mobility · 20 min", and a kept Rest Day "✅ Rest Day". Long names wrap; the numbers stay on one line.
+  - iOS: Result: ✅ (simulator) "✅ Hamstrings, glutes and calves · 2 Sets · 1 min" wrapping onto two lines with the numbers on one; a second and a third Workout merged into one row ("4 Sets · 1 min"). Mobility alone "✅ Mobility · 1 min" (finished early); a kept Rest Day "✅ Rest Day". Workouts kept short, so 20 min wasn't seen · Android: Result: · Notes:
+- [x] **DS4** The line at the receipt's foot gives tomorrow: rest or the Workout's Muscles, a reason, and tomorrow's kcal and protein. With no Planned Workout (before the Assessment) or a stale one, it's left out.
+  - iOS: Result: ✅ (simulator) "Tomorrow: Triceps, front delts and upper back. Shoulders are furthest behind this week. 2,970 kcal · 159 g protein"; after training "Tomorrow: Rest. You've trained today, and this week's Workouts still fit." Left out for an account before the Assessment and with the plan stale after an offline Workout · Android: Result: · Notes:
+- [ ] **DS5** In airplane mode, after Today has loaded the day once, the receipt still shows once you finish a Workout offline, counting it; with none finished offline today it hides rather than say "No Workout yet". Open the app fresh in airplane mode: no receipt. In light and dark, the receipt reads clearly.
+  - iOS: Result: ✅ (simulator, partial) Offline approximated by refusing the API's connections (a proxy), not airplane mode: the day loaded but History refused → no receipt; finished a Workout → receipt counting only it ("1 Set · 0 min"); back online it merged with the rest. Fresh open with the API refused: no receipt. Clear in light and dark. Real airplane mode not run · Android: Result: · Notes:
+
+## Day Summary: the finished day (#209)
+
+From 6 to 10 pm in your timezone, as for #208. The day is finished once you've trained (Mobility and Walk and mobility included) or kept a recommended Rest Day, and kcal is in range or over. Protein never decides it.
+
+- [ ] **DF1** Train, and log food short of the kcal range: Today is as in DS1, with the Nudge, "Done for today." and the links. Log enough food to reach the range and come back to Today: a big "TOMORROW · <day>" card now leads under the rings, with "Rest." or tomorrow's Workout's Muscles, the reason, "Eat … kcal · … g protein" and "See the next Workout ›", and the "TODAY" receipt under it with no tomorrow line. The Coach's Nudge, the Workout card, Mobility and Walk and mobility are gone; Tell the coach, This week, "Start manual workout" and Last workout stay where they were.
+  - iOS: Result: ✅ (simulator) Trained and short: Nudge, "Done for today." and links. In range: "TOMORROW · FRIDAY", "Rest.", the reason, "Eat 2,970 kcal · 159 g protein", "See the next Workout ›", the receipt under it with no tomorrow line; Nudge, Workout card, Rest between Sets, Mobility and Walk and mobility gone; This week, Start manual workout and Last workout stay. Tell the coach not seen (no GEMINI_API_KEY in the dev API) · Android: Result: · Notes:
+- [x] **DF2** On a recommended Rest Day with nothing done, reach the kcal range: the day finishes the same way, with "✅ Rest Day" in the receipt and "Rest today." gone. With kcal in range and protein short, it's still finished; with kcal over, too.
+  - iOS: Result: ✅ (simulator) Account trained Mon and Wed, so Thursday is a recommended Rest Day: kcal 2,862 in range with protein 143 / 160 short → finished, "✅ Rest Day" in the receipt, Tomorrow card leads; still finished at 3,262 kcal (over) · Android: Result: · Notes:
+- [x] **DF3** Tap "See the next Workout ›": the Planned Workout sheet opens on the next Workout's Exercises, as from the Workout card. Close it: Today is as it was.
+  - iOS: Result: ✅ (simulator) Opens the "Next Workout" sheet on its Exercises; closed by dragging down, Today as it was · Android: Result: · Notes:
+- [ ] **DF4** With no Planned Workout or a stale one (a Workout finished in airplane mode), a finished day shows the receipt alone in the Nudge's place, with no Tomorrow card. Start a Workout on a finished day: "Keep going." still shows. At 10 pm, back to the front, Today is as it was before 6 pm. In light and dark, the card and receipt read clearly and a three-Muscle name wraps without overlapping.
+  - iOS: Result: ✅ (simulator) Stale plan after a Workout finished with the API refused (stand-in for airplane mode): the finished day showed the receipt alone in the Nudge's place, no Tomorrow card. A Workout started on a finished day: "Keep going." shows. At 10:00 pm (phone in America/Noronha) back to the front: Today as at 5:57 pm. Card and receipt clear in light and dark; "Front delts, triceps and abs." wraps without overlap · Android: Result: · Notes:
+
+## Weekly Streak (#207)
+
+Needs an account onboarded at least two weeks ago, with History behind it.
+
+- [x] **WS1** In light and in dark, This week shows "🔥 N-week streak" under the day circles, where N is the weeks in a row since your first whole week (the week you onboarded counts when you onboarded on its Monday) with at least one fewer Workout than your days per week, Mobility and Walk and mobility included. This week adds to it only once it reaches the number; on a Monday with nothing done yet the streak is still there. With no streak, nothing shows, not "0-week streak". Both phones show the same N.
+  - iOS: Result: ✅ (simulator, partial) "🔥 2-week streak" (weeks of 9 and 16 Nov; onboarded Wed 4 Nov, so that week skipped); an account onboarded on Monday 19 Oct shows 5 then 6, its first week counted. This week added only once it reached 2 of 3. None for an account onboarded this week. Light and dark fine. History seeded through the API at past times on a movable API clock. Monday-with-nothing and both phones not run · Android: Result: · Notes:
+- [x] **WS2** Finish the Workout that brings this week to the number: once Today is back, N goes up by one. In airplane mode the streak is gone (only Pending Workouts are known), and back online it returns. Change your days per week in Profile: past weeks are judged again with the new number.
+  - iOS: Result: ⚠️ (simulator) Finishing the 2nd Workout of the week took it from 2 to 3 once Today was back. API refused (stand-in for airplane mode): streak gone, "Last week ›" alone; back: returns. Profile has no way to change days per week on this build (read-only row), so changed through PATCH /user: at 5 days the past weeks fail and it reads "1-week streak" · Android: Result: · Notes:
+
+## Week Summary card (#210)
+
+Needs a Sunday evening, both phones signed in to the same account, and the iPhone and the Android phone both closed beforehand. While building, `DEV_NOW=<ISO time> pnpm --filter @fit/mobile web:signed-in` starts the API's clock there, and Playwright's `page.clock.install` does the browser's (docs/agents/workouts.md, "Running things").
+
+- [ ] **WC1** Before 6 pm on Sunday, open the app: Today has no Week Summary card. Send it to the background and bring it back after 6 pm: the card is on Today, under the rings and above every other card (above the Tomorrow card when there is one). In light and in dark it shows a ring of Workouts done against planned, "Last week", the week's dates and "🔥 N-week streak" (left out with no streak), then bars for Workouts, Calories, Protein and Weekly Budget. A week with no food logged has no Calories or Protein bar, and one with no Workouts no Weekly Budget bar. In your first, part week it reads "Your first week", with fewer Workouts planned.
+  - iOS: Result: ✅ (simulator, partial; Thursday, not Sunday) The unseen week of 16 Nov showed on Thursday under the rings, above the Nudge and above the Tomorrow card; ring, "Last week", "16 Nov – 22 Nov · 🔥 2-week streak", bars for Workouts, Calories, Protein, Weekly Budget, in light and dark. No food → no Calories/Protein bars; no Workouts → no Weekly Budget bar; part first week reads "Your first week", 1 of 2. Before/after 6 pm on Sunday not run · Android: Result: · Notes:
+- [x] **WC2** With the card up, go to Food and History and back to Today: it's still there. Send the app to the background and bring it back: it's gone, and it doesn't come back however often the app is opened that week.
+  - iOS: Result: ✅ (simulator) Still there after Food and History; gone after Home and back; never back across several force-quits and reopens · Android: Result: · Notes:
+- [ ] **WC3** Across both phones: after WC1 on the iPhone, open the app on the Android phone (after 6 pm on Sunday, or any day that week): no card. Next Sunday, do it the other way round, Android first.
+  - iOS: Result: ⏭ (simulator) One simulator only. Approximated: after it was seen, a cold start (forgets what it saw) asked the API, which answered seen, so no card · Android: Result: · Notes:
+- [ ] **WC4** In airplane mode on a Sunday after 6 pm (or later in the week, before the card has been seen), open the app: no card. Turn airplane mode off and bring the app back to the front: the card shows, so the offline open didn't count as seen. If you opened it on Monday instead, the card is still the week just ended.
+  - iOS: Result: ✅ (simulator, Thursday) Cold open with the API refused (stand-in for airplane mode): no card; API back and the app brought to the front: card shows, so the offline open didn't count. Monday not run · Android: Result: · Notes:
+
+## Week Summary screen and Last week (#211)
+
+Needs a week with Workouts, food, a Weigh-in and Check-ins, and for WS4 the deload week (the 5th week of the Block, counted from the Monday of the Assessment's week). Light and dark for each.
+
+- [x] **WS1** Tap the Week Summary card: the Week Summary screen opens (prototype variant B), with the week's dates, the Coach's sentence ("A full week, and two PRs.") and the line under it, then tiles for Workouts, the streak, kcal and protein a day, the change since the last Weigh-in, and Readiness against the week before. Back returns to Today.
+  - iOS: Result: ✅ (simulator) Card's "See your week ›" opens it: "16 NOV–22 NOV", "A full week, and 12 PRs.", "Every Workout done, calories under on average, and 1.3 lb down.", tiles 3/3, 🔥 2, 2,774 kcal, 166 g, −1.3 lb, Readiness 13.3 · ↑ 3.3. Back returns to Today. Light and dark · Android: Result: · Notes:
+- [ ] **WS2** Under the tiles: "Weekly Budget · N of M met" with a chip for each Muscle short of it ("Calves 2/5"), then Progress with each PR ("⭐ PR · …" over what it beat) and each Exercise whose Working Level moved ("↑ 44 lb × 10", or "↓ back to … , missed twice"), then a bar for each day's kcal: green in range, orange under, red over, none on a day with no food logged. Weights are in your unit: switch kg and lb on Profile and open it again.
+  - iOS: Result: ✅ (simulator, partial) "Weekly Budget · 7 of 9 met" with "Quads 9/14", "Hamstrings 9.5/14"; PRs with what they beat; ↑ moves ("↑ 17.5 lb × 12" → "↑ 8 kg × 12" after switching to kg); day bars red over, orange under, green in range, none on Sunday. No ↓ move in the seeded week, so that wasn't seen · Android: Result: · Notes:
+- [ ] **WS3** On Today from Monday to Sunday before 6 pm, This week has "Last week ›" at the right of the streak row (with no streak, on its own). It opens the screen for the week before. From 6 pm on Sunday it opens the week just ended, as the new card does, and still does once the card has gone. It isn't there in the week you onboarded until 6 pm on its Sunday.
+  - iOS: Result: ✅ (simulator, partial; Thursday) "Last week ›" right of the streak row opens 16–22 Nov, still there after the card went; with no streak it's alone; absent for an account onboarded this Tuesday. Sunday 6 pm switch-over not run · Android: Result: · Notes:
+- [x] **WS4** In the week after a deload week, open "Last week": the screen says "DELOAD WEEK" over the dates and "A deload week, lighter on purpose.", and the Weekly Budget reads "Deload: lighter on purpose" with no Muscles listed as short. The card's Weekly Budget bar says the same.
+  - iOS: Result: ✅ (simulator) Account assessed in the week of 19 Oct through the API on a movable clock, so 16–22 Nov was its deload week: "DELOAD WEEK · 16 NOV–22 NOV", "A deload week, lighter on purpose.", "Deload: lighter on purpose" with no Muscles; the card's bar says the same. Light and dark · Android: Result: · Notes:
+- [ ] **WS5** A week with no Weigh-in and no Check-ins has no Weigh-in or Readiness tile, and one with no food logged no kcal or protein tile and no "Calories each day". A week with nothing logged at all says "A quiet week." In airplane mode the screen says it needs a connection, with Try again.
+  - iOS: Result: ✅ (simulator) No Weigh-in, Check-ins or food: no Weigh-in, Readiness, kcal or protein tiles and no "Calories each day"; nothing logged: "A quiet week." With the API refused (not airplane mode) it says "Fit Coach isn't answering, so the Week Summary can't load just now" with Try again, which loads it once back; the no-connection wording wasn't seen · Android: Result: · Notes:
+
 ## When the server isn't answering (#170, #174)
 
 Needs the phone online with the API stopped, or the server otherwise unreachable while the phone has a network.
 
 - [x] **NA1** With the app already open, stop the API, then search for a food, Save a food's portion and Log weight. Each stops loading within 15 s and says "Fit Coach isn't answering. Check your connection, or try again in a minute.", not that it needs a connection. Today, the Food tab and History say Fit Coach can't be reached, not "No connection". Start the API again: everything works without restarting the app.
-  - iOS: Result: · Android: Result: · Notes:
+  - iOS: Result: ✅ reload on coming to the front (#206, simulator; offline approximated by a proxy in front of the in-memory API refusing every connection, the simulator's network up) Cold-started Expo Go with the API unreachable: Today showed "Can't reach Fit Coach. Workouts save on this phone until it's back.", "The rest of this week needs a connection" and "Your last Workout needs a connection", no rings data. API restored, then Home and back without switching tabs: within ~1 s Today had the rings, the Day, the receipt (phone at 8:30 pm New York via SIMCTL_CHILD_TZ), the week card and the Last Workout from History. Requests on coming back: GET /user, /week-summaries/latest, /assessments/latest, /workouts?limit=20, /days/today (twice), /tell-the-coach, POST /planned-workouts/current (twice), plus PATCH /user and PUT /week-summaries/…/seen the first time. Done twice (Settings app as the background, then the Home button), same result. The NA1 search/Save/Log weight steps weren't redone here · Android: Result: · Notes:
 
 ## Sentry (#122)
 

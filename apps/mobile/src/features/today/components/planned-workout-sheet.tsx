@@ -1,4 +1,4 @@
-import type { DayExercise } from "@fit/engines";
+import type { DayExercise, RestChoice } from "@fit/engines";
 import type { BuiltInEquipment, CheckIn, DayLength } from "@fit/shared";
 import { useRef } from "react";
 import { StyleSheet, View } from "react-native";
@@ -29,6 +29,7 @@ import {
 import { progressionChangeLine } from "../plan-reasons";
 import { CheckInRatings } from "./check-in-card";
 import { RecoveryLinks } from "./recovery-links";
+import { RestChoiceRow } from "./rest-choice-row";
 import { useWeightUnit } from "@/features/user/current-user-provider";
 
 type SheetCheckIn = {
@@ -60,6 +61,8 @@ type PlannedWorkoutSheetProps = {
   dropped: string[];
   workoutLength: DayLength;
   onChooseLength: (workoutLength: DayLength) => void;
+  restChoice: RestChoice;
+  onChooseRest: (choice: RestChoice) => void;
   equipment: BuiltInEquipment | undefined;
   equipmentChoices: BuiltInEquipment[];
   onChooseEquipment: (equipment?: BuiltInEquipment) => void;
@@ -85,6 +88,8 @@ export function PlannedWorkoutSheet({
   dropped,
   workoutLength,
   onChooseLength,
+  restChoice,
+  onChooseRest,
   equipment,
   equipmentChoices,
   onChooseEquipment,
@@ -145,6 +150,7 @@ export function PlannedWorkoutSheet({
                 />
               ))}
             </HStack>
+            <RestChoiceRow choice={restChoice} onChoose={onChooseRest} />
             {equipmentChoices.length ? (
               <HStack spacing={2} wrap="wrap">
                 <Chip label="Usual equipment" selected={!equipment} onPress={() => onChooseEquipment()} />

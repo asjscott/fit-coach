@@ -8,7 +8,9 @@ import {
 } from "@fit/shared";
 import { getCalendars } from "expo-localization";
 import { createContext, use, useCallback, useEffect, useState, type ReactNode } from "react";
+import { AppState } from "react-native";
 import { ApiError, useApi } from "@/api";
+import { onComingToFront } from "@/features/workouts/coming-to-front";
 import { deviceStorage } from "@/features/workouts/device-storage";
 import { errorMessage } from "@/utils/error-message";
 import { useSendTimeZone } from "./hooks/use-send-time-zone";
@@ -79,6 +81,11 @@ export function CurrentUserProvider({ children }: { children: ReactNode }) {
       if (isSignedIn === false) storedUser.forget().catch(() => {});
     }
   }, [isSignedIn, refresh]);
+
+  // A user that didn't load, such as opening while the server wasn't answering, tries again on coming back to the front
+  useEffect(() => {
+    if (isSignedIn && error) return onComingToFront(AppState, refresh);
+  }, [isSignedIn, error, refresh]);
 
   const updateUser = useCallback(
     async (update: UserUpdate) => {

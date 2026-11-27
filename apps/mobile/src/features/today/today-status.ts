@@ -9,7 +9,7 @@ import {
   type RestDayReason,
 } from "@fit/engines";
 import type { ActivityLevel, WeightUnit } from "@fit/shared";
-import { estimatedTimeLabel, secondsLabel, timeStat, volumeLabel } from "../workouts/format";
+import { estimatedTimeLabel, lengthLabel, secondsLabel, setsLabel, volumeLabel } from "../workouts/format";
 
 // Whether Today asks for the Activity Level (spec #158 story 4): only a user onboarded before it was asked has none,
 // and they're asked once. Skipped is undefined until the phone has read it
@@ -73,8 +73,10 @@ export const todayRestDay = (
   daysPerWeek: number | undefined,
 ) => (plan === "none" ? null : restDay(workouts, now, daysPerWeek));
 
-// The one card at the top of Today
-export type TodayCard = "loading" | "resume" | "assessment" | "done" | "rest" | "ready" | "connect" | "manual";
+// The one card at the top of Today. On a finished day it's "day-summary": the Day Summary's Tomorrow card and receipt
+// stand in for it, higher up, and for the recovery links under it
+export type TodayCard =
+  "loading" | "resume" | "assessment" | "day-summary" | "done" | "rest" | "ready" | "connect" | "manual";
 
 // Waits for the phone and History, so that a day already finished doesn't flash as ready to train
 export function todayCard({
@@ -85,6 +87,7 @@ export function todayCard({
   assessmentFirst,
   finishedToday,
   restDay: restDayReason,
+  dayFinished,
 }: {
   isLoaded: boolean;
   state: TodayState;
@@ -93,10 +96,13 @@ export function todayCard({
   assessmentFirst: boolean;
   finishedToday: boolean;
   restDay: RestDayReason | null;
+  // The Day Summary's finished (day-summary.ts)
+  dayFinished: boolean;
 }): TodayCard {
   if (workoutInProgress) return "resume";
   if (!isLoaded || state === "loading") return "loading";
   if (assessmentFirst) return "assessment";
+  if (dayFinished) return "day-summary";
   if (finishedToday) return "done";
   if (restDayReason) return "rest";
   if (plan === "planned") return "ready";
@@ -109,11 +115,10 @@ const counted = (n: number, noun: string) => `${n} ${noun}${n === 1 ? "" : "s"}`
 export function todayLoggedLine(workouts: readonly FinishedWorkoutSets[], weightUnit: WeightUnit) {
   const summaries = workouts.map(summarizeWorkout);
   const total = (field: "sets" | "durationMs" | "volumeKg") => summaries.reduce((sum, s) => sum + s[field], 0);
-  const { value, unit } = timeStat(total("durationMs"));
   const volumeKg = total("volumeKg");
   return [
-    counted(total("sets"), "Set"),
-    `${value} ${unit}`,
+    setsLabel(total("sets")),
+    lengthLabel(total("durationMs")),
     ...(volumeKg ? [`${volumeLabel(volumeKg, weightUnit)} ${weightUnit}`] : []),
   ].join(" · ");
 }
@@ -142,7 +147,7 @@ export const mobilityFocusLabels: Record<MobilityFocus, string> = {
 
 // How long a hold of a Mobility Workout takes, and how it's made up: "1 min 50 s · 45 s per side"
 export function mobilityHoldLine(hold: RecoveryExercise, setLabel: string) {
-  return [secondsLabel(holdTimeSeconds(hold)), ...(hold.sets > 1 ? [`${hold.sets} sets`] : []), setLabel].join(" · ");
+  return [secondsLabel(holdTimeSeconds(hold)), ...(hold.sets > 1 ? [setsLabel(hold.sets)] : []), setLabel].join(" · ");
 }
 
 // The whole list: "14 holds · About 20 min"
@@ -161,7 +166,7 @@ export function todayPlanLine(
   const sets = plannedExercises.reduce((sum, exercise) => sum + exercise.sets, 0);
   return [
     counted(plannedExercises.length, "Exercise"),
-    counted(sets, "Set"),
+    setsLabel(sets),
     estimatedTimeLabel(estimatedSeconds),
     ...(lighter ? [LIGHTER_AFTER_CHECK_IN.toLowerCase()] : []),
   ].join(" · ");

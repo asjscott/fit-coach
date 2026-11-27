@@ -15,8 +15,24 @@ screens (apps/mobile/src/features/workouts/views)
        │    ├─ PreviousSetsSource: GET /workouts/previous-sets?slug= through useApi (4 s timeout)
        │    └─ PlannedWorkoutSource: POST /planned-workouts/current through useApi
        └─ useSyncTriggers: sync() on foreground and on reconnect (expo-network)
+useReloadOnVisit (hooks/use-reload-on-visit.ts): a screen's server data (History, the Day, the Planned Workout…) reloads
+  on each visit and each time the app comes back to the front while the screen is in front (NA1); the user reloads on
+  coming back to the front if it didn't load (current-user-provider.tsx)
 History (history-provider.tsx, hooks/use-history.ts): GET /workouts, held in memory only, paged back far enough to
-  cover the 8 weeks of weekly Volume; Pending Workouts merged in
+  cover the 8 weeks of weekly Volume and the Weekly Streak's weeks (weeklyStreakSince); Pending Workouts merged in
+Weekly Streak (packages/engines/src/weekly-streak.ts): weeklyStreak, in the user's timeZone; This week and the Week
+  Summary both call it. partFirstWeek is the one rule for the part first week: skipped by the streak, pro-rated by the
+  Week Summary, and none when the user onboarded on a Monday
+Week Summary (apps/api/src/week-summaries.ts, routes/week-summaries.ts): GET /week-summaries/:monday (or latest, the
+  week just ended: latestWeekSummaryMonday) worked out live; only "seen" is stored (weekSummariesSeen, unique on user
+  and week), set by PUT /week-summaries/:monday/seen. The API file only loads the week; the rules are weekSummary in
+  packages/engines/src/week-summary.ts, where a new part is worked out from WeekSummaryInput and added to WeekSummary
+  (packages/shared/src/week-summaries.ts) as optional. The Coach's sentence: weekVerdict
+  (packages/engines/src/week-verdict.ts), ordered templates, the first that matches wins. Working Level moves come from
+  each level's last move (movedBy, change), as only that is stored: a level moved again later shows as it is now, and
+  one moved in a later week drops out of the earlier week's moves. Today's card: useWeekSummaryCard and week-summary-card.tsx in features/today; the screen (/week-summary?monday=)
+  is views/week-summary-view.tsx with its parts in week-summary-screen.ts, opened from the card and from "Last week"
+  in This week (lastWeekLink)
 Training summaries (packages/engines/src/training-summaries.ts): Volume, Sets, weeks, weekly Volume and the Previous
   Sets selection, pure functions
 API (apps/api/src/workouts.ts, routes/workouts.ts): idempotent POST, paged GET (before + beforeId), DELETE, and
@@ -125,12 +141,13 @@ Schemas shared by app and API: packages/shared/src/workouts.ts
   wrapping round, with a superset as one step; the rest screen's "Next" goes by it too. `WorkoutView` gives the same
   action to the Exercise's box and the rest screen, and holds which Exercise Log extra set opened. A Workout's last
   planned Set has no rest (`restAfterSet`), nor does the Set that finishes an Assessment's last test; a Set past the plan rests as usual.
-- **The rest choice is a phone-only preference** (#178): Auto or 30 s to 3 min in 15 s steps, picked on Today, stored in
-  device storage (`stored-rest-choice.ts`) and held as `restChoice` on the LogbookProvider. Never on the server, in the
+- **The rest choice is a phone-only preference** (#178): Auto or 30 s to 3 min in 15 s steps, picked in the Next Workout sheet (`rest-choice-row.tsx`: Auto and a slider, under the Workout Length; #206 moved it
+  there from Today), stored in device storage (`stored-rest-choice.ts`) and held as `restChoice` on the LogbookProvider. Never on the server, in the
   Logbook or on the Planned Workout (ADR 0003), which is still built at Long on Auto. `restAfterSet`, `pairRestPlan`
   and `daysWorkout` (`DayChoices.rest`) take it as an input: a Set is timed as its `secondsPerSet` less its Auto rest
   plus the choice (`secondsWithRest`, `rest-choice.ts`), so a shorter rest fits more of the plan's Sets in the Length.
-  An Assessment always rests as on Auto, and the walk keeps its time and has no rest.
+  An Assessment always rests as on Auto, whatever the choice (`restAfterSet` ignores it), and the walk keeps its time and has no rest. A Manual Workout (no Assessment and
+  no Workout Exercise with `planned`) never rests (#206): `restAfterSet` gives null, so there's no rest screen or bar.
 - **Times follow the phone's 12- or 24-hour setting, not its locale** (#69): `timeLabel` and Android's time dialog both
   read `uses24HourClock` (`format.ts`, from `expo-localization`), and the dialog is 24-hour whatever the phone says
   without it. The iOS pickers follow the setting by themselves. Hermes alone goes by the language: en-GB with a Canadian
@@ -551,8 +568,17 @@ maps would fix that and isn't set up.
   `.expo/dev-signed-in.log`. Use it for any ticket that changes a signed-in screen.
   - To be several users from Playwright, add `x-dev-user` in `context.route` rather than from the page, since CORS
     refuses that header. A new `x-dev-user` is a new account.
+  - For a fixed clock, such as the Day Summary's 6 to 10 pm (#208), use Playwright's clock before the page loads:
+    `page.clock.install({ time })` then `page.clock.setFixedTime(new Date("2026-11-26T19:00:00-05:00"))`, with
+    `timezoneId` on the context, which the phone sends as the user's timezone. Only the phone's clock moves: the API
+    keeps the real one, so pick a time on today's real date, and upload Workouts with real past times.
+  - Its ports are fixed (8187, 3187). When another checkout already has them, run its two commands by hand on other
+    ports, with `CORS_ORIGINS` and `EXPO_PUBLIC_API_URL` to match, and onboard with the same three requests.
   - For offline, abort the API in the same route and override `navigator.onLine`. Don't use `context.setOffline`: in
     dev, routes load from Metro on demand, so it fails with a red "Failed to fetch" that a phone never shows.
+  - `DEV_NOW=<ISO time>` starts the API's clock there (it runs on from it; `dev:local` too), for what depends on the
+    day or hour, such as the Week Summary from 6 pm on Sunday. Match the browser with Playwright's `page.clock.install`
+    and `timezoneId`. The onboarded account is onboarded at that time.
   - It can't show a real sign-in, Clerk with no signal, or native storage. Those stay in `docs/manual-checks.md`.
   - Food search finds nothing without `USDA_API_KEY`. USDA's public `DEMO_KEY` gives a few real searches an hour:
     `USDA_API_KEY=DEMO_KEY pnpm --filter @fit/mobile web:signed-in`. Never commit a real key.

@@ -1,4 +1,12 @@
-import { assessmentOffer, finishedToday, lastWorkout, offerKey, thisWeek, withPending } from "@fit/engines";
+import {
+  assessmentOffer,
+  finishedToday,
+  lastWorkout,
+  offerKey,
+  thisWeek,
+  weeklyStreak,
+  withPending,
+} from "@fit/engines";
 import type { RestDayReason } from "@fit/engines";
 import { router } from "expo-router";
 import { useEffect, useState } from "react";
@@ -14,7 +22,7 @@ import { useLatestAssessment } from "@/features/assessment/hooks/use-latest-asse
 import { useCurrentUser, useTimeZone, useWeightUnit } from "@/features/user/current-user-provider";
 import { ForgottenWorkoutModal } from "@/features/workouts/components/forgotten-workout-modal";
 import { PastWorkoutSheet } from "@/features/workouts/components/past-workout-sheet";
-import { elapsedLabel, estimatedTimeLabel, restChoiceLabel } from "@/features/workouts/format";
+import { elapsedLabel, estimatedTimeLabel } from "@/features/workouts/format";
 import { useHistory } from "@/features/workouts/history-provider";
 import {
   useResumeWorkout,
@@ -39,16 +47,22 @@ import { MobilitySheet } from "../components/mobility-sheet";
 import { PlannedWorkoutSheet } from "../components/planned-workout-sheet";
 import { PrNote } from "../components/pr-note";
 import { RecoveryLinks } from "../components/recovery-links";
-import { RestChoiceSheet } from "../components/rest-choice-sheet";
 import { ThisWeekSection } from "../components/this-week-section";
+import { TomorrowCard } from "../components/tomorrow-card";
 import { TodayCard, TodayCardLink } from "../components/today-card";
+import { WeekSummaryCard } from "../components/week-summary-card";
 import { CheckInCard } from "../components/check-in-card";
+import { DaySummaryReceipt } from "../components/day-summary-receipt";
+import { daySummary } from "../day-summary";
 import { useActivityLevelPrompt } from "../hooks/use-activity-level-prompt";
+import { useRenderOnForeground } from "../hooks/use-render-on-foreground";
 import { useCheckIn } from "../hooks/use-check-in";
 import { useDaysWorkout } from "../hooks/use-days-workout";
 import { useDismissedOffer } from "../hooks/use-dismissed-offer";
 import { usePlannedWorkout } from "../hooks/use-planned-workout";
 import { usePrNote } from "../hooks/use-pr-note";
+import { useWeekSummaryCard } from "../hooks/use-week-summary-card";
+import { lastWeekLink } from "../week-summary-card";
 import { planReasonLines } from "../plan-reasons";
 import {
   showsCheckIn,
@@ -91,13 +105,14 @@ export default function TodayView() {
   const { dismissed, dismiss } = useDismissedOffer();
   const tests = useChosenTests();
   const [sheetIsOpen, setSheetIsOpen] = useState(false);
-  const [restSheetIsOpen, setRestSheetIsOpen] = useState(false);
   // When the Mobility sheet was opened, or null while it's closed
   const [mobilityOpenedAt, setMobilityOpenedAt] = useState<Date | null>(null);
   const prNote = usePrNote();
   const { day, refresh: refreshDay } = useDay();
   const activityPrompt = useActivityLevelPrompt();
+  const weekSummary = useWeekSummaryCard();
   useRefreshHistory();
+  useRenderOnForeground();
 
   const plan = todayPlan({
     isLoaded,
@@ -144,6 +159,14 @@ export default function TodayView() {
   const week = thisWeek(all, now, daysPerWeek);
   const last = lastWorkout(all);
   const state = todayState({ historyLoaded: workouts !== null, failed: !!error, workoutCount: all.length });
+  // Offline only the Pending Workouts are known, which would undercount it
+  const streak =
+    state === "loaded" && daysPerWeek !== undefined && user?.onboardedAt
+      ? weeklyStreak({ workouts: all, daysPerWeek, onboardedAt: user.onboardedAt, now, timeZone })
+      : null;
+  // "Last week" in This week, until the next Week Summary is due
+  const lastWeek = user?.onboardedAt ? lastWeekLink({ now, timeZone, onboardedAt: user.onboardedAt }) : null;
+  const openWeekSummary = (monday: string) => router.push({ pathname: "/week-summary", params: { monday } });
   const restDayReason = todayRestDay(plan, all, now, daysPerWeek);
   const finished = finishedToday(all, now);
   const offer =
@@ -160,6 +183,20 @@ export default function TodayView() {
           timeZone: user?.timeZone ?? "UTC",
         });
   const leadingOffer = offer?.kind === "start" && plan === "none" && !logbook.workout ? offer : null;
+  // Waits for History as the day's card does, so the day isn't summed up from part of it
+  const summary =
+    state === "loading"
+      ? null
+      : daySummary({
+          now,
+          timeZone,
+          workouts: all,
+          historyLoaded: state !== "offline",
+          day,
+          restDayToday: restDayReason,
+          daysPerWeek,
+          plannedWorkout,
+        });
   const card = todayCard({
     isLoaded,
     state,
@@ -168,6 +205,7 @@ export default function TodayView() {
     assessmentFirst: !!leadingOffer,
     finishedToday: finished.length > 0,
     restDay: restDayReason,
+    dayFinished: !!summary?.finished,
   });
   const nextWorkout = (action: string) =>
     today ? `Next Workout: ${estimatedTimeLabel(today.estimatedSeconds)} · ${action}` : "";
@@ -189,12 +227,32 @@ export default function TodayView() {
           />
         </View>
       ) : null}
-      {day ? (
+      {/* First of the cards, above the Day Summary and the Tomorrow card */}
+      {weekSummary ? (
+        <View style={{ marginBottom: spacing[4] }}>
+          <WeekSummaryCard summary={weekSummary} now={now} onPress={() => openWeekSummary(weekSummary.monday)} />
+        </View>
+      ) : null}
+      {/* A finished day leads with tomorrow, and its receipt, in place of the Nudge */}
+      {summary?.finished ? (
+        <View style={{ marginBottom: spacing[4], gap: spacing[3] }}>
+          {summary.tomorrow ? (
+            <TomorrowCard tomorrow={summary.tomorrow} onSeeNextWorkout={today ? openSheet : null} />
+          ) : null}
+          <DaySummaryReceipt summary={summary} />
+        </View>
+      ) : null}
+      {day && !summary?.finished ? (
         <View style={{ marginBottom: spacing[4] }}>
           <CoachSummaryCard
             day={day}
             onPress={() => router.navigate({ pathname: "/food", params: { half: "ideas" } })}
           />
+        </View>
+      ) : null}
+      {summary && !summary.finished ? (
+        <View style={{ marginBottom: spacing[4] }}>
+          <DaySummaryReceipt summary={summary} />
         </View>
       ) : null}
       {user &&
@@ -289,18 +347,8 @@ export default function TodayView() {
           <TodayCardLink label={LOG_PAST} color="onAccent" size="sm" onPress={() => setPastSheetIsOpen(true)} />
         </TodayCard>
       ) : null}
-      {card === "loading" || card === "resume" ? null : (
-        <View style={{ marginTop: spacing[3] }}>
-          <TodayCardLink
-            label={`Rest between Sets: ${restChoiceLabel(logbook.restChoice)}`}
-            color="muted"
-            size="sm"
-            onPress={() => setRestSheetIsOpen(true)}
-          />
-        </View>
-      )}
-      {/* Every day, plan or no plan; a Rest Day's card has its own */}
-      {card === "loading" || card === "resume" || card === "rest" ? null : (
+      {/* Every day, plan or no plan, until it's finished; a Rest Day's card has its own */}
+      {card === "loading" || card === "resume" || card === "rest" || card === "day-summary" ? null : (
         <View style={{ marginTop: spacing[3], gap: spacing[3] }}>
           <RecoveryLinks
             color="muted"
@@ -324,7 +372,13 @@ export default function TodayView() {
       ) : null}
       {state === "loading" ? null : (
         <View style={{ marginTop: spacing[3] }}>
-          <ThisWeekSection week={week} state={state} now={now} />
+          <ThisWeekSection
+            week={week}
+            state={state}
+            now={now}
+            streak={streak}
+            onLastWeek={lastWeek ? () => openWeekSummary(lastWeek) : null}
+          />
         </View>
       )}
       {card === "loading" || card === "resume" || card === "manual" ? null : (
@@ -344,12 +398,6 @@ export default function TodayView() {
           </View>
         </View>
       )}
-      <RestChoiceSheet
-        isOpen={restSheetIsOpen}
-        onClose={() => setRestSheetIsOpen(false)}
-        choice={logbook.restChoice}
-        onChoose={logbook.chooseRest}
-      />
       <MobilitySheet openedAt={mobilityOpenedAt} onClose={() => setMobilityOpenedAt(null)} />
       <PastWorkoutSheet isOpen={pastSheetIsOpen} onClose={() => setPastSheetIsOpen(false)} onPick={handleStartPast} />
       {offer && !leadingOffer ? (
@@ -375,6 +423,8 @@ export default function TodayView() {
           dropped={today.dropped}
           workoutLength={today.workoutLength}
           onChooseLength={today.chooseLength}
+          restChoice={logbook.restChoice}
+          onChooseRest={logbook.chooseRest}
           equipment={today.equipment}
           equipmentChoices={today.equipmentChoices}
           onChooseEquipment={today.chooseEquipment}

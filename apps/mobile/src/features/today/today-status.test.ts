@@ -96,6 +96,7 @@ describe("todayCard", () => {
     assessmentFirst: false,
     finishedToday: false,
     restDay: null,
+    dayFinished: false,
   } as const;
 
   it("offers the plan on an ordinary day", () => {
@@ -134,6 +135,15 @@ describe("todayCard", () => {
 
   it("offers a Manual Workout with nothing else to show", () => {
     expect(todayCard({ ...ready, plan: "none" })).toBe("manual");
+  });
+
+  it("gives way to the Day Summary on a finished day, after training or on a Rest Day kept", () => {
+    expect(todayCard({ ...ready, finishedToday: true, dayFinished: true })).toBe("day-summary");
+    expect(todayCard({ ...ready, restDay: "trained-yesterday", dayFinished: true })).toBe("day-summary");
+  });
+
+  it("still puts a Workout under way first on a finished day", () => {
+    expect(todayCard({ ...ready, workoutInProgress: true, dayFinished: true })).toBe("resume");
   });
 });
 
@@ -265,7 +275,7 @@ describe("a Mobility Workout's list", () => {
   it("gives each hold's time, its sides and changes included", () => {
     expect(mobilityHoldLine(hold("pigeon", 1, 45), "45 s per side")).toBe("1 min 50 s · 45 s per side");
     expect(mobilityHoldLine(hold("cat-cow", 1, 45), "45 s")).toBe("55 s · 45 s");
-    expect(mobilityHoldLine(hold("foam-roll-quads", 2, 50), "50 s")).toBe("2 min · 2 sets · 50 s");
+    expect(mobilityHoldLine(hold("foam-roll-quads", 2, 50), "50 s")).toBe("2 min · 2 Sets · 50 s");
   });
 
   it("gives the total", () => {

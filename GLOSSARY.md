@@ -79,7 +79,7 @@ What the user is training for: losing fat, building muscle, recomposition, or at
 _Avoid_: Plan, objective, program
 
 **Manual Workout**:
-A Workout whose exercises the user chose themselves, rather than having them prescribed by the coach.
+A Workout whose exercises the user chose themselves, rather than having them prescribed by the coach. It has no rests between Sets, so the Rest Choice doesn't apply to it.
 _Avoid_: Custom workout, freestyle workout
 
 ### Planning
@@ -93,7 +93,7 @@ The Workout on offer today: the Planned Workout on the Workout Length and equipm
 _Avoid_: Today's session, adjusted plan
 
 **Rest Choice**:
-How long the user wants the rests between Sets, chosen on Today and kept on the phone: Auto, each Exercise's own rest, or one length from 30 seconds to 3 minutes for every Exercise. It decides how many of the plan's Sets fit the Workout Length, but never changes the Planned Workout. An Assessment Workout always rests on Auto.
+How long the user wants the rests between Sets, chosen in the Next Workout sheet (with the Workout Length and equipment) and kept on the phone: Auto, each Exercise's own rest, or one length from 30 seconds to 3 minutes for every Exercise. It decides how many of the plan's Sets fit the Workout Length, but never changes the Planned Workout. An Assessment Workout always rests on Auto, and a Manual Workout doesn't rest.
 _Avoid_: Rest setting, rest preference, rest timer (for the choice)
 
 **Hold timer**:

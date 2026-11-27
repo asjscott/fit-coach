@@ -36,3 +36,8 @@ export async function findCheckIn(clerkUserId: string, date: string): Promise<Da
   const { sleep, energy, soreness, checkedInAt } = doc;
   return { date, sleep, energy, soreness, checkedInAt: checkedInAt.toISOString() };
 }
+
+// The user's Check-ins on the local dates from `first` to `last`, both included
+export async function findCheckInsBetween(clerkUserId: string, first: string, last: string) {
+  return checkIns.find({ clerkUserId, date: { $gte: first, $lte: last } }).toArray();
+}

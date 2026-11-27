@@ -63,8 +63,11 @@ export const timeStat = (ms: number) => minutesStat(Math.round(ms / 60_000));
 // How long a Workout should take, in minutes like its Workout Length: "About 44 min"
 export const estimatedTimeLabel = (seconds: number) => `About ${Math.round(seconds / 60)} min`;
 
+// A length of time to the nearest minute, as one label: "48 min", "1 h 5 min"
+export const lengthLabel = (ms: number) => statLabel(timeStat(ms));
+
 export const durationLabel = ({ startedAt, endedAt }: WorkoutTimes) =>
-  statLabel(timeStat(Date.parse(endedAt) - Date.parse(startedAt)));
+  lengthLabel(Date.parse(endedAt) - Date.parse(startedAt));
 
 // The two Recovery Workouts (#198), on Today, the Rest Day card, the plan's sheet and in History
 export const MOBILITY = "Mobility";
@@ -155,6 +158,10 @@ export function weekDatesLabel(start: Date, now = new Date(), locale?: string) {
   return label.replace(/\s*–\s*/, "\u2009–\u2009");
 }
 
+// The same for a week by its Monday's date (YYYY-MM-DD), such as a Week Summary's, read as that local calendar day
+export const mondayWeekDatesLabel = (monday: string, now = new Date()) =>
+  weekDatesLabel(new Date(`${monday}T00:00:00`), now);
+
 // Every load is stored in kg and shown in the user's unit (#126)
 
 // A Volume in whole units of the user's with thousands separators, e.g. "6,420"; the unit is drawn separately
@@ -166,7 +173,8 @@ export const loadLabel = (kg: number, unit: WeightUnit) => `${loadInUnit(kg, uni
 // A weight to the tenth of the user's unit, such as an Estimated maximum or body weight: "16.8 kg", "37 lb"
 export const weightLabel = (kg: number, unit: WeightUnit) => `${inUnitToStep(kg, unit, 0.1).toLocaleString()} ${unit}`;
 
-export const setsLabel = (sets: number) => `${sets} ${sets === 1 ? "set" : "sets"}`;
+// A count of Sets, a glossary term so capitalised: "1 Set", "18 Sets"
+export const setsLabel = (sets: number) => `${sets} ${sets === 1 ? "Set" : "Sets"}`;
 
 // A PR's new best against the one it beat (#130), weights in the user's unit (#126) and both rounded the same way
 // (#146): "Estimated max 162 lb, up from 154 lb", "20 kg for 8 reps, up from 16 kg", "14 reps, up from 12"
@@ -261,7 +269,7 @@ function oneNumberLabel(target: SetTarget, unit: WeightUnit, reading?: SetReadin
 
 type PlannedSets = NonNullable<InProgressWorkoutExercise["planned"]>;
 
-// What the plan sets for an Exercise: "3 sets · 20 kg × 8–12 · aim for 9"
+// What the plan sets for an Exercise: "3 Sets · 20 kg × 8–12 · aim for 9"
 export const plannedSetsLabel = ({ sets, target }: PlannedSets, unit: WeightUnit, reading?: TargetReading) =>
   `${setsLabel(sets)} · ${setTargetLabel(target, unit, reading)}`;
 
@@ -286,7 +294,7 @@ export const builtInEquipmentLabels: Record<BuiltInEquipment, string> = {
 export const noAlternativeLabel = (equipment: BuiltInEquipment, name: string) =>
   `No ${builtInEquipmentLabels[equipment]} option for ${name.toLowerCase()}`;
 
-// A collapsed Workout Exercise's line: "3 sets · 18 kg × 10, 10, 8", else its target Sets, else its Previous Sets,
+// A collapsed Workout Exercise's line: "3 Sets · 18 kg × 10, 10, 8", else its target Sets, else its Previous Sets,
 // else "Not started". A Jump's reps read as contacts (#141)
 export function workoutExerciseSummary(
   sets: readonly Set[],
@@ -347,7 +355,7 @@ export const supersetLetter = (index: number) => String.fromCharCode(65 + index)
 // The superset box's banner mid-round (#96). The name is the library's, as it is (#111)
 export const straightToLabel = (name: string) => `No rest: straight to ${name}`;
 
-// A rest choice on Today: "Auto", "45 s", "1 min 15 s"
+// A rest choice: "Auto", "45 s", "1 min 15 s"
 export function restChoiceLabel(choice: RestChoice) {
   return choice === "auto" ? "Auto" : secondsLabel(choice);
 }

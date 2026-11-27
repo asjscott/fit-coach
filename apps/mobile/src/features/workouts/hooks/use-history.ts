@@ -1,7 +1,8 @@
-import { weeklyVolumeStart } from "@fit/engines";
+import { mondayOf, weeklyStreakSince, weeklyVolumeStart, type WeeklyStreakInput } from "@fit/engines";
 import { Workout } from "@fit/shared";
 import { useCallback, useRef, useState } from "react";
 import { useApi } from "@/api";
+import { useCurrentUser, useTimeZone } from "@/features/user/current-user-provider";
 import { errorMessage } from "@/utils/error-message";
 
 const PAGE_SIZE = 20;
@@ -18,6 +19,13 @@ export function useHistoryState() {
   // Ignores a page that arrives after a newer refresh started
   const generation = useRef(0);
   const loadingMore = useRef(false);
+  // What the Weekly Streak needs besides the Workouts, read when a refresh pages back so refresh stays stable
+  const streak = useRef<Omit<WeeklyStreakInput, "workouts" | "now"> | null>(null);
+  const { user } = useCurrentUser();
+  const timeZone = useTimeZone();
+  const daysPerWeek = user?.profile.daysPerWeek;
+  streak.current =
+    user?.onboardedAt && daysPerWeek !== undefined ? { daysPerWeek, onboardedAt: user.onboardedAt, timeZone } : null;
 
   // The page after the given Workout, or the newest page
   const fetchPage = useCallback(
@@ -34,15 +42,22 @@ export function useHistoryState() {
   );
 
   // Loads the newest pages again, so a just-uploaded Workout shows at the top. Pages back until the
-  // weekly Volume's 8 weeks are covered, so those weeks' totals are whole
+  // weekly Volume's 8 weeks and the Weekly Streak's weeks are covered, so those weeks' totals are whole
   const refresh = useCallback(async () => {
     const current = ++generation.current;
-    const since = weeklyVolumeStart(new Date()).getTime();
+    const now = new Date();
+    const since = weeklyVolumeStart(now).getTime();
+    // The oldest Workout loaded is before the week the streak stops at, so that week is whole too. That week depends on
+    // the Workouts loaded so far, so it's worked out again after each page
+    const streakOf = streak.current && { ...streak.current, now };
+    const streakCovered = (workouts: Workout[], oldest: Workout) =>
+      !streakOf ||
+      mondayOf(new Date(oldest.startedAt), streakOf.timeZone) < weeklyStreakSince({ ...streakOf, workouts });
     try {
       let loaded: Workout[] = [];
       let more = true;
       let oldest: Workout | undefined;
-      while (more && (!oldest || Date.parse(oldest.startedAt) >= since)) {
+      while (more && (!oldest || Date.parse(oldest.startedAt) >= since || !streakCovered(loaded, oldest))) {
         const result = await fetchPage(oldest);
         if (current !== generation.current) return;
         loaded = [...loaded, ...result.page];

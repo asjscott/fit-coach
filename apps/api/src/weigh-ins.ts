@@ -66,3 +66,13 @@ export async function migrateWeighIns() {
   const onboarded = users.find({ onboardedAt: { $ne: null }, "profile.weightKg": { $exists: true } });
   for await (const user of onboarded) await keepFirstWeighIn(user);
 }
+
+// The Weigh-in of the week starting on this Monday and its change since the Weigh-in before, in kg; null without both
+export async function weighInChange(clerkUserId: string, monday: string) {
+  const [thisWeek, before] = await Promise.all([
+    weighIns.findOne({ clerkUserId, week: monday }),
+    weighIns.findOne({ clerkUserId, week: { $lt: monday } }, { sort: { week: -1 } }),
+  ]);
+  if (!thisWeek || !before) return null;
+  return { kg: thisWeek.kg, changeKg: Math.round((thisWeek.kg - before.kg) * 1000) / 1000 };
+}

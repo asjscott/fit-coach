@@ -15,6 +15,7 @@ export * from "./progression";
 export * from "./tell-the-coach";
 export * from "./units";
 export * from "./user";
+export * from "./week-summaries";
 export * from "./workouts";
 
 export const ErrorResponse = z.object({

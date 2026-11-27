@@ -37,6 +37,15 @@ export default function AppLayout() {
             }}
           />
           <Stack.Screen
+            name="week-summary"
+            options={{
+              ...stackScreenOptions,
+              headerShown: true,
+              title: "Week Summary",
+              headerBackButtonDisplayMode: "minimal",
+            }}
+          />
+          <Stack.Screen
             name="assessment-results"
             // A bare chevron: the back title would be "(tabs)", the route group's name
             options={{

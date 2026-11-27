@@ -6,6 +6,11 @@ import { sliderSizes, type SliderSize } from "./styles";
 
 type SliderContextValue = { fraction: number; width: number; size: SliderSize };
 
+const SHADOW_RADIUS = 4;
+// Room at each end for the thumb's shadow, so a parent that clips at its padding doesn't cut it off at either end.
+// iOS spreads a shadow over about twice its radius, so 4 pt of room still cut it on the simulator (#206)
+const SHADOW_ROOM = 10;
+
 const SliderContext = createContext<SliderContextValue | null>(null);
 
 function useSliderContext() {
@@ -50,6 +55,7 @@ export function Slider({
   const [internal, setInternal] = useState(defaultValue ?? minValue);
   const current = value ?? internal;
   const [width, setWidth] = useState(0);
+  const thumb = sliderSizes[size].thumb;
 
   // Latest values for the gesture callbacks, which are created once
   const latest = useRef({ left: 0, width: 0, current, minValue, maxValue, step, disabled, onChange, onChangeEnd });
@@ -82,7 +88,6 @@ export function Slider({
   }, []);
 
   const fraction = maxValue === minValue ? 0 : (current - minValue) / (maxValue - minValue);
-  const thumb = sliderSizes[size].thumb;
 
   return (
     <SliderContext value={{ fraction, width, size }}>
@@ -103,12 +108,17 @@ export function Slider({
         }}
         onLayout={(e) => {
           setWidth(e.nativeEvent.layout.width);
+          // The thumb's centre travels the track, inset by the shadow's room and half a thumb at each end
           rootRef.current?.measureInWindow((x, _y, w) => {
-            latest.current.left = x;
-            latest.current.width = w;
+            latest.current.left = x + SHADOW_ROOM + thumb / 2;
+            latest.current.width = w - 2 * SHADOW_ROOM - thumb;
           });
         }}
-        style={[{ height: thumb, justifyContent: "center" }, disabled && { opacity: 0.4 }, style]}
+        style={[
+          { height: thumb, justifyContent: "center", paddingHorizontal: SHADOW_ROOM },
+          disabled && { opacity: 0.4 },
+          style,
+        ]}
         {...panResponder.panHandlers}
       >
         {children}
@@ -120,9 +130,11 @@ export function Slider({
 export function SliderTrack({ children }: { children?: ReactNode }) {
   const { colors } = useTheme();
   const { size } = useSliderContext();
+  // Inset by half a thumb, so the thumb stays inside the slider at either end rather than being cut off (#206)
   return (
     <View
       style={{
+        marginHorizontal: sliderSizes[size].thumb / 2,
         height: sliderSizes[size].track,
         borderRadius: radii.pill,
         backgroundColor: colors.line,
@@ -149,7 +161,7 @@ export function SliderThumb() {
       pointerEvents="none"
       style={{
         position: "absolute",
-        left: fraction * width - thumb / 2,
+        left: SHADOW_ROOM + fraction * (width - 2 * SHADOW_ROOM - thumb),
         width: thumb,
         height: thumb,
         borderRadius: thumb / 2,
@@ -158,7 +170,7 @@ export function SliderThumb() {
         borderColor: colors.accent,
         shadowColor: colors.shadow,
         shadowOpacity: 0.2,
-        shadowRadius: 4,
+        shadowRadius: SHADOW_RADIUS,
         shadowOffset: { width: 0, height: 2 },
         elevation: 3,
       }}
