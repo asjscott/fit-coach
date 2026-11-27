@@ -50,6 +50,7 @@ export function Slider({
   const [internal, setInternal] = useState(defaultValue ?? minValue);
   const current = value ?? internal;
   const [width, setWidth] = useState(0);
+  const thumb = sliderSizes[size].thumb;
 
   // Latest values for the gesture callbacks, which are created once
   const latest = useRef({ left: 0, width: 0, current, minValue, maxValue, step, disabled, onChange, onChangeEnd });
@@ -82,7 +83,6 @@ export function Slider({
   }, []);
 
   const fraction = maxValue === minValue ? 0 : (current - minValue) / (maxValue - minValue);
-  const thumb = sliderSizes[size].thumb;
 
   return (
     <SliderContext value={{ fraction, width, size }}>
@@ -103,9 +103,10 @@ export function Slider({
         }}
         onLayout={(e) => {
           setWidth(e.nativeEvent.layout.width);
+          // The thumb's centre travels the track, inset by half a thumb at each end
           rootRef.current?.measureInWindow((x, _y, w) => {
-            latest.current.left = x;
-            latest.current.width = w;
+            latest.current.left = x + thumb / 2;
+            latest.current.width = w - thumb;
           });
         }}
         style={[{ height: thumb, justifyContent: "center" }, disabled && { opacity: 0.4 }, style]}
@@ -120,9 +121,11 @@ export function Slider({
 export function SliderTrack({ children }: { children?: ReactNode }) {
   const { colors } = useTheme();
   const { size } = useSliderContext();
+  // Inset by half a thumb, so the thumb stays inside the slider at either end rather than being cut off (#206)
   return (
     <View
       style={{
+        marginHorizontal: sliderSizes[size].thumb / 2,
         height: sliderSizes[size].track,
         borderRadius: radii.pill,
         backgroundColor: colors.line,
@@ -149,7 +152,7 @@ export function SliderThumb() {
       pointerEvents="none"
       style={{
         position: "absolute",
-        left: fraction * width - thumb / 2,
+        left: fraction * (width - thumb),
         width: thumb,
         height: thumb,
         borderRadius: thumb / 2,
