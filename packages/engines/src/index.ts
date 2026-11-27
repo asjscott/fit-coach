@@ -40,7 +40,7 @@ export * from "./plan-workout";
 export * from "./progression";
 export * from "./prs";
 export * from "./recovery-workout";
-export { REST_CHOICES, RestChoice } from "./rest-choice";
+export { fixedRestChoice, REST_CHOICES, RestChoice } from "./rest-choice";
 export * from "./rest-day";
 export * from "./rest-timer";
 export { supersetGroups, supersetPartner, supersetTurn, type PlannedProgress } from "./supersets";

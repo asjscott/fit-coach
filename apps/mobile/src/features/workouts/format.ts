@@ -355,7 +355,7 @@ export const supersetLetter = (index: number) => String.fromCharCode(65 + index)
 // The superset box's banner mid-round (#96). The name is the library's, as it is (#111)
 export const straightToLabel = (name: string) => `No rest: straight to ${name}`;
 
-// A rest choice on Today: "Auto", "45 s", "1 min 15 s"
+// A rest choice: "Auto", "45 s", "1 min 15 s"
 export function restChoiceLabel(choice: RestChoice) {
   return choice === "auto" ? "Auto" : secondsLabel(choice);
 }

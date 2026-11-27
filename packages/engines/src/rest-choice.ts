@@ -3,10 +3,19 @@ import { z } from "zod";
 // Auto, each Exercise's own rest, or one length for every Exercise: 30 s to 3 min in 15 s steps (#178)
 export const REST_CHOICES = ["auto", 30, 45, 60, 75, 90, 105, 120, 135, 150, 165, 180] as const;
 
-// The rest the user chooses on Today. Kept on the phone only, so it shapes how a Workout is done but never the stored
-// plan (ADR 0003)
+// The rest the user chooses in the Next Workout sheet. Kept on the phone only, so it shapes how a Workout is done but
+// never the stored plan (ADR 0003)
 export const RestChoice = z.literal(REST_CHOICES);
 export type RestChoice = z.infer<typeof RestChoice>;
+
+const FIXED_CHOICES = REST_CHOICES.filter((choice) => choice !== "auto");
+
+// The fixed length nearest to a number of seconds, such as where the rest slider stops
+export function fixedRestChoice(seconds: number): Exclude<RestChoice, "auto"> {
+  return FIXED_CHOICES.reduce((nearest, choice) =>
+    Math.abs(choice - seconds) < Math.abs(nearest - seconds) ? choice : nearest,
+  );
+}
 
 // The Auto rest after a Set (#95): what's left of the Set's time once the Set itself is done, but never under 45 seconds
 const SET_SECONDS = 30;

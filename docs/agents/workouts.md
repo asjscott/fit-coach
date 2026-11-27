@@ -141,8 +141,8 @@ Schemas shared by app and API: packages/shared/src/workouts.ts
   wrapping round, with a superset as one step; the rest screen's "Next" goes by it too. `WorkoutView` gives the same
   action to the Exercise's box and the rest screen, and holds which Exercise Log extra set opened. A Workout's last
   planned Set has no rest (`restAfterSet`), nor does the Set that finishes an Assessment's last test; a Set past the plan rests as usual.
-- **The rest choice is a phone-only preference** (#178): Auto or 30 s to 3 min in 15 s steps, picked on Today, stored in
-  device storage (`stored-rest-choice.ts`) and held as `restChoice` on the LogbookProvider. Never on the server, in the
+- **The rest choice is a phone-only preference** (#178): Auto or 30 s to 3 min in 15 s steps, picked in the Next Workout sheet (`rest-choice-row.tsx`: Auto and a slider, under the Workout Length; #206 moved it
+  there from Today), stored in device storage (`stored-rest-choice.ts`) and held as `restChoice` on the LogbookProvider. Never on the server, in the
   Logbook or on the Planned Workout (ADR 0003), which is still built at Long on Auto. `restAfterSet`, `pairRestPlan`
   and `daysWorkout` (`DayChoices.rest`) take it as an input: a Set is timed as its `secondsPerSet` less its Auto rest
   plus the choice (`secondsWithRest`, `rest-choice.ts`), so a shorter rest fits more of the plan's Sets in the Length.

@@ -22,7 +22,7 @@ import { useLatestAssessment } from "@/features/assessment/hooks/use-latest-asse
 import { useCurrentUser, useTimeZone, useWeightUnit } from "@/features/user/current-user-provider";
 import { ForgottenWorkoutModal } from "@/features/workouts/components/forgotten-workout-modal";
 import { PastWorkoutSheet } from "@/features/workouts/components/past-workout-sheet";
-import { elapsedLabel, estimatedTimeLabel, restChoiceLabel } from "@/features/workouts/format";
+import { elapsedLabel, estimatedTimeLabel } from "@/features/workouts/format";
 import { useHistory } from "@/features/workouts/history-provider";
 import {
   useResumeWorkout,
@@ -47,7 +47,6 @@ import { MobilitySheet } from "../components/mobility-sheet";
 import { PlannedWorkoutSheet } from "../components/planned-workout-sheet";
 import { PrNote } from "../components/pr-note";
 import { RecoveryLinks } from "../components/recovery-links";
-import { RestChoiceSheet } from "../components/rest-choice-sheet";
 import { ThisWeekSection } from "../components/this-week-section";
 import { TomorrowCard } from "../components/tomorrow-card";
 import { TodayCard, TodayCardLink } from "../components/today-card";
@@ -106,7 +105,6 @@ export default function TodayView() {
   const { dismissed, dismiss } = useDismissedOffer();
   const tests = useChosenTests();
   const [sheetIsOpen, setSheetIsOpen] = useState(false);
-  const [restSheetIsOpen, setRestSheetIsOpen] = useState(false);
   // When the Mobility sheet was opened, or null while it's closed
   const [mobilityOpenedAt, setMobilityOpenedAt] = useState<Date | null>(null);
   const prNote = usePrNote();
@@ -349,16 +347,6 @@ export default function TodayView() {
           <TodayCardLink label={LOG_PAST} color="onAccent" size="sm" onPress={() => setPastSheetIsOpen(true)} />
         </TodayCard>
       ) : null}
-      {card === "loading" || card === "resume" || card === "day-summary" ? null : (
-        <View style={{ marginTop: spacing[3] }}>
-          <TodayCardLink
-            label={`Rest between Sets: ${restChoiceLabel(logbook.restChoice)}`}
-            color="muted"
-            size="sm"
-            onPress={() => setRestSheetIsOpen(true)}
-          />
-        </View>
-      )}
       {/* Every day, plan or no plan, until it's finished; a Rest Day's card has its own */}
       {card === "loading" || card === "resume" || card === "rest" || card === "day-summary" ? null : (
         <View style={{ marginTop: spacing[3], gap: spacing[3] }}>
@@ -410,12 +398,6 @@ export default function TodayView() {
           </View>
         </View>
       )}
-      <RestChoiceSheet
-        isOpen={restSheetIsOpen}
-        onClose={() => setRestSheetIsOpen(false)}
-        choice={logbook.restChoice}
-        onChoose={logbook.chooseRest}
-      />
       <MobilitySheet openedAt={mobilityOpenedAt} onClose={() => setMobilityOpenedAt(null)} />
       <PastWorkoutSheet isOpen={pastSheetIsOpen} onClose={() => setPastSheetIsOpen(false)} onPick={handleStartPast} />
       {offer && !leadingOffer ? (
@@ -441,6 +423,8 @@ export default function TodayView() {
           dropped={today.dropped}
           workoutLength={today.workoutLength}
           onChooseLength={today.chooseLength}
+          restChoice={logbook.restChoice}
+          onChooseRest={logbook.chooseRest}
           equipment={today.equipment}
           equipmentChoices={today.equipmentChoices}
           onChooseEquipment={today.chooseEquipment}

@@ -93,7 +93,7 @@ The Workout on offer today: the Planned Workout on the Workout Length and equipm
 _Avoid_: Today's session, adjusted plan
 
 **Rest Choice**:
-How long the user wants the rests between Sets, chosen on Today and kept on the phone: Auto, each Exercise's own rest, or one length from 30 seconds to 3 minutes for every Exercise. It decides how many of the plan's Sets fit the Workout Length, but never changes the Planned Workout. An Assessment Workout always rests on Auto.
+How long the user wants the rests between Sets, chosen in the Next Workout sheet (with the Workout Length and equipment) and kept on the phone: Auto, each Exercise's own rest, or one length from 30 seconds to 3 minutes for every Exercise. It decides how many of the plan's Sets fit the Workout Length, but never changes the Planned Workout. An Assessment Workout always rests on Auto.
 _Avoid_: Rest setting, rest preference, rest timer (for the choice)
 
 **Hold timer**:

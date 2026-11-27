@@ -8,7 +8,7 @@ Result codes: **✅ pass** · **❌ fail** · **⚠️ works but feels off** · 
 
 ## What's left
 
-- **Run on the phone now:** R1, U1, U2, LS2, PR1, RS1–RS7. Each is a part no run has covered yet.
+- **Run on the phone now:** R1, U1, U2, LS2, PR1, RS1–RS7, RS9. Each is a part no run has covered yet.
 - **M7, on the phones:** WI4, WI6, F4, FL6, SC3, SC4, TC4, FI6, TB2, NA1. Session 5 passed the rest of M7 on the simulators and phones; these are the parts not yet seen, and the offline checks again after #170–#174.
 - **Ranges (#189), on the phones:** RR1–RR3.
 - **Nutrition History (#191), on the phones:** NH1–NH4.
@@ -204,6 +204,8 @@ On the installed web app on the iPhone, with the silent switch off and the volum
 
 - [x] **RS8** Log an Exercise's last planned Set: the rest screen has the rating, Next exercise and Log extra set, all in sight without scrolling. Next exercise opens the next Exercise with the rest as a bar (#180).
   - Result: Pass· Notes:
+- [ ] **RS9** Today has no "Rest between Sets" link (#206). Open "See or change this Workout": under the Workout Length chips and above the equipment, one row reads "Rest between Sets" with the choice under it, an Auto chip and a slider. Auto is selected at first. Drag the slider: the length follows in 15 s steps from 30 s to 3 min, Auto deselects and the count of Sets that fit the Length changes (Standard: 22 Sets on Auto, 27 at 1 min). Tap Auto: it's selected again and the slider's fill goes. Close and reopen the app: the choice is kept, and a rest after a Set is that long.
+  - iOS: Result: · Android: Result: · Notes:
 
 ## Hold timer (#196)
 
@@ -386,7 +388,7 @@ From 6 to 10 pm in your timezone. Change the phone's time in Settings (turn off 
 
 From 6 to 10 pm in your timezone, as for #208. The day is finished once you've trained (Mobility and Walk and mobility included) or kept a recommended Rest Day, and kcal is in range or over. Protein never decides it.
 
-- [ ] **DF1** Train, and log food short of the kcal range: Today is as in DS1, with the Nudge, "Done for today." and the links. Log enough food to reach the range and come back to Today: a big "TOMORROW · <day>" card now leads under the rings, with "Rest." or tomorrow's Workout's Muscles, the reason, "Eat … kcal · … g protein" and "See the next Workout ›", and the "TODAY" receipt under it with no tomorrow line. The Coach's Nudge, the Workout card, "Rest between Sets", Mobility and Walk and mobility are gone; Tell the coach, This week, "Start manual workout" and Last workout stay where they were.
+- [ ] **DF1** Train, and log food short of the kcal range: Today is as in DS1, with the Nudge, "Done for today." and the links. Log enough food to reach the range and come back to Today: a big "TOMORROW · <day>" card now leads under the rings, with "Rest." or tomorrow's Workout's Muscles, the reason, "Eat … kcal · … g protein" and "See the next Workout ›", and the "TODAY" receipt under it with no tomorrow line. The Coach's Nudge, the Workout card, Mobility and Walk and mobility are gone; Tell the coach, This week, "Start manual workout" and Last workout stay where they were.
   - iOS: Result: ✅ (simulator) Trained and short: Nudge, "Done for today." and links. In range: "TOMORROW · FRIDAY", "Rest.", the reason, "Eat 2,970 kcal · 159 g protein", "See the next Workout ›", the receipt under it with no tomorrow line; Nudge, Workout card, Rest between Sets, Mobility and Walk and mobility gone; This week, Start manual workout and Last workout stay. Tell the coach not seen (no GEMINI_API_KEY in the dev API) · Android: Result: · Notes:
 - [x] **DF2** On a recommended Rest Day with nothing done, reach the kcal range: the day finishes the same way, with "✅ Rest Day" in the receipt and "Rest today." gone. With kcal in range and protein short, it's still finished; with kcal over, too.
   - iOS: Result: ✅ (simulator) Account trained Mon and Wed, so Thursday is a recommended Rest Day: kcal 2,862 in range with protein 143 / 160 short → finished, "✅ Rest Day" in the receipt, Tomorrow card leads; still finished at 3,262 kcal (over) · Android: Result: · Notes:
