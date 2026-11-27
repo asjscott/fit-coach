@@ -167,9 +167,13 @@ describe("daySummary: food", () => {
     ]);
   });
 
-  it("marks kcal over the top of the range by how much", () => {
+  it("crosses kcal over the top of the range, by how much", () => {
     expect(ate(3300, 150)?.kcal.state).toBe("over");
-    expect(foodRows(ate(3300, 150))[0]).toEqual({ label: "✅ Calories", detail: "3,300 / 2,980 kcal · 170 over" });
+    expect(foodRows(ate(3300, 150))[0]).toEqual({ label: "❌ Calories", detail: "3,300 / 2,980 kcal · 170 over" });
+  });
+
+  it("crosses protein over the top of the range, by how much", () => {
+    expect(foodRows(ate(2900, 212))[1]).toEqual({ label: "❌ Protein", detail: "212 / 160 g · 20 over" });
   });
 
   it("rounds as the rings do", () => {

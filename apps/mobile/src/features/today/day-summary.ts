@@ -189,6 +189,7 @@ export function musclesName(muscles: readonly Muscle[]) {
 
 const DONE = "✅";
 const NOT_YET = "○";
+const RANGE_MARKS: Record<RangeRow["state"], string> = { below: NOT_YET, in: DONE, over: "❌" };
 
 // The receipt's Workout row: "✅ Chest, back and quads" and "18 Sets · 48 min"
 export function workoutRow(workout: DaySummaryWorkout): ReceiptRow {
@@ -210,7 +211,7 @@ export function workoutRow(workout: DaySummaryWorkout): ReceiptRow {
 function rangeRowLabel(name: string, { amount, target, state }: RangeRow, unit: string, range: number): ReceiptRow {
   const over = state === "over" ? ` · ${wholeNumber(amount - range)} over` : "";
   return {
-    label: `${state === "below" ? NOT_YET : DONE} ${name}`,
+    label: `${RANGE_MARKS[state]} ${name}`,
     detail: `${wholeNumber(amount)} / ${wholeNumber(target)} ${unit}${over}`,
   };
 }
