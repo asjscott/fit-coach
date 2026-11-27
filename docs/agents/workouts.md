@@ -15,6 +15,9 @@ screens (apps/mobile/src/features/workouts/views)
        │    ├─ PreviousSetsSource: GET /workouts/previous-sets?slug= through useApi (4 s timeout)
        │    └─ PlannedWorkoutSource: POST /planned-workouts/current through useApi
        └─ useSyncTriggers: sync() on foreground and on reconnect (expo-network)
+useReloadOnVisit (hooks/use-reload-on-visit.ts): a screen's server data (History, the Day, the Planned Workout…) reloads
+  on each visit and each time the app comes back to the front while the screen is in front (NA1); the user reloads on
+  coming back to the front if it didn't load (current-user-provider.tsx)
 History (history-provider.tsx, hooks/use-history.ts): GET /workouts, held in memory only, paged back far enough to
   cover the 8 weeks of weekly Volume and the Weekly Streak's weeks (weeklyStreakSince); Pending Workouts merged in
 Weekly Streak (packages/engines/src/weekly-streak.ts): weeklyStreak, in the user's timeZone; This week and the Week
