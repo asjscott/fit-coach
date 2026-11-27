@@ -6,8 +6,10 @@ import { sliderSizes, type SliderSize } from "./styles";
 
 type SliderContextValue = { fraction: number; width: number; size: SliderSize };
 
-// Room at each end for the thumb's shadow, so a parent that clips at its padding doesn't cut it off at either end (#206)
-const SHADOW_ROOM = 4;
+const SHADOW_RADIUS = 4;
+// Room at each end for the thumb's shadow, so a parent that clips at its padding doesn't cut it off at either end.
+// iOS spreads a shadow over about twice its radius, so 4 pt of room still cut it on the simulator (#206)
+const SHADOW_ROOM = 10;
 
 const SliderContext = createContext<SliderContextValue | null>(null);
 
@@ -168,7 +170,7 @@ export function SliderThumb() {
         borderColor: colors.accent,
         shadowColor: colors.shadow,
         shadowOpacity: 0.2,
-        shadowRadius: SHADOW_ROOM,
+        shadowRadius: SHADOW_RADIUS,
         shadowOffset: { width: 0, height: 2 },
         elevation: 3,
       }}
