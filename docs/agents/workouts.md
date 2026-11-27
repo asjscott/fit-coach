@@ -146,7 +146,8 @@ Schemas shared by app and API: packages/shared/src/workouts.ts
   Logbook or on the Planned Workout (ADR 0003), which is still built at Long on Auto. `restAfterSet`, `pairRestPlan`
   and `daysWorkout` (`DayChoices.rest`) take it as an input: a Set is timed as its `secondsPerSet` less its Auto rest
   plus the choice (`secondsWithRest`, `rest-choice.ts`), so a shorter rest fits more of the plan's Sets in the Length.
-  An Assessment always rests as on Auto, and the walk keeps its time and has no rest.
+  An Assessment always rests as on Auto, and the walk keeps its time and has no rest. A Manual Workout (no Assessment and
+  no Workout Exercise with `planned`) never rests (#206): `restAfterSet` gives null, so there's no rest screen or bar.
 - **Times follow the phone's 12- or 24-hour setting, not its locale** (#69): `timeLabel` and Android's time dialog both
   read `uses24HourClock` (`format.ts`, from `expo-localization`), and the dialog is 24-hour whatever the phone says
   without it. The iOS pickers follow the setting by themselves. Hermes alone goes by the language: en-GB with a Canadian

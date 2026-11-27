@@ -25,7 +25,7 @@ export const startRest = (slug: string, now: Date, choice?: RestChoice): Rest =>
 // the two rests. Once the other has all its Sets, the one left rests as usual. A Recovery Exercise has no rest after
 // it (#200), and nor does a Set of a Workout logged afterwards, which happened on another day (#153). An Assessment
 // always rests as on Auto, so its tests aren't held back by tiredness (#178). The Workout's last planned Set has none
-// (#180), nor the Set that leaves an Assessment no test to do
+// (#180), nor the Set that leaves an Assessment no test to do. A Manual Workout, with no plan or tests, never rests (#206)
 export function restAfterSet(
   workout: Pick<InProgressWorkout, "workoutExercises" | "pastStart" | "assessment" | "bodyProfile">,
   workoutExerciseId: string,
@@ -34,7 +34,7 @@ export function restAfterSet(
   equipmentProfile?: ProfileWithLoads,
 ): Rest | null {
   const { workoutExercises, pastStart, assessment } = workout;
-  if (pastStart) return null;
+  if (pastStart || isManual(workout)) return null;
   if (assessment && equipmentProfile && testProgress(workout, equipmentProfile).allDone) return null;
   const choice = assessment ? "auto" : chosen;
   const logged = workoutExercises.find(({ id }) => id === workoutExerciseId);
@@ -46,6 +46,10 @@ export function restAfterSet(
     return done === partner.slug ? startRest(logged.slug, now, choice) : null;
   return { endsAt: now.getTime() + pairSeconds * 1000 };
 }
+
+// A Workout the user chose the Exercises of: neither an Assessment nor started from a plan of Exercises
+const isManual = ({ assessment, workoutExercises }: Pick<InProgressWorkout, "assessment" | "workoutExercises">) =>
+  !assessment && !workoutExercises.some(({ planned }) => planned);
 
 // The rest after a superset's round: the longer of its two Exercises' rests
 export const pairRestSeconds = (a: string, b: string, choice?: RestChoice) =>

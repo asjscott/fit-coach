@@ -131,15 +131,20 @@ describe("restAfterSet", () => {
     it("rests after a Set past the plan", () => {
       expect(secondsOf(restAfterSet(done(3, 3, 4), "squat", now))).toBe(90);
     });
+  });
 
-    it("always rests in a Manual Workout", () => {
-      const manual = workout(0, 0).workoutExercises.map(({ id, slug, loadType, sets }) => ({
-        id,
-        slug,
-        loadType,
-        sets,
-      }));
-      expect(secondsOf(restAfterSet({ workoutExercises: manual }, "squat", now))).toBe(90);
+  // The user's call on #206: rest isn't relevant to a Workout the user chose the Exercises of
+  describe("in a Manual Workout", () => {
+    const manual = workout(0, 0).workoutExercises.map(({ id, slug, loadType, sets }) => ({ id, slug, loadType, sets }));
+
+    it("never rests, on Auto or a chosen rest", () => {
+      expect(restAfterSet({ workoutExercises: manual }, "squat", now)).toBeNull();
+      expect(restAfterSet({ workoutExercises: manual }, "press", now, 60)).toBeNull();
+    });
+
+    it("rests in a Planned Workout with an Exercise the user added", () => {
+      const added = { workoutExercises: [...workout(0, 0).workoutExercises, { ...manual[2]!, id: "extra" }] };
+      expect(secondsOf(restAfterSet(added, "extra", now))).toBe(90);
     });
   });
 

@@ -8,7 +8,7 @@ Result codes: **✅ pass** · **❌ fail** · **⚠️ works but feels off** · 
 
 ## What's left
 
-- **Run on the phone now:** R1, U1, U2, LS2, PR1, RS1–RS7, RS9. Each is a part no run has covered yet.
+- **Run on the phone now:** R1, U1, U2, LS2, PR1, RS1–RS7, RS9, RS10. Each is a part no run has covered yet.
 - **M7, on the phones:** WI4, WI6, F4, FL6, SC3, SC4, TC4, FI6, TB2, NA1. Session 5 passed the rest of M7 on the simulators and phones; these are the parts not yet seen, and the offline checks again after #170–#174.
 - **Ranges (#189), on the phones:** RR1–RR3.
 - **Nutrition History (#191), on the phones:** NH1–NH4.
@@ -185,7 +185,7 @@ Result codes: **✅ pass** · **❌ fail** · **⚠️ works but feels off** · 
 
 ## Rest screen (#179)
 
-On the installed web app on the iPhone, with the silent switch off and the volume up.
+On the installed web app on the iPhone, with the silent switch off and the volume up. Rest in a planned Workout or the Assessment: a Manual Workout has none (#206).
 
 - [x] **RS1** Log a Set and put the phone down a few steps away: the countdown reads from across the room, in light and dark, and shows the next Set and its target.
   - Result: · Notes: Pass
@@ -204,8 +204,10 @@ On the installed web app on the iPhone, with the silent switch off and the volum
 
 - [x] **RS8** Log an Exercise's last planned Set: the rest screen has the rating, Next exercise and Log extra set, all in sight without scrolling. Next exercise opens the next Exercise with the rest as a bar (#180).
   - Result: Pass· Notes:
-- [ ] **RS9** Today has no "Rest between Sets" link (#206). Open "See or change this Workout": under the Workout Length chips and above the equipment, one row reads "Rest between Sets" with the choice under it, an Auto chip and a slider. Auto is selected at first. Drag the slider: the length follows in 15 s steps from 30 s to 3 min, Auto deselects and the count of Sets that fit the Length changes (Standard: 22 Sets on Auto, 27 at 1 min). Tap Auto: it's selected again and the slider's fill goes. Close and reopen the app: the choice is kept, and a rest after a Set is that long.
+- [ ] **RS9** Today has no "Rest between Sets" link (#206). Open "See or change this Workout": under the Workout Length chips and above the equipment, one row reads "Rest between Sets" with the choice under it, an Auto chip and a slider. Auto is selected at first. Drag the slider: the length follows in 15 s steps from 30 s to 3 min, Auto deselects and the count of Sets that fit the Length changes (Standard: 22 Sets on Auto, 27 at 1 min). Tap Auto: it's selected again and the slider's fill goes. Close and reopen the app: the choice is kept, and a rest after a Set of the planned Workout is that long.
   - iOS: Result: ✅ with a nit (simulator, iPhone 17 Pro, light and dark) No "Rest between Sets" link on Today. In "See or change this Workout" one row sits between the Length chips and the equipment: "Rest between Sets" / "Auto", the Auto chip and the slider, all on one line. Auto selected at first, Standard 22 Sets. Dragging the slider (touch): 1 min → Auto deselected, "1 min", 27 Sets; 3 min → 11 Sets; 30 s → 30 Sets. Tap Auto: selected again, fill gone, 22 Sets. Set 1 min, force-quit and reopen: Today said 27 Sets and the sheet kept 1 min. Nit: at 3 min the slider's thumb is cut in half at the row's right edge (left end at 30 s is whole). Not checked: a rest's length during a Workout, the iPhone SE width (needs another simulator boot) · Android: Result: · Notes:
+- [ ] **RS10** Choose 1 min in the sheet, then start a Manual Workout and log a few Sets of a strength Exercise: no rest screen and no rest bar over Finish, only the next Set's steppers (#206).
+  - iOS: Result: · Android: Result: · Notes:
 
 ## Hold timer (#196)
 
